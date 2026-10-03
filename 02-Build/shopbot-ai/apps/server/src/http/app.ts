@@ -26,7 +26,7 @@ export async function createApp(config: Config, pool: Pool, nativeTest?:Interpre
     app.get('/api/simulator', async () => service.snapshot());
     app.post('/api/simulator/events', async (request, reply) => {
       const parsed = eventSchema.safeParse(request.body);
-      if (!parsed.success) return reply.code(400).send({ error: 'Invalid simulator event', details: parsed.error.issues });
+      if (!parsed.success||parsed.data.type==='voice') return reply.code(400).send({ error: 'Invalid simulator event', details: parsed.success?undefined:parsed.error.issues });
       return reply.code(202).send(await service.ingest(parsed.data));
     });
     const dashboard = resolve('dist/dashboard');

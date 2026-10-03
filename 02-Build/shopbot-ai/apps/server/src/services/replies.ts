@@ -4,6 +4,7 @@ import type {ConversationState,Interpretation,RichReply,ProductCard,SimulatorEve
 import {formatMoney} from '../../../../packages/contracts/money.js';
 import type {ToolResult} from './tools.js';
 import {renderDraft} from './tools.js';
+import {discoveryPresentation} from './discovery-replies.js';
 import {productCheckReply} from './product-verification.js';
 
 export function socialIntent(text:string):Interpretation['conversation']|undefined {
@@ -49,6 +50,7 @@ export function presentReply(result:ToolResult,state:ConversationState,intent?:I
   const quoting=!!priceRequest||intent?.next==='price';
   let text=result.message,cards:ProductCard[]|undefined,kind:RichReply['kind']='text',buttons:RichReply['buttons'];
   if(intent?.operations.length===0&&intent.next==='continue'&&intent.conversation)text=intent.conversation==='shop_question'?shopAnswers(intent.shopQuestions)||socialReply('handoff',state):socialReply(intent.conversation,state);
+  else if(result.discovery)return discoveryPresentation(result.discovery,state,result.discoveryBindingId);
   else if(result.products) {
     if(result.products.length){text=intent?.conversation==='browse'?'Here are the closest options. Choose the size/type you need; I’ll ask how many next.':`Here are the catalog prices and options. ${quoting?result.message+'\n':''}Which one did you mean?`;if(result.quote)text=`${result.products[0].name}: ${formatMoney(result.products[0].pricePaise)} / ${result.quote.unit}. For ${result.quote.quantity} ${unitLabel(result.quote.unit,result.quote.quantity)}, the catalog total is ${formatMoney(result.quote.totalPaise)}. Availability needs shop confirmation. This quote hasn’t added anything to your list.`;cards=result.products.slice(0,10).map(product=>({product,label:quoting?(result.products!.length>1?'Check this price':'Add to my list'):'Choose this',action:quoting&&result.products!.length>1?{id:randomUUID(),type:'quote_product',sku:product.sku,quantity:priceRequest?.quantity??intent?.priceQuantity,requestedUnit:priceRequest?.requestedUnit??intent?.priceUnit,expectedVersion:state.version}:{id:randomUUID(),type:'choose_product',sku:product.sku,...(quoting&&result.quote?{quantity:result.quote.quantity}:{}),expectedVersion:state.version}}));}
     else text='I couldn’t find a matching item in this catalog. What is it for, and do you know the size or type?';
@@ -68,7 +70,7 @@ export function presentReply(result:ToolResult,state:ConversationState,intent?:I
       text=`Let’s make sure I’ve got the right ${line.query??'item'}. ${questionFromAI(intent?.clarifyQuestion)??((line.candidates?.length??0)===1?'Is this the size/type you mean?':'Which of these sizes/types do you need? If none fits, tell me what you’re using it for.')}`;
       cards=line.candidates?.slice(0,10).map(product=>({product,label:'Choose this',action:{id:randomUUID(),type:'select_candidate',questionId:pending.id,lineId:line.id,sku:product.sku}}));
     } else {
-      text=line.sku?`The shop needs to check availability for ${line.name}. Would you like a different item?`:`I checked the catalog for “${line.name}”, but there’s no matching listing. I’ve kept it on your list for the shop to check. ${questionFromAI(intent?.clarifyQuestion)??(/paint/i.test(line.name)?'What are you painting—walls, wood or metal?':'What will you use it for? I can look for relevant options, or leave this for the shop to check.')}`;
+      text=state.catalogDiscovery?'What will you use this item for? Tell me its size, type or brand. I’ve kept your request for the shop to check.':line.sku?`The shop needs to check availability for ${line.name}. Would you like a different item?`:`I checked the catalog for “${line.name}”, but there’s no matching listing. I’ve kept it on your list for the shop to check. ${questionFromAI(intent?.clarifyQuestion)??(/paint/i.test(line.name)?'What are you painting—walls, wood or metal?':'What will you use it for? I can look for relevant options, or leave this for the shop to check.')}`;
     }
     if(event?.type==='text'&&/^(?:yes|confirm|one|two|three|four|five|six|seven|eight|nine|ten|\d+(?:\.\d+)?)$/i.test(event.text.trim())&&line.resolution==='needs_choice'){text=`I still need the size/type for ${line.query??line.name}. Please choose an option by name or button; if that was a quantity, include the unit.`;cards=undefined;}
     if(others.length)text+=` I’ve also kept ${others.map(l=>l.query??l.name).join(' and ')} on your list; we’ll check those next.`;

@@ -1,14 +1,18 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
-import { toolCallSchema, type ConversationState, type DraftLine, type OrderRequest, type Product, type ToolCall } from '../../../../packages/contracts/index.js';
+import { toolCallSchema, type ConversationState, type DraftLine, type OrderRequest, type Product, type ToolCall,type DiscoveryPlan,type DiscoveryResult,type CatalogMap } from '../../../../packages/contracts/index.js';
 import { formatMoney, lineTotal } from '../../../../packages/contracts/money.js';
 import { matches, searchProducts,exactProductMatch,normalize,sameUnit,normalizeUnit } from './catalog.js';
 import { authorize, ToolError, withConversation, type ActorContext } from './context.js';
+import {catalogEnabled} from './catalog.js';
+import {getCatalogMap,discoverProducts} from './catalog-discovery.js';
 import {productIdentity,productConfirmed,preserveConfirmation,markProductConfirmed,makeProductCheck} from './product-verification.js';
 
-export type ToolResult = { state?: ConversationState; products?: Product[]; request?: OrderRequest | null; totalCount?:number; quote?:{quantity:number;unit:string;totalPaise:number}; message: string };
+export type ToolResult = { state?: ConversationState; products?: Product[];discovery?:DiscoveryResult;catalogMap?:CatalogMap;discoveryBindingId?:string; request?: OrderRequest | null; totalCount?:number; quote?:{quantity:number;unit:string;totalPaise:number}; message: string };
 export const toolDefinitions = [
   { name: 'search_products', purpose: 'Find actual products and variants in the verified store' },
+  { name: 'get_catalog_map', purpose:'Read this store’s departments and product families without loading every SKU' },
+  { name: 'discover_products', purpose:'Rank real catalog products from keywords and refine verified families, brands and specifications' },
   { name: 'get_draft', purpose: 'Read resolved and unresolved customer draft lines' },
   { name: 'apply_draft_changes', purpose: 'Apply a validated operation batch at one expected draft version' },
   { name: 'preview_order', purpose: 'Clarify unresolved lines or create a bound review from current facts' },
@@ -19,10 +23,10 @@ export const toolDefinitions = [
 function canonical(value: any): any { return Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value; }
 export function digest(value: unknown) { return createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex'); }
 export async function loadState(client: PoolClient, ctx: ActorContext): Promise<ConversationState> {
-  const { rows } = await client.query('SELECT c.version,c.draft,c.pending,c.fulfillment,c.last_request_id,p.require_product_confirmation FROM conversations c LEFT JOIN store_policies p ON p.store_id=c.store_id WHERE c.id=$1 AND c.store_id=$2 AND c.actor=$3', [ctx.conversationId,ctx.storeId,ctx.actor]);
+  const { rows } = await client.query('SELECT c.version,c.draft,c.pending,c.fulfillment,c.last_request_id,p.require_product_confirmation,cp.store_type FROM conversations c LEFT JOIN store_policies p ON p.store_id=c.store_id LEFT JOIN catalog_profiles cp ON cp.store_id=c.store_id WHERE c.id=$1 AND c.store_id=$2 AND c.actor=$3', [ctx.conversationId,ctx.storeId,ctx.actor]);
   if (!rows[0]) throw new ToolError('Conversation unavailable', 'forbidden');
   const c = rows[0];
-  return { version:c.version,draft:c.draft,pending:c.pending,fulfillment:c.fulfillment,lastRequestId:c.last_request_id,...(c.require_product_confirmation?{requireProductConfirmation:true as const}:{}) };
+  return { version:c.version,draft:c.draft,pending:c.pending,fulfillment:c.fulfillment,lastRequestId:c.last_request_id,...(c.store_type?{catalogDiscovery:true as const}:{}),...(c.require_product_confirmation?{requireProductConfirmation:true as const}:{}) };
 }
 async function saveState(client: PoolClient, ctx: ActorContext, state: ConversationState) {
   await client.query('UPDATE conversations SET draft=$1::jsonb,version=$2,pending=$3::jsonb,fulfillment=$4,last_request_id=$5 WHERE id=$6 AND store_id=$7 AND actor=$8', [JSON.stringify(state.draft),state.version,JSON.stringify(state.pending),state.fulfillment,state.lastRequestId,ctx.conversationId,ctx.storeId,ctx.actor]);
@@ -39,7 +43,13 @@ function resolvedLine(product: Product, quantity: number | null, query: string, 
   return { id,query,sku:product.sku,quantity,name:product.name,unit:product.unit,pricePaise:product.pricePaise,productVersion:product.version,
     ...(requestedUnit?{requestedUnit:normalizeUnit(requestedUnit)}:{}),resolution:quantity===null?'needs_quantity':product.stock===0?'unavailable':'matched',candidates:[product] };
 }
-async function resolveLine(client: PoolClient, ctx: ActorContext, query: string, quantity: number | null, id: string = randomUUID(),requestedUnit?:string): Promise<DraftLine> {
+async function resolveLine(client: PoolClient, ctx: ActorContext, query: string, quantity: number | null, id: string = randomUUID(),requestedUnit?:string,search?:DiscoveryPlan): Promise<DraftLine> {
+  if(await catalogEnabled(client,ctx)){
+    const discovery=await discoverProducts(client,ctx,query,search);
+    const exact=discovery.products.filter(p=>exactProductMatch(query,p));
+    if(exact.length===1){const line=resolvedLine(exact[0],quantity,query,id,requestedUnit);line.candidates=discovery.products;line.discovery=discovery;return line;}
+    return {id,query,quantity,name:query,...(requestedUnit?{requestedUnit:normalizeUnit(requestedUnit)}:{}),resolution:discovery.products.length?'needs_choice':'unavailable',candidates:discovery.products,discovery};
+  }
   const candidates = await searchProducts(client,ctx,query);
   if (candidates.length === 1&&exactProductMatch(query,candidates[0])&&!(candidates[0].unit==='box'&&/\d/.test(candidates[0].name)&&!/[\d½¾]/.test(query)&&normalize(query)!==normalize(candidates[0].sku))) return resolvedLine(candidates[0],quantity,query,id,requestedUnit);
   // A result set is retained, never silently reduced to the first product.
@@ -84,6 +94,8 @@ export class RetailTools {
   }
   private async execute(client: PoolClient, ctx: ActorContext, call: ToolCall): Promise<ToolResult> {
     const state=await loadState(client,ctx);
+    if(call.name==='get_catalog_map')return {catalogMap:await getCatalogMap(client,ctx,call.args.departmentId),message:'Store departments and product families.'};
+    if(call.name==='discover_products'){const discovery=await discoverProducts(client,ctx,call.args.query,call.args.search);return {discovery,products:discovery.products,totalCount:discovery.totalCount,message:'Check these catalog suggestions.'};}
     if(call.name==='search_products') {
       const products=await searchProducts(client,ctx,call.args.query);
       const product=products.length===1&&exactProductMatch(call.args.query,products[0])?products[0]:undefined;
@@ -124,8 +136,8 @@ export class RetailTools {
       for(const op of call.args.operations) {
         if(op.kind==='set_fulfillment') { state.fulfillment=op.method; continue; }
         if(op.kind==='add_item') {
-          const line=await resolveLine(client,ctx,op.query,op.quantity,undefined,op.requestedUnit);
-          if(ctx.selectedCatalogSku===line.sku&&line.candidates?.length===1)markProductConfirmed(line,line.candidates[0]);
+          const line=await resolveLine(client,ctx,op.query,op.quantity,undefined,op.requestedUnit,op.search);
+          if(ctx.selectedCatalogSku===line.sku&&line.candidates?.some(p=>p.sku===line.sku)&&ctx.selectedCatalogProduct&&productIdentity(ctx.selectedCatalogProduct)===productIdentity(line.candidates.find(p=>p.sku===line.sku)!))markProductConfirmed(line,line.candidates.find(p=>p.sku===line.sku)!);
           const same=line.resolution==='matched'?state.draft.find(l=>l.sku===line.sku&&l.resolution==='matched'):undefined;
           if(same&&same.quantity!==null&&line.quantity!==null) {
             const total=Math.round((same.quantity+line.quantity)*1000)/1000;
@@ -138,10 +150,10 @@ export class RetailTools {
           if(index<0) throw new ToolError('The referenced draft line is no longer current.');
           const old=state.draft[index];
           if(old.resolution==='needs_unit'&&op.quantity!==undefined&&!op.requestedUnit)throw new ToolError(`Please include the unit, for example 2 ${old.unit??'units'}. I can’t convert ${old.requestedUnit??'the requested amount'} without a verified pack size or length.`);
-          const next=await resolveLine(client,ctx,op.query??old.sku??old.query??old.name,op.quantity??old.requestedQuantity??old.quantity,old.id,op.requestedUnit??old.requestedUnit);
+          const next=await resolveLine(client,ctx,op.query??old.sku??old.query??old.name,op.quantity??old.requestedQuantity??old.quantity,old.id,op.requestedUnit??old.requestedUnit,op.search??(!op.query?old.discovery?.plan:undefined));
           if(!op.query)next.query=old.query??old.name;
           state.draft[index]=preserveConfirmation(old,next);
-          if(ctx.selectedCatalogSku===next.sku&&next.candidates?.length===1)markProductConfirmed(next,next.candidates[0]);
+          if(ctx.selectedCatalogSku===next.sku&&next.candidates?.some(p=>p.sku===next.sku)&&ctx.selectedCatalogProduct&&productIdentity(ctx.selectedCatalogProduct)===productIdentity(next.candidates.find(p=>p.sku===next.sku)!))markProductConfirmed(next,next.candidates.find(p=>p.sku===next.sku)!);
         } else {
           const line=referenceLine(state,op.reference);
           if(op.kind==='remove_item') state.draft=state.draft.filter(l=>l.id!==line.id);
@@ -169,12 +181,13 @@ export class RetailTools {
       let refreshed=false;
       for(const line of state.draft) {
         if(!line.sku) {
-          if(state.requireProductConfirmation){const next=await resolveLine(client,ctx,line.query??line.name,line.quantity,line.id,line.requestedUnit);if(digest(next)!==digest(line)){Object.assign(line,next);refreshed=true;}}
+          if(state.requireProductConfirmation){const next=await resolveLine(client,ctx,line.query??line.name,line.quantity,line.id,line.requestedUnit,line.discovery?.plan);if(digest(next)!==digest(line)){Object.assign(line,next);refreshed=true;}}
           continue;
         }
         const [product]=await searchProducts(client,ctx,line.sku);
         if(!product) { if(line.resolution!=='unavailable'||line.candidates?.length||line.productConfirmation) {line.resolution='unavailable';line.candidates=[];delete line.productConfirmation;refreshed=true;} continue; }
         const current=preserveConfirmation(line,resolvedLine(product,line.requestedQuantity??line.quantity,line.query??line.name,line.id,line.requestedUnit));
+        if(state.catalogDiscovery&&!productConfirmed(line,product)){const discovery=await discoverProducts(client,ctx,line.query??line.name,line.discovery?.plan);current.candidates=discovery.products;current.discovery=discovery;}
         if(product.stock!==null&&line.quantity!==null&&product.stock<line.quantity) current.resolution='unavailable';
         if(digest(current)!==digest(line)) {delete line.productConfirmation;Object.assign(line,current);refreshed=true;}
       }
@@ -197,6 +210,7 @@ export class RetailTools {
       return {state,message:`${refreshed?'Catalog facts changed; please review the updated request.\n':''}${renderDraft(state)}\nTotal: ${formatMoney(totalPaise)}. Pickup.\nShall I send this request to the shop? Reply yes or confirm this review. Availability needs shop approval; stock is not reserved.`};
     }
     // Only this tool can create a request. No staff/payment/readiness action exists in this customer registry.
+    if(call.name!=='submit_order_request')throw new ToolError('Unsupported customer tool.');
     const pending=state.pending;
     if(!pending||pending.kind!=='review'||pending.id!==call.args.reviewId||pending.version!==state.version||Date.parse(pending.expiresAt)<=Date.now()) throw new ToolError('There is no current unexpired review for that confirmation. Review the draft first.','stale_confirmation');
     if(digest({lines:state.draft,fulfillment:state.fulfillment,totalPaise:pending.totalPaise})!==pending.hash) throw new ToolError('Review snapshot changed; review again.','stale_confirmation');

@@ -1,3 +1,11 @@
+# Current checkpoint — 3 October 2026
+
+Indexed generic catalog hierarchy, keyword retrieval, scoped narrowing callbacks, explicit product photos and recorded voice are implemented and deployed locally. All 82 integration/regression tests, typecheck, Docker build and final live text/audio desktop/mobile checks pass. The voice request preserves two pipes and five bottles of solvent; checking both photos produces a separate ₹1,185 review, with no submitted order.
+
+Try `http://localhost:3017/native-test`, refresh and choose New chat. Broad discovery and voice use one free-only call each; refinements, typed quantity replies and photo buttons can use backend tools without extra AI. Actual WhatsApp delivery and merchant onboarding remain separate milestones. See `CATALOG-DISCOVERY.md`, workspace `GIT-WORKFLOW.md`, and `03-Output/012-catalog-mindmap-and-voice.md`.
+
+---
+
 # Actual implementation status
 
 Updated 2 October 2026.

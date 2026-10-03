@@ -1,10 +1,11 @@
 import type { ConversationState, Product } from '../../../../packages/contracts/index.js';
 import type { RateCard } from '../services/inference-budget.js';
 import type {AssistantMemory,CatalogObservation} from '../services/agent-assistance.js';
-export type InterpretationInput = { text: string; state: ConversationState; catalog?: Product[];history?:{direction:string;text:string}[]; assistantMemory?:AssistantMemory|null;observations?:CatalogObservation[] };
+export type InterpretationInput = { text: string; audio?:{mimeType:'audio/wav';data:string;durationSeconds:number}; state: ConversationState; catalog?: Product[];history?:{direction:string;text:string}[]; assistantMemory?:AssistantMemory|null;catalogMap?:import('../../../../packages/contracts/index.js').CatalogMap;observations?:CatalogObservation[] };
 export type ProviderResult = { output: unknown; truncated: boolean; usage: Record<string,number> | null; responseModel?: string };
 export interface Interpreter {
   readonly name: string;
+  readonly supportsAudio?:boolean;
   readonly mode: 'mock' | 'live';
   readonly billing?: RateCard;
   readonly freeQuota?: {scope:string;model:string};

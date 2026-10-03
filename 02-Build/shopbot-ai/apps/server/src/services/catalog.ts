@@ -4,7 +4,7 @@ import type { ActorContext } from './context.js';
 export function normalize(text: string): string {
   return text.toLowerCase().replace(/½|1\/2|half[- ]inch/g, '0.5 inch').replace(/¾|3\/4/g, '0.75 inch').replace(/one[- ]inch/g, '1 inch').replace(/ten[- ]inch/g, '10 inch').normalize('NFKC').replace(/[^\p{L}\p{N}.]+/gu,' ').trim();
 }
-function tokens(text: string) { return normalize(text).split(/\s+/).filter(t => t && !['the','a','an','of','inch','inches','some'].includes(t)).map(t => t==='boxes'?'box':/^[a-z]+s$/.test(t) ? t.slice(0,-1) : t); }
+export function tokens(text: string) { return normalize(text).split(/\s+/).filter(t => t && !['the','a','an','of','inch','inches','some'].includes(t)).map(t => t==='boxes'?'box':/^[a-z]+s$/.test(t) ? t.slice(0,-1) : t); }
 export function matches(query: string, values: string[]) {
   const needles = tokens(query),haystack = new Set(values.flatMap(tokens));
   // Product words are often split/joined by customers or source catalogs.
@@ -13,7 +13,7 @@ export function matches(query: string, values: string[]) {
   const covered=(i:number):boolean=>i===needles.length||haystack.has(needles[i])&&covered(i+1)||i+1<needles.length&&/^[a-z]+$/.test(needles[i]+needles[i+1])&&haystack.has(needles[i]+needles[i+1])&&covered(i+2);
   return needles.length > 0 && covered(0);
 }
-function oneEdit(a:string,b:string) {
+export function oneEdit(a:string,b:string) {
   if(a===b)return true;if(a.length<4||b.length<4||!/^[a-z]+$/.test(a+b)||Math.abs(a.length-b.length)>1)return false;
   // A single edit or adjacent transposition. Numeric specifications are never fuzzy.
   if(a.length===b.length){const d=[...a].map((c,i)=>c===b[i]?-1:i).filter(i=>i>=0);return d.length===1||(d.length===2&&d[1]===d[0]+1&&a[d[0]]===b[d[1]]&&a[d[1]]===b[d[0]]);}
@@ -21,11 +21,32 @@ function oneEdit(a:string,b:string) {
 }
 const values=(p:Product)=>[p.name,p.unit,p.category??'',...p.aliases];
 export function exactProductMatch(query:string,p:Product){return normalize(query)===normalize(p.sku)||matches(query,values(p));}
+export const productColumns='sku,name,unit,price_paise,stock,version,aliases,quantity_step,category,image_path,family_id,brand,specifications,keywords';
+export function productFromRow(p:any):Product {
+ return {sku:p.sku,name:p.name,unit:p.unit,pricePaise:p.price_paise,stock:p.stock,version:p.version,aliases:p.aliases,quantityStep:Number(p.quantity_step),...(p.category?{category:p.category}:{}),...(p.image_path?{imageUrl:p.image_path}:{}),...(p.family_id?{familyId:p.family_id}:{}),...(p.brand?{brand:p.brand}:{}),...(p.specifications&&Object.keys(p.specifications).length?{specifications:p.specifications}:{}),...(p.keywords?.length?{keywords:p.keywords}:{})};
+}
+export async function catalogEnabled(client:PoolClient,ctx:ActorContext) {return !!(await client.query('SELECT 1 FROM catalog_profiles WHERE store_id=$1',[ctx.storeId])).rowCount;}
+export async function catalogContext(client:PoolClient,ctx:ActorContext) {
+ return (await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND active=true ORDER BY sku LIMIT 24`,[ctx.storeId])).rows.map(productFromRow);
+}
 export async function getProducts(client: PoolClient, context: ActorContext): Promise<Product[]> {
-  const result = await client.query('SELECT sku,name,unit,price_paise,stock,version,aliases,quantity_step,category,image_path FROM products WHERE store_id=$1 AND active=true ORDER BY sku', [context.storeId]);
-  return result.rows.map(p => ({sku:p.sku,name:p.name,unit:p.unit,pricePaise:p.price_paise,stock:p.stock,version:p.version,aliases:p.aliases,quantityStep:Number(p.quantity_step),...(p.category?{category:p.category}:{}),...(p.image_path?{imageUrl:p.image_path}:{})}));
+  const result=await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND active=true ORDER BY sku`,[context.storeId]);
+  return result.rows.map(productFromRow);
 }
 export async function searchProducts(client: PoolClient, context: ActorContext, query: string): Promise<Product[]> {
+  const identifiedRows=await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND active=true AND lower(sku)=lower($2) LIMIT 1`,[context.storeId,query.trim()]);
+  if(identifiedRows.rowCount)return identifiedRows.rows.map(productFromRow);
+  if(await catalogEnabled(client,context)){
+    const ts=tokens(query).slice(0,12);
+    if(!ts.length)return [];
+    const parameters:unknown[]=[context.storeId];
+    const clauses=ts.map(t=>{parameters.push('%'+t.replace(/[\\%_]/g,'\\$&')+'%');return `search_text ILIKE $${parameters.length} ESCAPE '\\'`;});
+    const result=await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND active=true AND (${clauses.join(' AND ')}) ORDER BY sku LIMIT 100`,parameters);
+    const exact=result.rows.map(productFromRow).filter(p=>exactProductMatch(query,p));
+    if(exact.length)return exact;
+    const fuzzy=await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND active=true AND $2 OPERATOR(public.<%) search_text ORDER BY public.word_similarity($2,search_text) DESC,sku LIMIT 30`,[context.storeId,normalize(query)]);
+    return fuzzy.rows.map(productFromRow).filter(p=>ts.every(t=>values(p).flatMap(tokens).some(h=>oneEdit(t,h))));
+  }
   const rows = await getProducts(client,context);
   // Catalog identities must never compete with text/alias matches. Refreshing
   // an existing line by SKU cannot change its product or packaging.

@@ -72,3 +72,9 @@ The native Google SDK adapter and durable spending guards are implemented; see [
 Local AI browser smoke now passes with five products and ₹914 review (728 tokens); 24 tests pass. Open http://localhost:3017/native-test and click New AI test. Wait 15 seconds between AI messages, max three/minute and 100/day. Default demo preserved; WhatsApp not connected. See NATIVE-AI.md.
 
 The native test page now uses a WhatsApp-style conversation and a separate 30-product image demo. Say hello, then try “I want screw boxes plus some paint”, or browse a category to see photos in one message. Choices/quantity require confirmation. Test details show hypothetical owner message costs; no WhatsApp messages are delivered. See WHATSAPP-EXPERIENCE.md.
+
+## Catalog discovery and voice
+
+Open http://localhost:3017/native-test and choose **New chat**. Try “I need a blade,” then narrow the product type and brand using the displayed buttons. Use **Record voice**, stop, listen, and send a short shopping list. Check each product photo and quantity; submitting the final request is a separate action. The local page sends no WhatsApp messages.
+
+See [CATALOG-DISCOVERY.md](CATALOG-DISCOVERY.md) for the hierarchy, indexed tools, recorded-audio contract and generic-store configuration. Local history and rollback/export instructions are in the workspace’s `GIT-WORKFLOW.md`.

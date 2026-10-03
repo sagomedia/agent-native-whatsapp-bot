@@ -1,3 +1,4 @@
+import {voiceUploadSchema,normalizeVoice,loadVoice} from '../services/voice-media.js';
 import {randomUUID,randomBytes,createHmac,timingSafeEqual} from 'node:crypto';
 import type {FastifyInstance,FastifyRequest} from 'fastify';
 import type {Pool} from 'pg';
@@ -38,9 +39,16 @@ export async function registerNativeTest(app:FastifyInstance,pool:Pool,provider:
       const a=(await pool.query('SELECT failure_code FROM provider_attempts WHERE conversation_id=$1 ORDER BY created_at DESC LIMIT 1',[inbox.context.conversationId])).rows[0];
       return {...snapshot,provider:provider.name,lastFailure:a?.failure_code??null,deliveryPreview:{outboundMessages:snapshot.messages.filter(m=>m.direction==='outbound').length,planningPaisePerMessage:planningPaise,estimateOnly:true,whatsAppConnected:false}};
     });
+    routes.post('/api/native-test/voice',{bodyLimit:1450000},async(request,reply)=>{
+      const inbox=await channel(request);if(!inbox)return reply.code(401).send({error:'Start a new AI test conversation.'});
+      if(!provider.supportsAudio)return reply.code(503).send({error:'Voice input is not configured. Please type your request.'});
+      const parsed=voiceUploadSchema.safeParse(request.body);if(!parsed.success)return reply.code(400).send({error:'Use a supported voice recording under 1 MB.'});
+      try{const media=await normalizeVoice(parsed.data),saved=await inbox.ingest({id:parsed.data.id,type:'voice',mediaId:parsed.data.id},media);await runtime.processNext(inbox.context);return saved;}catch(error){return reply.code((error as {statusCode?:number}).statusCode??400).send({error:error instanceof Error?error.message:'Voice note could not be saved.'});}
+    });
+    routes.get('/api/native-test/voice/:id',async(request,reply)=>{const inbox=await channel(request);if(!inbox)return reply.code(401).send({error:'Start a new AI test conversation.'});const id=(request.params as {id:string}).id;if(!/^[0-9a-f-]{36}$/.test(id))return reply.code(400).send({error:'Invalid recording.'});try{const media=await loadVoice(pool,inbox.context,id);return reply.header('Cache-Control','private, no-store').type('audio/wav').send(Buffer.from(media.data,'base64'));}catch{return reply.code(404).send({error:'Voice note not found.'});}});
     routes.post('/api/native-test/events',async(request,reply)=>{
       const inbox=await channel(request);if(!inbox)return reply.code(401).send({error:'Start a new AI test conversation.'});
-      const parsed=eventSchema.safeParse(request.body);if(!parsed.success)return reply.code(400).send({error:'Invalid test message.'});
+      const parsed=eventSchema.safeParse(request.body);if(!parsed.success||parsed.data.type==='voice')return reply.code(400).send({error:'Invalid test message.'});
       const saved=await inbox.ingest(parsed.data);
       await runtime.processNext(inbox.context);
       return saved;

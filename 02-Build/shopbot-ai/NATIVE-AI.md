@@ -96,3 +96,9 @@ The image-demo store opts into `store_policies.require_product_confirmation`. In
 Quantity replies such as “5 bottles” and current product buttons bypass inference. Queued answers and stale choices remain bound to their original question. Customer corrections use `resolve_line` and preserve other requested lines. “Add into the catalog” during a product check adds to the customer list, never the merchant catalog. Product acceptance does not submit an order; the final Confirm request action remains separate.
 
 Missing photos are explicitly labelled in the UI; the engine never invents an image. Actual voice recording/transcription and WhatsApp delivery remain future adapters. This phase accepts text, including eventual transcription output. Its local carousel preview does not itself establish real WhatsApp carousel eligibility or billing.
+
+## 3 October 2026 — catalog and recorded voice checkpoint
+
+The local adapter now supplies a bounded catalog map/sample and real discovery observations; it extracts keyword plans from text or a recorded voice note. The expanded provider grammar was rejected by the live endpoint, so JSON mode supplies the compact planning contract in the instruction. Strict wire/canonical validation still precedes every operation; invalid output cannot partially mutate the draft and no automatic repair call is made. One free-only audio call transcribes and plans. Paid text rates cannot authorize audio.
+
+The final desktop/mobile run used one text call and one voice call. The 7.2-second synthetic microphone request retained two 1-inch pipes and five bottles of solvent. Photo acceptance used zero extra calls and reached a separate ₹1,185 review without submission. All 82 tests pass. See `CATALOG-DISCOVERY.md` and workspace `03-Output/012-catalog-mindmap-and-voice.md` for detailed accounting and evidence.

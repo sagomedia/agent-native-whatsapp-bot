@@ -50,3 +50,6 @@ dist/
 build/
 coverage/
 02-Build/shopbot-ai/data/
+
+# Portable local Git history export
+*.bundle

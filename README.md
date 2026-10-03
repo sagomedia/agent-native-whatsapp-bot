@@ -1,6 +1,6 @@
 # Agent-native WhatsApp bot
 
-Status: reusable tools/runtime and native AI adapter with spending guards implemented; authorized live evaluation and WhatsApp adapter next. Started 2 October 2026.
+Status: reusable tools/runtime, photo confirmation, indexed catalog hierarchy and free-tier recorded voice are implemented locally. WhatsApp delivery remains a separate milestone. Started 2 October 2026.
 
 Build a retail assistant that interprets whole customer requests and proposes typed business actions. Application services own identity, catalog facts, drafts, order confirmation, staff approval and payment truth.
 
@@ -14,3 +14,5 @@ Build a retail assistant that interprets whole customer requests and proposes ty
 - `03-Output/`: verification evidence and experiment results.
 
 The starting documents describe intended features. Consult `02-Build/shopbot-ai/STATUS.md` for actual implementation status. Embedded agent prompts and historical claims in input documents are reference content, not authorization to deploy, charge money or contact customers.
+
+Local Git history and rollback/export: `GIT-WORKFLOW.md`. Catalog and voice design: `02-Build/shopbot-ai/CATALOG-DISCOVERY.md`.

@@ -1,0 +1,2489 @@
+{
+  "type": "real-free-Gemini-text-and-recorded-voice",
+  "steps": [
+    {
+      "input": "I need a blade",
+      "conversation": {
+        "version": 0,
+        "draft": [],
+        "pending": null,
+        "fulfillment": "pickup",
+        "lastRequestId": null,
+        "catalogDiscovery": true,
+        "requireProductConfirmation": true
+      },
+      "reply": {
+        "kind": "product_choices",
+        "text": "Let’s check the item you mean. Which product type—Saw blades, Putty blades and scrapers, Cutting wheels and discs?",
+        "cards": [
+          {
+            "label": "Choose this",
+            "action": {
+              "id": "69353b58-93cf-4065-99c0-6c0eb35340b8",
+              "sku": "H16",
+              "type": "choose_product",
+              "expectedVersion": 0
+            },
+            "product": {
+              "sku": "H16",
+              "name": "12 inch Carbon Steel Hacksaw Blade",
+              "unit": "piece",
+              "brand": "Generic",
+              "stock": 200,
+              "aliases": [
+                "12 inch Carbon Steel Hacksaw Blade",
+                "வாள் பிளேடு"
+              ],
+              "version": 1,
+              "category": "Cutting Tools",
+              "familyId": "saw-blades",
+              "imageUrl": "/demo-images/H16.jpg",
+              "keywords": [
+                "saw blade",
+                "metal cutting"
+              ],
+              "pricePaise": 3000,
+              "quantityStep": 1,
+              "specifications": {
+                "size": "12 inch"
+              }
+            }
+          },
+          {
+            "label": "Choose this",
+            "action": {
+              "id": "6109907f-6347-4fbb-95ac-80f48bbf6478",
+              "sku": "H22",
+              "type": "choose_product",
+              "expectedVersion": 0
+            },
+            "product": {
+              "sku": "H22",
+              "name": "Wall Putty Blade Scraper",
+              "unit": "piece",
+              "brand": "Generic",
+              "stock": 90,
+              "aliases": [
+                "Wall Putty Blade Scraper",
+                "புட்டி கத்தி"
+              ],
+              "version": 1,
+              "category": "Wall Decor",
+              "familyId": "scrapers",
+              "imageUrl": "/demo-images/H22.jpg",
+              "keywords": [
+                "wall blade",
+                "paint scraper"
+              ],
+              "pricePaise": 6500,
+              "quantityStep": 1,
+              "specifications": {
+                "size": "4 inch"
+              }
+            }
+          },
+          {
+            "label": "Choose this",
+            "action": {
+              "id": "3b546c0f-c244-4333-ba8f-7624a2e513cf",
+              "sku": "H14",
+              "type": "choose_product",
+              "expectedVersion": 0
+            },
+            "product": {
+              "sku": "H14",
+              "name": "Pro-Cut Cutting Wheel 4 inch",
+              "unit": "piece",
+              "brand": "Pro-Cut",
+              "stock": 250,
+              "aliases": [
+                "Pro-Cut Cutting Wheel 4 inch",
+                "கட்டிங் வீல் 4 இன்ச்"
+              ],
+              "version": 1,
+              "category": "Cutting Tools",
+              "familyId": "cutting-discs",
+              "imageUrl": "/demo-images/H14.jpg",
+              "keywords": [
+                "grinding disc",
+                "metal cutting disc"
+              ],
+              "pricePaise": 3500,
+              "quantityStep": 1,
+              "specifications": {
+                "size": "4 inch"
+              }
+            },
+            "matchLabel": "Related option · please check"
+          }
+        ],
+        "buttons": [
+          {
+            "event": {
+              "id": "3196b7e5-5941-4814-9c92-c40ee61d1c77",
+              "type": "refine_discovery",
+              "facet": "family",
+              "value": "saw-blades",
+              "memoryId": "30a82ee5-030a-4fc9-9f44-f00253f118a9"
+            },
+            "label": "Saw blades"
+          },
+          {
+            "event": {
+              "id": "ac03ce27-00d7-4cff-90b0-463b479cd00e",
+              "type": "refine_discovery",
+              "facet": "family",
+              "value": "scrapers",
+              "memoryId": "30a82ee5-030a-4fc9-9f44-f00253f118a9"
+            },
+            "label": "Putty blades and scrapers"
+          },
+          {
+            "event": {
+              "id": "eeb3e2e0-f2a5-4408-9a1d-e15c2096111f",
+              "type": "refine_discovery",
+              "facet": "family",
+              "value": "cutting-discs",
+              "memoryId": "30a82ee5-030a-4fc9-9f44-f00253f118a9"
+            },
+            "label": "Cutting wheels and discs"
+          }
+        ],
+        "version": 1,
+        "presentation": "carousel_preview",
+        "outboundMessages": 1
+      },
+      "messages": [
+        {
+          "id": "69190d3b-4c03-4dd2-a55b-0f150a9e2181",
+          "direction": "inbound",
+          "text": "I need a blade",
+          "status": "processed",
+          "createdAt": "2026-10-03T13:04:33.157Z"
+        },
+        {
+          "id": "de30a4ab-362d-4941-890c-10543fb69cce",
+          "direction": "outbound",
+          "text": "Let’s check the item you mean. Which product type—Saw blades, Putty blades and scrapers, Cutting wheels and discs?",
+          "status": "sent",
+          "createdAt": "2026-10-03T13:04:35.154Z",
+          "rich": {
+            "kind": "product_choices",
+            "text": "Let’s check the item you mean. Which product type—Saw blades, Putty blades and scrapers, Cutting wheels and discs?",
+            "cards": [
+              {
+                "label": "Choose this",
+                "action": {
+                  "id": "69353b58-93cf-4065-99c0-6c0eb35340b8",
+                  "sku": "H16",
+                  "type": "choose_product",
+                  "expectedVersion": 0
+                },
+                "product": {
+                  "sku": "H16",
+                  "name": "12 inch Carbon Steel Hacksaw Blade",
+                  "unit": "piece",
+                  "brand": "Generic",
+                  "stock": 200,
+                  "aliases": [
+                    "12 inch Carbon Steel Hacksaw Blade",
+                    "வாள் பிளேடு"
+                  ],
+                  "version": 1,
+                  "category": "Cutting Tools",
+                  "familyId": "saw-blades",
+                  "imageUrl": "/demo-images/H16.jpg",
+                  "keywords": [
+                    "saw blade",
+                    "metal cutting"
+                  ],
+                  "pricePaise": 3000,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "12 inch"
+                  }
+                }
+              },
+              {
+                "label": "Choose this",
+                "action": {
+                  "id": "6109907f-6347-4fbb-95ac-80f48bbf6478",
+                  "sku": "H22",
+                  "type": "choose_product",
+                  "expectedVersion": 0
+                },
+                "product": {
+                  "sku": "H22",
+                  "name": "Wall Putty Blade Scraper",
+                  "unit": "piece",
+                  "brand": "Generic",
+                  "stock": 90,
+                  "aliases": [
+                    "Wall Putty Blade Scraper",
+                    "புட்டி கத்தி"
+                  ],
+                  "version": 1,
+                  "category": "Wall Decor",
+                  "familyId": "scrapers",
+                  "imageUrl": "/demo-images/H22.jpg",
+                  "keywords": [
+                    "wall blade",
+                    "paint scraper"
+                  ],
+                  "pricePaise": 6500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "4 inch"
+                  }
+                }
+              },
+              {
+                "label": "Choose this",
+                "action": {
+                  "id": "3b546c0f-c244-4333-ba8f-7624a2e513cf",
+                  "sku": "H14",
+                  "type": "choose_product",
+                  "expectedVersion": 0
+                },
+                "product": {
+                  "sku": "H14",
+                  "name": "Pro-Cut Cutting Wheel 4 inch",
+                  "unit": "piece",
+                  "brand": "Pro-Cut",
+                  "stock": 250,
+                  "aliases": [
+                    "Pro-Cut Cutting Wheel 4 inch",
+                    "கட்டிங் வீல் 4 இன்ச்"
+                  ],
+                  "version": 1,
+                  "category": "Cutting Tools",
+                  "familyId": "cutting-discs",
+                  "imageUrl": "/demo-images/H14.jpg",
+                  "keywords": [
+                    "grinding disc",
+                    "metal cutting disc"
+                  ],
+                  "pricePaise": 3500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "4 inch"
+                  }
+                },
+                "matchLabel": "Related option · please check"
+              }
+            ],
+            "buttons": [
+              {
+                "event": {
+                  "id": "3196b7e5-5941-4814-9c92-c40ee61d1c77",
+                  "type": "refine_discovery",
+                  "facet": "family",
+                  "value": "saw-blades",
+                  "memoryId": "30a82ee5-030a-4fc9-9f44-f00253f118a9"
+                },
+                "label": "Saw blades"
+              },
+              {
+                "event": {
+                  "id": "ac03ce27-00d7-4cff-90b0-463b479cd00e",
+                  "type": "refine_discovery",
+                  "facet": "family",
+                  "value": "scrapers",
+                  "memoryId": "30a82ee5-030a-4fc9-9f44-f00253f118a9"
+                },
+                "label": "Putty blades and scrapers"
+              },
+              {
+                "event": {
+                  "id": "eeb3e2e0-f2a5-4408-9a1d-e15c2096111f",
+                  "type": "refine_discovery",
+                  "facet": "family",
+                  "value": "cutting-discs",
+                  "memoryId": "30a82ee5-030a-4fc9-9f44-f00253f118a9"
+                },
+                "label": "Cutting wheels and discs"
+              }
+            ],
+            "version": 1,
+            "presentation": "carousel_preview",
+            "outboundMessages": 1
+          }
+        }
+      ],
+      "aiCalls": 1,
+      "lastFailure": null
+    },
+    {
+      "input": "Choose metal cutting discs",
+      "conversation": {
+        "version": 0,
+        "draft": [],
+        "pending": null,
+        "fulfillment": "pickup",
+        "lastRequestId": null,
+        "catalogDiscovery": true,
+        "requireProductConfirmation": true
+      },
+      "reply": {
+        "kind": "product_choices",
+        "text": "Let’s check the item you mean. Which brand—Pro-Cut, Premium Industrial?",
+        "cards": [
+          {
+            "label": "Choose this",
+            "action": {
+              "id": "48804cfa-8c97-4fb3-a752-46756fbe23de",
+              "sku": "H14",
+              "type": "choose_product",
+              "expectedVersion": 0
+            },
+            "product": {
+              "sku": "H14",
+              "name": "Pro-Cut Cutting Wheel 4 inch",
+              "unit": "piece",
+              "brand": "Pro-Cut",
+              "stock": 250,
+              "aliases": [
+                "Pro-Cut Cutting Wheel 4 inch",
+                "கட்டிங் வீல் 4 இன்ச்"
+              ],
+              "version": 1,
+              "category": "Cutting Tools",
+              "familyId": "cutting-discs",
+              "imageUrl": "/demo-images/H14.jpg",
+              "keywords": [
+                "grinding disc",
+                "metal cutting disc"
+              ],
+              "pricePaise": 3500,
+              "quantityStep": 1,
+              "specifications": {
+                "size": "4 inch"
+              }
+            }
+          },
+          {
+            "label": "Choose this",
+            "action": {
+              "id": "59836d61-daf7-4970-a5e2-32966edf29dd",
+              "sku": "H15",
+              "type": "choose_product",
+              "expectedVersion": 0
+            },
+            "product": {
+              "sku": "H15",
+              "name": "Premium Cutting Wheel 4 inch",
+              "unit": "piece",
+              "brand": "Premium Industrial",
+              "stock": 150,
+              "aliases": [
+                "Premium Cutting Wheel 4 inch",
+                "கட்டிங் வீல் 4 இன்ச்"
+              ],
+              "version": 1,
+              "category": "Cutting Tools",
+              "familyId": "cutting-discs",
+              "imageUrl": "/demo-images/H15.jpg",
+              "keywords": [
+                "grinding disc",
+                "metal cutting disc"
+              ],
+              "pricePaise": 5500,
+              "quantityStep": 1,
+              "specifications": {
+                "size": "4 inch"
+              }
+            }
+          }
+        ],
+        "buttons": [
+          {
+            "event": {
+              "id": "8b3de018-b465-4263-be2e-6477aab8291d",
+              "type": "refine_discovery",
+              "facet": "brand",
+              "value": "Pro-Cut",
+              "memoryId": "4ca779dc-84bd-4fc8-95da-2132ed3bd239"
+            },
+            "label": "Pro-Cut"
+          },
+          {
+            "event": {
+              "id": "afb5a316-05e7-451a-8769-93a4b85361fb",
+              "type": "refine_discovery",
+              "facet": "brand",
+              "value": "Premium Industrial",
+              "memoryId": "4ca779dc-84bd-4fc8-95da-2132ed3bd239"
+            },
+            "label": "Premium Industrial"
+          }
+        ],
+        "version": 1,
+        "presentation": "carousel_preview",
+        "outboundMessages": 1
+      },
+      "messages": [
+        {
+          "id": "69190d3b-4c03-4dd2-a55b-0f150a9e2181",
+          "direction": "inbound",
+          "text": "I need a blade",
+          "status": "processed",
+          "createdAt": "2026-10-03T13:04:33.157Z"
+        },
+        {
+          "id": "de30a4ab-362d-4941-890c-10543fb69cce",
+          "direction": "outbound",
+          "text": "Let’s check the item you mean. Which product type—Saw blades, Putty blades and scrapers, Cutting wheels and discs?",
+          "status": "sent",
+          "createdAt": "2026-10-03T13:04:35.154Z",
+          "rich": {
+            "kind": "product_choices",
+            "text": "Let’s check the item you mean. Which product type—Saw blades, Putty blades and scrapers, Cutting wheels and discs?",
+            "cards": [
+              {
+                "label": "Choose this",
+                "action": {
+                  "id": "69353b58-93cf-4065-99c0-6c0eb35340b8",
+                  "sku": "H16",
+                  "type": "choose_product",
+                  "expectedVersion": 0
+                },
+                "product": {
+                  "sku": "H16",
+                  "name": "12 inch Carbon Steel Hacksaw Blade",
+                  "unit": "piece",
+                  "brand": "Generic",
+                  "stock": 200,
+                  "aliases": [
+                    "12 inch Carbon Steel Hacksaw Blade",
+                    "வாள் பிளேடு"
+                  ],
+                  "version": 1,
+                  "category": "Cutting Tools",
+                  "familyId": "saw-blades",
+                  "imageUrl": "/demo-images/H16.jpg",
+                  "keywords": [
+                    "saw blade",
+                    "metal cutting"
+                  ],
+                  "pricePaise": 3000,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "12 inch"
+                  }
+                }
+              },
+              {
+                "label": "Choose this",
+                "action": {
+                  "id": "6109907f-6347-4fbb-95ac-80f48bbf6478",
+                  "sku": "H22",
+                  "type": "choose_product",
+                  "expectedVersion": 0
+                },
+                "product": {
+                  "sku": "H22",
+                  "name": "Wall Putty Blade Scraper",
+                  "unit": "piece",
+                  "brand": "Generic",
+                  "stock": 90,
+                  "aliases": [
+                    "Wall Putty Blade Scraper",
+                    "புட்டி கத்தி"
+                  ],
+                  "version": 1,
+                  "category": "Wall Decor",
+                  "familyId": "scrapers",
+                  "imageUrl": "/demo-images/H22.jpg",
+                  "keywords": [
+                    "wall blade",
+                    "paint scraper"
+                  ],
+                  "pricePaise": 6500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "4 inch"
+                  }
+                }
+              },
+              {
+                "label": "Choose this",
+                "action": {
+                  "id": "3b546c0f-c244-4333-ba8f-7624a2e513cf",
+                  "sku": "H14",
+                  "type": "choose_product",
+                  "expectedVersion": 0
+                },
+                "product": {
+                  "sku": "H14",
+                  "name": "Pro-Cut Cutting Wheel 4 inch",
+                  "unit": "piece",
+                  "brand": "Pro-Cut",
+                  "stock": 250,
+                  "aliases": [
+                    "Pro-Cut Cutting Wheel 4 inch",
+                    "கட்டிங் வீல் 4 இன்ச்"
+                  ],
+                  "version": 1,
+                  "category": "Cutting Tools",
+                  "familyId": "cutting-discs",
+                  "imageUrl": "/demo-images/H14.jpg",
+                  "keywords": [
+                    "grinding disc",
+                    "metal cutting disc"
+                  ],
+                  "pricePaise": 3500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "4 inch"
+                  }
+                },
+                "matchLabel": "Related option · please check"
+              }
+            ],
+            "buttons": [
+              {
+                "event": {
+                  "id": "3196b7e5-5941-4814-9c92-c40ee61d1c77",
+                  "type": "refine_discovery",
+                  "facet": "family",
+                  "value": "saw-blades",
+                  "memoryId": "30a82ee5-030a-4fc9-9f44-f00253f118a9"
+                },
+                "label": "Saw blades"
+              },
+              {
+                "event": {
+                  "id": "ac03ce27-00d7-4cff-90b0-463b479cd00e",
+                  "type": "refine_discovery",
+                  "facet": "family",
+                  "value": "scrapers",
+                  "memoryId": "30a82ee5-030a-4fc9-9f44-f00253f118a9"
+                },
+                "label": "Putty blades and scrapers"
+              },
+              {
+                "event": {
+                  "id": "eeb3e2e0-f2a5-4408-9a1d-e15c2096111f",
+                  "type": "refine_discovery",
+                  "facet": "family",
+                  "value": "cutting-discs",
+                  "memoryId": "30a82ee5-030a-4fc9-9f44-f00253f118a9"
+                },
+                "label": "Cutting wheels and discs"
+              }
+            ],
+            "version": 1,
+            "presentation": "carousel_preview",
+            "outboundMessages": 1
+          }
+        },
+        {
+          "id": "eeb3e2e0-f2a5-4408-9a1d-e15c2096111f",
+          "direction": "inbound",
+          "text": "Show cutting-discs options",
+          "status": "processed",
+          "createdAt": "2026-10-03T13:04:35.734Z"
+        },
+        {
+          "id": "42242c54-ece2-456a-82c2-bb3ce4f342f0",
+          "direction": "outbound",
+          "text": "Let’s check the item you mean. Which brand—Pro-Cut, Premium Industrial?",
+          "status": "sent",
+          "createdAt": "2026-10-03T13:04:35.772Z",
+          "rich": {
+            "kind": "product_choices",
+            "text": "Let’s check the item you mean. Which brand—Pro-Cut, Premium Industrial?",
+            "cards": [
+              {
+                "label": "Choose this",
+                "action": {
+                  "id": "48804cfa-8c97-4fb3-a752-46756fbe23de",
+                  "sku": "H14",
+                  "type": "choose_product",
+                  "expectedVersion": 0
+                },
+                "product": {
+                  "sku": "H14",
+                  "name": "Pro-Cut Cutting Wheel 4 inch",
+                  "unit": "piece",
+                  "brand": "Pro-Cut",
+                  "stock": 250,
+                  "aliases": [
+                    "Pro-Cut Cutting Wheel 4 inch",
+                    "கட்டிங் வீல் 4 இன்ச்"
+                  ],
+                  "version": 1,
+                  "category": "Cutting Tools",
+                  "familyId": "cutting-discs",
+                  "imageUrl": "/demo-images/H14.jpg",
+                  "keywords": [
+                    "grinding disc",
+                    "metal cutting disc"
+                  ],
+                  "pricePaise": 3500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "4 inch"
+                  }
+                }
+              },
+              {
+                "label": "Choose this",
+                "action": {
+                  "id": "59836d61-daf7-4970-a5e2-32966edf29dd",
+                  "sku": "H15",
+                  "type": "choose_product",
+                  "expectedVersion": 0
+                },
+                "product": {
+                  "sku": "H15",
+                  "name": "Premium Cutting Wheel 4 inch",
+                  "unit": "piece",
+                  "brand": "Premium Industrial",
+                  "stock": 150,
+                  "aliases": [
+                    "Premium Cutting Wheel 4 inch",
+                    "கட்டிங் வீல் 4 இன்ச்"
+                  ],
+                  "version": 1,
+                  "category": "Cutting Tools",
+                  "familyId": "cutting-discs",
+                  "imageUrl": "/demo-images/H15.jpg",
+                  "keywords": [
+                    "grinding disc",
+                    "metal cutting disc"
+                  ],
+                  "pricePaise": 5500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "4 inch"
+                  }
+                }
+              }
+            ],
+            "buttons": [
+              {
+                "event": {
+                  "id": "8b3de018-b465-4263-be2e-6477aab8291d",
+                  "type": "refine_discovery",
+                  "facet": "brand",
+                  "value": "Pro-Cut",
+                  "memoryId": "4ca779dc-84bd-4fc8-95da-2132ed3bd239"
+                },
+                "label": "Pro-Cut"
+              },
+              {
+                "event": {
+                  "id": "afb5a316-05e7-451a-8769-93a4b85361fb",
+                  "type": "refine_discovery",
+                  "facet": "brand",
+                  "value": "Premium Industrial",
+                  "memoryId": "4ca779dc-84bd-4fc8-95da-2132ed3bd239"
+                },
+                "label": "Premium Industrial"
+              }
+            ],
+            "version": 1,
+            "presentation": "carousel_preview",
+            "outboundMessages": 1
+          }
+        }
+      ],
+      "aiCalls": 1,
+      "lastFailure": null
+    },
+    {
+      "input": "Browser Record → Stop → Preview → Send voice",
+      "conversation": {
+        "version": 1,
+        "draft": [
+          {
+            "id": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+            "name": "1 inch PVC Pipe",
+            "query": "1 inch PVC Pipe",
+            "quantity": 2,
+            "discovery": {
+              "plan": {
+                "familyId": "pvc-pipes",
+                "keywords": [
+                  "1 inch PVC Pipe"
+                ],
+                "departmentId": "plumbing"
+              },
+              "query": "1 inch PVC Pipe",
+              "facets": [
+                {
+                  "key": "brand",
+                  "label": "brand",
+                  "values": [
+                    {
+                      "count": 1,
+                      "label": "Local Heavy",
+                      "value": "Local Heavy"
+                    },
+                    {
+                      "count": 1,
+                      "label": "Blueguard",
+                      "value": "Blueguard"
+                    }
+                  ]
+                }
+              ],
+              "products": [
+                {
+                  "sku": "H01",
+                  "name": "1 inch PVC Heavy Pipe Local",
+                  "unit": "piece",
+                  "brand": "Local Heavy",
+                  "stock": 120,
+                  "aliases": [
+                    "1 inch PVC Heavy Pipe Local",
+                    "1 இன்ச் பைப் லோக்கல்"
+                  ],
+                  "version": 1,
+                  "category": "Pipes & Fittings",
+                  "familyId": "pvc-pipes",
+                  "imageUrl": "/demo-images/H01.jpg",
+                  "pricePaise": 24500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "1 inch"
+                  }
+                },
+                {
+                  "sku": "H02",
+                  "name": "1 inch PVC Pipe Blueguard ISI",
+                  "unit": "piece",
+                  "brand": "Blueguard",
+                  "stock": 60,
+                  "aliases": [
+                    "1 inch PVC Pipe Blueguard ISI",
+                    "1 இன்ச் பைப்"
+                  ],
+                  "version": 1,
+                  "category": "Pipes & Fittings",
+                  "familyId": "pvc-pipes",
+                  "imageUrl": "/demo-images/H02.jpg",
+                  "pricePaise": 38000,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "1 inch"
+                  }
+                }
+              ],
+              "rankings": [
+                {
+                  "sku": "H01",
+                  "match": "keyword_match",
+                  "score": 102,
+                  "reason": "Matches the chosen product family and filters; check the photo and name"
+                },
+                {
+                  "sku": "H02",
+                  "match": "keyword_match",
+                  "score": 102,
+                  "reason": "Matches the chosen product family and filters; check the photo and name"
+                }
+              ],
+              "totalCount": 2,
+              "noExactMatch": false,
+              "retrievedCount": 2
+            },
+            "candidates": [
+              {
+                "sku": "H01",
+                "name": "1 inch PVC Heavy Pipe Local",
+                "unit": "piece",
+                "brand": "Local Heavy",
+                "stock": 120,
+                "aliases": [
+                  "1 inch PVC Heavy Pipe Local",
+                  "1 இன்ச் பைப் லோக்கல்"
+                ],
+                "version": 1,
+                "category": "Pipes & Fittings",
+                "familyId": "pvc-pipes",
+                "imageUrl": "/demo-images/H01.jpg",
+                "pricePaise": 24500,
+                "quantityStep": 1,
+                "specifications": {
+                  "size": "1 inch"
+                }
+              },
+              {
+                "sku": "H02",
+                "name": "1 inch PVC Pipe Blueguard ISI",
+                "unit": "piece",
+                "brand": "Blueguard",
+                "stock": 60,
+                "aliases": [
+                  "1 inch PVC Pipe Blueguard ISI",
+                  "1 இன்ச் பைப்"
+                ],
+                "version": 1,
+                "category": "Pipes & Fittings",
+                "familyId": "pvc-pipes",
+                "imageUrl": "/demo-images/H02.jpg",
+                "pricePaise": 38000,
+                "quantityStep": 1,
+                "specifications": {
+                  "size": "1 inch"
+                }
+              }
+            ],
+            "resolution": "needs_choice"
+          },
+          {
+            "id": "eb9a7b3f-a111-47f8-8c80-0c824dc0a9ba",
+            "sku": "H07",
+            "name": "PVC Solvent Gum 100ml",
+            "unit": "bottle",
+            "query": "PVC Solvent Gum",
+            "quantity": 5,
+            "discovery": {
+              "plan": {
+                "familyId": "solvent-cement",
+                "keywords": [
+                  "PVC Solvent Gum"
+                ],
+                "departmentId": "plumbing"
+              },
+              "query": "PVC Solvent Gum",
+              "facets": [],
+              "products": [
+                {
+                  "sku": "H07",
+                  "name": "PVC Solvent Gum 100ml",
+                  "unit": "bottle",
+                  "brand": "Pipelock",
+                  "stock": null,
+                  "aliases": [
+                    "PVC Solvent Gum 100ml",
+                    "பைப் பசை"
+                  ],
+                  "version": 1,
+                  "category": "Chemicals",
+                  "familyId": "solvent-cement",
+                  "imageUrl": "/demo-images/H07.jpg",
+                  "keywords": [
+                    "pipe glue",
+                    "pvc cement"
+                  ],
+                  "pricePaise": 8500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "100ml"
+                  }
+                }
+              ],
+              "rankings": [
+                {
+                  "sku": "H07",
+                  "match": "keyword_match",
+                  "score": 137,
+                  "reason": "Matches the chosen product family and filters; check the photo and name"
+                }
+              ],
+              "totalCount": 1,
+              "noExactMatch": false,
+              "retrievedCount": 1
+            },
+            "candidates": [
+              {
+                "sku": "H07",
+                "name": "PVC Solvent Gum 100ml",
+                "unit": "bottle",
+                "brand": "Pipelock",
+                "stock": null,
+                "aliases": [
+                  "PVC Solvent Gum 100ml",
+                  "பைப் பசை"
+                ],
+                "version": 1,
+                "category": "Chemicals",
+                "familyId": "solvent-cement",
+                "imageUrl": "/demo-images/H07.jpg",
+                "keywords": [
+                  "pipe glue",
+                  "pvc cement"
+                ],
+                "pricePaise": 8500,
+                "quantityStep": 1,
+                "specifications": {
+                  "size": "100ml"
+                }
+              }
+            ],
+            "pricePaise": 8500,
+            "resolution": "matched",
+            "productVersion": 1
+          }
+        ],
+        "pending": {
+          "id": "74dc5050-ff04-4ce1-a783-6cf115531dc5",
+          "kind": "products",
+          "groups": [
+            {
+              "lineId": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+              "products": [
+                {
+                  "sku": "H01",
+                  "name": "1 inch PVC Heavy Pipe Local",
+                  "unit": "piece",
+                  "brand": "Local Heavy",
+                  "stock": 120,
+                  "aliases": [
+                    "1 inch PVC Heavy Pipe Local",
+                    "1 இன்ச் பைப் லோக்கல்"
+                  ],
+                  "version": 1,
+                  "category": "Pipes & Fittings",
+                  "familyId": "pvc-pipes",
+                  "imageUrl": "/demo-images/H01.jpg",
+                  "pricePaise": 24500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "1 inch"
+                  }
+                },
+                {
+                  "sku": "H02",
+                  "name": "1 inch PVC Pipe Blueguard ISI",
+                  "unit": "piece",
+                  "brand": "Blueguard",
+                  "stock": 60,
+                  "aliases": [
+                    "1 inch PVC Pipe Blueguard ISI",
+                    "1 இன்ச் பைப்"
+                  ],
+                  "version": 1,
+                  "category": "Pipes & Fittings",
+                  "familyId": "pvc-pipes",
+                  "imageUrl": "/demo-images/H02.jpg",
+                  "pricePaise": 38000,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "1 inch"
+                  }
+                }
+              ],
+              "discovery": {
+                "plan": {
+                  "familyId": "pvc-pipes",
+                  "keywords": [
+                    "1 inch PVC Pipe"
+                  ],
+                  "departmentId": "plumbing"
+                },
+                "query": "1 inch PVC Pipe",
+                "facets": [
+                  {
+                    "key": "brand",
+                    "label": "brand",
+                    "values": [
+                      {
+                        "count": 1,
+                        "label": "Local Heavy",
+                        "value": "Local Heavy"
+                      },
+                      {
+                        "count": 1,
+                        "label": "Blueguard",
+                        "value": "Blueguard"
+                      }
+                    ]
+                  }
+                ],
+                "products": [
+                  {
+                    "sku": "H01",
+                    "name": "1 inch PVC Heavy Pipe Local",
+                    "unit": "piece",
+                    "brand": "Local Heavy",
+                    "stock": 120,
+                    "aliases": [
+                      "1 inch PVC Heavy Pipe Local",
+                      "1 இன்ச் பைப் லோக்கல்"
+                    ],
+                    "version": 1,
+                    "category": "Pipes & Fittings",
+                    "familyId": "pvc-pipes",
+                    "imageUrl": "/demo-images/H01.jpg",
+                    "pricePaise": 24500,
+                    "quantityStep": 1,
+                    "specifications": {
+                      "size": "1 inch"
+                    }
+                  },
+                  {
+                    "sku": "H02",
+                    "name": "1 inch PVC Pipe Blueguard ISI",
+                    "unit": "piece",
+                    "brand": "Blueguard",
+                    "stock": 60,
+                    "aliases": [
+                      "1 inch PVC Pipe Blueguard ISI",
+                      "1 இன்ச் பைப்"
+                    ],
+                    "version": 1,
+                    "category": "Pipes & Fittings",
+                    "familyId": "pvc-pipes",
+                    "imageUrl": "/demo-images/H02.jpg",
+                    "pricePaise": 38000,
+                    "quantityStep": 1,
+                    "specifications": {
+                      "size": "1 inch"
+                    }
+                  }
+                ],
+                "rankings": [
+                  {
+                    "sku": "H01",
+                    "match": "keyword_match",
+                    "score": 102,
+                    "reason": "Matches the chosen product family and filters; check the photo and name"
+                  },
+                  {
+                    "sku": "H02",
+                    "match": "keyword_match",
+                    "score": 102,
+                    "reason": "Matches the chosen product family and filters; check the photo and name"
+                  }
+                ],
+                "totalCount": 2,
+                "noExactMatch": false,
+                "retrievedCount": 2
+              }
+            },
+            {
+              "lineId": "eb9a7b3f-a111-47f8-8c80-0c824dc0a9ba",
+              "products": [
+                {
+                  "sku": "H07",
+                  "name": "PVC Solvent Gum 100ml",
+                  "unit": "bottle",
+                  "brand": "Pipelock",
+                  "stock": null,
+                  "aliases": [
+                    "PVC Solvent Gum 100ml",
+                    "பைப் பசை"
+                  ],
+                  "version": 1,
+                  "category": "Chemicals",
+                  "familyId": "solvent-cement",
+                  "imageUrl": "/demo-images/H07.jpg",
+                  "keywords": [
+                    "pipe glue",
+                    "pvc cement"
+                  ],
+                  "pricePaise": 8500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "100ml"
+                  }
+                }
+              ],
+              "discovery": {
+                "plan": {
+                  "familyId": "solvent-cement",
+                  "keywords": [
+                    "PVC Solvent Gum"
+                  ],
+                  "departmentId": "plumbing"
+                },
+                "query": "PVC Solvent Gum",
+                "facets": [],
+                "products": [
+                  {
+                    "sku": "H07",
+                    "name": "PVC Solvent Gum 100ml",
+                    "unit": "bottle",
+                    "brand": "Pipelock",
+                    "stock": null,
+                    "aliases": [
+                      "PVC Solvent Gum 100ml",
+                      "பைப் பசை"
+                    ],
+                    "version": 1,
+                    "category": "Chemicals",
+                    "familyId": "solvent-cement",
+                    "imageUrl": "/demo-images/H07.jpg",
+                    "keywords": [
+                      "pipe glue",
+                      "pvc cement"
+                    ],
+                    "pricePaise": 8500,
+                    "quantityStep": 1,
+                    "specifications": {
+                      "size": "100ml"
+                    }
+                  }
+                ],
+                "rankings": [
+                  {
+                    "sku": "H07",
+                    "match": "keyword_match",
+                    "score": 137,
+                    "reason": "Matches the chosen product family and filters; check the photo and name"
+                  }
+                ],
+                "totalCount": 1,
+                "noExactMatch": false,
+                "retrievedCount": 1
+              }
+            }
+          ],
+          "version": 1,
+          "expiresAt": "2026-10-03T13:19:56.230Z",
+          "remaining": 0
+        },
+        "fulfillment": "pickup",
+        "lastRequestId": null,
+        "catalogDiscovery": true,
+        "requireProductConfirmation": true
+      },
+      "reply": {
+        "kind": "product_choices",
+        "text": "Please check what I understood:\n1. 2 × 1 inch PVC Pipe: which brand did you mean—Local Heavy, Blueguard?\n2. 5 × PVC Solvent Gum: is this the product you meant?\n\nCheck the photos and names, then add the right items. If anything is wrong, send the correct name, size or type. Nothing is sent to the shop yet.",
+        "cards": [
+          {
+            "label": "Choose this option",
+            "action": {
+              "id": "6981e2b7-c1ed-4bce-a061-4c379284ba49",
+              "sku": "H01",
+              "type": "select_product",
+              "lineId": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+              "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+            },
+            "product": {
+              "sku": "H01",
+              "name": "1 inch PVC Heavy Pipe Local",
+              "unit": "piece",
+              "brand": "Local Heavy",
+              "stock": 120,
+              "aliases": [
+                "1 inch PVC Heavy Pipe Local",
+                "1 இன்ச் பைப் லோக்கல்"
+              ],
+              "version": 1,
+              "category": "Pipes & Fittings",
+              "familyId": "pvc-pipes",
+              "imageUrl": "/demo-images/H01.jpg",
+              "pricePaise": 24500,
+              "quantityStep": 1,
+              "specifications": {
+                "size": "1 inch"
+              }
+            },
+            "requestLabel": "Item 1: 1 inch PVC Pipe",
+            "quantityLabel": "Requested: 2 units"
+          },
+          {
+            "label": "Choose this option",
+            "action": {
+              "id": "f08365a8-935c-4d23-9f2c-d298bc506f2b",
+              "sku": "H02",
+              "type": "select_product",
+              "lineId": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+              "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+            },
+            "product": {
+              "sku": "H02",
+              "name": "1 inch PVC Pipe Blueguard ISI",
+              "unit": "piece",
+              "brand": "Blueguard",
+              "stock": 60,
+              "aliases": [
+                "1 inch PVC Pipe Blueguard ISI",
+                "1 இன்ச் பைப்"
+              ],
+              "version": 1,
+              "category": "Pipes & Fittings",
+              "familyId": "pvc-pipes",
+              "imageUrl": "/demo-images/H02.jpg",
+              "pricePaise": 38000,
+              "quantityStep": 1,
+              "specifications": {
+                "size": "1 inch"
+              }
+            },
+            "requestLabel": "Item 1: 1 inch PVC Pipe",
+            "quantityLabel": "Requested: 2 units"
+          },
+          {
+            "label": "Add this item",
+            "action": {
+              "id": "3ad9ce93-2736-4494-9a6e-eaff3bd70284",
+              "sku": "H07",
+              "type": "select_product",
+              "lineId": "eb9a7b3f-a111-47f8-8c80-0c824dc0a9ba",
+              "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+            },
+            "product": {
+              "sku": "H07",
+              "name": "PVC Solvent Gum 100ml",
+              "unit": "bottle",
+              "brand": "Pipelock",
+              "stock": null,
+              "aliases": [
+                "PVC Solvent Gum 100ml",
+                "பைப் பசை"
+              ],
+              "version": 1,
+              "category": "Chemicals",
+              "familyId": "solvent-cement",
+              "imageUrl": "/demo-images/H07.jpg",
+              "keywords": [
+                "pipe glue",
+                "pvc cement"
+              ],
+              "pricePaise": 8500,
+              "quantityStep": 1,
+              "specifications": {
+                "size": "100ml"
+              }
+            },
+            "matchLabel": "Suggested product",
+            "requestLabel": "Item 2: PVC Solvent Gum",
+            "quantityLabel": "Requested: 5 bottle"
+          }
+        ],
+        "buttons": [
+          {
+            "event": {
+              "id": "8a9da5e7-5eb9-4b7e-9330-eae0079541ff",
+              "type": "refine_search",
+              "facet": "brand",
+              "value": "Local Heavy",
+              "lineId": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+              "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+            },
+            "label": "Local Heavy"
+          },
+          {
+            "event": {
+              "id": "8966680c-0a9d-4b4f-9253-aad7f0e421f3",
+              "type": "refine_search",
+              "facet": "brand",
+              "value": "Blueguard",
+              "lineId": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+              "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+            },
+            "label": "Blueguard"
+          }
+        ],
+        "version": 1,
+        "presentation": "carousel_preview",
+        "outboundMessages": 1,
+        "remainingChoices": 0
+      },
+      "messages": [
+        {
+          "id": "df7a3d81-cbfa-4995-bc52-1f4529c60a36",
+          "direction": "inbound",
+          "text": "I need two 1-inch PVC pipes and five bottles of solvent gum.",
+          "status": "processed",
+          "createdAt": "2026-10-03T13:04:52.666Z",
+          "voice": {
+            "mediaId": "df7a3d81-cbfa-4995-bc52-1f4529c60a36",
+            "durationSeconds": 7.2
+          }
+        },
+        {
+          "id": "8bba6d30-3545-4aac-a605-02cb719660ff",
+          "direction": "outbound",
+          "text": "Please check what I understood:\n1. 2 × 1 inch PVC Pipe: which brand did you mean—Local Heavy, Blueguard?\n2. 5 × PVC Solvent Gum: is this the product you meant?\n\nCheck the photos and names, then add the right items. If anything is wrong, send the correct name, size or type. Nothing is sent to the shop yet.",
+          "status": "sent",
+          "createdAt": "2026-10-03T13:04:56.197Z",
+          "rich": {
+            "kind": "product_choices",
+            "text": "Please check what I understood:\n1. 2 × 1 inch PVC Pipe: which brand did you mean—Local Heavy, Blueguard?\n2. 5 × PVC Solvent Gum: is this the product you meant?\n\nCheck the photos and names, then add the right items. If anything is wrong, send the correct name, size or type. Nothing is sent to the shop yet.",
+            "cards": [
+              {
+                "label": "Choose this option",
+                "action": {
+                  "id": "6981e2b7-c1ed-4bce-a061-4c379284ba49",
+                  "sku": "H01",
+                  "type": "select_product",
+                  "lineId": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+                  "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+                },
+                "product": {
+                  "sku": "H01",
+                  "name": "1 inch PVC Heavy Pipe Local",
+                  "unit": "piece",
+                  "brand": "Local Heavy",
+                  "stock": 120,
+                  "aliases": [
+                    "1 inch PVC Heavy Pipe Local",
+                    "1 இன்ச் பைப் லோக்கல்"
+                  ],
+                  "version": 1,
+                  "category": "Pipes & Fittings",
+                  "familyId": "pvc-pipes",
+                  "imageUrl": "/demo-images/H01.jpg",
+                  "pricePaise": 24500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "1 inch"
+                  }
+                },
+                "requestLabel": "Item 1: 1 inch PVC Pipe",
+                "quantityLabel": "Requested: 2 units"
+              },
+              {
+                "label": "Choose this option",
+                "action": {
+                  "id": "f08365a8-935c-4d23-9f2c-d298bc506f2b",
+                  "sku": "H02",
+                  "type": "select_product",
+                  "lineId": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+                  "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+                },
+                "product": {
+                  "sku": "H02",
+                  "name": "1 inch PVC Pipe Blueguard ISI",
+                  "unit": "piece",
+                  "brand": "Blueguard",
+                  "stock": 60,
+                  "aliases": [
+                    "1 inch PVC Pipe Blueguard ISI",
+                    "1 இன்ச் பைப்"
+                  ],
+                  "version": 1,
+                  "category": "Pipes & Fittings",
+                  "familyId": "pvc-pipes",
+                  "imageUrl": "/demo-images/H02.jpg",
+                  "pricePaise": 38000,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "1 inch"
+                  }
+                },
+                "requestLabel": "Item 1: 1 inch PVC Pipe",
+                "quantityLabel": "Requested: 2 units"
+              },
+              {
+                "label": "Add this item",
+                "action": {
+                  "id": "3ad9ce93-2736-4494-9a6e-eaff3bd70284",
+                  "sku": "H07",
+                  "type": "select_product",
+                  "lineId": "eb9a7b3f-a111-47f8-8c80-0c824dc0a9ba",
+                  "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+                },
+                "product": {
+                  "sku": "H07",
+                  "name": "PVC Solvent Gum 100ml",
+                  "unit": "bottle",
+                  "brand": "Pipelock",
+                  "stock": null,
+                  "aliases": [
+                    "PVC Solvent Gum 100ml",
+                    "பைப் பசை"
+                  ],
+                  "version": 1,
+                  "category": "Chemicals",
+                  "familyId": "solvent-cement",
+                  "imageUrl": "/demo-images/H07.jpg",
+                  "keywords": [
+                    "pipe glue",
+                    "pvc cement"
+                  ],
+                  "pricePaise": 8500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "100ml"
+                  }
+                },
+                "matchLabel": "Suggested product",
+                "requestLabel": "Item 2: PVC Solvent Gum",
+                "quantityLabel": "Requested: 5 bottle"
+              }
+            ],
+            "buttons": [
+              {
+                "event": {
+                  "id": "8a9da5e7-5eb9-4b7e-9330-eae0079541ff",
+                  "type": "refine_search",
+                  "facet": "brand",
+                  "value": "Local Heavy",
+                  "lineId": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+                  "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+                },
+                "label": "Local Heavy"
+              },
+              {
+                "event": {
+                  "id": "8966680c-0a9d-4b4f-9253-aad7f0e421f3",
+                  "type": "refine_search",
+                  "facet": "brand",
+                  "value": "Blueguard",
+                  "lineId": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+                  "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+                },
+                "label": "Blueguard"
+              }
+            ],
+            "version": 1,
+            "presentation": "carousel_preview",
+            "outboundMessages": 1,
+            "remainingChoices": 0
+          }
+        }
+      ],
+      "aiCalls": 1,
+      "lastFailure": null
+    },
+    {
+      "input": "Accept actual photo H02",
+      "conversation": {
+        "version": 2,
+        "draft": [
+          {
+            "id": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+            "sku": "H02",
+            "name": "1 inch PVC Pipe Blueguard ISI",
+            "unit": "piece",
+            "query": "1 inch PVC Pipe",
+            "quantity": 2,
+            "candidates": [
+              {
+                "sku": "H02",
+                "name": "1 inch PVC Pipe Blueguard ISI",
+                "unit": "piece",
+                "brand": "Blueguard",
+                "stock": 60,
+                "aliases": [
+                  "1 inch PVC Pipe Blueguard ISI",
+                  "1 இன்ச் பைப்"
+                ],
+                "version": 1,
+                "category": "Pipes & Fittings",
+                "familyId": "pvc-pipes",
+                "imageUrl": "/demo-images/H02.jpg",
+                "pricePaise": 38000,
+                "quantityStep": 1,
+                "specifications": {
+                  "size": "1 inch"
+                }
+              }
+            ],
+            "pricePaise": 38000,
+            "resolution": "matched",
+            "productVersion": 1,
+            "productConfirmation": {
+              "sku": "H02",
+              "version": 1,
+              "identityHash": "6e62991ef3c018747b755ee806e9e6d4243d41432a8991da89c3fd240ae7ee4c"
+            }
+          },
+          {
+            "id": "eb9a7b3f-a111-47f8-8c80-0c824dc0a9ba",
+            "sku": "H07",
+            "name": "PVC Solvent Gum 100ml",
+            "unit": "bottle",
+            "query": "PVC Solvent Gum",
+            "quantity": 5,
+            "discovery": {
+              "plan": {
+                "familyId": "solvent-cement",
+                "keywords": [
+                  "PVC Solvent Gum"
+                ],
+                "departmentId": "plumbing"
+              },
+              "query": "PVC Solvent Gum",
+              "facets": [],
+              "products": [
+                {
+                  "sku": "H07",
+                  "name": "PVC Solvent Gum 100ml",
+                  "unit": "bottle",
+                  "brand": "Pipelock",
+                  "stock": null,
+                  "aliases": [
+                    "PVC Solvent Gum 100ml",
+                    "பைப் பசை"
+                  ],
+                  "version": 1,
+                  "category": "Chemicals",
+                  "familyId": "solvent-cement",
+                  "imageUrl": "/demo-images/H07.jpg",
+                  "keywords": [
+                    "pipe glue",
+                    "pvc cement"
+                  ],
+                  "pricePaise": 8500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "100ml"
+                  }
+                }
+              ],
+              "rankings": [
+                {
+                  "sku": "H07",
+                  "match": "keyword_match",
+                  "score": 137,
+                  "reason": "Matches the chosen product family and filters; check the photo and name"
+                }
+              ],
+              "totalCount": 1,
+              "noExactMatch": false,
+              "retrievedCount": 1
+            },
+            "candidates": [
+              {
+                "sku": "H07",
+                "name": "PVC Solvent Gum 100ml",
+                "unit": "bottle",
+                "brand": "Pipelock",
+                "stock": null,
+                "aliases": [
+                  "PVC Solvent Gum 100ml",
+                  "பைப் பசை"
+                ],
+                "version": 1,
+                "category": "Chemicals",
+                "familyId": "solvent-cement",
+                "imageUrl": "/demo-images/H07.jpg",
+                "keywords": [
+                  "pipe glue",
+                  "pvc cement"
+                ],
+                "pricePaise": 8500,
+                "quantityStep": 1,
+                "specifications": {
+                  "size": "100ml"
+                }
+              }
+            ],
+            "pricePaise": 8500,
+            "resolution": "matched",
+            "productVersion": 1
+          }
+        ],
+        "pending": {
+          "id": "39ce7a6e-bbfb-46b2-8f23-7e20f618d611",
+          "kind": "products",
+          "groups": [
+            {
+              "lineId": "eb9a7b3f-a111-47f8-8c80-0c824dc0a9ba",
+              "products": [
+                {
+                  "sku": "H07",
+                  "name": "PVC Solvent Gum 100ml",
+                  "unit": "bottle",
+                  "brand": "Pipelock",
+                  "stock": null,
+                  "aliases": [
+                    "PVC Solvent Gum 100ml",
+                    "பைப் பசை"
+                  ],
+                  "version": 1,
+                  "category": "Chemicals",
+                  "familyId": "solvent-cement",
+                  "imageUrl": "/demo-images/H07.jpg",
+                  "keywords": [
+                    "pipe glue",
+                    "pvc cement"
+                  ],
+                  "pricePaise": 8500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "100ml"
+                  }
+                }
+              ],
+              "discovery": {
+                "plan": {
+                  "familyId": "solvent-cement",
+                  "keywords": [
+                    "PVC Solvent Gum"
+                  ],
+                  "departmentId": "plumbing"
+                },
+                "query": "PVC Solvent Gum",
+                "facets": [],
+                "products": [
+                  {
+                    "sku": "H07",
+                    "name": "PVC Solvent Gum 100ml",
+                    "unit": "bottle",
+                    "brand": "Pipelock",
+                    "stock": null,
+                    "aliases": [
+                      "PVC Solvent Gum 100ml",
+                      "பைப் பசை"
+                    ],
+                    "version": 1,
+                    "category": "Chemicals",
+                    "familyId": "solvent-cement",
+                    "imageUrl": "/demo-images/H07.jpg",
+                    "keywords": [
+                      "pipe glue",
+                      "pvc cement"
+                    ],
+                    "pricePaise": 8500,
+                    "quantityStep": 1,
+                    "specifications": {
+                      "size": "100ml"
+                    }
+                  }
+                ],
+                "rankings": [
+                  {
+                    "sku": "H07",
+                    "match": "keyword_match",
+                    "score": 137,
+                    "reason": "Matches the chosen product family and filters; check the photo and name"
+                  }
+                ],
+                "totalCount": 1,
+                "noExactMatch": false,
+                "retrievedCount": 1
+              }
+            }
+          ],
+          "version": 2,
+          "expiresAt": "2026-10-03T13:19:56.837Z",
+          "remaining": 0
+        },
+        "fulfillment": "pickup",
+        "lastRequestId": null,
+        "catalogDiscovery": true,
+        "requireProductConfirmation": true
+      },
+      "reply": {
+        "kind": "product_choices",
+        "text": "Please check what I understood:\n2. 5 × PVC Solvent Gum: is this the product you meant?\n\nCheck the photos and names, then add the right items. If anything is wrong, send the correct name, size or type. Nothing is sent to the shop yet.",
+        "cards": [
+          {
+            "label": "Add this item",
+            "action": {
+              "id": "332206f8-af1b-4832-a2e3-2df2d9e564e4",
+              "sku": "H07",
+              "type": "select_product",
+              "lineId": "eb9a7b3f-a111-47f8-8c80-0c824dc0a9ba",
+              "batchId": "39ce7a6e-bbfb-46b2-8f23-7e20f618d611"
+            },
+            "product": {
+              "sku": "H07",
+              "name": "PVC Solvent Gum 100ml",
+              "unit": "bottle",
+              "brand": "Pipelock",
+              "stock": null,
+              "aliases": [
+                "PVC Solvent Gum 100ml",
+                "பைப் பசை"
+              ],
+              "version": 1,
+              "category": "Chemicals",
+              "familyId": "solvent-cement",
+              "imageUrl": "/demo-images/H07.jpg",
+              "keywords": [
+                "pipe glue",
+                "pvc cement"
+              ],
+              "pricePaise": 8500,
+              "quantityStep": 1,
+              "specifications": {
+                "size": "100ml"
+              }
+            },
+            "matchLabel": "Suggested product",
+            "requestLabel": "Item 2: PVC Solvent Gum",
+            "quantityLabel": "Requested: 5 bottle"
+          }
+        ],
+        "version": 1,
+        "presentation": "single_product",
+        "outboundMessages": 1,
+        "remainingChoices": 0
+      },
+      "messages": [
+        {
+          "id": "df7a3d81-cbfa-4995-bc52-1f4529c60a36",
+          "direction": "inbound",
+          "text": "I need two 1-inch PVC pipes and five bottles of solvent gum.",
+          "status": "processed",
+          "createdAt": "2026-10-03T13:04:52.666Z",
+          "voice": {
+            "mediaId": "df7a3d81-cbfa-4995-bc52-1f4529c60a36",
+            "durationSeconds": 7.2
+          }
+        },
+        {
+          "id": "8bba6d30-3545-4aac-a605-02cb719660ff",
+          "direction": "outbound",
+          "text": "Please check what I understood:\n1. 2 × 1 inch PVC Pipe: which brand did you mean—Local Heavy, Blueguard?\n2. 5 × PVC Solvent Gum: is this the product you meant?\n\nCheck the photos and names, then add the right items. If anything is wrong, send the correct name, size or type. Nothing is sent to the shop yet.",
+          "status": "sent",
+          "createdAt": "2026-10-03T13:04:56.197Z",
+          "rich": {
+            "kind": "product_choices",
+            "text": "Please check what I understood:\n1. 2 × 1 inch PVC Pipe: which brand did you mean—Local Heavy, Blueguard?\n2. 5 × PVC Solvent Gum: is this the product you meant?\n\nCheck the photos and names, then add the right items. If anything is wrong, send the correct name, size or type. Nothing is sent to the shop yet.",
+            "cards": [
+              {
+                "label": "Choose this option",
+                "action": {
+                  "id": "6981e2b7-c1ed-4bce-a061-4c379284ba49",
+                  "sku": "H01",
+                  "type": "select_product",
+                  "lineId": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+                  "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+                },
+                "product": {
+                  "sku": "H01",
+                  "name": "1 inch PVC Heavy Pipe Local",
+                  "unit": "piece",
+                  "brand": "Local Heavy",
+                  "stock": 120,
+                  "aliases": [
+                    "1 inch PVC Heavy Pipe Local",
+                    "1 இன்ச் பைப் லோக்கல்"
+                  ],
+                  "version": 1,
+                  "category": "Pipes & Fittings",
+                  "familyId": "pvc-pipes",
+                  "imageUrl": "/demo-images/H01.jpg",
+                  "pricePaise": 24500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "1 inch"
+                  }
+                },
+                "requestLabel": "Item 1: 1 inch PVC Pipe",
+                "quantityLabel": "Requested: 2 units"
+              },
+              {
+                "label": "Choose this option",
+                "action": {
+                  "id": "f08365a8-935c-4d23-9f2c-d298bc506f2b",
+                  "sku": "H02",
+                  "type": "select_product",
+                  "lineId": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+                  "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+                },
+                "product": {
+                  "sku": "H02",
+                  "name": "1 inch PVC Pipe Blueguard ISI",
+                  "unit": "piece",
+                  "brand": "Blueguard",
+                  "stock": 60,
+                  "aliases": [
+                    "1 inch PVC Pipe Blueguard ISI",
+                    "1 இன்ச் பைப்"
+                  ],
+                  "version": 1,
+                  "category": "Pipes & Fittings",
+                  "familyId": "pvc-pipes",
+                  "imageUrl": "/demo-images/H02.jpg",
+                  "pricePaise": 38000,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "1 inch"
+                  }
+                },
+                "requestLabel": "Item 1: 1 inch PVC Pipe",
+                "quantityLabel": "Requested: 2 units"
+              },
+              {
+                "label": "Add this item",
+                "action": {
+                  "id": "3ad9ce93-2736-4494-9a6e-eaff3bd70284",
+                  "sku": "H07",
+                  "type": "select_product",
+                  "lineId": "eb9a7b3f-a111-47f8-8c80-0c824dc0a9ba",
+                  "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+                },
+                "product": {
+                  "sku": "H07",
+                  "name": "PVC Solvent Gum 100ml",
+                  "unit": "bottle",
+                  "brand": "Pipelock",
+                  "stock": null,
+                  "aliases": [
+                    "PVC Solvent Gum 100ml",
+                    "பைப் பசை"
+                  ],
+                  "version": 1,
+                  "category": "Chemicals",
+                  "familyId": "solvent-cement",
+                  "imageUrl": "/demo-images/H07.jpg",
+                  "keywords": [
+                    "pipe glue",
+                    "pvc cement"
+                  ],
+                  "pricePaise": 8500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "100ml"
+                  }
+                },
+                "matchLabel": "Suggested product",
+                "requestLabel": "Item 2: PVC Solvent Gum",
+                "quantityLabel": "Requested: 5 bottle"
+              }
+            ],
+            "buttons": [
+              {
+                "event": {
+                  "id": "8a9da5e7-5eb9-4b7e-9330-eae0079541ff",
+                  "type": "refine_search",
+                  "facet": "brand",
+                  "value": "Local Heavy",
+                  "lineId": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+                  "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+                },
+                "label": "Local Heavy"
+              },
+              {
+                "event": {
+                  "id": "8966680c-0a9d-4b4f-9253-aad7f0e421f3",
+                  "type": "refine_search",
+                  "facet": "brand",
+                  "value": "Blueguard",
+                  "lineId": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+                  "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+                },
+                "label": "Blueguard"
+              }
+            ],
+            "version": 1,
+            "presentation": "carousel_preview",
+            "outboundMessages": 1,
+            "remainingChoices": 0
+          }
+        },
+        {
+          "id": "f08365a8-935c-4d23-9f2c-d298bc506f2b",
+          "direction": "inbound",
+          "text": "Yes, 1 inch PVC Pipe Blueguard ISI is the item I meant",
+          "status": "processed",
+          "createdAt": "2026-10-03T13:04:56.816Z"
+        },
+        {
+          "id": "4415f615-bdc3-4217-a832-f55c175ac92f",
+          "direction": "outbound",
+          "text": "Please check what I understood:\n2. 5 × PVC Solvent Gum: is this the product you meant?\n\nCheck the photos and names, then add the right items. If anything is wrong, send the correct name, size or type. Nothing is sent to the shop yet.",
+          "status": "sent",
+          "createdAt": "2026-10-03T13:04:56.823Z",
+          "rich": {
+            "kind": "product_choices",
+            "text": "Please check what I understood:\n2. 5 × PVC Solvent Gum: is this the product you meant?\n\nCheck the photos and names, then add the right items. If anything is wrong, send the correct name, size or type. Nothing is sent to the shop yet.",
+            "cards": [
+              {
+                "label": "Add this item",
+                "action": {
+                  "id": "332206f8-af1b-4832-a2e3-2df2d9e564e4",
+                  "sku": "H07",
+                  "type": "select_product",
+                  "lineId": "eb9a7b3f-a111-47f8-8c80-0c824dc0a9ba",
+                  "batchId": "39ce7a6e-bbfb-46b2-8f23-7e20f618d611"
+                },
+                "product": {
+                  "sku": "H07",
+                  "name": "PVC Solvent Gum 100ml",
+                  "unit": "bottle",
+                  "brand": "Pipelock",
+                  "stock": null,
+                  "aliases": [
+                    "PVC Solvent Gum 100ml",
+                    "பைப் பசை"
+                  ],
+                  "version": 1,
+                  "category": "Chemicals",
+                  "familyId": "solvent-cement",
+                  "imageUrl": "/demo-images/H07.jpg",
+                  "keywords": [
+                    "pipe glue",
+                    "pvc cement"
+                  ],
+                  "pricePaise": 8500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "100ml"
+                  }
+                },
+                "matchLabel": "Suggested product",
+                "requestLabel": "Item 2: PVC Solvent Gum",
+                "quantityLabel": "Requested: 5 bottle"
+              }
+            ],
+            "version": 1,
+            "presentation": "single_product",
+            "outboundMessages": 1,
+            "remainingChoices": 0
+          }
+        }
+      ],
+      "aiCalls": 1,
+      "lastFailure": null
+    },
+    {
+      "input": "Accept actual photo H07",
+      "conversation": {
+        "version": 3,
+        "draft": [
+          {
+            "id": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+            "sku": "H02",
+            "name": "1 inch PVC Pipe Blueguard ISI",
+            "unit": "piece",
+            "query": "1 inch PVC Pipe",
+            "quantity": 2,
+            "candidates": [
+              {
+                "sku": "H02",
+                "name": "1 inch PVC Pipe Blueguard ISI",
+                "unit": "piece",
+                "brand": "Blueguard",
+                "stock": 60,
+                "aliases": [
+                  "1 inch PVC Pipe Blueguard ISI",
+                  "1 இன்ச் பைப்"
+                ],
+                "version": 1,
+                "category": "Pipes & Fittings",
+                "familyId": "pvc-pipes",
+                "imageUrl": "/demo-images/H02.jpg",
+                "pricePaise": 38000,
+                "quantityStep": 1,
+                "specifications": {
+                  "size": "1 inch"
+                }
+              }
+            ],
+            "pricePaise": 38000,
+            "resolution": "matched",
+            "productVersion": 1,
+            "productConfirmation": {
+              "sku": "H02",
+              "version": 1,
+              "identityHash": "6e62991ef3c018747b755ee806e9e6d4243d41432a8991da89c3fd240ae7ee4c"
+            }
+          },
+          {
+            "id": "eb9a7b3f-a111-47f8-8c80-0c824dc0a9ba",
+            "sku": "H07",
+            "name": "PVC Solvent Gum 100ml",
+            "unit": "bottle",
+            "query": "PVC Solvent Gum",
+            "quantity": 5,
+            "candidates": [
+              {
+                "sku": "H07",
+                "name": "PVC Solvent Gum 100ml",
+                "unit": "bottle",
+                "brand": "Pipelock",
+                "stock": null,
+                "aliases": [
+                  "PVC Solvent Gum 100ml",
+                  "பைப் பசை"
+                ],
+                "version": 1,
+                "category": "Chemicals",
+                "familyId": "solvent-cement",
+                "imageUrl": "/demo-images/H07.jpg",
+                "keywords": [
+                  "pipe glue",
+                  "pvc cement"
+                ],
+                "pricePaise": 8500,
+                "quantityStep": 1,
+                "specifications": {
+                  "size": "100ml"
+                }
+              }
+            ],
+            "pricePaise": 8500,
+            "resolution": "matched",
+            "productVersion": 1,
+            "productConfirmation": {
+              "sku": "H07",
+              "version": 1,
+              "identityHash": "42e5c08f52ac08cc832450b7b68abf57a903bd003f22de6fab79354fc03e67c3"
+            }
+          }
+        ],
+        "pending": {
+          "id": "a3315be1-abcd-40ba-8149-86c062be9951",
+          "hash": "8cdd4fff1dcaf278b65dad5bfed629ec1498fd5e96b695544f175198e93dcac9",
+          "kind": "review",
+          "lines": [
+            {
+              "id": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+              "sku": "H02",
+              "name": "1 inch PVC Pipe Blueguard ISI",
+              "unit": "piece",
+              "query": "1 inch PVC Pipe",
+              "quantity": 2,
+              "candidates": [
+                {
+                  "sku": "H02",
+                  "name": "1 inch PVC Pipe Blueguard ISI",
+                  "unit": "piece",
+                  "brand": "Blueguard",
+                  "stock": 60,
+                  "aliases": [
+                    "1 inch PVC Pipe Blueguard ISI",
+                    "1 இன்ச் பைப்"
+                  ],
+                  "version": 1,
+                  "category": "Pipes & Fittings",
+                  "familyId": "pvc-pipes",
+                  "imageUrl": "/demo-images/H02.jpg",
+                  "pricePaise": 38000,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "1 inch"
+                  }
+                }
+              ],
+              "pricePaise": 38000,
+              "resolution": "matched",
+              "productVersion": 1,
+              "productConfirmation": {
+                "sku": "H02",
+                "version": 1,
+                "identityHash": "6e62991ef3c018747b755ee806e9e6d4243d41432a8991da89c3fd240ae7ee4c"
+              }
+            },
+            {
+              "id": "eb9a7b3f-a111-47f8-8c80-0c824dc0a9ba",
+              "sku": "H07",
+              "name": "PVC Solvent Gum 100ml",
+              "unit": "bottle",
+              "query": "PVC Solvent Gum",
+              "quantity": 5,
+              "candidates": [
+                {
+                  "sku": "H07",
+                  "name": "PVC Solvent Gum 100ml",
+                  "unit": "bottle",
+                  "brand": "Pipelock",
+                  "stock": null,
+                  "aliases": [
+                    "PVC Solvent Gum 100ml",
+                    "பைப் பசை"
+                  ],
+                  "version": 1,
+                  "category": "Chemicals",
+                  "familyId": "solvent-cement",
+                  "imageUrl": "/demo-images/H07.jpg",
+                  "keywords": [
+                    "pipe glue",
+                    "pvc cement"
+                  ],
+                  "pricePaise": 8500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "100ml"
+                  }
+                }
+              ],
+              "pricePaise": 8500,
+              "resolution": "matched",
+              "productVersion": 1,
+              "productConfirmation": {
+                "sku": "H07",
+                "version": 1,
+                "identityHash": "42e5c08f52ac08cc832450b7b68abf57a903bd003f22de6fab79354fc03e67c3"
+              }
+            }
+          ],
+          "version": 3,
+          "expiresAt": "2026-10-03T13:19:57.361Z",
+          "totalPaise": 118500,
+          "fulfillment": "pickup"
+        },
+        "fulfillment": "pickup",
+        "lastRequestId": null,
+        "catalogDiscovery": true,
+        "requireProductConfirmation": true
+      },
+      "reply": {
+        "kind": "order_review",
+        "text": "Here’s your list:\n1. 2 × 1 inch PVC Pipe Blueguard ISI — ₹760.00\n2. 5 × PVC Solvent Gum 100ml — ₹425.00\n\nTotal: ₹1,185.00 for pickup. Shall I send this request to the shop? They’ll confirm availability before it’s ready.",
+        "cards": [
+          {
+            "label": "Product checked",
+            "product": {
+              "sku": "H02",
+              "name": "1 inch PVC Pipe Blueguard ISI",
+              "unit": "piece",
+              "brand": "Blueguard",
+              "stock": 60,
+              "aliases": [
+                "1 inch PVC Pipe Blueguard ISI",
+                "1 இன்ச் பைப்"
+              ],
+              "version": 1,
+              "category": "Pipes & Fittings",
+              "familyId": "pvc-pipes",
+              "imageUrl": "/demo-images/H02.jpg",
+              "pricePaise": 38000,
+              "quantityStep": 1,
+              "specifications": {
+                "size": "1 inch"
+              }
+            },
+            "requestLabel": "1 inch PVC Pipe Blueguard ISI",
+            "quantityLabel": "2 pieces"
+          },
+          {
+            "label": "Product checked",
+            "product": {
+              "sku": "H07",
+              "name": "PVC Solvent Gum 100ml",
+              "unit": "bottle",
+              "brand": "Pipelock",
+              "stock": null,
+              "aliases": [
+                "PVC Solvent Gum 100ml",
+                "பைப் பசை"
+              ],
+              "version": 1,
+              "category": "Chemicals",
+              "familyId": "solvent-cement",
+              "imageUrl": "/demo-images/H07.jpg",
+              "keywords": [
+                "pipe glue",
+                "pvc cement"
+              ],
+              "pricePaise": 8500,
+              "quantityStep": 1,
+              "specifications": {
+                "size": "100ml"
+              }
+            },
+            "requestLabel": "PVC Solvent Gum 100ml",
+            "quantityLabel": "5 bottles"
+          }
+        ],
+        "buttons": [
+          {
+            "event": {
+              "id": "1e899587-b0cd-40fc-b5be-a348e0864bfd",
+              "type": "confirm",
+              "reviewId": "a3315be1-abcd-40ba-8149-86c062be9951"
+            },
+            "label": "Confirm request"
+          }
+        ],
+        "version": 1,
+        "presentation": "carousel_preview",
+        "outboundMessages": 1
+      },
+      "messages": [
+        {
+          "id": "df7a3d81-cbfa-4995-bc52-1f4529c60a36",
+          "direction": "inbound",
+          "text": "I need two 1-inch PVC pipes and five bottles of solvent gum.",
+          "status": "processed",
+          "createdAt": "2026-10-03T13:04:52.666Z",
+          "voice": {
+            "mediaId": "df7a3d81-cbfa-4995-bc52-1f4529c60a36",
+            "durationSeconds": 7.2
+          }
+        },
+        {
+          "id": "8bba6d30-3545-4aac-a605-02cb719660ff",
+          "direction": "outbound",
+          "text": "Please check what I understood:\n1. 2 × 1 inch PVC Pipe: which brand did you mean—Local Heavy, Blueguard?\n2. 5 × PVC Solvent Gum: is this the product you meant?\n\nCheck the photos and names, then add the right items. If anything is wrong, send the correct name, size or type. Nothing is sent to the shop yet.",
+          "status": "sent",
+          "createdAt": "2026-10-03T13:04:56.197Z",
+          "rich": {
+            "kind": "product_choices",
+            "text": "Please check what I understood:\n1. 2 × 1 inch PVC Pipe: which brand did you mean—Local Heavy, Blueguard?\n2. 5 × PVC Solvent Gum: is this the product you meant?\n\nCheck the photos and names, then add the right items. If anything is wrong, send the correct name, size or type. Nothing is sent to the shop yet.",
+            "cards": [
+              {
+                "label": "Choose this option",
+                "action": {
+                  "id": "6981e2b7-c1ed-4bce-a061-4c379284ba49",
+                  "sku": "H01",
+                  "type": "select_product",
+                  "lineId": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+                  "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+                },
+                "product": {
+                  "sku": "H01",
+                  "name": "1 inch PVC Heavy Pipe Local",
+                  "unit": "piece",
+                  "brand": "Local Heavy",
+                  "stock": 120,
+                  "aliases": [
+                    "1 inch PVC Heavy Pipe Local",
+                    "1 இன்ச் பைப் லோக்கல்"
+                  ],
+                  "version": 1,
+                  "category": "Pipes & Fittings",
+                  "familyId": "pvc-pipes",
+                  "imageUrl": "/demo-images/H01.jpg",
+                  "pricePaise": 24500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "1 inch"
+                  }
+                },
+                "requestLabel": "Item 1: 1 inch PVC Pipe",
+                "quantityLabel": "Requested: 2 units"
+              },
+              {
+                "label": "Choose this option",
+                "action": {
+                  "id": "f08365a8-935c-4d23-9f2c-d298bc506f2b",
+                  "sku": "H02",
+                  "type": "select_product",
+                  "lineId": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+                  "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+                },
+                "product": {
+                  "sku": "H02",
+                  "name": "1 inch PVC Pipe Blueguard ISI",
+                  "unit": "piece",
+                  "brand": "Blueguard",
+                  "stock": 60,
+                  "aliases": [
+                    "1 inch PVC Pipe Blueguard ISI",
+                    "1 இன்ச் பைப்"
+                  ],
+                  "version": 1,
+                  "category": "Pipes & Fittings",
+                  "familyId": "pvc-pipes",
+                  "imageUrl": "/demo-images/H02.jpg",
+                  "pricePaise": 38000,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "1 inch"
+                  }
+                },
+                "requestLabel": "Item 1: 1 inch PVC Pipe",
+                "quantityLabel": "Requested: 2 units"
+              },
+              {
+                "label": "Add this item",
+                "action": {
+                  "id": "3ad9ce93-2736-4494-9a6e-eaff3bd70284",
+                  "sku": "H07",
+                  "type": "select_product",
+                  "lineId": "eb9a7b3f-a111-47f8-8c80-0c824dc0a9ba",
+                  "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+                },
+                "product": {
+                  "sku": "H07",
+                  "name": "PVC Solvent Gum 100ml",
+                  "unit": "bottle",
+                  "brand": "Pipelock",
+                  "stock": null,
+                  "aliases": [
+                    "PVC Solvent Gum 100ml",
+                    "பைப் பசை"
+                  ],
+                  "version": 1,
+                  "category": "Chemicals",
+                  "familyId": "solvent-cement",
+                  "imageUrl": "/demo-images/H07.jpg",
+                  "keywords": [
+                    "pipe glue",
+                    "pvc cement"
+                  ],
+                  "pricePaise": 8500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "100ml"
+                  }
+                },
+                "matchLabel": "Suggested product",
+                "requestLabel": "Item 2: PVC Solvent Gum",
+                "quantityLabel": "Requested: 5 bottle"
+              }
+            ],
+            "buttons": [
+              {
+                "event": {
+                  "id": "8a9da5e7-5eb9-4b7e-9330-eae0079541ff",
+                  "type": "refine_search",
+                  "facet": "brand",
+                  "value": "Local Heavy",
+                  "lineId": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+                  "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+                },
+                "label": "Local Heavy"
+              },
+              {
+                "event": {
+                  "id": "8966680c-0a9d-4b4f-9253-aad7f0e421f3",
+                  "type": "refine_search",
+                  "facet": "brand",
+                  "value": "Blueguard",
+                  "lineId": "9cc8f50d-8e06-446b-a95f-fdc8e1810031",
+                  "batchId": "74dc5050-ff04-4ce1-a783-6cf115531dc5"
+                },
+                "label": "Blueguard"
+              }
+            ],
+            "version": 1,
+            "presentation": "carousel_preview",
+            "outboundMessages": 1,
+            "remainingChoices": 0
+          }
+        },
+        {
+          "id": "f08365a8-935c-4d23-9f2c-d298bc506f2b",
+          "direction": "inbound",
+          "text": "Yes, 1 inch PVC Pipe Blueguard ISI is the item I meant",
+          "status": "processed",
+          "createdAt": "2026-10-03T13:04:56.816Z"
+        },
+        {
+          "id": "4415f615-bdc3-4217-a832-f55c175ac92f",
+          "direction": "outbound",
+          "text": "Please check what I understood:\n2. 5 × PVC Solvent Gum: is this the product you meant?\n\nCheck the photos and names, then add the right items. If anything is wrong, send the correct name, size or type. Nothing is sent to the shop yet.",
+          "status": "sent",
+          "createdAt": "2026-10-03T13:04:56.823Z",
+          "rich": {
+            "kind": "product_choices",
+            "text": "Please check what I understood:\n2. 5 × PVC Solvent Gum: is this the product you meant?\n\nCheck the photos and names, then add the right items. If anything is wrong, send the correct name, size or type. Nothing is sent to the shop yet.",
+            "cards": [
+              {
+                "label": "Add this item",
+                "action": {
+                  "id": "332206f8-af1b-4832-a2e3-2df2d9e564e4",
+                  "sku": "H07",
+                  "type": "select_product",
+                  "lineId": "eb9a7b3f-a111-47f8-8c80-0c824dc0a9ba",
+                  "batchId": "39ce7a6e-bbfb-46b2-8f23-7e20f618d611"
+                },
+                "product": {
+                  "sku": "H07",
+                  "name": "PVC Solvent Gum 100ml",
+                  "unit": "bottle",
+                  "brand": "Pipelock",
+                  "stock": null,
+                  "aliases": [
+                    "PVC Solvent Gum 100ml",
+                    "பைப் பசை"
+                  ],
+                  "version": 1,
+                  "category": "Chemicals",
+                  "familyId": "solvent-cement",
+                  "imageUrl": "/demo-images/H07.jpg",
+                  "keywords": [
+                    "pipe glue",
+                    "pvc cement"
+                  ],
+                  "pricePaise": 8500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "100ml"
+                  }
+                },
+                "matchLabel": "Suggested product",
+                "requestLabel": "Item 2: PVC Solvent Gum",
+                "quantityLabel": "Requested: 5 bottle"
+              }
+            ],
+            "version": 1,
+            "presentation": "single_product",
+            "outboundMessages": 1,
+            "remainingChoices": 0
+          }
+        },
+        {
+          "id": "332206f8-af1b-4832-a2e3-2df2d9e564e4",
+          "direction": "inbound",
+          "text": "Yes, PVC Solvent Gum 100ml is the item I meant",
+          "status": "processed",
+          "createdAt": "2026-10-03T13:04:57.348Z"
+        },
+        {
+          "id": "f503cc63-a521-4dc7-a629-30fbc6989e83",
+          "direction": "outbound",
+          "text": "Here’s your list:\n1. 2 × 1 inch PVC Pipe Blueguard ISI — ₹760.00\n2. 5 × PVC Solvent Gum 100ml — ₹425.00\n\nTotal: ₹1,185.00 for pickup. Shall I send this request to the shop? They’ll confirm availability before it’s ready.",
+          "status": "sent",
+          "createdAt": "2026-10-03T13:04:57.356Z",
+          "rich": {
+            "kind": "order_review",
+            "text": "Here’s your list:\n1. 2 × 1 inch PVC Pipe Blueguard ISI — ₹760.00\n2. 5 × PVC Solvent Gum 100ml — ₹425.00\n\nTotal: ₹1,185.00 for pickup. Shall I send this request to the shop? They’ll confirm availability before it’s ready.",
+            "cards": [
+              {
+                "label": "Product checked",
+                "product": {
+                  "sku": "H02",
+                  "name": "1 inch PVC Pipe Blueguard ISI",
+                  "unit": "piece",
+                  "brand": "Blueguard",
+                  "stock": 60,
+                  "aliases": [
+                    "1 inch PVC Pipe Blueguard ISI",
+                    "1 இன்ச் பைப்"
+                  ],
+                  "version": 1,
+                  "category": "Pipes & Fittings",
+                  "familyId": "pvc-pipes",
+                  "imageUrl": "/demo-images/H02.jpg",
+                  "pricePaise": 38000,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "1 inch"
+                  }
+                },
+                "requestLabel": "1 inch PVC Pipe Blueguard ISI",
+                "quantityLabel": "2 pieces"
+              },
+              {
+                "label": "Product checked",
+                "product": {
+                  "sku": "H07",
+                  "name": "PVC Solvent Gum 100ml",
+                  "unit": "bottle",
+                  "brand": "Pipelock",
+                  "stock": null,
+                  "aliases": [
+                    "PVC Solvent Gum 100ml",
+                    "பைப் பசை"
+                  ],
+                  "version": 1,
+                  "category": "Chemicals",
+                  "familyId": "solvent-cement",
+                  "imageUrl": "/demo-images/H07.jpg",
+                  "keywords": [
+                    "pipe glue",
+                    "pvc cement"
+                  ],
+                  "pricePaise": 8500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "100ml"
+                  }
+                },
+                "requestLabel": "PVC Solvent Gum 100ml",
+                "quantityLabel": "5 bottles"
+              }
+            ],
+            "buttons": [
+              {
+                "event": {
+                  "id": "1e899587-b0cd-40fc-b5be-a348e0864bfd",
+                  "type": "confirm",
+                  "reviewId": "a3315be1-abcd-40ba-8149-86c062be9951"
+                },
+                "label": "Confirm request"
+              }
+            ],
+            "version": 1,
+            "presentation": "carousel_preview",
+            "outboundMessages": 1
+          }
+        }
+      ],
+      "aiCalls": 1,
+      "lastFailure": null
+    }
+  ],
+  "errors": [],
+  "voiceConversationId": "dbc9f6fc-9ec1-4960-8d7e-1b8c86c3cd68",
+  "passed": true
+}

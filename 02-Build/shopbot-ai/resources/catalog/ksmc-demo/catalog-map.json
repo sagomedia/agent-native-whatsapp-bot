@@ -1,0 +1,494 @@
+{
+  "storeType": "hardware",
+  "nodes": [
+    {
+      "id": "plumbing",
+      "label": "Plumbing",
+      "kind": "department",
+      "parentId": null,
+      "aliases": [
+        "pipe",
+        "water",
+        "plumbing",
+        "leak",
+        "hose",
+        "connector",
+        "tap"
+      ]
+    },
+    {
+      "id": "tools",
+      "label": "Tools and cutting",
+      "kind": "department",
+      "parentId": null,
+      "aliases": [
+        "tool",
+        "blade",
+        "screwdriver",
+        "hammer",
+        "wrench",
+        "spanner",
+        "measure",
+        "cut"
+      ]
+    },
+    {
+      "id": "surfaces",
+      "label": "Painting and surface work",
+      "kind": "department",
+      "parentId": null,
+      "aliases": [
+        "paint",
+        "painting",
+        "wall",
+        "putty",
+        "decor",
+        "finish",
+        "scrape"
+      ]
+    },
+    {
+      "id": "garden",
+      "label": "Garden",
+      "kind": "department",
+      "parentId": null,
+      "aliases": [
+        "garden",
+        "plant",
+        "hedge",
+        "prune",
+        "watering"
+      ]
+    },
+    {
+      "id": "hardware",
+      "label": "Fasteners and hardware",
+      "kind": "department",
+      "parentId": null,
+      "aliases": [
+        "screw",
+        "fastener",
+        "clamp",
+        "bracket"
+      ]
+    },
+    {
+      "id": "safety",
+      "label": "Safety",
+      "kind": "department",
+      "parentId": null,
+      "aliases": [
+        "glove",
+        "safety",
+        "protection"
+      ]
+    },
+    {
+      "id": "pvc-pipes",
+      "label": "PVC pipes",
+      "kind": "family",
+      "parentId": "plumbing",
+      "aliases": [
+        "pvc pipe",
+        "water pipe"
+      ]
+    },
+    {
+      "id": "pipe-fittings",
+      "label": "Pipe fittings",
+      "kind": "family",
+      "parentId": "plumbing",
+      "aliases": [
+        "elbow",
+        "tee",
+        "end cap",
+        "reducer",
+        "bush"
+      ]
+    },
+    {
+      "id": "tank-valves",
+      "label": "Tank connectors and valves",
+      "kind": "family",
+      "parentId": "plumbing",
+      "aliases": [
+        "tank connector",
+        "ball valve",
+        "tap"
+      ]
+    },
+    {
+      "id": "sealing",
+      "label": "Sealing materials (legacy)",
+      "kind": "family",
+      "parentId": "plumbing",
+      "aliases": [],
+      "deprecated": true
+    },
+    {
+      "id": "hose",
+      "label": "Garden hoses",
+      "kind": "family",
+      "parentId": "garden",
+      "aliases": [
+        "garden hose",
+        "watering hose"
+      ]
+    },
+    {
+      "id": "cutting-discs",
+      "label": "Cutting wheels and discs",
+      "kind": "family",
+      "parentId": "tools",
+      "aliases": [
+        "cutting wheel",
+        "cutting disc",
+        "grinder blade",
+        "metal cutting"
+      ]
+    },
+    {
+      "id": "saw-blades",
+      "label": "Saw blades",
+      "kind": "family",
+      "parentId": "tools",
+      "aliases": [
+        "hacksaw",
+        "saw blade",
+        "metal blade",
+        "blade"
+      ]
+    },
+    {
+      "id": "pipe-cutters",
+      "label": "Pipe cutters",
+      "kind": "family",
+      "parentId": "tools",
+      "aliases": [
+        "pvc cutter",
+        "pipe cutter",
+        "plastic cutting"
+      ]
+    },
+    {
+      "id": "measuring",
+      "label": "Measuring tools",
+      "kind": "family",
+      "parentId": "tools",
+      "aliases": [
+        "measuring tape",
+        "water level",
+        "measure"
+      ]
+    },
+    {
+      "id": "hand-tools",
+      "label": "Hand tools",
+      "kind": "family",
+      "parentId": "tools",
+      "aliases": [
+        "screwdriver",
+        "wrench",
+        "spanner",
+        "hammer"
+      ]
+    },
+    {
+      "id": "scrapers",
+      "label": "Putty blades and scrapers",
+      "kind": "family",
+      "parentId": "surfaces",
+      "aliases": [
+        "putty blade",
+        "scraper",
+        "wall blade",
+        "paint scraper",
+        "blade"
+      ]
+    },
+    {
+      "id": "wall-stencils",
+      "label": "Wall stencils",
+      "kind": "family",
+      "parentId": "surfaces",
+      "aliases": [
+        "wall stencil",
+        "painting pattern",
+        "wall decor"
+      ]
+    },
+    {
+      "id": "paint",
+      "label": "Paints",
+      "kind": "family",
+      "parentId": "surfaces",
+      "aliases": [
+        "paint",
+        "wall paint",
+        "metal paint",
+        "wood paint"
+      ]
+    },
+    {
+      "id": "garden-cutters",
+      "label": "Pruners and garden shears",
+      "kind": "family",
+      "parentId": "garden",
+      "aliases": [
+        "pruner",
+        "hedge shear",
+        "garden scissors",
+        "plant cutting"
+      ]
+    },
+    {
+      "id": "clamps",
+      "label": "Clamps and brackets",
+      "kind": "family",
+      "parentId": "hardware",
+      "aliases": [
+        "pipe clamp",
+        "l angle",
+        "bracket",
+        "clamp"
+      ]
+    },
+    {
+      "id": "screw-boxes",
+      "label": "Screws and screw boxes",
+      "kind": "family",
+      "parentId": "hardware",
+      "aliases": [
+        "screw box",
+        "screws",
+        "fasteners"
+      ]
+    },
+    {
+      "id": "gloves",
+      "label": "Hand protection",
+      "kind": "family",
+      "parentId": "safety",
+      "aliases": [
+        "glove",
+        "hand protection"
+      ]
+    },
+    {
+      "id": "solvent-cement",
+      "parentId": "plumbing",
+      "kind": "family",
+      "label": "PVC solvent cement",
+      "aliases": [
+        "solvent gum",
+        "solvent solution",
+        "solvent cement",
+        "PVC cement",
+        "pipe glue"
+      ]
+    },
+    {
+      "id": "thread-tape",
+      "parentId": "plumbing",
+      "kind": "family",
+      "label": "Thread seal tape",
+      "aliases": [
+        "PTFE tape",
+        "teflon tape",
+        "thread tape"
+      ]
+    },
+    {
+      "id": "repair-epoxy",
+      "parentId": "plumbing",
+      "kind": "family",
+      "label": "Repair epoxy",
+      "aliases": [
+        "epoxy",
+        "m seal",
+        "m-seal",
+        "repair putty"
+      ]
+    }
+  ],
+  "placements": [
+    {
+      "sku": "H01",
+      "familyId": "pvc-pipes",
+      "keywords": []
+    },
+    {
+      "sku": "H02",
+      "familyId": "pvc-pipes",
+      "keywords": []
+    },
+    {
+      "sku": "H03",
+      "familyId": "pvc-pipes",
+      "keywords": []
+    },
+    {
+      "sku": "H04",
+      "familyId": "pvc-pipes",
+      "keywords": []
+    },
+    {
+      "sku": "H05",
+      "familyId": "pipe-fittings",
+      "keywords": []
+    },
+    {
+      "sku": "H06",
+      "familyId": "pipe-fittings",
+      "keywords": []
+    },
+    {
+      "sku": "H09",
+      "familyId": "pipe-fittings",
+      "keywords": []
+    },
+    {
+      "sku": "H30",
+      "familyId": "pipe-fittings",
+      "keywords": []
+    },
+    {
+      "sku": "H10",
+      "familyId": "tank-valves",
+      "keywords": []
+    },
+    {
+      "sku": "H11",
+      "familyId": "tank-valves",
+      "keywords": []
+    },
+    {
+      "sku": "H07",
+      "familyId": "solvent-cement",
+      "keywords": [
+        "pipe glue",
+        "pvc cement"
+      ],
+      "legacyFamilyId": "sealing"
+    },
+    {
+      "sku": "H08",
+      "familyId": "thread-tape",
+      "keywords": [
+        "ptfe tape",
+        "thread sealing tape"
+      ],
+      "legacyFamilyId": "sealing"
+    },
+    {
+      "sku": "H21",
+      "familyId": "repair-epoxy",
+      "keywords": [
+        "epoxy sealant"
+      ],
+      "legacyFamilyId": "sealing"
+    },
+    {
+      "sku": "H13",
+      "familyId": "hose",
+      "keywords": []
+    },
+    {
+      "sku": "H14",
+      "familyId": "cutting-discs",
+      "keywords": [
+        "grinding disc",
+        "metal cutting disc"
+      ]
+    },
+    {
+      "sku": "H15",
+      "familyId": "cutting-discs",
+      "keywords": [
+        "grinding disc",
+        "metal cutting disc"
+      ]
+    },
+    {
+      "sku": "H16",
+      "familyId": "saw-blades",
+      "keywords": [
+        "saw blade",
+        "metal cutting"
+      ]
+    },
+    {
+      "sku": "H19",
+      "familyId": "pipe-cutters",
+      "keywords": [
+        "plastic pipe cutting"
+      ]
+    },
+    {
+      "sku": "H20",
+      "familyId": "measuring",
+      "keywords": []
+    },
+    {
+      "sku": "H28",
+      "familyId": "measuring",
+      "keywords": []
+    },
+    {
+      "sku": "H22",
+      "familyId": "scrapers",
+      "keywords": [
+        "wall blade",
+        "paint scraper"
+      ]
+    },
+    {
+      "sku": "H23",
+      "familyId": "wall-stencils",
+      "keywords": []
+    },
+    {
+      "sku": "H24",
+      "familyId": "wall-stencils",
+      "keywords": []
+    },
+    {
+      "sku": "H25",
+      "familyId": "wall-stencils",
+      "keywords": []
+    },
+    {
+      "sku": "H17",
+      "familyId": "garden-cutters",
+      "keywords": []
+    },
+    {
+      "sku": "H18",
+      "familyId": "garden-cutters",
+      "keywords": []
+    },
+    {
+      "sku": "H12",
+      "familyId": "clamps",
+      "keywords": []
+    },
+    {
+      "sku": "H26",
+      "familyId": "clamps",
+      "keywords": []
+    },
+    {
+      "sku": "H27",
+      "familyId": "screw-boxes",
+      "keywords": [
+        "screw box",
+        "screw boxes"
+      ]
+    },
+    {
+      "sku": "H29",
+      "familyId": "gloves",
+      "keywords": []
+    }
+  ]
+}

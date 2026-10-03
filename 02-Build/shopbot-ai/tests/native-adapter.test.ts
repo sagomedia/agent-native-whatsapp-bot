@@ -37,7 +37,7 @@ test('native configuration fails closed; dated USD rates include thinking and ne
   assert.deepEqual(usageEstimate(geminiTextRate,{output:{},truncated:false,responseModel:geminiTextRate.model,usage:{promptTokenCount:1000,candidatesTokenCount:100,totalTokenCount:1120}}),{microusd:600,violation:false});
 });
 
-test('official SDK wire contract: one request, JSON schema, standard tier, bounded minimal thinking and no hidden retries',async()=>{
+test('official SDK wire contract: one request, JSON mode and strict backend contract, standard tier, bounded minimal thinking and no hidden retries',async()=>{
   const savedFetch=globalThis.fetch;let calls=0;let body:any;
   globalThis.fetch=async(input,init)=>{
     calls++;const request=new Request(input,init);assert.equal(new URL(request.url).hostname,'generativelanguage.googleapis.com');body=await request.json();
@@ -47,7 +47,7 @@ test('official SDK wire contract: one request, JSON schema, standard tier, bound
     const native=new GoogleInterpreter(settings);
     const result=await native.interpret({text:'five items',state:{draft:[],version:0,pending:null,fulfillment:'pickup',lastRequestId:null}},AbortSignal.timeout(1000));
     assert.equal(calls,1);assert.deepEqual(result.output,{operations,next:'review'});
-    assert.equal(body.generationConfig.maxOutputTokens,4096);assert.equal(body.generationConfig.candidateCount,1);assert.equal(body.generationConfig.responseMimeType,'application/json');assert.ok(body.generationConfig.responseJsonSchema);assert.equal(body.generationConfig.thinkingConfig.thinkingLevel,'MINIMAL');assert.equal(body.serviceTier,'standard');assert.equal(body.tools,undefined);
+    assert.equal(body.generationConfig.maxOutputTokens,4096);assert.equal(body.generationConfig.candidateCount,1);assert.equal(body.generationConfig.responseMimeType,'application/json');assert.equal(body.generationConfig.responseJsonSchema,undefined);assert.match(JSON.stringify(body.systemInstruction),/Planning contract/);assert.equal(body.generationConfig.thinkingConfig.thinkingLevel,'MINIMAL');assert.equal(body.serviceTier,'standard');assert.equal(body.tools,undefined);
     globalThis.fetch=async()=>{calls++;return new Response(JSON.stringify({error:{message:'offline transient',code:503}}),{status:503,headers:{'Content-Type':'application/json'}});};
     calls=0;await assert.rejects(native.interpret({text:'test',state:{draft:[],version:0,pending:null,fulfillment:'pickup',lastRequestId:null}},AbortSignal.timeout(1000)));assert.equal(calls,1);
   }finally{globalThis.fetch=savedFetch;}

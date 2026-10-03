@@ -57,6 +57,24 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
     if(!v7.rowCount){await client.query('ALTER TABLE conversations ADD COLUMN assistant_memory jsonb');await client.query('INSERT INTO schema_migrations(version) VALUES(7)');}
     const v8=await client.query('SELECT version FROM schema_migrations WHERE version=8');
     if(!v8.rowCount){await client.query('CREATE TABLE store_policies(store_id uuid PRIMARY KEY REFERENCES stores(id),require_product_confirmation boolean NOT NULL DEFAULT false)');await client.query('INSERT INTO schema_migrations(version) VALUES(8)');}
+    const v9=await client.query('SELECT version FROM schema_migrations WHERE version=9');
+    if(!v9.rowCount){await client.query(`
+      CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+      CREATE TABLE catalog_profiles(store_id uuid PRIMARY KEY REFERENCES stores(id),store_type text NOT NULL);
+      CREATE TABLE catalog_nodes(store_id uuid NOT NULL REFERENCES stores(id),id text NOT NULL,parent_id text,kind text NOT NULL CHECK(kind IN ('department','family')),label text NOT NULL,aliases jsonb NOT NULL DEFAULT '[]',PRIMARY KEY(store_id,id),FOREIGN KEY(store_id,parent_id) REFERENCES catalog_nodes(store_id,id));
+      ALTER TABLE products ADD COLUMN family_id text,ADD COLUMN brand text,ADD COLUMN specifications jsonb NOT NULL DEFAULT '{}',ADD COLUMN keywords jsonb NOT NULL DEFAULT '[]';
+      ALTER TABLE products ADD CONSTRAINT products_family_fk FOREIGN KEY(store_id,family_id) REFERENCES catalog_nodes(store_id,id);
+      ALTER TABLE products ADD COLUMN search_text text GENERATED ALWAYS AS (lower(name||' '||sku||' '||aliases::text||' '||coalesce(category,'')||' '||coalesce(brand,'')||' '||specifications::text||' '||keywords::text)) STORED;
+      ALTER TABLE products ADD COLUMN search_vector tsvector GENERATED ALWAYS AS (to_tsvector('simple',name||' '||sku||' '||aliases::text||' '||coalesce(category,'')||' '||coalesce(brand,'')||' '||specifications::text||' '||keywords::text)) STORED;
+      CREATE INDEX products_search_fts ON products USING gin(search_vector) WHERE active=true;
+      CREATE INDEX products_search_trgm ON products USING gin(search_text public.gin_trgm_ops) WHERE active=true;
+      CREATE INDEX products_family_brand ON products(store_id,family_id,brand) WHERE active=true;
+      INSERT INTO schema_migrations(version) VALUES(9);
+    `);}
+    const v10=await client.query('SELECT version FROM schema_migrations WHERE version=10');
+    if(!v10.rowCount){await client.query(`CREATE TABLE voice_media(id uuid PRIMARY KEY,store_id uuid NOT NULL,conversation_id uuid NOT NULL,actor text NOT NULL,source_hash text NOT NULL,audio bytea NOT NULL CHECK(octet_length(audio)<=960044),duration_seconds double precision NOT NULL CHECK(duration_seconds>0 AND duration_seconds<=30),created_at timestamptz NOT NULL DEFAULT now(),FOREIGN KEY(store_id,conversation_id,actor) REFERENCES conversations(store_id,id,actor)); INSERT INTO schema_migrations(version) VALUES(10);`);}
+    const v11=await client.query('SELECT version FROM schema_migrations WHERE version=11');
+    if(!v11.rowCount){await client.query('ALTER TABLE voice_media ADD COLUMN source_version integer NOT NULL DEFAULT 0 CHECK(source_version>=0)');await client.query('INSERT INTO schema_migrations(version) VALUES(11)');}
     if (mode === 'mock') {
       assertMock(mode);
       await client.query('INSERT INTO stores VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [fixtureStore, 'Workshop supply demo', 'true']);

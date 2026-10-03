@@ -1,0 +1,41 @@
+{
+  "attempts": [
+    {
+      "state": "failed",
+      "billing_state": "free_declared",
+      "failure_code": "invalid_operations",
+      "attempts": 1,
+      "reported_tokens": 4491
+    },
+    {
+      "state": "failed",
+      "billing_state": "free_declared",
+      "failure_code": "provider_error",
+      "attempts": 6,
+      "reported_tokens": 0,
+      "usage_note": "No usage metadata returned; zero reported tokens is not a measured provider total."
+    },
+    {
+      "state": "succeeded",
+      "billing_state": "free_declared",
+      "failure_code": null,
+      "attempts": 5,
+      "reported_tokens": 29351
+    }
+  ],
+  "configuration": {
+    "paidEnabled": false,
+    "freeEnabled": true,
+    "budgetUSD": "0"
+  },
+  "scope": "Public live attempt ledger since goal creation, 1791026892",
+  "final_smoke": {
+    "live_calls": 2,
+    "text_calls": 1,
+    "voice_calls": 1,
+    "voice_duration_seconds": 7.2,
+    "draft_lines": 2,
+    "final_total_paise": 118500,
+    "submitted_orders": 0
+  }
+}

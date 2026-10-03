@@ -34,3 +34,13 @@ Quantity steps now come from product metadata; the reusable tools validate up to
 - USD accounting stays separate from product paise; no implicit exchange rate or invoice claim.
 - Reserve a conservative full-input-limit/output-cap amount before invocation, then settle consistent usage. Unknown costs stay held, and store budgets span conversations/repeated evaluations.
 - Keep native evaluation in an explicit local CLI with synthetic fixtures; no unauthenticated paid simulator endpoint.
+
+## 3 October 2026 — indexed catalog and voice
+
+Catalog taxonomy is tenant-owned data. The backend uses indexed retrieval and real facets; AI plans keywords rather than receiving all variants. Related products are labelled, hard filters remain hard, and relevance scores are not displayed as probabilities.
+
+Normalized voice notes use bounded PostgreSQL bytea storage in this local phase, transactionally scoped alongside durable events. This keeps retries, ownership and playback consistent without a second filesystem commit. The existing media volume remains for future channel/merchant media; a production media-retention/object-storage policy is a later deployment decision.
+
+Recorded voice uses one free-only transcription/planning request. The paid text rate profile does not authorize audio. Photo acceptance and final submission remain separate deterministic consent actions.
+
+Provider compatibility: the live endpoint rejected the expanded generation grammar. Use JSON mode with the compact contract in the instruction and strict backend validation, rather than trusting unvalidated model text. Keep one call/attempt, no automatic repair, and complete rollback on malformed plans. Narrowing values are ordered to match the photos shown, while their counts remain scoped SQL facts.
