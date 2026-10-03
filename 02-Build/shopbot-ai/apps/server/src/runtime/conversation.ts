@@ -1,3 +1,4 @@
+import {loadImage} from '../services/image-media.js';
 import {loadVoice} from '../services/voice-media.js';
 import {priceInquiry,quantityReply} from '../services/shopping-language.js';
 import {socialIntent,shopInquiry,presentReply,plainReply} from '../services/replies.js';
@@ -47,7 +48,7 @@ export class ConversationRuntime {
     const inquiry=claimed.event.type==='text'?shopInquiry(claimed.event.text):undefined;
     if(inquiry&&!deterministic)interpretation=inquiry;
     if(social&&!deterministic)interpretation={operations:[],next:'continue',conversation:social};
-    if(!failure&&!deterministic&&!social&&!inquiry&&(claimed.event.type==='text'||claimed.event.type==='voice')) {
+    if(!failure&&!deterministic&&!social&&!inquiry&&(claimed.event.type==='text'||claimed.event.type==='voice'||claimed.event.type==='image')) {
       try {interpretation=await this.interpret(ctx,claimed);}
       catch(error) {failure=this.provider.mode==='live'?(error instanceof ToolError&&error.code==='stale_version'?error.message:error instanceof ToolError&&error.code==='quota_unavailable'?'I’m temporarily at the AI request limit. Your list is kept. You can still say “check again”, use a product button, or review your list; please wait a little before sending a new description.':error instanceof FreeQuotaError?'The AI service is temporarily rate limited. Your list is kept; product buttons and catalog rechecks still work.':'I’m having trouble processing that message. Your list is kept. You can recheck the item, use the product choices, or try a new description shortly.'):error instanceof Error?error.message:'Interpretation failed. Your draft is retained.';}
     }
@@ -112,6 +113,7 @@ export class ConversationRuntime {
               } else await saveAssistantMemory(client,ctx,null);
             }
           }
+          if(claimed.event.type==='image'&&interpretation?.next==='assist')rich={...rich,text:(rich.cards?.length?'These are possible catalog matches for your photo. Check the brand, size and type before choosing.\n\n':'I could not find a confirmed catalog match for this photo.\n\n')+rich.text};
           message=rich.text;
         }
         await client.query('RELEASE SAVEPOINT turn_actions');
@@ -223,13 +225,16 @@ export class ConversationRuntime {
   }
   private async interpret(ctx:ActorContext,claim:Claimed):Promise<Interpretation> {
     const recent=(await this.pool.query("SELECT direction,left(text,500) AS text FROM messages WHERE conversation_id=$1 AND status IN ('processed','sent') ORDER BY sequence DESC LIMIT 8",[ctx.conversationId])).rows.reverse();
-    const voice=claim.event.type==='voice';
+    const voice=claim.event.type==='voice',image=claim.event.type==='image';
+    if(image&&!this.provider.supportsImages)throw new ToolError('Image input is not configured. Please describe the item.');
     if(voice&&!this.provider.supportsAudio)throw new ToolError('Voice input is not configured. Please type your request.');
     const audio=voice?await loadVoice(this.pool,ctx,(claim.event as Extract<SimulatorEvent,{type:'voice'}>).mediaId):undefined;
     if(audio&&audio.sourceVersion!==claim.state.version)throw new ToolError('That voice note belongs to an earlier product question. Please record the current request again.','stale_version');
-    const text=claim.event.type==='text'?claim.event.text:'Recorded customer voice note';
-    const observations=voice?[]:await withConversation(this.pool,ctx,async client=>observeCatalog(client,ctx,this.tools,observationQueries(text,claim.state,claim.memory),`${claim.id}:observe`));
-    const input={history:recent,text,audio,state:claim.state,catalog:claim.catalog,catalogMap:claim.catalogMap,assistantMemory:claim.memory,observations};
+    const photo=image?await loadImage(this.pool,ctx,(claim.event as Extract<SimulatorEvent,{type:'image'}>).mediaId):undefined;
+    if(photo&&photo.sourceVersion!==claim.state.version)throw new ToolError('That photo belongs to an earlier product question. Please send the current photo again.','stale_version');
+    const text=claim.event.type==='text'?claim.event.text:claim.event.type==='image'?(claim.event.caption||'Find catalog products like the uploaded photo'):'Recorded customer voice note';
+    const observations=voice||image?[]:await withConversation(this.pool,ctx,async client=>observeCatalog(client,ctx,this.tools,observationQueries(text,claim.state,claim.memory),`${claim.id}:observe`));
+    const input={history:recent,text,audio,image:photo,state:claim.state,catalog:claim.catalog,catalogMap:claim.catalogMap,assistantMemory:claim.memory,observations};
     this.provider.validateInput?.(input);
     // A committed reservation precedes every potentially paid invocation.
     const reservation=await withConversation(this.pool,ctx,async client=>{
@@ -248,11 +253,12 @@ export class ConversationRuntime {
       const output=await Promise.race([this.provider.interpret(input,signal),new Promise<never>((_,reject)=>{signal.addEventListener('abort',()=>reject(new Error('Interpretation timed out; draft retained.')),{once:true});})]);
       failureCode='usage_validation';
       if(!await settleAttempt(this.pool,ctx,reservation.id!,output)) throw new ToolError('Provider usage exceeded the verified limits. No changes applied.');
+      if(output.validationIssues?.length)await this.pool.query('UPDATE provider_attempts SET validation_issues=$1::jsonb WHERE id=$2 AND conversation_id=$3',[JSON.stringify(output.validationIssues.slice(0,6).map(i=>({path:i.path.slice(0,100),code:i.code.slice(0,40)}))),reservation.id,ctx.conversationId]);
       failureCode='truncated_or_model_mismatch';
       if(output.truncated) throw new ToolError('Interpretation was truncated. No partial list was applied.');
       failureCode=output.output===null?'invalid_json':'invalid_operations';
       const parsed=interpretationSchema.safeParse(output.output);
-      if(!parsed.success||voice&&!parsed.data.transcript) throw new ToolError('Could not validate all requested actions. Please rephrase; no changes were applied.');
+      if(!parsed.success||voice&&!parsed.data.transcript||image&&(parsed.data.operations.length>0||!['assist','continue'].includes(parsed.data.next))) throw new ToolError('Could not validate all requested actions. Please rephrase; no changes were applied.');
       failureCode='ledger_write';
       const valid=parsed.data;
       await this.pool.query("UPDATE provider_attempts SET state='succeeded',response=$1::jsonb,usage=$2::jsonb WHERE id=$3",[JSON.stringify(valid),JSON.stringify(output.usage),reservation.id]);

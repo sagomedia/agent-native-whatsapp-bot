@@ -1,3 +1,4 @@
+import {imageUploadSchema,normalizeImage,loadImage} from '../services/image-media.js';
 import {voiceUploadSchema,normalizeVoice,loadVoice} from '../services/voice-media.js';
 import {randomUUID,randomBytes,createHmac,timingSafeEqual} from 'node:crypto';
 import type {FastifyInstance,FastifyRequest} from 'fastify';
@@ -36,9 +37,16 @@ export async function registerNativeTest(app:FastifyInstance,pool:Pool,provider:
     routes.get('/api/native-test',async(request,reply)=>{
       const inbox=await channel(request);if(!inbox)return reply.code(401).send({error:'Start a new AI test conversation.'});
       const snapshot=await inbox.snapshot();
-      const a=(await pool.query('SELECT failure_code FROM provider_attempts WHERE conversation_id=$1 ORDER BY created_at DESC LIMIT 1',[inbox.context.conversationId])).rows[0];
-      return {...snapshot,provider:provider.name,lastFailure:a?.failure_code??null,deliveryPreview:{outboundMessages:snapshot.messages.filter(m=>m.direction==='outbound').length,planningPaisePerMessage:planningPaise,estimateOnly:true,whatsAppConnected:false}};
+      const a=(await pool.query('SELECT failure_code,validation_issues FROM provider_attempts WHERE conversation_id=$1 ORDER BY created_at DESC LIMIT 1',[inbox.context.conversationId])).rows[0];
+      return {...snapshot,provider:provider.name,lastFailure:a?.failure_code??null,lastValidationIssues:a?.validation_issues??null,deliveryPreview:{outboundMessages:snapshot.messages.filter(m=>m.direction==='outbound').length,planningPaisePerMessage:planningPaise,estimateOnly:true,whatsAppConnected:false}};
     });
+    routes.post('/api/native-test/image',{bodyLimit:2850000},async(request,reply)=>{
+      const inbox=await channel(request);if(!inbox)return reply.code(401).send({error:'Start a new AI test conversation.'});
+      if(!provider.supportsImages)return reply.code(503).send({error:'Image search is not configured. Describe the product instead.'});
+      const parsed=imageUploadSchema.safeParse(request.body);if(!parsed.success)return reply.code(400).send({error:'Use a JPG, PNG or WebP photo under 2 MB and a caption up to 1000 characters.'});
+      try{const media=await normalizeImage(parsed.data),saved=await inbox.ingest({id:parsed.data.id,type:'image',mediaId:parsed.data.id,caption:parsed.data.caption},undefined,media);await runtime.processNext(inbox.context);return saved;}catch(error){return reply.code((error as {statusCode?:number}).statusCode??400).send({error:error instanceof Error?error.message:'Photo could not be saved.'});}
+    });
+    routes.get('/api/native-test/image/:id',async(request,reply)=>{const inbox=await channel(request);if(!inbox)return reply.code(401).send({error:'Start a new AI test conversation.'});const id=(request.params as {id:string}).id;if(!/^[0-9a-f-]{36}$/.test(id))return reply.code(400).send({error:'Invalid image.'});try{const media=await loadImage(pool,inbox.context,id);return reply.header('Cache-Control','private, no-store').header('X-Content-Type-Options','nosniff').type('image/jpeg').send(Buffer.from(media.data,'base64'));}catch{return reply.code(404).send({error:'Image not found.'});}});
     routes.post('/api/native-test/voice',{bodyLimit:1450000},async(request,reply)=>{
       const inbox=await channel(request);if(!inbox)return reply.code(401).send({error:'Start a new AI test conversation.'});
       if(!provider.supportsAudio)return reply.code(503).send({error:'Voice input is not configured. Please type your request.'});
@@ -48,7 +56,7 @@ export async function registerNativeTest(app:FastifyInstance,pool:Pool,provider:
     routes.get('/api/native-test/voice/:id',async(request,reply)=>{const inbox=await channel(request);if(!inbox)return reply.code(401).send({error:'Start a new AI test conversation.'});const id=(request.params as {id:string}).id;if(!/^[0-9a-f-]{36}$/.test(id))return reply.code(400).send({error:'Invalid recording.'});try{const media=await loadVoice(pool,inbox.context,id);return reply.header('Cache-Control','private, no-store').type('audio/wav').send(Buffer.from(media.data,'base64'));}catch{return reply.code(404).send({error:'Voice note not found.'});}});
     routes.post('/api/native-test/events',async(request,reply)=>{
       const inbox=await channel(request);if(!inbox)return reply.code(401).send({error:'Start a new AI test conversation.'});
-      const parsed=eventSchema.safeParse(request.body);if(!parsed.success||parsed.data.type==='voice')return reply.code(400).send({error:'Invalid test message.'});
+      const parsed=eventSchema.safeParse(request.body);if(!parsed.success||(parsed.data.type==='voice'||parsed.data.type==='image'))return reply.code(400).send({error:'Invalid test message.'});
       const saved=await inbox.ingest(parsed.data);
       await runtime.processNext(inbox.context);
       return saved;

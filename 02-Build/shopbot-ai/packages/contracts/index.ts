@@ -28,6 +28,7 @@ export const toolCallSchema = z.discriminatedUnion('name', [
 export type ToolCall = z.infer<typeof toolCallSchema>;
 export const eventSchema = z.discriminatedUnion('type', [
   z.object({id:z.uuid(),type:z.literal('voice'),mediaId:z.uuid()}).strict(),
+  z.object({id:z.uuid(),type:z.literal('image'),mediaId:z.uuid(),caption:z.string().trim().max(1000).default('')}).strict(),
   z.object({ id: z.uuid(), type: z.literal('text'), text: z.string().trim().min(1).max(4000) }).strict(),
   z.object({id:z.uuid(),type:z.literal('browse'),query:query,expectedVersion:z.number().int().min(0)}).strict(),
   z.object({id:z.uuid(),type:z.literal('choose_product'),sku:query,quantity:quantity.optional(),expectedVersion:z.number().int().min(0)}).strict(),
@@ -49,7 +50,7 @@ export type ProductCheck={kind:'products';id:string;version:number;expiresAt:str
 export type Pending = { kind: 'question'; id: string; lineId: string; version: number } | ProductCheck | { kind: 'review'; id: string; version: number; hash: string; expiresAt: string; lines: DraftLine[]; totalPaise: number; fulfillment: 'pickup' };
 export type ConversationState = { version: number; draft: DraftLine[]; pending: Pending | null; fulfillment: 'pickup'; lastRequestId: string | null;requireProductConfirmation?:true;catalogDiscovery?:true };
 export type OrderRequest = { id: string; acceptance: 'awaiting_approval'; payment: 'not_requested'; fulfillment: 'awaiting_approval'; totalPaise: number; lines: DraftLine[] };
-export type Snapshot = { mode: 'mock'; provider: string; catalog: Product[]; conversation: ConversationState; messages: { id: string; direction: string; text: string; status: string; createdAt?:string; voice?:{mediaId:string;durationSeconds:number}; rich?:RichReply }[]; pending: number; requests: OrderRequest[]; interpretationAttempts: number;catalogMap?:CatalogMap;discoveryBindingId?:string };
+export type Snapshot = { mode: 'mock'; provider: string; catalog: Product[]; conversation: ConversationState; messages: { id: string; direction: string; text: string; status: string; createdAt?:string; voice?:{mediaId:string;durationSeconds:number}; image?:{mediaId:string}; rich?:RichReply }[]; pending: number; requests: OrderRequest[]; interpretationAttempts: number;catalogMap?:CatalogMap;discoveryBindingId?:string };
 
 export type ProductCard={product:Product;action?:SimulatorEvent;label:string;requestLabel?:string;quantityLabel?:string;matchLabel?:string};
 export type RichReply={version:1;kind:'text'|'product_choices'|'order_review';text:string;cards?:ProductCard[];buttons?:{label:string;event:SimulatorEvent}[];presentation:'text'|'single_product'|'carousel_preview'|'list';outboundMessages:1;remainingChoices?:number};

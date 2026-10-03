@@ -1,3 +1,11 @@
+# Image upload — 3 October 2026
+
+Customer product-photo upload/search is implemented and running on `/native-test`: Upload image → preview → optional caption → Find matching products. JPG/PNG/WebP under 2 MB; scoped normalized images; one free-only visual planning call; read-only catalog suggestions; explicit product selection and separate review consent.
+
+All 90 regression tests and typecheck/build pass. A real demo cutting-wheel photo with a Tamil caption matched H14; selecting it and typing quantity 2 produced a separate ₹70 review with one successful inference and no submitted order. The initial live attempt failed validation; two total free attempts were used. Full Tamil/Tanglish replies remain a separate milestone. See `IMAGE-SEARCH.md` and `../../03-Output/014-image-upload-verification.md`.
+
+---
+
 # Language and storage audit — 3 October 2026
 
 The local app is healthy. Fixed Tamil normalization to preserve vowel marks and changed voice players to load duration metadata. All 83 offline regression/integration tests and the Docker typecheck/build pass. All 30 demo product JPEGs load; the existing Tamil voice note plays for 5.4 seconds.

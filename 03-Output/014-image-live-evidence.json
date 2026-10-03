@@ -1,0 +1,324 @@
+{
+  "case": "Public demo H14 product photo with authored Tamil caption",
+  "attempts": [
+    {
+      "state": "failed",
+      "failure_code": "invalid_json",
+      "validation_issues": null,
+      "usage": {
+        "totalTokenCount": 3933,
+        "promptTokenCount": 3785,
+        "candidatesTokenCount": 148
+      },
+      "response": null
+    },
+    {
+      "state": "succeeded",
+      "failure_code": null,
+      "validation_issues": null,
+      "usage": {
+        "totalTokenCount": 3990,
+        "promptTokenCount": 3858,
+        "candidatesTokenCount": 132
+      },
+      "response": {
+        "next": "assist",
+        "assistance": {
+          "search": {
+            "brand": "Pro-Cut",
+            "familyId": "cutting-discs",
+            "keywords": [
+              "cutting wheel",
+              "cutting disc",
+              "4 inch cutting wheel",
+              "metal cutting disc",
+              "PRO-CUT",
+              "abrasive disc"
+            ],
+            "departmentId": "tools",
+            "specifications": {
+              "size": "4 inch"
+            }
+          },
+          "queries": [
+            "cutting wheel"
+          ],
+          "rootQuery": "cutting wheel"
+        },
+        "operations": []
+      }
+    }
+  ],
+  "conversation": {
+    "version": 4,
+    "draft": [
+      {
+        "id": "d07884df-5b34-4a3b-8e98-d5a3868c28af",
+        "sku": "H14",
+        "name": "Pro-Cut Cutting Wheel 4 inch",
+        "unit": "piece",
+        "query": "H14",
+        "quantity": 2,
+        "discovery": {
+          "plan": {
+            "familyId": "cutting-discs",
+            "keywords": [
+              "Pro-Cut Cutting Wheel 4 inch",
+              "H14"
+            ],
+            "specifications": {
+              "size": "4 inch"
+            }
+          },
+          "query": "H14",
+          "facets": [],
+          "products": [
+            {
+              "sku": "H14",
+              "name": "Pro-Cut Cutting Wheel 4 inch",
+              "unit": "piece",
+              "brand": "Pro-Cut",
+              "stock": 250,
+              "aliases": [
+                "Pro-Cut Cutting Wheel 4 inch",
+                "கட்டிங் வீல் 4 இன்ச்"
+              ],
+              "version": 1,
+              "category": "Cutting Tools",
+              "familyId": "cutting-discs",
+              "imageUrl": "/demo-images/H14.jpg",
+              "keywords": [
+                "grinding disc",
+                "metal cutting disc"
+              ],
+              "pricePaise": 3500,
+              "quantityStep": 1,
+              "specifications": {
+                "size": "4 inch"
+              }
+            },
+            {
+              "sku": "H15",
+              "name": "Premium Cutting Wheel 4 inch",
+              "unit": "piece",
+              "brand": "Premium Industrial",
+              "stock": 150,
+              "aliases": [
+                "Premium Cutting Wheel 4 inch",
+                "கட்டிங் வீல் 4 இன்ச்"
+              ],
+              "version": 1,
+              "category": "Cutting Tools",
+              "familyId": "cutting-discs",
+              "imageUrl": "/demo-images/H15.jpg",
+              "keywords": [
+                "grinding disc",
+                "metal cutting disc"
+              ],
+              "pricePaise": 5500,
+              "quantityStep": 1,
+              "specifications": {
+                "size": "4 inch"
+              }
+            }
+          ],
+          "rankings": [
+            {
+              "sku": "H14",
+              "match": "keyword_match",
+              "score": 1000,
+              "reason": "This catalog item matches the requested identity; check its photo"
+            },
+            {
+              "sku": "H15",
+              "match": "keyword_match",
+              "score": 32,
+              "reason": "Matches the chosen product family and filters; check the photo and name"
+            }
+          ],
+          "totalCount": 2,
+          "noExactMatch": false,
+          "retrievedCount": 2
+        },
+        "candidates": [
+          {
+            "sku": "H14",
+            "name": "Pro-Cut Cutting Wheel 4 inch",
+            "unit": "piece",
+            "brand": "Pro-Cut",
+            "stock": 250,
+            "aliases": [
+              "Pro-Cut Cutting Wheel 4 inch",
+              "கட்டிங் வீல் 4 இன்ச்"
+            ],
+            "version": 1,
+            "category": "Cutting Tools",
+            "familyId": "cutting-discs",
+            "imageUrl": "/demo-images/H14.jpg",
+            "keywords": [
+              "grinding disc",
+              "metal cutting disc"
+            ],
+            "pricePaise": 3500,
+            "quantityStep": 1,
+            "specifications": {
+              "size": "4 inch"
+            }
+          }
+        ],
+        "pricePaise": 3500,
+        "resolution": "matched",
+        "productVersion": 1,
+        "productConfirmation": {
+          "sku": "H14",
+          "version": 1,
+          "identityHash": "dad18261c5f9910d2d712e5bd015ab531c378f32817c80cb0e7407ecb20a6a51"
+        }
+      }
+    ],
+    "pending": {
+      "id": "2802fd4e-dce5-4874-bd6d-f9a4378a830f",
+      "hash": "7090f892aedeca5dd557c57c4bfc55c6cdac2f140ddbaf6ae0204c8b22096316",
+      "kind": "review",
+      "lines": [
+        {
+          "id": "d07884df-5b34-4a3b-8e98-d5a3868c28af",
+          "sku": "H14",
+          "name": "Pro-Cut Cutting Wheel 4 inch",
+          "unit": "piece",
+          "query": "H14",
+          "quantity": 2,
+          "discovery": {
+            "plan": {
+              "familyId": "cutting-discs",
+              "keywords": [
+                "Pro-Cut Cutting Wheel 4 inch",
+                "H14"
+              ],
+              "specifications": {
+                "size": "4 inch"
+              }
+            },
+            "query": "H14",
+            "facets": [],
+            "products": [
+              {
+                "sku": "H14",
+                "name": "Pro-Cut Cutting Wheel 4 inch",
+                "unit": "piece",
+                "brand": "Pro-Cut",
+                "stock": 250,
+                "aliases": [
+                  "Pro-Cut Cutting Wheel 4 inch",
+                  "கட்டிங் வீல் 4 இன்ச்"
+                ],
+                "version": 1,
+                "category": "Cutting Tools",
+                "familyId": "cutting-discs",
+                "imageUrl": "/demo-images/H14.jpg",
+                "keywords": [
+                  "grinding disc",
+                  "metal cutting disc"
+                ],
+                "pricePaise": 3500,
+                "quantityStep": 1,
+                "specifications": {
+                  "size": "4 inch"
+                }
+              },
+              {
+                "sku": "H15",
+                "name": "Premium Cutting Wheel 4 inch",
+                "unit": "piece",
+                "brand": "Premium Industrial",
+                "stock": 150,
+                "aliases": [
+                  "Premium Cutting Wheel 4 inch",
+                  "கட்டிங் வீல் 4 இன்ச்"
+                ],
+                "version": 1,
+                "category": "Cutting Tools",
+                "familyId": "cutting-discs",
+                "imageUrl": "/demo-images/H15.jpg",
+                "keywords": [
+                  "grinding disc",
+                  "metal cutting disc"
+                ],
+                "pricePaise": 5500,
+                "quantityStep": 1,
+                "specifications": {
+                  "size": "4 inch"
+                }
+              }
+            ],
+            "rankings": [
+              {
+                "sku": "H14",
+                "match": "keyword_match",
+                "score": 1000,
+                "reason": "This catalog item matches the requested identity; check its photo"
+              },
+              {
+                "sku": "H15",
+                "match": "keyword_match",
+                "score": 32,
+                "reason": "Matches the chosen product family and filters; check the photo and name"
+              }
+            ],
+            "totalCount": 2,
+            "noExactMatch": false,
+            "retrievedCount": 2
+          },
+          "candidates": [
+            {
+              "sku": "H14",
+              "name": "Pro-Cut Cutting Wheel 4 inch",
+              "unit": "piece",
+              "brand": "Pro-Cut",
+              "stock": 250,
+              "aliases": [
+                "Pro-Cut Cutting Wheel 4 inch",
+                "கட்டிங் வீல் 4 இன்ச்"
+              ],
+              "version": 1,
+              "category": "Cutting Tools",
+              "familyId": "cutting-discs",
+              "imageUrl": "/demo-images/H14.jpg",
+              "keywords": [
+                "grinding disc",
+                "metal cutting disc"
+              ],
+              "pricePaise": 3500,
+              "quantityStep": 1,
+              "specifications": {
+                "size": "4 inch"
+              }
+            }
+          ],
+          "pricePaise": 3500,
+          "resolution": "matched",
+          "productVersion": 1,
+          "productConfirmation": {
+            "sku": "H14",
+            "version": 1,
+            "identityHash": "dad18261c5f9910d2d712e5bd015ab531c378f32817c80cb0e7407ecb20a6a51"
+          }
+        }
+      ],
+      "version": 4,
+      "expiresAt": "2026-10-03T18:07:40.939Z",
+      "totalPaise": 7000,
+      "fulfillment": "pickup"
+    },
+    "last_request_id": null
+  },
+  "media": [
+    {
+      "width": 1280,
+      "height": 853,
+      "bytes": 239546,
+      "source_version": 0
+    }
+  ],
+  "orderCount": 0
+}

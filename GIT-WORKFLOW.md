@@ -10,6 +10,8 @@ Before changing versions, keep the working tree clean (`git status --short`) and
 
 The deployed local image also preserves `shopbot-ai-visual-baseline` for immediate app rollback. Tag that image as `shopbot-ai-local-app`, then run `docker compose up -d --no-build app`. The updated candidate is `shopbot-ai-mindmap-candidate`. Refresh and choose New chat after an app restart because signed local test cookies are process-specific.
 
+Image-upload checkpoint: `checkpoint/image-search` records the customer photo upload and guarded read-only recognition flow. The deployed candidate is `shopbot-ai-image-candidate`; `shopbot-ai-language-baseline` preserves the prior app image.
+
 ## Portable history
 
 A metadata pointer copied to another computer will not carry its history. `03-Output/shopbot-ai-history.bundle` exports all current commits, branches and tags. The bundle is ignored by Git and contains no ignored `.env`, audio, node_modules or runtime database. From the project root, refresh it after a new commit with:

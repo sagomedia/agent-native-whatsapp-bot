@@ -75,6 +75,10 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
     if(!v10.rowCount){await client.query(`CREATE TABLE voice_media(id uuid PRIMARY KEY,store_id uuid NOT NULL,conversation_id uuid NOT NULL,actor text NOT NULL,source_hash text NOT NULL,audio bytea NOT NULL CHECK(octet_length(audio)<=960044),duration_seconds double precision NOT NULL CHECK(duration_seconds>0 AND duration_seconds<=30),created_at timestamptz NOT NULL DEFAULT now(),FOREIGN KEY(store_id,conversation_id,actor) REFERENCES conversations(store_id,id,actor)); INSERT INTO schema_migrations(version) VALUES(10);`);}
     const v11=await client.query('SELECT version FROM schema_migrations WHERE version=11');
     if(!v11.rowCount){await client.query('ALTER TABLE voice_media ADD COLUMN source_version integer NOT NULL DEFAULT 0 CHECK(source_version>=0)');await client.query('INSERT INTO schema_migrations(version) VALUES(11)');}
+    const v12=await client.query('SELECT version FROM schema_migrations WHERE version=12');
+    if(!v12.rowCount){await client.query(`CREATE TABLE image_media(id uuid PRIMARY KEY,store_id uuid NOT NULL,conversation_id uuid NOT NULL,actor text NOT NULL,source_hash text NOT NULL,image bytea NOT NULL CHECK(octet_length(image)<=2097152),width integer NOT NULL CHECK(width>0 AND width<=1280),height integer NOT NULL CHECK(height>0 AND height<=1280),source_version integer NOT NULL CHECK(source_version>=0),created_at timestamptz NOT NULL DEFAULT now(),FOREIGN KEY(store_id,conversation_id,actor) REFERENCES conversations(store_id,id,actor)); INSERT INTO schema_migrations(version) VALUES(12);`);}
+    const v13=await client.query('SELECT version FROM schema_migrations WHERE version=13');
+    if(!v13.rowCount){await client.query('ALTER TABLE provider_attempts ADD COLUMN validation_issues jsonb');await client.query('INSERT INTO schema_migrations(version) VALUES(13)');}
     if (mode === 'mock') {
       assertMock(mode);
       await client.query('INSERT INTO stores VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [fixtureStore, 'Workshop supply demo', 'true']);

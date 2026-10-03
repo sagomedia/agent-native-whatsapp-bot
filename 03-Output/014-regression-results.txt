@@ -1,0 +1,160 @@
+✔ rechecking remembers the missing item, searches again without AI, and never substitutes screws for a screwdriver (402.970519ms)
+✔ a newly listed compound-name product can be chosen after recheck without duplicating the original request (457.558925ms)
+✔ model-chosen discovery queries run real tools and feed durable observations into the next decision (420.194829ms)
+✔ an alternative shown for a pending item resolves that item only after an explicit current selection (499.569343ms)
+✔ read-only assistance refuses mixed mutations and ungrounded commerce questions (526.187602ms)
+✔ quota denial is described as a limit and a recheck still works without another provider request (367.342247ms)
+✔ queued rechecks cannot jump from the earlier item to the next pending question (332.35955ms)
+✔ yes binds to a displayed discovery option but cannot add a price quote or an unseen queued option (398.378379ms)
+✔ the native planning prompt includes current and remembered tool observations without hidden memory identity or raw pricing (1.097696ms)
+✔ unrelated discovery while another item is pending adds the selected new item without replacing the old request (387.670393ms)
+✔ price rechecks preserve their product and quantity despite an unrelated pending item (333.270988ms)
+✔ a model cannot attach search alternatives to a nonexistent or unrelated draft line (185.270467ms)
+✔ five-item text -> complete review -> confirmed request once; known actions use zero calls (590.979935ms)
+✔ unresolved lines survive targeted choice/quantity clarification without silent omissions (529.288309ms)
+✔ uncertain quantities, unmatched lines and price-only requests retain their correct purpose (531.045482ms)
+✔ compound edits and yes-but-edit create a fresh review; stale, unrelated and expired yes cannot submit (614.038211ms)
+✔ price/availability changes require new review; immutable requests preserve prices and state (493.877215ms)
+✔ shared tools support a second store/profile and decimal units; tenant/actor/role injection is rejected (278.868161ms)
+✔ tool batches roll back on invalid dependencies/line limits; replay cannot repeat a mutation (375.689643ms)
+✔ malformed/truncated/privilege-changing provider output cannot mutate draft; live adapter fails closed (953.026304ms)
+✔ expired work lease reuses saved interpretation, recovers once and enforces persisted attempt ceiling (294.655636ms)
+✔ store mind map separates actual departments, families and SKU facts; broad blade has three diverse verified photos (451.253051ms)
+✔ type, brand and numeric specifications are hard constraints; unsupported filters never become arbitrary products (320.4849ms)
+✔ hierarchical product refinement uses zero extra AI calls and preserves the original requested line (675.635257ms)
+✔ read-only exploration refines current categories without adding, and stale refinement IDs are rejected (408.298298ms)
+✔ missing exact products keep requests, label related photos, and never claim shop unavailability or invent a fill image (446.841909ms)
+✔ catalog identity changed after a browse photo requires a fresh image check before acceptance (386.567817ms)
+✔ a quote yes during product checks cannot accept or submit the proposed products (356.115683ms)
+{"fixture":"10000-product grocery store","retrieved":120,"returned":3,"discoveryMs":74,"filterIndexVerified":true}
+✔ a second store with ten thousand products uses bounded retrieval, complete brand facets and indexed filters (1273.576454ms)
+✔ exact SKU suggestions never bypass a conflicting brand, family or specification filter (283.509953ms)
+✔ multi-query AI discovery combines keywords into one scoped broad search and current narrowing question (281.761279ms)
+✔ narrowing choices reflect shown photo families; solvent, tape and epoxy remain separate product natures (172.45744ms)
+✔ Tamil vowel marks survive normalization and Tamil catalog aliases retrieve the actual SKUs (123.006203ms)
+{"level":30,"time":1791050043145,"pid":868445,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"GET","url":"/health/ready","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050043158,"pid":868445,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":200},"responseTime":12.466119000000162,"msg":"request completed"}
+{"level":30,"time":1791050043169,"pid":868445,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"GET","url":"/api/simulator","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050043159,"pid":868445,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/simulator/events","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050043164,"pid":868445,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":400},"responseTime":4.584970999999996,"msg":"request completed"}
+{"level":30,"time":1791050043169,"pid":868445,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","msg":"Route GET:/api/simulator not found"}
+{"level":30,"time":1791050043169,"pid":868445,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":404},"responseTime":0.46205799999984265,"msg":"request completed"}
+✔ local foundation: locking, seed, durable drafts, replay, stale edits and mock boundaries (1545.501864ms)
+✔ uploaded raster bytes are bounded and decoded into a small single JPEG; spoofed and malformed formats are rejected (365.813732ms)
+✔ one image inference searches catalog read-only; current photo selection is required; duplicate upload does not repeat inference (863.451273ms)
+✔ unrelated photo and malformed model search cannot mutate or approve an order (1424.150204ms)
+✔ the runtime rejects mutation attempts from another image-capable provider and rejects stale queued photos before inference (936.853011ms)
+✔ image requests respect the shared free quota and paid text billing never authorizes image inference (1247.261682ms)
+{"level":30,"time":1791050047211,"pid":868446,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/native-test/image","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050047217,"pid":868446,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":401},"responseTime":5.78926599999977,"msg":"request completed"}
+{"level":30,"time":1791050047218,"pid":868446,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/native-test/session","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050047222,"pid":868446,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":200},"responseTime":4.4194219999999405,"msg":"request completed"}
+{"level":30,"time":1791050047223,"pid":868446,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/api/native-test/events","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050047225,"pid":868446,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":400},"responseTime":2.123131000000285,"msg":"request completed"}
+{"level":30,"time":1791050047227,"pid":868446,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/api/native-test/image","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050047228,"pid":868446,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":403},"responseTime":0.2681490000004487,"msg":"request completed"}
+{"level":30,"time":1791050047228,"pid":868446,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"POST","url":"/api/native-test/image","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050047230,"pid":868446,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":400},"responseTime":2.28831000000082,"msg":"request completed"}
+{"level":30,"time":1791050047233,"pid":868446,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"POST","url":"/api/native-test/image","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050047563,"pid":868446,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":200},"responseTime":329.4960230000006,"msg":"request completed"}
+{"level":30,"time":1791050047564,"pid":868446,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","req":{"method":"GET","url":"/api/native-test/image/2deeccdf-d427-4424-af07-7157bcfd3674","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050047575,"pid":868446,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":200},"responseTime":10.908844999999928,"msg":"request completed"}
+{"level":30,"time":1791050047575,"pid":868446,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","req":{"method":"POST","url":"/api/native-test/session","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050047577,"pid":868446,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","res":{"statusCode":200},"responseTime":2.3431209999998828,"msg":"request completed"}
+{"level":30,"time":1791050047578,"pid":868446,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","req":{"method":"GET","url":"/api/native-test/image/2deeccdf-d427-4424-af07-7157bcfd3674","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050047580,"pid":868446,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","res":{"statusCode":404},"responseTime":2.0207110000001194,"msg":"request completed"}
+✔ local photo upload and retrieval enforce signed conversation scope, origin and verified media ingress (616.026422ms)
+✔ PNG and WebP uploads decode successfully and over-dimension rasters are rejected before conversion (537.432406ms)
+✔ native configuration fails closed; dated USD rates include thinking and never imply paise conversion (5.122639ms)
+✔ official SDK wire contract: one request, JSON mode and strict backend contract, standard tier, bounded minimal thinking and no hidden retries (57.476333ms)
+✔ native runtime reserves before SDK invocation, settles measured usage, and known confirmation needs no calls (759.92355ms)
+✔ truncated, invalid JSON and invalid operation responses still retain billed usage without draft changes (1154.706724ms)
+✔ missing usage and network errors retain budget holds across runtime restart; secrets never reach replies (726.219658ms)
+✔ cross-conversation reservations serialize at store budget; depleted budgets stop before provider invocation (310.308732ms)
+✔ usage above configured bounds blocks the budget and preserves draft; unknown held attempts are not refunded (391.973185ms)
+✔ crashed paid attempt remains unknown and held when recovery lacks another reservation (251.778533ms)
+✔ free-tier configuration requires explicit opt-in, stable project scope and zero paid budget (1.205805ms)
+✔ free attempts reserve durable project quota before calling, create no paid budget, and throttle across conversations (357.918395ms)
+✔ free 429 cooldown survives runtime restart and never retries or exposes provider errors (296.895297ms)
+✔ free daily cap counts failed and unknown requests at Pacific day boundaries (960.661343ms)
+✔ native add wire alias translates only a complete strict operation object (169.384072ms)
+{"level":30,"time":1791050047876,"pid":868457,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/native-test/session","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050047878,"pid":868457,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":403},"responseTime":2.2826399999994464,"msg":"request completed"}
+{"level":30,"time":1791050047879,"pid":868457,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/native-test/session","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050047879,"pid":868457,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":403},"responseTime":0.307119000000057,"msg":"request completed"}
+{"level":30,"time":1791050047879,"pid":868457,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"GET","url":"/api/native-test","host":"evil.example","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050047879,"pid":868457,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":403},"responseTime":0.16580900000008114,"msg":"request completed"}
+{"level":30,"time":1791050047880,"pid":868457,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/api/native-test/session","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050047905,"pid":868457,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":200},"responseTime":25.17147599999953,"msg":"request completed"}
+{"level":30,"time":1791050047905,"pid":868457,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"POST","url":"/api/native-test/events","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050047949,"pid":868457,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":200},"responseTime":43.81373900000017,"msg":"request completed"}
+{"level":30,"time":1791050047950,"pid":868457,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"POST","url":"/api/native-test/events","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050047956,"pid":868457,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":200},"responseTime":6.284303999999793,"msg":"request completed"}
+{"level":30,"time":1791050047957,"pid":868457,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","req":{"method":"GET","url":"/api/native-test","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050047961,"pid":868457,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":200},"responseTime":4.685860999999932,"msg":"request completed"}
+{"level":30,"time":1791050047962,"pid":868457,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","req":{"method":"GET","url":"/api/native-test","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050047962,"pid":868457,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","res":{"statusCode":401},"responseTime":0.18494900000041525,"msg":"request completed"}
+{"level":30,"time":1791050047962,"pid":868457,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","req":{"method":"GET","url":"/api/simulator","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050047968,"pid":868457,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","res":{"statusCode":200},"responseTime":6.047665000000052,"msg":"request completed"}
+✔ local native HTTP channel requires local origin/header and signed fresh session; retries do not repeat inference (398.38469ms)
+✔ persona greetings preserve the draft, use no AI request, and replies remain one persisted message (129.750115ms)
+✔ vague screw box plus paint retains both, asks size then quantity, and sends one photo envelope per turn (223.129201ms)
+✔ typo matches are choices, numeric specs stay exact, and browse caps at ten without adding or auto-paging (163.588877ms)
+✔ WhatsApp planning respects approved card count, marketing cost, service window and one-message ceiling (1.455134ms)
+✔ native edit aliases preserve strict fields and map validated current line IDs to backend references (1.067816ms)
+✔ contextual yes confirms one product choice, asks quantity, and never sends an order before review (167.539319ms)
+✔ ambiguous numbers, greetings and declines retain the pending line without repeated photos or inference (275.555835ms)
+✔ measurement and packaging mismatches require an explicit catalog unit and never infer conversions (232.748551ms)
+✔ quantity quotes are read-only, computed from catalog prices, and reject unit conversions (142.540973ms)
+✔ owner questions give truthful answers in one reply without mutating or sending the review (137.850262ms)
+✔ mock diagnostic parser preserves box packaging and supported unit synonyms (190.146577ms)
+✔ WhatsApp planning requires marketing opt-in and selects the cheapest approved matching carousel (0.754067ms)
+✔ queued unit answers and remove-it stay bound to the original question instead of changing the next line (195.865603ms)
+✔ mixed shopping and delivery questions retain only actual item requests and one truthful reply (101.390942ms)
+✔ exact SKU refresh preserves loose-piece versus box identity even when SKU words match another alias (132.904793ms)
+✔ explicit customer price intent is read-only even when a provider would misclassify it as an addition (151.409356ms)
+✔ price variant buttons keep quote intent and quantity until the customer explicitly adds to the list (123.067724ms)
+✔ exact products show photos before acceptance; bottle quantities before and after selection never call AI (631.920437ms)
+✔ product acceptance with a missing quantity asks bottles, then 5 bottles works offline (440.065078ms)
+✔ mixed requests retain each line and group exact matches and alternatives into one bounded reply (496.862413ms)
+✔ more than ten product options and three requested items are checked on customer-driven pages (469.588356ms)
+✔ unshown, foreign, duplicate and queued product confirmations cannot approve another choice (370.193485ms)
+✔ corrections replace the original line, and catalog identity changes revoke photo acceptance (451.706449ms)
+✔ a displayed browse choice counts as photo acceptance; an invented callback must show a product check (341.231834ms)
+✔ quantity ambiguity and packaging mismatch never confirm or convert products (394.535425ms)
+✔ twenty requested lines use pages of at most three and never fan out automatically (617.153888ms)
+✔ changed products reject atomic bulk acceptance; missing photos have an explicit fallback (272.532737ms)
+✔ uploaded bytes determine voice duration; invalid, long and silent recordings are rejected before inference (339.80362ms)
+✔ one free-only SDK request transcribes and plans; real photos need acceptance; duplicate upload cannot repeat inference (506.886782ms)
+✔ voice yes cannot accept product proposals or submit; missing transcript rolls back all model operations (674.068464ms)
+✔ voice respects the shared free request limit without changing the list or hiding a retry (662.313182ms)
+{"level":30,"time":1791050044700,"pid":868469,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/native-test/voice","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050044705,"pid":868469,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":401},"responseTime":5.195428999999876,"msg":"request completed"}
+{"level":30,"time":1791050044706,"pid":868469,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/native-test/session","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050044712,"pid":868469,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":200},"responseTime":5.788336000000072,"msg":"request completed"}
+{"level":30,"time":1791050044714,"pid":868469,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/api/native-test/events","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050044718,"pid":868469,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":400},"responseTime":4.2242630000000645,"msg":"request completed"}
+{"level":30,"time":1791050044719,"pid":868469,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/api/native-test/voice","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050044719,"pid":868469,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":403},"responseTime":0.29008900000008,"msg":"request completed"}
+{"level":30,"time":1791050044720,"pid":868469,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"POST","url":"/api/native-test/voice","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050044896,"pid":868469,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":200},"responseTime":175.93696499999987,"msg":"request completed"}
+{"level":30,"time":1791050044897,"pid":868469,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"GET","url":"/api/native-test/voice/807d6493-c44c-4066-8644-27fa3c5f0a44","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050044902,"pid":868469,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":200},"responseTime":5.3329289999996945,"msg":"request completed"}
+{"level":30,"time":1791050044902,"pid":868469,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","req":{"method":"POST","url":"/api/native-test/session","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050044905,"pid":868469,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":200},"responseTime":2.22157100000004,"msg":"request completed"}
+{"level":30,"time":1791050044905,"pid":868469,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","req":{"method":"POST","url":"/api/native-test/session","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050044907,"pid":868469,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","res":{"statusCode":200},"responseTime":2.322071000000051,"msg":"request completed"}
+{"level":30,"time":1791050044908,"pid":868469,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","req":{"method":"GET","url":"/api/native-test/voice/807d6493-c44c-4066-8644-27fa3c5f0a44","host":"localhost:3017","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1791050044910,"pid":868469,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","res":{"statusCode":404},"responseTime":1.973222000000078,"msg":"request completed"}
+✔ paid text adapter refuses audio before any request; local route requires signed session and uploaded media (603.931353ms)
+✔ compact provider search plans translate atomically into the canonical deterministic filter contract (497.50128ms)
+✔ duplicate or out-of-range provider plan bindings cannot partially mutate a draft (675.156489ms)
+✔ a queued voice quantity cannot answer the next product question or make another AI call (351.99309ms)
+ℹ tests 90
+ℹ suites 0
+ℹ pass 90
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9274.151647

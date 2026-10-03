@@ -1,5 +1,7 @@
 # ShopBot: catalog, storage and language map
 
+Update: customer image upload/search is now implemented; see `014-image-upload-verification.md` and `02-Build/shopbot-ai/IMAGE-SEARCH.md`. The storage/import/localization recommendations below still apply.
+
 3 October 2026. English, Tamil and Tanglish (Tamil written in English letters) are the intended modes. This guide distinguishes the running app from the recommended next implementation. Tanglish is a writing style, not a third spoken language.
 
 ## What the screenshot means
@@ -93,7 +95,7 @@ flowchart LR
 
 **Today:** normalized catalog input is `02-Build/shopbot-ai/resources/catalog/ksmc-demo/catalog.json`; the tree is `catalog-map.json`; real demo JPEGs are in that folder's `images/`; products serve as `/demo-images/Hxx.jpg`. Runtime values are PostgreSQL rows. Editing JSON does not automatically update existing product rows: demo seeding uses `ON CONFLICT DO NOTHING` and intentionally preserves existing merchant edits.
 
-**Today:** conversations, messages, draft state, assistant memory, order snapshots and provider/quota records are in PostgreSQL. Voice WAV bytes are also in PostgreSQL `voice_media`, scoped by store, conversation and actor. The mounted media directory is available but is not the current voice persistence path. There is no customer image-upload/image-recognition search feature.
+**Today:** conversations, messages, draft state, assistant memory, order snapshots and provider/quota records are in PostgreSQL. Voice WAV bytes are also in PostgreSQL `voice_media`, scoped by store, conversation and actor. The mounted media directory is available but is not the current voice persistence path. Customer image-upload/visual catalog search is now implemented in the local harness. Normalized private JPEGs are stored in PostgreSQL `image_media`; original/EXIF bytes are discarded. Image recognition supplies clues, while actual SKU photos and prices still come from SQL catalog retrieval.
 
 **Next storage design:** keep SQL metadata and indexes authoritative. Put image/audio binaries in an object store; use immutable, versioned keys such as `stores/<store-id>/products/<sku>/<image-version>/main.jpg`. Keep `mediaId`, storage key, checksum, MIME type, byte size, dimensions, source, review state and timestamps in SQL. Bind photo identity changes to product versions so an old acceptance cannot accept a changed variant. Audio must use private, authorized access with a clear retention/deletion policy; don't place customer recordings in public product-photo folders. Set retention with the merchant before production; don't silently retain indefinitely or erase audit evidence.
 
