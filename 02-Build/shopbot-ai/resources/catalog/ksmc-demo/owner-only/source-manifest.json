@@ -1,0 +1,172 @@
+[
+  {
+    "bytes": 4093,
+    "path": "FAKE_MONEY_DETAILS.txt",
+    "sha256": "361a6248e28d628dc4fce435eaeacbd574799ce8df43cc4816066f469da695c6"
+  },
+  {
+    "bytes": 13532,
+    "path": "KSMC_50_Products_Details.txt",
+    "sha256": "a2730aefff7223180b35fb4c6b8aa4fd87a3f8c25779a8e230a5923d1a52e53c"
+  },
+  {
+    "bytes": 730,
+    "path": "README.txt",
+    "sha256": "27edb337263cd25452adea90d73eef3b42f7db2c65d73bef746406fdca3f08b4"
+  },
+  {
+    "bytes": 86961,
+    "path": "images/H01_1_inch_PVC_Heavy_Pipe_Local.jpg",
+    "sha256": "ba5d571155f6801104cd3ea7f16cfc159e2066adfb7d18c040e26f027a098e67"
+  },
+  {
+    "bytes": 135912,
+    "path": "images/H02_1_inch_PVC_Pipe_Finolex_ISI.jpg",
+    "sha256": "16daeb8d7a6f14e95f1a35c3ba941bd138a2a1faaf14d152f2b7385c077f9651"
+  },
+  {
+    "bytes": 75813,
+    "path": "images/H03_0.75_inch_PVC_Pipe_Local.jpg",
+    "sha256": "7da9f35831d63f4d67f017850a6af519f0314d1b5350879b91a70bd4b1e50dc9"
+  },
+  {
+    "bytes": 78585,
+    "path": "images/H04_1.5_inch_PVC_Pipe_Local.jpg",
+    "sha256": "9a25254899a50e12c357cbf01219e8d5fb65d7e2a58a24eb9dc038976d689bc8"
+  },
+  {
+    "bytes": 85263,
+    "path": "images/H05_PVC_Elbow_1_inch.jpg",
+    "sha256": "cce7b11b34269e24bca716c3aaf4fa33868cf47888cc4ed94040b8b7a5b34369"
+  },
+  {
+    "bytes": 83615,
+    "path": "images/H06_PVC_Tee_1_inch.jpg",
+    "sha256": "f67a173d5bde2550abeead829de882c93c411344a14785536c059fbb26752859"
+  },
+  {
+    "bytes": 193943,
+    "path": "images/H07_PVC_Solvent_Gum_100ml.jpg",
+    "sha256": "c62cb2a0d3093b85c91e847fa89ad91c7bedfdda9408ad665bd0add265f3cd4f"
+  },
+  {
+    "bytes": 160839,
+    "path": "images/H08_Teflon_Tape.jpg",
+    "sha256": "b98da9854a2a649d3f0c9eafe1c6801d7fbd4abe11933e355c65a52a2481e78e"
+  },
+  {
+    "bytes": 84801,
+    "path": "images/H09_PVC_End_Cap_1_inch.jpg",
+    "sha256": "df4f74d9c3ff49383b33d10bb6dfb5ee090cd5c28e8629dd8fe5d3c682059540"
+  },
+  {
+    "bytes": 166591,
+    "path": "images/H10_Water_Tank_Connector_1_inch.jpg",
+    "sha256": "389f557212e22c58e1303a1b4cd87f735370fe9a7217ae7a6bcea26d010a47fe"
+  },
+  {
+    "bytes": 141882,
+    "path": "images/H11_Ball_Valve_1_inch.jpg",
+    "sha256": "df1fa078c124ddbd4b34d800ab7a28d149503a122f0527a629e57e96c7628b90"
+  },
+  {
+    "bytes": 198536,
+    "path": "images/H12_Pipe_Clamp_1_inch.jpg",
+    "sha256": "2573e44bc802cd8ed97e5f8c225075a3daa57374d661fd88a9b425935d4f35bc"
+  },
+  {
+    "bytes": 280767,
+    "path": "images/H13_Garden_Hose_Pipe_10m.jpg",
+    "sha256": "e7ffc0ab5a2a8865f69936fffa8370c5327382c8d11d5495c7f2e63a28aa7331"
+  },
+  {
+    "bytes": 520366,
+    "path": "images/H14_TEZZ_INOX_Cutting_Wheel_4_inch.jpg",
+    "sha256": "6c195194bf783a13d0451f201222511c1085f0d42934d43027a17ff6e426be2d"
+  },
+  {
+    "bytes": 445643,
+    "path": "images/H15_Bosch_Cutting_Wheel_4_inch.jpg",
+    "sha256": "ae6102148d25d2ded2afe7dcc7fbe83f7dc6cb930ef3586b0fcfd62f4dc7e0c0"
+  },
+  {
+    "bytes": 134336,
+    "path": "images/H16_Hacksaw_Blade.jpg",
+    "sha256": "4353934d77f0c9cbf37050a976eb23f92e595ccbed33ce620b34e7d5ce97470c"
+  },
+  {
+    "bytes": 127963,
+    "path": "images/H17_Hedge_Shear_Garden_Scissor.jpg",
+    "sha256": "4bdf9ad192e91f12028c54d0847d331379b4362d5fd42ce5de51075ea233c3d5"
+  },
+  {
+    "bytes": 197303,
+    "path": "images/H18_Falcon_Bypass_Pruner.jpg",
+    "sha256": "3a7f58ba257a48432e88be4dd955ba0dde01b8276a2cbea86e8305afb6df2bb5"
+  },
+  {
+    "bytes": 128246,
+    "path": "images/H19_Pipe_Cutter_Small.jpg",
+    "sha256": "b8099aa2db8c2a1e66ee3e7976430fd7f6231b1930b29e218b09e65a891b743a"
+  },
+  {
+    "bytes": 165805,
+    "path": "images/H20_Measuring_Tape_5m.jpg",
+    "sha256": "6ecfe4d5156e4c165a888bb172eea85ad8e4e481e44380da71de2958bf0bf4f6"
+  },
+  {
+    "bytes": 203597,
+    "path": "images/H21_M-Seal_90g.jpg",
+    "sha256": "cf6e5160c73b66ac390df4ab57c2597bba8b1a98e54a26bf5b1ec6a0d74a94d5"
+  },
+  {
+    "bytes": 159828,
+    "path": "images/H22_Wall_Putty_Blade_Scraper.jpg",
+    "sha256": "7675df1c98d3d8313c75b478e62bb15bb6ab8e1093aa46a6477bc3fde0865495"
+  },
+  {
+    "bytes": 209273,
+    "path": "images/H23_Wall_Stencil_Butterfly_Design.jpg",
+    "sha256": "949eba10252e47cb14def039336bbd16a0e0688cfb535eac2eed37de5edf86ec"
+  },
+  {
+    "bytes": 208530,
+    "path": "images/H24_Wall_Stencil_Ganesha_Design.jpg",
+    "sha256": "96a21ea9fedb545211be5259c62db93adae23d7d38420571058c3e0c217854af"
+  },
+  {
+    "bytes": 319791,
+    "path": "images/H25_Wall_Stencil_Damask_Design.jpg",
+    "sha256": "96d64fe8de183e85e1f0589e8841b3b5001ae79bc909d3f1aa2e77d5e3db4c6a"
+  },
+  {
+    "bytes": 125107,
+    "path": "images/H26_L-Angle_Clamp_1_inch.jpg",
+    "sha256": "6c52c071758dc0af90543eb79278e2bed6500aed710039dae3a1da9289601368"
+  },
+  {
+    "bytes": 292786,
+    "path": "images/H27_Screw_Box_1_inch_Stainless.jpg",
+    "sha256": "c070ed9834ea801e0fa2699eddb3fd7d6fae335a565f008a20b08f6357b1d3ca"
+  },
+  {
+    "bytes": 288353,
+    "path": "images/H28_Water_Level_Tube_10m.jpg",
+    "sha256": "d9dcb06b81b584b827116370c9daee9032bf0d3605bec4e8e7bd180d31f686a4"
+  },
+  {
+    "bytes": 389874,
+    "path": "images/H29_Safety_Hand_Gloves.jpg",
+    "sha256": "f951a6e419020c84ee17c1d6867408cdb836a8a6f121c0b55ee689fe7b857d31"
+  },
+  {
+    "bytes": 70150,
+    "path": "images/H30_PVC_Bush_1x0.75_inch_Reducer.jpg",
+    "sha256": "1108760fbe42ff5c1e98a7d6eb7c0a786d1b70187d4ea5fc35bf556e64f8c98a"
+  },
+  {
+    "bytes": 10316,
+    "path": "products_50.json",
+    "sha256": "aefe8f1e1a5a955d689d8bd24fe6f6b6d03d80027c21117055a1c98b45bbce5f"
+  }
+]

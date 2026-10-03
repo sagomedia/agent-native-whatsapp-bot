@@ -1,0 +1,1154 @@
+{
+  "kind": "real-free-Gemini-and-browser-check",
+  "steps": [
+    {
+      "input": "I want two 1 inch PVC pipes, solvent gum and one garden hose",
+      "state": {
+        "version": 1,
+        "draft": [
+          {
+            "id": "2870bb21-bbbe-4abb-9ce0-517d46d63d3b",
+            "name": "1 inch PVC pipe",
+            "query": "1 inch PVC pipe",
+            "quantity": 2,
+            "candidates": [
+              {
+                "sku": "H01",
+                "name": "1 inch PVC Heavy Pipe Local",
+                "unit": "piece",
+                "stock": 120,
+                "aliases": [
+                  "1 inch PVC Heavy Pipe Local",
+                  "1 இன்ச் பைப் லோக்கல்"
+                ],
+                "version": 1,
+                "category": "Pipes & Fittings",
+                "imageUrl": "/demo-images/H01.jpg",
+                "pricePaise": 24500,
+                "quantityStep": 1
+              },
+              {
+                "sku": "H02",
+                "name": "1 inch PVC Pipe Blueguard ISI",
+                "unit": "piece",
+                "stock": 60,
+                "aliases": [
+                  "1 inch PVC Pipe Blueguard ISI",
+                  "1 இன்ச் பைப்"
+                ],
+                "version": 1,
+                "category": "Pipes & Fittings",
+                "imageUrl": "/demo-images/H02.jpg",
+                "pricePaise": 38000,
+                "quantityStep": 1
+              }
+            ],
+            "resolution": "needs_choice"
+          },
+          {
+            "id": "2dc63ab6-bfb1-47d3-8c14-5f771ac58bad",
+            "sku": "H07",
+            "name": "PVC Solvent Gum 100ml",
+            "unit": "bottle",
+            "query": "solvent gum",
+            "quantity": null,
+            "candidates": [
+              {
+                "sku": "H07",
+                "name": "PVC Solvent Gum 100ml",
+                "unit": "bottle",
+                "stock": null,
+                "aliases": [
+                  "PVC Solvent Gum 100ml",
+                  "பைப் பசை"
+                ],
+                "version": 1,
+                "category": "Chemicals",
+                "imageUrl": "/demo-images/H07.jpg",
+                "pricePaise": 8500,
+                "quantityStep": 1
+              }
+            ],
+            "pricePaise": 8500,
+            "resolution": "needs_quantity",
+            "productVersion": 1
+          },
+          {
+            "id": "e63fcf82-d504-4982-901b-fe9ab9e265c2",
+            "sku": "H13",
+            "name": "Garden Hose Pipe 10m",
+            "unit": "piece",
+            "query": "garden hose",
+            "quantity": 1,
+            "candidates": [
+              {
+                "sku": "H13",
+                "name": "Garden Hose Pipe 10m",
+                "unit": "piece",
+                "stock": 30,
+                "aliases": [
+                  "Garden Hose Pipe 10m",
+                  "தோட்ட பைப் 10m"
+                ],
+                "version": 1,
+                "category": "Garden",
+                "imageUrl": "/demo-images/H13.jpg",
+                "pricePaise": 45000,
+                "quantityStep": 1
+              }
+            ],
+            "pricePaise": 45000,
+            "resolution": "matched",
+            "productVersion": 1
+          }
+        ],
+        "pending": {
+          "id": "4ba18d36-d12e-4c8a-8d48-d60f8f072234",
+          "kind": "products",
+          "groups": [
+            {
+              "lineId": "2870bb21-bbbe-4abb-9ce0-517d46d63d3b",
+              "products": [
+                {
+                  "sku": "H01",
+                  "name": "1 inch PVC Heavy Pipe Local",
+                  "unit": "piece",
+                  "stock": 120,
+                  "aliases": [
+                    "1 inch PVC Heavy Pipe Local",
+                    "1 இன்ச் பைப் லோக்கல்"
+                  ],
+                  "version": 1,
+                  "category": "Pipes & Fittings",
+                  "imageUrl": "/demo-images/H01.jpg",
+                  "pricePaise": 24500,
+                  "quantityStep": 1
+                },
+                {
+                  "sku": "H02",
+                  "name": "1 inch PVC Pipe Blueguard ISI",
+                  "unit": "piece",
+                  "stock": 60,
+                  "aliases": [
+                    "1 inch PVC Pipe Blueguard ISI",
+                    "1 இன்ச் பைப்"
+                  ],
+                  "version": 1,
+                  "category": "Pipes & Fittings",
+                  "imageUrl": "/demo-images/H02.jpg",
+                  "pricePaise": 38000,
+                  "quantityStep": 1
+                }
+              ]
+            },
+            {
+              "lineId": "2dc63ab6-bfb1-47d3-8c14-5f771ac58bad",
+              "products": [
+                {
+                  "sku": "H07",
+                  "name": "PVC Solvent Gum 100ml",
+                  "unit": "bottle",
+                  "stock": null,
+                  "aliases": [
+                    "PVC Solvent Gum 100ml",
+                    "பைப் பசை"
+                  ],
+                  "version": 1,
+                  "category": "Chemicals",
+                  "imageUrl": "/demo-images/H07.jpg",
+                  "pricePaise": 8500,
+                  "quantityStep": 1
+                }
+              ]
+            },
+            {
+              "lineId": "e63fcf82-d504-4982-901b-fe9ab9e265c2",
+              "products": [
+                {
+                  "sku": "H13",
+                  "name": "Garden Hose Pipe 10m",
+                  "unit": "piece",
+                  "stock": 30,
+                  "aliases": [
+                    "Garden Hose Pipe 10m",
+                    "தோட்ட பைப் 10m"
+                  ],
+                  "version": 1,
+                  "category": "Garden",
+                  "imageUrl": "/demo-images/H13.jpg",
+                  "pricePaise": 45000,
+                  "quantityStep": 1
+                }
+              ]
+            }
+          ],
+          "version": 1,
+          "expiresAt": "2026-10-03T11:12:43.849Z",
+          "remaining": 0
+        },
+        "fulfillment": "pickup",
+        "lastRequestId": null,
+        "requireProductConfirmation": true
+      },
+      "reply": {
+        "kind": "product_choices",
+        "text": "Please check what I understood:\n1. 2 × 1 inch PVC pipe: which option did you mean?\n2. ? × solvent gum: is this the product you meant?\n3. 1 × garden hose: is this the product you meant?\n\nCheck the photos and names, then add the right items. If anything is wrong, send the correct name, size or type. Nothing is sent to the shop yet.",
+        "cards": [
+          {
+            "label": "Choose this option",
+            "action": {
+              "id": "c94e3121-4f60-41f7-a6ec-28aa0ed7f9fe",
+              "sku": "H01",
+              "type": "select_product",
+              "lineId": "2870bb21-bbbe-4abb-9ce0-517d46d63d3b",
+              "batchId": "4ba18d36-d12e-4c8a-8d48-d60f8f072234"
+            },
+            "product": {
+              "sku": "H01",
+              "name": "1 inch PVC Heavy Pipe Local",
+              "unit": "piece",
+              "stock": 120,
+              "aliases": [
+                "1 inch PVC Heavy Pipe Local",
+                "1 இன்ச் பைப் லோக்கல்"
+              ],
+              "version": 1,
+              "category": "Pipes & Fittings",
+              "imageUrl": "/demo-images/H01.jpg",
+              "pricePaise": 24500,
+              "quantityStep": 1
+            },
+            "requestLabel": "Item 1: 1 inch PVC pipe",
+            "quantityLabel": "Requested: 2 units"
+          },
+          {
+            "label": "Choose this option",
+            "action": {
+              "id": "abfa5394-ae29-4307-8d05-fbfdd175a0ed",
+              "sku": "H02",
+              "type": "select_product",
+              "lineId": "2870bb21-bbbe-4abb-9ce0-517d46d63d3b",
+              "batchId": "4ba18d36-d12e-4c8a-8d48-d60f8f072234"
+            },
+            "product": {
+              "sku": "H02",
+              "name": "1 inch PVC Pipe Blueguard ISI",
+              "unit": "piece",
+              "stock": 60,
+              "aliases": [
+                "1 inch PVC Pipe Blueguard ISI",
+                "1 இன்ச் பைப்"
+              ],
+              "version": 1,
+              "category": "Pipes & Fittings",
+              "imageUrl": "/demo-images/H02.jpg",
+              "pricePaise": 38000,
+              "quantityStep": 1
+            },
+            "requestLabel": "Item 1: 1 inch PVC pipe",
+            "quantityLabel": "Requested: 2 units"
+          },
+          {
+            "label": "Add this item",
+            "action": {
+              "id": "afc16951-0fc2-433b-be6f-5f49df6cc92b",
+              "sku": "H07",
+              "type": "select_product",
+              "lineId": "2dc63ab6-bfb1-47d3-8c14-5f771ac58bad",
+              "batchId": "4ba18d36-d12e-4c8a-8d48-d60f8f072234"
+            },
+            "product": {
+              "sku": "H07",
+              "name": "PVC Solvent Gum 100ml",
+              "unit": "bottle",
+              "stock": null,
+              "aliases": [
+                "PVC Solvent Gum 100ml",
+                "பைப் பசை"
+              ],
+              "version": 1,
+              "category": "Chemicals",
+              "imageUrl": "/demo-images/H07.jpg",
+              "pricePaise": 8500,
+              "quantityStep": 1
+            },
+            "requestLabel": "Item 2: solvent gum",
+            "quantityLabel": "Quantity to confirm"
+          },
+          {
+            "label": "Add this item",
+            "action": {
+              "id": "2a4e79d8-c1cd-4a09-aa7e-4764525c2cfb",
+              "sku": "H13",
+              "type": "select_product",
+              "lineId": "e63fcf82-d504-4982-901b-fe9ab9e265c2",
+              "batchId": "4ba18d36-d12e-4c8a-8d48-d60f8f072234"
+            },
+            "product": {
+              "sku": "H13",
+              "name": "Garden Hose Pipe 10m",
+              "unit": "piece",
+              "stock": 30,
+              "aliases": [
+                "Garden Hose Pipe 10m",
+                "தோட்ட பைப் 10m"
+              ],
+              "version": 1,
+              "category": "Garden",
+              "imageUrl": "/demo-images/H13.jpg",
+              "pricePaise": 45000,
+              "quantityStep": 1
+            },
+            "requestLabel": "Item 3: garden hose",
+            "quantityLabel": "Requested: 1 piece"
+          }
+        ],
+        "version": 1,
+        "presentation": "carousel_preview",
+        "outboundMessages": 1,
+        "remainingChoices": 0
+      },
+      "aiCalls": 1
+    },
+    {
+      "input": "5 bottles",
+      "state": {
+        "version": 2,
+        "draft": [
+          {
+            "id": "2870bb21-bbbe-4abb-9ce0-517d46d63d3b",
+            "name": "1 inch PVC pipe",
+            "query": "1 inch PVC pipe",
+            "quantity": 2,
+            "candidates": [
+              {
+                "sku": "H01",
+                "name": "1 inch PVC Heavy Pipe Local",
+                "unit": "piece",
+                "stock": 120,
+                "aliases": [
+                  "1 inch PVC Heavy Pipe Local",
+                  "1 இன்ச் பைப் லோக்கல்"
+                ],
+                "version": 1,
+                "category": "Pipes & Fittings",
+                "imageUrl": "/demo-images/H01.jpg",
+                "pricePaise": 24500,
+                "quantityStep": 1
+              },
+              {
+                "sku": "H02",
+                "name": "1 inch PVC Pipe Blueguard ISI",
+                "unit": "piece",
+                "stock": 60,
+                "aliases": [
+                  "1 inch PVC Pipe Blueguard ISI",
+                  "1 இன்ச் பைப்"
+                ],
+                "version": 1,
+                "category": "Pipes & Fittings",
+                "imageUrl": "/demo-images/H02.jpg",
+                "pricePaise": 38000,
+                "quantityStep": 1
+              }
+            ],
+            "resolution": "needs_choice"
+          },
+          {
+            "id": "2dc63ab6-bfb1-47d3-8c14-5f771ac58bad",
+            "sku": "H07",
+            "name": "PVC Solvent Gum 100ml",
+            "unit": "bottle",
+            "query": "solvent gum",
+            "quantity": 5,
+            "candidates": [
+              {
+                "sku": "H07",
+                "name": "PVC Solvent Gum 100ml",
+                "unit": "bottle",
+                "stock": null,
+                "aliases": [
+                  "PVC Solvent Gum 100ml",
+                  "பைப் பசை"
+                ],
+                "version": 1,
+                "category": "Chemicals",
+                "imageUrl": "/demo-images/H07.jpg",
+                "pricePaise": 8500,
+                "quantityStep": 1
+              }
+            ],
+            "pricePaise": 8500,
+            "resolution": "matched",
+            "requestedUnit": "bottle",
+            "productVersion": 1
+          },
+          {
+            "id": "e63fcf82-d504-4982-901b-fe9ab9e265c2",
+            "sku": "H13",
+            "name": "Garden Hose Pipe 10m",
+            "unit": "piece",
+            "query": "garden hose",
+            "quantity": 1,
+            "candidates": [
+              {
+                "sku": "H13",
+                "name": "Garden Hose Pipe 10m",
+                "unit": "piece",
+                "stock": 30,
+                "aliases": [
+                  "Garden Hose Pipe 10m",
+                  "தோட்ட பைப் 10m"
+                ],
+                "version": 1,
+                "category": "Garden",
+                "imageUrl": "/demo-images/H13.jpg",
+                "pricePaise": 45000,
+                "quantityStep": 1
+              }
+            ],
+            "pricePaise": 45000,
+            "resolution": "matched",
+            "productVersion": 1
+          }
+        ],
+        "pending": {
+          "id": "1bb70d5b-3bba-43aa-907f-3976ae840462",
+          "kind": "products",
+          "groups": [
+            {
+              "lineId": "2870bb21-bbbe-4abb-9ce0-517d46d63d3b",
+              "products": [
+                {
+                  "sku": "H01",
+                  "name": "1 inch PVC Heavy Pipe Local",
+                  "unit": "piece",
+                  "stock": 120,
+                  "aliases": [
+                    "1 inch PVC Heavy Pipe Local",
+                    "1 இன்ச் பைப் லோக்கல்"
+                  ],
+                  "version": 1,
+                  "category": "Pipes & Fittings",
+                  "imageUrl": "/demo-images/H01.jpg",
+                  "pricePaise": 24500,
+                  "quantityStep": 1
+                },
+                {
+                  "sku": "H02",
+                  "name": "1 inch PVC Pipe Blueguard ISI",
+                  "unit": "piece",
+                  "stock": 60,
+                  "aliases": [
+                    "1 inch PVC Pipe Blueguard ISI",
+                    "1 இன்ச் பைப்"
+                  ],
+                  "version": 1,
+                  "category": "Pipes & Fittings",
+                  "imageUrl": "/demo-images/H02.jpg",
+                  "pricePaise": 38000,
+                  "quantityStep": 1
+                }
+              ]
+            },
+            {
+              "lineId": "2dc63ab6-bfb1-47d3-8c14-5f771ac58bad",
+              "products": [
+                {
+                  "sku": "H07",
+                  "name": "PVC Solvent Gum 100ml",
+                  "unit": "bottle",
+                  "stock": null,
+                  "aliases": [
+                    "PVC Solvent Gum 100ml",
+                    "பைப் பசை"
+                  ],
+                  "version": 1,
+                  "category": "Chemicals",
+                  "imageUrl": "/demo-images/H07.jpg",
+                  "pricePaise": 8500,
+                  "quantityStep": 1
+                }
+              ]
+            },
+            {
+              "lineId": "e63fcf82-d504-4982-901b-fe9ab9e265c2",
+              "products": [
+                {
+                  "sku": "H13",
+                  "name": "Garden Hose Pipe 10m",
+                  "unit": "piece",
+                  "stock": 30,
+                  "aliases": [
+                    "Garden Hose Pipe 10m",
+                    "தோட்ட பைப் 10m"
+                  ],
+                  "version": 1,
+                  "category": "Garden",
+                  "imageUrl": "/demo-images/H13.jpg",
+                  "pricePaise": 45000,
+                  "quantityStep": 1
+                }
+              ]
+            }
+          ],
+          "version": 2,
+          "expiresAt": "2026-10-03T11:12:44.471Z",
+          "remaining": 0
+        },
+        "fulfillment": "pickup",
+        "lastRequestId": null,
+        "requireProductConfirmation": true
+      },
+      "reply": {
+        "kind": "product_choices",
+        "text": "Please check what I understood:\n1. 2 × 1 inch PVC pipe: which option did you mean?\n2. 5 × solvent gum: is this the product you meant?\n3. 1 × garden hose: is this the product you meant?\n\nCheck the photos and names, then add the right items. If anything is wrong, send the correct name, size or type. Nothing is sent to the shop yet.",
+        "cards": [
+          {
+            "label": "Choose this option",
+            "action": {
+              "id": "d9a04f3a-6a18-4b9a-bb13-b34a5fa1e993",
+              "sku": "H01",
+              "type": "select_product",
+              "lineId": "2870bb21-bbbe-4abb-9ce0-517d46d63d3b",
+              "batchId": "1bb70d5b-3bba-43aa-907f-3976ae840462"
+            },
+            "product": {
+              "sku": "H01",
+              "name": "1 inch PVC Heavy Pipe Local",
+              "unit": "piece",
+              "stock": 120,
+              "aliases": [
+                "1 inch PVC Heavy Pipe Local",
+                "1 இன்ச் பைப் லோக்கல்"
+              ],
+              "version": 1,
+              "category": "Pipes & Fittings",
+              "imageUrl": "/demo-images/H01.jpg",
+              "pricePaise": 24500,
+              "quantityStep": 1
+            },
+            "requestLabel": "Item 1: 1 inch PVC pipe",
+            "quantityLabel": "Requested: 2 units"
+          },
+          {
+            "label": "Choose this option",
+            "action": {
+              "id": "4dc42c18-ff68-4340-94e3-de95d612ee1e",
+              "sku": "H02",
+              "type": "select_product",
+              "lineId": "2870bb21-bbbe-4abb-9ce0-517d46d63d3b",
+              "batchId": "1bb70d5b-3bba-43aa-907f-3976ae840462"
+            },
+            "product": {
+              "sku": "H02",
+              "name": "1 inch PVC Pipe Blueguard ISI",
+              "unit": "piece",
+              "stock": 60,
+              "aliases": [
+                "1 inch PVC Pipe Blueguard ISI",
+                "1 இன்ச் பைப்"
+              ],
+              "version": 1,
+              "category": "Pipes & Fittings",
+              "imageUrl": "/demo-images/H02.jpg",
+              "pricePaise": 38000,
+              "quantityStep": 1
+            },
+            "requestLabel": "Item 1: 1 inch PVC pipe",
+            "quantityLabel": "Requested: 2 units"
+          },
+          {
+            "label": "Add this item",
+            "action": {
+              "id": "2136f951-f261-4c43-be6d-b3dfca318332",
+              "sku": "H07",
+              "type": "select_product",
+              "lineId": "2dc63ab6-bfb1-47d3-8c14-5f771ac58bad",
+              "batchId": "1bb70d5b-3bba-43aa-907f-3976ae840462"
+            },
+            "product": {
+              "sku": "H07",
+              "name": "PVC Solvent Gum 100ml",
+              "unit": "bottle",
+              "stock": null,
+              "aliases": [
+                "PVC Solvent Gum 100ml",
+                "பைப் பசை"
+              ],
+              "version": 1,
+              "category": "Chemicals",
+              "imageUrl": "/demo-images/H07.jpg",
+              "pricePaise": 8500,
+              "quantityStep": 1
+            },
+            "requestLabel": "Item 2: solvent gum",
+            "quantityLabel": "Requested: 5 bottle"
+          },
+          {
+            "label": "Add this item",
+            "action": {
+              "id": "6d67feec-ed70-48bc-8b52-b1c18b85c21a",
+              "sku": "H13",
+              "type": "select_product",
+              "lineId": "e63fcf82-d504-4982-901b-fe9ab9e265c2",
+              "batchId": "1bb70d5b-3bba-43aa-907f-3976ae840462"
+            },
+            "product": {
+              "sku": "H13",
+              "name": "Garden Hose Pipe 10m",
+              "unit": "piece",
+              "stock": 30,
+              "aliases": [
+                "Garden Hose Pipe 10m",
+                "தோட்ட பைப் 10m"
+              ],
+              "version": 1,
+              "category": "Garden",
+              "imageUrl": "/demo-images/H13.jpg",
+              "pricePaise": 45000,
+              "quantityStep": 1
+            },
+            "requestLabel": "Item 3: garden hose",
+            "quantityLabel": "Requested: 1 piece"
+          }
+        ],
+        "version": 1,
+        "presentation": "carousel_preview",
+        "outboundMessages": 1,
+        "remainingChoices": 0
+      },
+      "aiCalls": 1
+    },
+    {
+      "input": "Select first pipe photo",
+      "state": {
+        "version": 3,
+        "draft": [
+          {
+            "id": "2870bb21-bbbe-4abb-9ce0-517d46d63d3b",
+            "sku": "H01",
+            "name": "1 inch PVC Heavy Pipe Local",
+            "unit": "piece",
+            "query": "1 inch PVC pipe",
+            "quantity": 2,
+            "candidates": [
+              {
+                "sku": "H01",
+                "name": "1 inch PVC Heavy Pipe Local",
+                "unit": "piece",
+                "stock": 120,
+                "aliases": [
+                  "1 inch PVC Heavy Pipe Local",
+                  "1 இன்ச் பைப் லோக்கல்"
+                ],
+                "version": 1,
+                "category": "Pipes & Fittings",
+                "imageUrl": "/demo-images/H01.jpg",
+                "pricePaise": 24500,
+                "quantityStep": 1
+              }
+            ],
+            "pricePaise": 24500,
+            "resolution": "matched",
+            "productVersion": 1,
+            "productConfirmation": {
+              "sku": "H01",
+              "version": 1,
+              "identityHash": "c10f67211575d27c4d10a44e40cd6b6cd8e9895a3acaa378486d667b396db3e6"
+            }
+          },
+          {
+            "id": "2dc63ab6-bfb1-47d3-8c14-5f771ac58bad",
+            "sku": "H07",
+            "name": "PVC Solvent Gum 100ml",
+            "unit": "bottle",
+            "query": "solvent gum",
+            "quantity": 5,
+            "candidates": [
+              {
+                "sku": "H07",
+                "name": "PVC Solvent Gum 100ml",
+                "unit": "bottle",
+                "stock": null,
+                "aliases": [
+                  "PVC Solvent Gum 100ml",
+                  "பைப் பசை"
+                ],
+                "version": 1,
+                "category": "Chemicals",
+                "imageUrl": "/demo-images/H07.jpg",
+                "pricePaise": 8500,
+                "quantityStep": 1
+              }
+            ],
+            "pricePaise": 8500,
+            "resolution": "matched",
+            "requestedUnit": "bottle",
+            "productVersion": 1
+          },
+          {
+            "id": "e63fcf82-d504-4982-901b-fe9ab9e265c2",
+            "sku": "H13",
+            "name": "Garden Hose Pipe 10m",
+            "unit": "piece",
+            "query": "garden hose",
+            "quantity": 1,
+            "candidates": [
+              {
+                "sku": "H13",
+                "name": "Garden Hose Pipe 10m",
+                "unit": "piece",
+                "stock": 30,
+                "aliases": [
+                  "Garden Hose Pipe 10m",
+                  "தோட்ட பைப் 10m"
+                ],
+                "version": 1,
+                "category": "Garden",
+                "imageUrl": "/demo-images/H13.jpg",
+                "pricePaise": 45000,
+                "quantityStep": 1
+              }
+            ],
+            "pricePaise": 45000,
+            "resolution": "matched",
+            "productVersion": 1
+          }
+        ],
+        "pending": {
+          "id": "0b693b7d-6768-474f-becb-8b6c9e51acd2",
+          "kind": "products",
+          "groups": [
+            {
+              "lineId": "2dc63ab6-bfb1-47d3-8c14-5f771ac58bad",
+              "products": [
+                {
+                  "sku": "H07",
+                  "name": "PVC Solvent Gum 100ml",
+                  "unit": "bottle",
+                  "stock": null,
+                  "aliases": [
+                    "PVC Solvent Gum 100ml",
+                    "பைப் பசை"
+                  ],
+                  "version": 1,
+                  "category": "Chemicals",
+                  "imageUrl": "/demo-images/H07.jpg",
+                  "pricePaise": 8500,
+                  "quantityStep": 1
+                }
+              ]
+            },
+            {
+              "lineId": "e63fcf82-d504-4982-901b-fe9ab9e265c2",
+              "products": [
+                {
+                  "sku": "H13",
+                  "name": "Garden Hose Pipe 10m",
+                  "unit": "piece",
+                  "stock": 30,
+                  "aliases": [
+                    "Garden Hose Pipe 10m",
+                    "தோட்ட பைப் 10m"
+                  ],
+                  "version": 1,
+                  "category": "Garden",
+                  "imageUrl": "/demo-images/H13.jpg",
+                  "pricePaise": 45000,
+                  "quantityStep": 1
+                }
+              ]
+            }
+          ],
+          "version": 3,
+          "expiresAt": "2026-10-03T11:12:44.814Z",
+          "remaining": 0
+        },
+        "fulfillment": "pickup",
+        "lastRequestId": null,
+        "requireProductConfirmation": true
+      },
+      "reply": {
+        "kind": "product_choices",
+        "text": "Please check what I understood:\n2. 5 × solvent gum: is this the product you meant?\n3. 1 × garden hose: is this the product you meant?\n\nCheck the photos and names, then add the right items. If anything is wrong, send the correct name, size or type. Nothing is sent to the shop yet.",
+        "cards": [
+          {
+            "label": "Add this item",
+            "action": {
+              "id": "d955af1c-f5ca-4a62-ba39-a229df2aef56",
+              "sku": "H07",
+              "type": "select_product",
+              "lineId": "2dc63ab6-bfb1-47d3-8c14-5f771ac58bad",
+              "batchId": "0b693b7d-6768-474f-becb-8b6c9e51acd2"
+            },
+            "product": {
+              "sku": "H07",
+              "name": "PVC Solvent Gum 100ml",
+              "unit": "bottle",
+              "stock": null,
+              "aliases": [
+                "PVC Solvent Gum 100ml",
+                "பைப் பசை"
+              ],
+              "version": 1,
+              "category": "Chemicals",
+              "imageUrl": "/demo-images/H07.jpg",
+              "pricePaise": 8500,
+              "quantityStep": 1
+            },
+            "requestLabel": "Item 2: solvent gum",
+            "quantityLabel": "Requested: 5 bottle"
+          },
+          {
+            "label": "Add this item",
+            "action": {
+              "id": "d2a144a0-a4a3-4a33-9eeb-f557b8f9caf0",
+              "sku": "H13",
+              "type": "select_product",
+              "lineId": "e63fcf82-d504-4982-901b-fe9ab9e265c2",
+              "batchId": "0b693b7d-6768-474f-becb-8b6c9e51acd2"
+            },
+            "product": {
+              "sku": "H13",
+              "name": "Garden Hose Pipe 10m",
+              "unit": "piece",
+              "stock": 30,
+              "aliases": [
+                "Garden Hose Pipe 10m",
+                "தோட்ட பைப் 10m"
+              ],
+              "version": 1,
+              "category": "Garden",
+              "imageUrl": "/demo-images/H13.jpg",
+              "pricePaise": 45000,
+              "quantityStep": 1
+            },
+            "requestLabel": "Item 3: garden hose",
+            "quantityLabel": "Requested: 1 piece"
+          }
+        ],
+        "buttons": [
+          {
+            "event": {
+              "id": "9b2e8473-a7f1-4b5e-8316-69a4daa138d8",
+              "type": "confirm_products",
+              "batchId": "0b693b7d-6768-474f-becb-8b6c9e51acd2"
+            },
+            "label": "Add these items"
+          }
+        ],
+        "version": 1,
+        "presentation": "carousel_preview",
+        "outboundMessages": 1,
+        "remainingChoices": 0
+      },
+      "aiCalls": 1
+    },
+    {
+      "input": "Add these items",
+      "state": {
+        "version": 4,
+        "draft": [
+          {
+            "id": "2870bb21-bbbe-4abb-9ce0-517d46d63d3b",
+            "sku": "H01",
+            "name": "1 inch PVC Heavy Pipe Local",
+            "unit": "piece",
+            "query": "1 inch PVC pipe",
+            "quantity": 2,
+            "candidates": [
+              {
+                "sku": "H01",
+                "name": "1 inch PVC Heavy Pipe Local",
+                "unit": "piece",
+                "stock": 120,
+                "aliases": [
+                  "1 inch PVC Heavy Pipe Local",
+                  "1 இன்ச் பைப் லோக்கல்"
+                ],
+                "version": 1,
+                "category": "Pipes & Fittings",
+                "imageUrl": "/demo-images/H01.jpg",
+                "pricePaise": 24500,
+                "quantityStep": 1
+              }
+            ],
+            "pricePaise": 24500,
+            "resolution": "matched",
+            "productVersion": 1,
+            "productConfirmation": {
+              "sku": "H01",
+              "version": 1,
+              "identityHash": "c10f67211575d27c4d10a44e40cd6b6cd8e9895a3acaa378486d667b396db3e6"
+            }
+          },
+          {
+            "id": "2dc63ab6-bfb1-47d3-8c14-5f771ac58bad",
+            "sku": "H07",
+            "name": "PVC Solvent Gum 100ml",
+            "unit": "bottle",
+            "query": "solvent gum",
+            "quantity": 5,
+            "candidates": [
+              {
+                "sku": "H07",
+                "name": "PVC Solvent Gum 100ml",
+                "unit": "bottle",
+                "stock": null,
+                "aliases": [
+                  "PVC Solvent Gum 100ml",
+                  "பைப் பசை"
+                ],
+                "version": 1,
+                "category": "Chemicals",
+                "imageUrl": "/demo-images/H07.jpg",
+                "pricePaise": 8500,
+                "quantityStep": 1
+              }
+            ],
+            "pricePaise": 8500,
+            "resolution": "matched",
+            "requestedUnit": "bottle",
+            "productVersion": 1,
+            "productConfirmation": {
+              "sku": "H07",
+              "version": 1,
+              "identityHash": "e545b09e8e0da1033b1439db5e77cefccbbfe1a6442ce1dfc3e50bf9a38b7031"
+            }
+          },
+          {
+            "id": "e63fcf82-d504-4982-901b-fe9ab9e265c2",
+            "sku": "H13",
+            "name": "Garden Hose Pipe 10m",
+            "unit": "piece",
+            "query": "garden hose",
+            "quantity": 1,
+            "candidates": [
+              {
+                "sku": "H13",
+                "name": "Garden Hose Pipe 10m",
+                "unit": "piece",
+                "stock": 30,
+                "aliases": [
+                  "Garden Hose Pipe 10m",
+                  "தோட்ட பைப் 10m"
+                ],
+                "version": 1,
+                "category": "Garden",
+                "imageUrl": "/demo-images/H13.jpg",
+                "pricePaise": 45000,
+                "quantityStep": 1
+              }
+            ],
+            "pricePaise": 45000,
+            "resolution": "matched",
+            "productVersion": 1,
+            "productConfirmation": {
+              "sku": "H13",
+              "version": 1,
+              "identityHash": "9dfe0900a3c49044d1b6c09f8c5b74c2bb399345a167336993a3d5ac8f2638a3"
+            }
+          }
+        ],
+        "pending": {
+          "id": "bf9439bc-2152-4fdc-a139-fd93d665a191",
+          "hash": "ac71338c2eb0fa50b60741f606f9c152941bdaf6e81b1f3544469b01f483ff35",
+          "kind": "review",
+          "lines": [
+            {
+              "id": "2870bb21-bbbe-4abb-9ce0-517d46d63d3b",
+              "sku": "H01",
+              "name": "1 inch PVC Heavy Pipe Local",
+              "unit": "piece",
+              "query": "1 inch PVC pipe",
+              "quantity": 2,
+              "candidates": [
+                {
+                  "sku": "H01",
+                  "name": "1 inch PVC Heavy Pipe Local",
+                  "unit": "piece",
+                  "stock": 120,
+                  "aliases": [
+                    "1 inch PVC Heavy Pipe Local",
+                    "1 இன்ச் பைப் லோக்கல்"
+                  ],
+                  "version": 1,
+                  "category": "Pipes & Fittings",
+                  "imageUrl": "/demo-images/H01.jpg",
+                  "pricePaise": 24500,
+                  "quantityStep": 1
+                }
+              ],
+              "pricePaise": 24500,
+              "resolution": "matched",
+              "productVersion": 1,
+              "productConfirmation": {
+                "sku": "H01",
+                "version": 1,
+                "identityHash": "c10f67211575d27c4d10a44e40cd6b6cd8e9895a3acaa378486d667b396db3e6"
+              }
+            },
+            {
+              "id": "2dc63ab6-bfb1-47d3-8c14-5f771ac58bad",
+              "sku": "H07",
+              "name": "PVC Solvent Gum 100ml",
+              "unit": "bottle",
+              "query": "solvent gum",
+              "quantity": 5,
+              "candidates": [
+                {
+                  "sku": "H07",
+                  "name": "PVC Solvent Gum 100ml",
+                  "unit": "bottle",
+                  "stock": null,
+                  "aliases": [
+                    "PVC Solvent Gum 100ml",
+                    "பைப் பசை"
+                  ],
+                  "version": 1,
+                  "category": "Chemicals",
+                  "imageUrl": "/demo-images/H07.jpg",
+                  "pricePaise": 8500,
+                  "quantityStep": 1
+                }
+              ],
+              "pricePaise": 8500,
+              "resolution": "matched",
+              "requestedUnit": "bottle",
+              "productVersion": 1,
+              "productConfirmation": {
+                "sku": "H07",
+                "version": 1,
+                "identityHash": "e545b09e8e0da1033b1439db5e77cefccbbfe1a6442ce1dfc3e50bf9a38b7031"
+              }
+            },
+            {
+              "id": "e63fcf82-d504-4982-901b-fe9ab9e265c2",
+              "sku": "H13",
+              "name": "Garden Hose Pipe 10m",
+              "unit": "piece",
+              "query": "garden hose",
+              "quantity": 1,
+              "candidates": [
+                {
+                  "sku": "H13",
+                  "name": "Garden Hose Pipe 10m",
+                  "unit": "piece",
+                  "stock": 30,
+                  "aliases": [
+                    "Garden Hose Pipe 10m",
+                    "தோட்ட பைப் 10m"
+                  ],
+                  "version": 1,
+                  "category": "Garden",
+                  "imageUrl": "/demo-images/H13.jpg",
+                  "pricePaise": 45000,
+                  "quantityStep": 1
+                }
+              ],
+              "pricePaise": 45000,
+              "resolution": "matched",
+              "productVersion": 1,
+              "productConfirmation": {
+                "sku": "H13",
+                "version": 1,
+                "identityHash": "9dfe0900a3c49044d1b6c09f8c5b74c2bb399345a167336993a3d5ac8f2638a3"
+              }
+            }
+          ],
+          "version": 4,
+          "expiresAt": "2026-10-03T11:12:45.784Z",
+          "totalPaise": 136500,
+          "fulfillment": "pickup"
+        },
+        "fulfillment": "pickup",
+        "lastRequestId": null,
+        "requireProductConfirmation": true
+      },
+      "reply": {
+        "kind": "order_review",
+        "text": "Here’s your list:\n1. 2 × 1 inch PVC Heavy Pipe Local — ₹490.00\n2. 5 × PVC Solvent Gum 100ml — ₹425.00\n3. 1 × Garden Hose Pipe 10m — ₹450.00\n\nTotal: ₹1,365.00 for pickup. Shall I send this request to the shop? They’ll confirm availability before it’s ready.",
+        "cards": [
+          {
+            "label": "Product checked",
+            "product": {
+              "sku": "H01",
+              "name": "1 inch PVC Heavy Pipe Local",
+              "unit": "piece",
+              "stock": 120,
+              "aliases": [
+                "1 inch PVC Heavy Pipe Local",
+                "1 இன்ச் பைப் லோக்கல்"
+              ],
+              "version": 1,
+              "category": "Pipes & Fittings",
+              "imageUrl": "/demo-images/H01.jpg",
+              "pricePaise": 24500,
+              "quantityStep": 1
+            },
+            "requestLabel": "1 inch PVC Heavy Pipe Local",
+            "quantityLabel": "2 pieces"
+          },
+          {
+            "label": "Product checked",
+            "product": {
+              "sku": "H07",
+              "name": "PVC Solvent Gum 100ml",
+              "unit": "bottle",
+              "stock": null,
+              "aliases": [
+                "PVC Solvent Gum 100ml",
+                "பைப் பசை"
+              ],
+              "version": 1,
+              "category": "Chemicals",
+              "imageUrl": "/demo-images/H07.jpg",
+              "pricePaise": 8500,
+              "quantityStep": 1
+            },
+            "requestLabel": "PVC Solvent Gum 100ml",
+            "quantityLabel": "5 bottles"
+          },
+          {
+            "label": "Product checked",
+            "product": {
+              "sku": "H13",
+              "name": "Garden Hose Pipe 10m",
+              "unit": "piece",
+              "stock": 30,
+              "aliases": [
+                "Garden Hose Pipe 10m",
+                "தோட்ட பைப் 10m"
+              ],
+              "version": 1,
+              "category": "Garden",
+              "imageUrl": "/demo-images/H13.jpg",
+              "pricePaise": 45000,
+              "quantityStep": 1
+            },
+            "requestLabel": "Garden Hose Pipe 10m",
+            "quantityLabel": "1 piece"
+          }
+        ],
+        "buttons": [
+          {
+            "event": {
+              "id": "d9536e56-9156-40c2-9a24-f4d92d892ffb",
+              "type": "confirm",
+              "reviewId": "bf9439bc-2152-4fdc-a139-fd93d665a191"
+            },
+            "label": "Confirm request"
+          }
+        ],
+        "version": 1,
+        "presentation": "carousel_preview",
+        "outboundMessages": 1
+      },
+      "aiCalls": 1
+    }
+  ],
+  "errors": [],
+  "requestsSubmitted": 0,
+  "conversationId": "459a6f0f-b20d-4993-9fa4-404b65e96818"
+}

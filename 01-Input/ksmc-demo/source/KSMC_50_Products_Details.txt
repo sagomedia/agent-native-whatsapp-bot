@@ -1,0 +1,258 @@
+================================================================================
+KSMC GRANDSON - 50 PRODUCTS DEMO CATALOG
+Generated for WhatsApp Bot Demo - Fake Pricing for Testing Only
+================================================================================
+
+ID: H01
+Name: 1 inch PVC Heavy Pipe Local
+Tamil: 1 இன்ச் பைப் லோக்கல்
+Category: Pipes & Fittings | Size: 1 inch | Brand: Local Heavy
+Price: Rs.245 | Cost: Rs.180 | Margin: Rs.65 (26.5%)
+Stock: 120 pcs | GST: 18% | MRP: Rs.269
+Description: Heavy duty 1 inch Schedule 40 PVC pipe for water line, 10ft length (600 PSI rated)
+Frequently Bought Together: PVC Elbow 1" (H05) + Tee (H06) + Solvent (H07) + Teflon Tape (H08) - Combo Price Rs.165
+--------------------------------------------------------------------------------
+ID: H02
+Name: 1 inch PVC Pipe Blueguard ISI
+Tamil: Finolex பைப் 1 இன்ச்
+Category: Pipes & Fittings | Size: 1 inch | Brand: Blueguard
+Price: Rs.380 | Cost: Rs.320 | Margin: Rs.60 (15.8%)
+Stock: 60 pcs | GST: 18% | MRP: Rs.418
+Description: ISI marked (IS 4985:2000) 1 inch Schedule 40 PVC pipe for cold water supply, 10 bar / 150 PSI, 10ft
+Frequently Bought Together: PVC Elbow 1" (H05) + Tee (H06) + Solvent (H07) + Teflon Tape (H08) - Combo Price Rs.165
+--------------------------------------------------------------------------------
+ID: H03
+Name: 0.75 inch PVC Pipe Local
+Tamil: 0.75 இன்ச் பைப்
+Category: Pipes & Fittings | Size: 0.75 inch | Brand: Local
+Price: Rs.180 | Cost: Rs.130 | Margin: Rs.50 (27.8%)
+Stock: 90 pcs | GST: 18% | MRP: Rs.198
+Description: 0.75 inch Schedule 40 PVC pipe (ASTM D1785) for bathroom and domestic water lines
+Frequently Bought Together: PVC Elbow 1" (H05) + Tee (H06) + Solvent (H07) + Teflon Tape (H08) - Combo Price Rs.165
+--------------------------------------------------------------------------------
+ID: H04
+Name: 1.5 inch PVC Pipe Schedule 40
+Tamil: 1.5 இன்ச் பைப்
+Category: Pipes & Fittings | Size: 1.5 inch | Brand: Local
+Price: Rs.340 | Cost: Rs.250 | Margin: Rs.90 (26.5%)
+Stock: 45 pcs | GST: 18% | MRP: Rs.374
+Description: 1.5 inch Schedule 40 PVC pipe (ASTM D2665) large diameter for main water line and drainage
+Frequently Bought Together: PVC Elbow 1" (H05) + Tee (H06) + Solvent (H07) + Teflon Tape (H08) - Combo Price Rs.165
+--------------------------------------------------------------------------------
+ID: H05
+Name: PVC Elbow 1 inch
+Tamil: L-bend 1 இன்ச்
+Category: Fittings | Size: 1 inch | Brand: Generic
+Price: Rs.25 | Cost: Rs.12 | Margin: Rs.13 (52.0%)
+Stock: 300 pcs | GST: 18% | MRP: Rs.27
+Description: 1 inch Schedule 40 PVC 90 degree elbow joint fitting (ASTM D2466)
+--------------------------------------------------------------------------------
+ID: H06
+Name: PVC Tee 1 inch
+Tamil: T-bend 1 இன்ச்
+Category: Fittings | Size: 1 inch | Brand: Generic
+Price: Rs.35 | Cost: Rs.18 | Margin: Rs.17 (48.6%)
+Stock: 250 pcs | GST: 18% | MRP: Rs.38
+Description: 1 inch Schedule 40 PVC tee fitting (ASTM D2466) for 3-way line branching
+--------------------------------------------------------------------------------
+ID: H07
+Name: PVC Solvent Gum 100ml
+Tamil: பைப் பசை
+Category: Chemicals | Size: 100ml | Brand: Pipelock
+Price: Rs.85 | Cost: Rs.45 | Margin: Rs.40 (47.1%)
+Stock: 200 pcs | GST: 18% | MRP: Rs.93
+Description: Pipelock 100ml heavy duty fast-drying clear solvent cement for PVC pipes & fittings
+--------------------------------------------------------------------------------
+ID: H08
+Name: Teflon Tape
+Tamil: Teflon Tape
+Category: Tape | Size: 12mm x 13m | Brand: Generic
+Price: Rs.20 | Cost: Rs.8 | Margin: Rs.12 (60.0%)
+Stock: 500 pcs | GST: 18% | MRP: Rs.22
+Description: PTFE thread seal tape 12mm x 13m (1/2" x 520") for leakproof threaded plumbing joints
+--------------------------------------------------------------------------------
+ID: H09
+Name: PVC End Cap 1 inch
+Tamil: மூடி 1 இன்ச்
+Category: Fittings | Size: 1 inch | Brand: Generic
+Price: Rs.15 | Cost: Rs.6 | Margin: Rs.9 (60.0%)
+Stock: 400 pcs | GST: 18% | MRP: Rs.16
+Description: 1 inch Schedule 40 PVC slip end cap (ASTM D2466) to close pipe ends
+--------------------------------------------------------------------------------
+ID: H10
+Name: Water Tank Connector 1 inch
+Tamil: டேங்க் கனெக்டர்
+Category: Tank Fittings | Size: 1 inch | Brand: Generic
+Price: Rs.95 | Cost: Rs.60 | Margin: Rs.35 (36.8%)
+Stock: 80 pcs | GST: 18% | MRP: Rs.104
+Description: Heavy duty 1 inch solid brass water tank connector with locknut and washer for tank outlet
+--------------------------------------------------------------------------------
+ID: H11
+Name: Ball Valve 1 inch
+Tamil: பால் வால்வு 1 இன்ச்
+Category: Tank Fittings | Size: 1 inch | Brand: Generic
+Price: Rs.180 | Cost: Rs.120 | Margin: Rs.60 (33.3%)
+Stock: 70 pcs | GST: 18% | MRP: Rs.198
+Description: 1 inch Schedule 80 PVC quarter-turn water control ball valve (150 PSI / 10 Bar)
+--------------------------------------------------------------------------------
+ID: H12
+Name: Pipe Clamp 1 inch
+Tamil: கிளாம்ப் 1 இன்ச்
+Category: Clamps | Size: 1 inch | Brand: Generic
+Price: Rs.18 | Cost: Rs.9 | Margin: Rs.9 (50.0%)
+Stock: 350 pcs | GST: 18% | MRP: Rs.19
+Description: 1 inch heavy duty galvanized steel U-bolt clamp with mounting base plate and nuts
+Frequently Bought Together: PVC Elbow 1" (H05) + Tee (H06) + Solvent (H07) + Teflon Tape (H08) - Combo Price Rs.165
+--------------------------------------------------------------------------------
+ID: H13
+Name: Garden Hose Pipe 10m
+Tamil: தோட்ட பைப் 10m
+Category: Garden | Size: 0.5 inch x 10m | Brand: Generic
+Price: Rs.450 | Cost: Rs.300 | Margin: Rs.150 (33.3%)
+Stock: 30 pcs | GST: 18% | MRP: Rs.495
+Description: 10 meter flexible ribbed green garden watering hose with heavy duty brass connector
+Frequently Bought Together: PVC Elbow 1" (H05) + Tee (H06) + Solvent (H07) + Teflon Tape (H08) - Combo Price Rs.165
+--------------------------------------------------------------------------------
+ID: H14
+Name: Pro-Cut Cutting Wheel 4 inch
+Tamil: கட்டிங் வீல் 4 இன்ச்
+Category: Cutting Tools | Size: 4 inch | Brand: Pro-Cut
+Price: Rs.35 | Cost: Rs.22 | Margin: Rs.13 (37.1%)
+Stock: 250 pcs | GST: 18% | MRP: Rs.38
+Description: 4 inch (100x1.0x16mm) Pro-Cut abrasive metal cutting disc for steel and stainless metal
+Frequently Bought Together: Hacksaw Blade (H16) + Safety Gloves (H29)
+--------------------------------------------------------------------------------
+ID: H15
+Name: Premium Cutting Wheel 4 inch
+Tamil: Bosch வீல்
+Category: Cutting Tools | Size: 4 inch | Brand: Premium Industrial
+Price: Rs.55 | Cost: Rs.35 | Margin: Rs.20 (36.4%)
+Stock: 150 pcs | GST: 18% | MRP: Rs.60
+Description: 4 inch (100x1.0x16mm) premium industrial cutting wheel for metal and stainless steel (max 15,300 RPM)
+Frequently Bought Together: Hacksaw Blade (H16) + Safety Gloves (H29)
+--------------------------------------------------------------------------------
+ID: H16
+Name: 12 inch Carbon Steel Hacksaw Blade
+Tamil: வாள் பிளேடு
+Category: Cutting Tools | Size: 12 inch | Brand: Generic
+Price: Rs.30 | Cost: Rs.18 | Margin: Rs.12 (40.0%)
+Stock: 200 pcs | GST: 18% | MRP: Rs.33
+Description: 12 inch (300mm) 18 TPI heat treated high carbon steel hacksaw blade for metal and PVC
+--------------------------------------------------------------------------------
+ID: H17
+Name: GardenPro Hedge Shear Garden Scissor 10 inch
+Tamil: தோட்ட கத்தரி
+Category: Garden Tools | Size: 10 inch | Brand: GardenPro
+Price: Rs.480 | Cost: Rs.320 | Margin: Rs.160 (33.3%)
+Stock: 25 pcs | GST: 18% | MRP: Rs.528
+Description: GardenPro HS-1000 heavy duty 10 inch hedge shear for garden trimming with serrated blade
+--------------------------------------------------------------------------------
+ID: H18
+Name: Falcon Bypass Pruner
+Tamil: Falcon கத்தரி
+Category: Garden Tools | Size: 8 inch | Brand: Falcon
+Price: Rs.620 | Cost: Rs.450 | Margin: Rs.170 (27.4%)
+Stock: 20 pcs | GST: 18% | MRP: Rs.682
+Description: Falcon 8 inch (200mm) bypass pruner model F-150/8 with locking mechanism for garden branches
+--------------------------------------------------------------------------------
+ID: H19
+Name: Ratchet PVC Pipe Cutter 42mm
+Tamil: பைப் கட்டர்
+Category: Cutting Tools | Size: 0-42mm | Brand: Generic
+Price: Rs.350 | Cost: Rs.230 | Margin: Rs.120 (34.3%)
+Stock: 35 pcs | GST: 18% | MRP: Rs.385
+Description: Quick ratchet PVC pipe cutter (0-42mm / 1-1.6 inch) with SK5 blade and safety lock
+Frequently Bought Together: PVC Elbow 1" (H05) + Tee (H06) + Solvent (H07) + Teflon Tape (H08) - Combo Price Rs.165
+--------------------------------------------------------------------------------
+ID: H20
+Name: Measuring Tape 5m
+Tamil: அளவு நாடா 5m
+Category: Tools | Size: 5m | Brand: Generic
+Price: Rs.120 | Cost: Rs.75 | Margin: Rs.45 (37.5%)
+Stock: 100 pcs | GST: 18% | MRP: Rs.132
+Description: 5 meter / 19mm steel measuring tape with locking button and belt clip
+--------------------------------------------------------------------------------
+ID: H21
+Name: M-Seal 90g
+Tamil: M-Seal
+Category: Chemicals | Size: 90g | Brand: Pidilite
+Price: Rs.55 | Cost: Rs.35 | Margin: Rs.20 (36.4%)
+Stock: 180 pcs | GST: 18% | MRP: Rs.60
+Description: Pidilite M-Seal 90g 2-part epoxy compound putty for sealing leaks, joints and builds
+--------------------------------------------------------------------------------
+ID: H22
+Name: Wall Putty Blade Scraper
+Tamil: புட்டி கத்தி
+Category: Wall Decor | Size: 4 inch | Brand: Generic
+Price: Rs.65 | Cost: Rs.40 | Margin: Rs.25 (38.5%)
+Stock: 90 pcs | GST: 18% | MRP: Rs.71
+Description: Stainless steel 4 inch wall putty blade scraper with knurled non-slip handle
+--------------------------------------------------------------------------------
+ID: H23
+Name: Wall Stencil Butterfly Design
+Tamil: பட்டர்பிளை ஸ்டென்சில்
+Category: Wall Decor | Size: 12x12 inch | Brand: Rainbow
+Price: Rs.150 | Cost: Rs.90 | Margin: Rs.60 (40.0%)
+Stock: 60 pcs | GST: 18% | MRP: Rs.165
+Description: Reusable washable plastic butterfly design wall stencil 12x12 inch (30.5x30.5cm)
+Frequently Bought Together: Putty Blade (H22) + Other Stencils
+--------------------------------------------------------------------------------
+ID: H24
+Name: Wall Stencil Ganesha Design
+Tamil: கணேஷ் ஸ்டென்சில்
+Category: Wall Decor | Size: 12x12 inch | Brand: Rainbow
+Price: Rs.150 | Cost: Rs.90 | Margin: Rs.60 (40.0%)
+Stock: 55 pcs | GST: 18% | MRP: Rs.165
+Description: Lord Ganesha 12x12 inch reusable washable Mylar wall stencil for pooja room wall painting and craft
+Frequently Bought Together: Putty Blade (H22) + Other Stencils
+--------------------------------------------------------------------------------
+ID: H25
+Name: Wall Stencil Damask Design
+Tamil: டிசைன் ஸ்டென்சில்
+Category: Wall Decor | Size: 16x16 inch | Brand: Rainbow
+Price: Rs.180 | Cost: Rs.110 | Margin: Rs.70 (38.9%)
+Stock: 50 pcs | GST: 18% | MRP: Rs.198
+Description: Reusable classic damask pattern wall stencil 16x16 inch (0.25mm clear Mylar) for home decor
+Frequently Bought Together: Putty Blade (H22) + Other Stencils
+--------------------------------------------------------------------------------
+ID: H26
+Name: L-Angle Clamp 1 inch
+Tamil: L கிளாம்ப்
+Category: Hardware | Size: 1 inch | Brand: Generic
+Price: Rs.45 | Cost: Rs.28 | Margin: Rs.17 (37.8%)
+Stock: 120 pcs | GST: 18% | MRP: Rs.49
+Description: Heavy duty galvanized steel L-angle clamp bracket 1 inch with knurled adjustment knob for shelf support
+--------------------------------------------------------------------------------
+ID: H27
+Name: Stainless Steel Screws 1 inch (100 pcs)
+Tamil: ஸ்க்ரூ பாக்ஸ்
+Category: Hardware | Size: 1 inch x 100pcs | Brand: Build-Rite
+Price: Rs.95 | Cost: Rs.60 | Margin: Rs.35 (36.8%)
+Stock: 200 pcs | GST: 18% | MRP: Rs.104
+Description: Build-Rite 304 stainless steel #8 pan head Phillips screws 1 inch (25mm) box of 100
+--------------------------------------------------------------------------------
+ID: H28
+Name: Water Level Tube 10m
+Tamil: வாட்டர் லெவல்
+Category: Tools | Size: 10m | Brand: Generic
+Price: Rs.110 | Cost: Rs.70 | Margin: Rs.40 (36.4%)
+Stock: 80 pcs | GST: 18% | MRP: Rs.121
+Description: Clear flexible transparent PVC water level tube 10m for masonry and construction leveling
+--------------------------------------------------------------------------------
+ID: H29
+Name: Safety Hand Gloves
+Tamil: கையுறை
+Category: Safety | Size: Large | Brand: Generic
+Price: Rs.85 | Cost: Rs.50 | Margin: Rs.35 (41.2%)
+Stock: 150 pcs | GST: 18% | MRP: Rs.93
+Description: Heavy duty cotton canvas safety work gloves (Large) for industrial and construction grip
+--------------------------------------------------------------------------------
+ID: H30
+Name: PVC Bush 1x0.75 inch Reducer
+Tamil: புஷ் 1x0.75
+Category: Fittings | Size: 1 to 0.75 | Brand: Generic
+Price: Rs.20 | Cost: Rs.10 | Margin: Rs.10 (50.0%)
+Stock: 300 pcs | GST: 18% | MRP: Rs.22
+Description: 1 inch to 0.75 inch Schedule 40 PVC reducer bush adapter (NSF-pw)
+--------------------------------------------------------------------------------
+

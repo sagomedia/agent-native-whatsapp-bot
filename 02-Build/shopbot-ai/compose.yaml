@@ -1,0 +1,48 @@
+name: shopbot-ai-local
+services:
+  postgres:
+    image: postgres:17.6-bookworm
+    environment:
+      POSTGRES_USER: shopbot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Create .env from .env.example}
+      POSTGRES_DB: shopbot
+    ports:
+      - "127.0.0.1:5437:5432"
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shopbot -d shopbot"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  app:
+    build: .
+    environment:
+      APP_MODE: ${APP_MODE:-mock}
+      DATABASE_URL: postgres://shopbot:${POSTGRES_PASSWORD:?Create .env from .env.example}@postgres:5432/shopbot
+      PORT: 3000
+      HOST: 0.0.0.0
+      MEDIA_DIR: /app/data/media
+      WHATSAPP_PLANNING_PAISE: ${WHATSAPP_PLANNING_PAISE:-50}
+      ALLOW_LOCAL_AI_TEST: ${ALLOW_LOCAL_AI_TEST:-false}
+      ALLOW_FREE_INFERENCE: ${ALLOW_FREE_INFERENCE:-false}
+      AI_QUOTA_PROJECT: ${AI_QUOTA_PROJECT:-invisible-erp}
+      ALLOW_PAID_INFERENCE: ${ALLOW_PAID_INFERENCE:-false}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-gemini-3.5-flash-lite}
+      AI_BUDGET_USD: ${AI_BUDGET_USD:-0}
+    ports:
+      - "127.0.0.1:${APP_PORT:-3017}:3000"
+    volumes:
+      - media:/app/data/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+volumes:
+  database:
+  media:

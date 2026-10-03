@@ -1,0 +1,1052 @@
+[
+  {
+    "billingSimulation": {
+      "basePaise": 24500,
+      "billPaise": 28910,
+      "gstPercent": "18",
+      "mrpPaise": 27000,
+      "name": "1 inch PVC Heavy Pipe Local",
+      "profitPaise": 6500,
+      "taxPaise": 4410
+    },
+    "costPaise": 18000,
+    "detailsRecord": {
+      "costPaise": 18000,
+      "gstPercent": "18",
+      "mrpPaise": 26900,
+      "name": "1 inch PVC Heavy Pipe Local",
+      "pricePaise": 24500,
+      "stock": 120,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 6500,
+    "originalRecord": {
+      "brand": "Local Heavy",
+      "category": "Pipes & Fittings",
+      "cost": 180,
+      "desc": "Heavy duty 1 inch Schedule 40 PVC pipe for water line, 10ft length (600 PSI rated)",
+      "id": "H01",
+      "name": "1 inch PVC Heavy Pipe Local",
+      "price": 245,
+      "size": "1 inch",
+      "stock": 120,
+      "tamil": "1 இன்ச் பைப் லோக்கல்"
+    },
+    "sku": "H01"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 38000,
+      "billPaise": 44840,
+      "gstPercent": "18",
+      "mrpPaise": 41800,
+      "name": "1 inch PVC Pipe Blueguard ISI",
+      "profitPaise": 6000,
+      "taxPaise": 6840
+    },
+    "costPaise": 32000,
+    "detailsRecord": {
+      "costPaise": 32000,
+      "gstPercent": "18",
+      "mrpPaise": 41800,
+      "name": "1 inch PVC Pipe Blueguard ISI",
+      "pricePaise": 38000,
+      "stock": 60,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 6000,
+    "originalRecord": {
+      "brand": "Blueguard",
+      "category": "Pipes & Fittings",
+      "cost": 320,
+      "desc": "ISI marked (IS 4985:2000) 1 inch Schedule 40 PVC pipe for cold water supply, 10 bar / 150 PSI, 10ft",
+      "id": "H02",
+      "name": "1 inch PVC Pipe Blueguard ISI",
+      "price": 380,
+      "size": "1 inch",
+      "stock": 60,
+      "tamil": "Finolex பைப் 1 இன்ச்"
+    },
+    "sku": "H02"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 18000,
+      "billPaise": 21240,
+      "gstPercent": "18",
+      "mrpPaise": 19800,
+      "name": "0.75 inch PVC Pipe Local",
+      "profitPaise": 5000,
+      "taxPaise": 3240
+    },
+    "costPaise": 13000,
+    "detailsRecord": {
+      "costPaise": 13000,
+      "gstPercent": "18",
+      "mrpPaise": 19800,
+      "name": "0.75 inch PVC Pipe Local",
+      "pricePaise": 18000,
+      "stock": 90,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 5000,
+    "originalRecord": {
+      "brand": "Local",
+      "category": "Pipes & Fittings",
+      "cost": 130,
+      "desc": "0.75 inch Schedule 40 PVC pipe (ASTM D1785) for bathroom and domestic water lines",
+      "id": "H03",
+      "name": "0.75 inch PVC Pipe Local",
+      "price": 180,
+      "size": "0.75 inch",
+      "stock": 90,
+      "tamil": "0.75 இன்ச் பைப்"
+    },
+    "sku": "H03"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 34000,
+      "billPaise": 40120,
+      "gstPercent": "18",
+      "mrpPaise": 37400,
+      "name": "1.5 inch PVC Pipe Schedule 40",
+      "profitPaise": 9000,
+      "taxPaise": 6120
+    },
+    "costPaise": 25000,
+    "detailsRecord": {
+      "costPaise": 25000,
+      "gstPercent": "18",
+      "mrpPaise": 37400,
+      "name": "1.5 inch PVC Pipe Schedule 40",
+      "pricePaise": 34000,
+      "stock": 45,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 9000,
+    "originalRecord": {
+      "brand": "Local",
+      "category": "Pipes & Fittings",
+      "cost": 250,
+      "desc": "1.5 inch Schedule 40 PVC pipe (ASTM D2665) large diameter for main water line and drainage",
+      "id": "H04",
+      "name": "1.5 inch PVC Pipe Schedule 40",
+      "price": 340,
+      "size": "1.5 inch",
+      "stock": 45,
+      "tamil": "1.5 இன்ச் பைப்"
+    },
+    "sku": "H04"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 2500,
+      "billPaise": 2950,
+      "gstPercent": "18",
+      "mrpPaise": 2800,
+      "name": "PVC Elbow 1 inch",
+      "profitPaise": 1300,
+      "taxPaise": 450
+    },
+    "costPaise": 1200,
+    "detailsRecord": {
+      "costPaise": 1200,
+      "gstPercent": "18",
+      "mrpPaise": 2700,
+      "name": "PVC Elbow 1 inch",
+      "pricePaise": 2500,
+      "stock": 300,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 1300,
+    "originalRecord": {
+      "brand": "Generic",
+      "category": "Fittings",
+      "cost": 12,
+      "desc": "1 inch Schedule 40 PVC 90 degree elbow joint fitting (ASTM D2466)",
+      "id": "H05",
+      "name": "PVC Elbow 1 inch",
+      "price": 25,
+      "size": "1 inch",
+      "stock": 300,
+      "tamil": "L-bend 1 இன்ச்"
+    },
+    "sku": "H05"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 3500,
+      "billPaise": 4130,
+      "gstPercent": "18",
+      "mrpPaise": 3800,
+      "name": "PVC Tee 1 inch",
+      "profitPaise": 1700,
+      "taxPaise": 630
+    },
+    "costPaise": 1800,
+    "detailsRecord": {
+      "costPaise": 1800,
+      "gstPercent": "18",
+      "mrpPaise": 3800,
+      "name": "PVC Tee 1 inch",
+      "pricePaise": 3500,
+      "stock": 250,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 1700,
+    "originalRecord": {
+      "brand": "Generic",
+      "category": "Fittings",
+      "cost": 18,
+      "desc": "1 inch Schedule 40 PVC tee fitting (ASTM D2466) for 3-way line branching",
+      "id": "H06",
+      "name": "PVC Tee 1 inch",
+      "price": 35,
+      "size": "1 inch",
+      "stock": 250,
+      "tamil": "T-bend 1 இன்ச்"
+    },
+    "sku": "H06"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 8500,
+      "billPaise": 10030,
+      "gstPercent": "18",
+      "mrpPaise": 9400,
+      "name": "PVC Solvent Gum 100ml",
+      "profitPaise": 4000,
+      "taxPaise": 1530
+    },
+    "costPaise": 4500,
+    "detailsRecord": {
+      "costPaise": 4500,
+      "gstPercent": "18",
+      "mrpPaise": 9300,
+      "name": "PVC Solvent Gum 100ml",
+      "pricePaise": 8500,
+      "stock": 200,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 4000,
+    "originalRecord": {
+      "brand": "Pipelock",
+      "category": "Chemicals",
+      "cost": 45,
+      "desc": "Pipelock 100ml heavy duty fast-drying clear solvent cement for PVC pipes & fittings",
+      "id": "H07",
+      "name": "PVC Solvent Gum 100ml",
+      "price": 85,
+      "size": "100ml",
+      "stock": 200,
+      "tamil": "பைப் பசை"
+    },
+    "sku": "H07"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 2000,
+      "billPaise": 2360,
+      "gstPercent": "18",
+      "mrpPaise": 2200,
+      "name": "Teflon Tape",
+      "profitPaise": 1200,
+      "taxPaise": 360
+    },
+    "costPaise": 800,
+    "detailsRecord": {
+      "costPaise": 800,
+      "gstPercent": "18",
+      "mrpPaise": 2200,
+      "name": "Teflon Tape",
+      "pricePaise": 2000,
+      "stock": 500,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 1200,
+    "originalRecord": {
+      "brand": "Generic",
+      "category": "Tape",
+      "cost": 8,
+      "desc": "PTFE thread seal tape 12mm x 13m (1/2\" x 520\") for leakproof threaded plumbing joints",
+      "id": "H08",
+      "name": "Teflon Tape",
+      "price": 20,
+      "size": "12mm x 13m",
+      "stock": 500,
+      "tamil": "Teflon Tape"
+    },
+    "sku": "H08"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 1500,
+      "billPaise": 1770,
+      "gstPercent": "18",
+      "mrpPaise": 1600,
+      "name": "PVC End Cap 1 inch",
+      "profitPaise": 900,
+      "taxPaise": 270
+    },
+    "costPaise": 600,
+    "detailsRecord": {
+      "costPaise": 600,
+      "gstPercent": "18",
+      "mrpPaise": 1600,
+      "name": "PVC End Cap 1 inch",
+      "pricePaise": 1500,
+      "stock": 400,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 900,
+    "originalRecord": {
+      "brand": "Generic",
+      "category": "Fittings",
+      "cost": 6,
+      "desc": "1 inch Schedule 40 PVC slip end cap (ASTM D2466) to close pipe ends",
+      "id": "H09",
+      "name": "PVC End Cap 1 inch",
+      "price": 15,
+      "size": "1 inch",
+      "stock": 400,
+      "tamil": "மூடி 1 இன்ச்"
+    },
+    "sku": "H09"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 9500,
+      "billPaise": 11210,
+      "gstPercent": "18",
+      "mrpPaise": 10500,
+      "name": "Water Tank Connector 1 inch",
+      "profitPaise": 3500,
+      "taxPaise": 1710
+    },
+    "costPaise": 6000,
+    "detailsRecord": {
+      "costPaise": 6000,
+      "gstPercent": "18",
+      "mrpPaise": 10400,
+      "name": "Water Tank Connector 1 inch",
+      "pricePaise": 9500,
+      "stock": 80,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 3500,
+    "originalRecord": {
+      "brand": "Generic",
+      "category": "Tank Fittings",
+      "cost": 60,
+      "desc": "Heavy duty 1 inch solid brass water tank connector with locknut and washer for tank outlet",
+      "id": "H10",
+      "name": "Water Tank Connector 1 inch",
+      "price": 95,
+      "size": "1 inch",
+      "stock": 80,
+      "tamil": "டேங்க் கனெக்டர்"
+    },
+    "sku": "H10"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 18000,
+      "billPaise": 21240,
+      "gstPercent": "18",
+      "mrpPaise": 19800,
+      "name": "Ball Valve 1 inch",
+      "profitPaise": 6000,
+      "taxPaise": 3240
+    },
+    "costPaise": 12000,
+    "detailsRecord": {
+      "costPaise": 12000,
+      "gstPercent": "18",
+      "mrpPaise": 19800,
+      "name": "Ball Valve 1 inch",
+      "pricePaise": 18000,
+      "stock": 70,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 6000,
+    "originalRecord": {
+      "brand": "Generic",
+      "category": "Tank Fittings",
+      "cost": 120,
+      "desc": "1 inch Schedule 80 PVC quarter-turn water control ball valve (150 PSI / 10 Bar)",
+      "id": "H11",
+      "name": "Ball Valve 1 inch",
+      "price": 180,
+      "size": "1 inch",
+      "stock": 70,
+      "tamil": "பால் வால்வு 1 இன்ச்"
+    },
+    "sku": "H11"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 1800,
+      "billPaise": 2124,
+      "gstPercent": "18",
+      "mrpPaise": 2000,
+      "name": "Pipe Clamp 1 inch",
+      "profitPaise": 900,
+      "taxPaise": 324
+    },
+    "costPaise": 900,
+    "detailsRecord": {
+      "costPaise": 900,
+      "gstPercent": "18",
+      "mrpPaise": 1900,
+      "name": "Pipe Clamp 1 inch",
+      "pricePaise": 1800,
+      "stock": 350,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 900,
+    "originalRecord": {
+      "brand": "Generic",
+      "category": "Clamps",
+      "cost": 9,
+      "desc": "1 inch heavy duty galvanized steel U-bolt clamp with mounting base plate and nuts",
+      "id": "H12",
+      "name": "Pipe Clamp 1 inch",
+      "price": 18,
+      "size": "1 inch",
+      "stock": 350,
+      "tamil": "கிளாம்ப் 1 இன்ச்"
+    },
+    "sku": "H12"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 45000,
+      "billPaise": 53100,
+      "gstPercent": "18",
+      "mrpPaise": 49500,
+      "name": "Garden Hose Pipe 10m",
+      "profitPaise": 15000,
+      "taxPaise": 8100
+    },
+    "costPaise": 30000,
+    "detailsRecord": {
+      "costPaise": 30000,
+      "gstPercent": "18",
+      "mrpPaise": 49500,
+      "name": "Garden Hose Pipe 10m",
+      "pricePaise": 45000,
+      "stock": 30,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 15000,
+    "originalRecord": {
+      "brand": "Generic",
+      "category": "Garden",
+      "cost": 300,
+      "desc": "10 meter flexible ribbed green garden watering hose with heavy duty brass connector",
+      "id": "H13",
+      "name": "Garden Hose Pipe 10m",
+      "price": 450,
+      "size": "0.5 inch x 10m",
+      "stock": 30,
+      "tamil": "தோட்ட பைப் 10m"
+    },
+    "sku": "H13"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 3500,
+      "billPaise": 4130,
+      "gstPercent": "18",
+      "mrpPaise": 3800,
+      "name": "Pro-Cut Cutting Wheel 4 inch",
+      "profitPaise": 1300,
+      "taxPaise": 630
+    },
+    "costPaise": 2200,
+    "detailsRecord": {
+      "costPaise": 2200,
+      "gstPercent": "18",
+      "mrpPaise": 3800,
+      "name": "Pro-Cut Cutting Wheel 4 inch",
+      "pricePaise": 3500,
+      "stock": 250,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 1300,
+    "originalRecord": {
+      "brand": "Pro-Cut",
+      "category": "Cutting Tools",
+      "cost": 22,
+      "desc": "4 inch (100x1.0x16mm) Pro-Cut abrasive metal cutting disc for steel and stainless metal",
+      "id": "H14",
+      "name": "Pro-Cut Cutting Wheel 4 inch",
+      "price": 35,
+      "size": "4 inch",
+      "stock": 250,
+      "tamil": "கட்டிங் வீல் 4 இன்ச்"
+    },
+    "sku": "H14"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 5500,
+      "billPaise": 6490,
+      "gstPercent": "18",
+      "mrpPaise": 6100,
+      "name": "Premium Cutting Wheel 4 inch",
+      "profitPaise": 2000,
+      "taxPaise": 990
+    },
+    "costPaise": 3500,
+    "detailsRecord": {
+      "costPaise": 3500,
+      "gstPercent": "18",
+      "mrpPaise": 6000,
+      "name": "Premium Cutting Wheel 4 inch",
+      "pricePaise": 5500,
+      "stock": 150,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 2000,
+    "originalRecord": {
+      "brand": "Premium Industrial",
+      "category": "Cutting Tools",
+      "cost": 35,
+      "desc": "4 inch (100x1.0x16mm) premium industrial cutting wheel for metal and stainless steel (max 15,300 RPM)",
+      "id": "H15",
+      "name": "Premium Cutting Wheel 4 inch",
+      "price": 55,
+      "size": "4 inch",
+      "stock": 150,
+      "tamil": "Bosch வீல்"
+    },
+    "sku": "H15"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 3000,
+      "billPaise": 3540,
+      "gstPercent": "18",
+      "mrpPaise": 3300,
+      "name": "12 inch Carbon Steel Hacksaw Blade",
+      "profitPaise": 1200,
+      "taxPaise": 540
+    },
+    "costPaise": 1800,
+    "detailsRecord": {
+      "costPaise": 1800,
+      "gstPercent": "18",
+      "mrpPaise": 3300,
+      "name": "12 inch Carbon Steel Hacksaw Blade",
+      "pricePaise": 3000,
+      "stock": 200,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 1200,
+    "originalRecord": {
+      "brand": "Generic",
+      "category": "Cutting Tools",
+      "cost": 18,
+      "desc": "12 inch (300mm) 18 TPI heat treated high carbon steel hacksaw blade for metal and PVC",
+      "id": "H16",
+      "name": "12 inch Carbon Steel Hacksaw Blade",
+      "price": 30,
+      "size": "12 inch",
+      "stock": 200,
+      "tamil": "வாள் பிளேடு"
+    },
+    "sku": "H16"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 48000,
+      "billPaise": 56640,
+      "gstPercent": "18",
+      "mrpPaise": 52800,
+      "name": "GardenPro Hedge Shear Garden Scissor 10 inch",
+      "profitPaise": 16000,
+      "taxPaise": 8640
+    },
+    "costPaise": 32000,
+    "detailsRecord": {
+      "costPaise": 32000,
+      "gstPercent": "18",
+      "mrpPaise": 52800,
+      "name": "GardenPro Hedge Shear Garden Scissor 10 inch",
+      "pricePaise": 48000,
+      "stock": 25,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 16000,
+    "originalRecord": {
+      "brand": "GardenPro",
+      "category": "Garden Tools",
+      "cost": 320,
+      "desc": "GardenPro HS-1000 heavy duty 10 inch hedge shear for garden trimming with serrated blade",
+      "id": "H17",
+      "name": "GardenPro Hedge Shear Garden Scissor 10 inch",
+      "price": 480,
+      "size": "10 inch",
+      "stock": 25,
+      "tamil": "தோட்ட கத்தரி"
+    },
+    "sku": "H17"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 62000,
+      "billPaise": 73160,
+      "gstPercent": "18",
+      "mrpPaise": 68200,
+      "name": "Falcon Bypass Pruner",
+      "profitPaise": 17000,
+      "taxPaise": 11160
+    },
+    "costPaise": 45000,
+    "detailsRecord": {
+      "costPaise": 45000,
+      "gstPercent": "18",
+      "mrpPaise": 68200,
+      "name": "Falcon Bypass Pruner",
+      "pricePaise": 62000,
+      "stock": 20,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 17000,
+    "originalRecord": {
+      "brand": "Falcon",
+      "category": "Garden Tools",
+      "cost": 450,
+      "desc": "Falcon 8 inch (200mm) bypass pruner model F-150/8 with locking mechanism for garden branches",
+      "id": "H18",
+      "name": "Falcon Bypass Pruner",
+      "price": 620,
+      "size": "8 inch",
+      "stock": 20,
+      "tamil": "Falcon கத்தரி"
+    },
+    "sku": "H18"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 35000,
+      "billPaise": 41300,
+      "gstPercent": "18",
+      "mrpPaise": 38500,
+      "name": "Ratchet PVC Pipe Cutter 42mm",
+      "profitPaise": 12000,
+      "taxPaise": 6300
+    },
+    "costPaise": 23000,
+    "detailsRecord": {
+      "costPaise": 23000,
+      "gstPercent": "18",
+      "mrpPaise": 38500,
+      "name": "Ratchet PVC Pipe Cutter 42mm",
+      "pricePaise": 35000,
+      "stock": 35,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 12000,
+    "originalRecord": {
+      "brand": "Generic",
+      "category": "Cutting Tools",
+      "cost": 230,
+      "desc": "Quick ratchet PVC pipe cutter (0-42mm / 1-1.6 inch) with SK5 blade and safety lock",
+      "id": "H19",
+      "name": "Ratchet PVC Pipe Cutter 42mm",
+      "price": 350,
+      "size": "0-42mm",
+      "stock": 35,
+      "tamil": "பைப் கட்டர்"
+    },
+    "sku": "H19"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 12000,
+      "billPaise": 14160,
+      "gstPercent": "18",
+      "mrpPaise": 13200,
+      "name": "Measuring Tape 5m",
+      "profitPaise": 4500,
+      "taxPaise": 2160
+    },
+    "costPaise": 7500,
+    "detailsRecord": {
+      "costPaise": 7500,
+      "gstPercent": "18",
+      "mrpPaise": 13200,
+      "name": "Measuring Tape 5m",
+      "pricePaise": 12000,
+      "stock": 100,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 4500,
+    "originalRecord": {
+      "brand": "Generic",
+      "category": "Tools",
+      "cost": 75,
+      "desc": "5 meter / 19mm steel measuring tape with locking button and belt clip",
+      "id": "H20",
+      "name": "Measuring Tape 5m",
+      "price": 120,
+      "size": "5m",
+      "stock": 100,
+      "tamil": "அளவு நாடா 5m"
+    },
+    "sku": "H20"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 5500,
+      "billPaise": 6490,
+      "gstPercent": "18",
+      "mrpPaise": 6100,
+      "name": "M-Seal 90g",
+      "profitPaise": 2000,
+      "taxPaise": 990
+    },
+    "costPaise": 3500,
+    "detailsRecord": {
+      "costPaise": 3500,
+      "gstPercent": "18",
+      "mrpPaise": 6000,
+      "name": "M-Seal 90g",
+      "pricePaise": 5500,
+      "stock": 180,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 2000,
+    "originalRecord": {
+      "brand": "Pidilite",
+      "category": "Chemicals",
+      "cost": 35,
+      "desc": "Pidilite M-Seal 90g 2-part epoxy compound putty for sealing leaks, joints and builds",
+      "id": "H21",
+      "name": "M-Seal 90g",
+      "price": 55,
+      "size": "90g",
+      "stock": 180,
+      "tamil": "M-Seal"
+    },
+    "sku": "H21"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 6500,
+      "billPaise": 7670,
+      "gstPercent": "18",
+      "mrpPaise": 7200,
+      "name": "Wall Putty Blade Scraper",
+      "profitPaise": 2500,
+      "taxPaise": 1170
+    },
+    "costPaise": 4000,
+    "detailsRecord": {
+      "costPaise": 4000,
+      "gstPercent": "18",
+      "mrpPaise": 7100,
+      "name": "Wall Putty Blade Scraper",
+      "pricePaise": 6500,
+      "stock": 90,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 2500,
+    "originalRecord": {
+      "brand": "Generic",
+      "category": "Wall Decor",
+      "cost": 40,
+      "desc": "Stainless steel 4 inch wall putty blade scraper with knurled non-slip handle",
+      "id": "H22",
+      "name": "Wall Putty Blade Scraper",
+      "price": 65,
+      "size": "4 inch",
+      "stock": 90,
+      "tamil": "புட்டி கத்தி"
+    },
+    "sku": "H22"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 15000,
+      "billPaise": 17700,
+      "gstPercent": "18",
+      "mrpPaise": 16500,
+      "name": "Wall Stencil Butterfly Design",
+      "profitPaise": 6000,
+      "taxPaise": 2700
+    },
+    "costPaise": 9000,
+    "detailsRecord": {
+      "costPaise": 9000,
+      "gstPercent": "18",
+      "mrpPaise": 16500,
+      "name": "Wall Stencil Butterfly Design",
+      "pricePaise": 15000,
+      "stock": 60,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 6000,
+    "originalRecord": {
+      "brand": "Rainbow",
+      "category": "Wall Decor",
+      "cost": 90,
+      "desc": "Reusable washable plastic butterfly design wall stencil 12x12 inch (30.5x30.5cm)",
+      "id": "H23",
+      "name": "Wall Stencil Butterfly Design",
+      "price": 150,
+      "size": "12x12 inch",
+      "stock": 60,
+      "tamil": "பட்டர்பிளை ஸ்டென்சில்"
+    },
+    "sku": "H23"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 15000,
+      "billPaise": 17700,
+      "gstPercent": "18",
+      "mrpPaise": 16500,
+      "name": "Wall Stencil Ganesha Design",
+      "profitPaise": 6000,
+      "taxPaise": 2700
+    },
+    "costPaise": 9000,
+    "detailsRecord": {
+      "costPaise": 9000,
+      "gstPercent": "18",
+      "mrpPaise": 16500,
+      "name": "Wall Stencil Ganesha Design",
+      "pricePaise": 15000,
+      "stock": 55,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 6000,
+    "originalRecord": {
+      "brand": "Rainbow",
+      "category": "Wall Decor",
+      "cost": 90,
+      "desc": "Lord Ganesha 12x12 inch reusable washable Mylar wall stencil for pooja room wall painting and craft",
+      "id": "H24",
+      "name": "Wall Stencil Ganesha Design",
+      "price": 150,
+      "size": "12x12 inch",
+      "stock": 55,
+      "tamil": "கணேஷ் ஸ்டென்சில்"
+    },
+    "sku": "H24"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 18000,
+      "billPaise": 21240,
+      "gstPercent": "18",
+      "mrpPaise": 19800,
+      "name": "Wall Stencil Damask Design",
+      "profitPaise": 7000,
+      "taxPaise": 3240
+    },
+    "costPaise": 11000,
+    "detailsRecord": {
+      "costPaise": 11000,
+      "gstPercent": "18",
+      "mrpPaise": 19800,
+      "name": "Wall Stencil Damask Design",
+      "pricePaise": 18000,
+      "stock": 50,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 7000,
+    "originalRecord": {
+      "brand": "Rainbow",
+      "category": "Wall Decor",
+      "cost": 110,
+      "desc": "Reusable classic damask pattern wall stencil 16x16 inch (0.25mm clear Mylar) for home decor",
+      "id": "H25",
+      "name": "Wall Stencil Damask Design",
+      "price": 180,
+      "size": "16x16 inch",
+      "stock": 50,
+      "tamil": "டிசைன் ஸ்டென்சில்"
+    },
+    "sku": "H25"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 4500,
+      "billPaise": 5310,
+      "gstPercent": "18",
+      "mrpPaise": 5000,
+      "name": "L-Angle Clamp 1 inch",
+      "profitPaise": 1700,
+      "taxPaise": 810
+    },
+    "costPaise": 2800,
+    "detailsRecord": {
+      "costPaise": 2800,
+      "gstPercent": "18",
+      "mrpPaise": 4900,
+      "name": "L-Angle Clamp 1 inch",
+      "pricePaise": 4500,
+      "stock": 120,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 1700,
+    "originalRecord": {
+      "brand": "Generic",
+      "category": "Hardware",
+      "cost": 28,
+      "desc": "Heavy duty galvanized steel L-angle clamp bracket 1 inch with knurled adjustment knob for shelf support",
+      "id": "H26",
+      "name": "L-Angle Clamp 1 inch",
+      "price": 45,
+      "size": "1 inch",
+      "stock": 120,
+      "tamil": "L கிளாம்ப்"
+    },
+    "sku": "H26"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 9500,
+      "billPaise": 11210,
+      "gstPercent": "18",
+      "mrpPaise": 10500,
+      "name": "Stainless Steel Screws 1 inch (100 pcs)",
+      "profitPaise": 3500,
+      "taxPaise": 1710
+    },
+    "costPaise": 6000,
+    "detailsRecord": {
+      "costPaise": 6000,
+      "gstPercent": "18",
+      "mrpPaise": 10400,
+      "name": "Stainless Steel Screws 1 inch (100 pcs)",
+      "pricePaise": 9500,
+      "stock": 200,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 3500,
+    "originalRecord": {
+      "brand": "Build-Rite",
+      "category": "Hardware",
+      "cost": 60,
+      "desc": "Build-Rite 304 stainless steel #8 pan head Phillips screws 1 inch (25mm) box of 100",
+      "id": "H27",
+      "name": "Stainless Steel Screws 1 inch (100 pcs)",
+      "price": 95,
+      "size": "1 inch x 100pcs",
+      "stock": 200,
+      "tamil": "ஸ்க்ரூ பாக்ஸ்"
+    },
+    "sku": "H27"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 11000,
+      "billPaise": 12980,
+      "gstPercent": "18",
+      "mrpPaise": 12100,
+      "name": "Water Level Tube 10m",
+      "profitPaise": 4000,
+      "taxPaise": 1980
+    },
+    "costPaise": 7000,
+    "detailsRecord": {
+      "costPaise": 7000,
+      "gstPercent": "18",
+      "mrpPaise": 12100,
+      "name": "Water Level Tube 10m",
+      "pricePaise": 11000,
+      "stock": 80,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 4000,
+    "originalRecord": {
+      "brand": "Generic",
+      "category": "Tools",
+      "cost": 70,
+      "desc": "Clear flexible transparent PVC water level tube 10m for masonry and construction leveling",
+      "id": "H28",
+      "name": "Water Level Tube 10m",
+      "price": 110,
+      "size": "10m",
+      "stock": 80,
+      "tamil": "வாட்டர் லெவல்"
+    },
+    "sku": "H28"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 8500,
+      "billPaise": 10030,
+      "gstPercent": "18",
+      "mrpPaise": 9400,
+      "name": "Safety Hand Gloves",
+      "profitPaise": 3500,
+      "taxPaise": 1530
+    },
+    "costPaise": 5000,
+    "detailsRecord": {
+      "costPaise": 5000,
+      "gstPercent": "18",
+      "mrpPaise": 9300,
+      "name": "Safety Hand Gloves",
+      "pricePaise": 8500,
+      "stock": 150,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 3500,
+    "originalRecord": {
+      "brand": "Generic",
+      "category": "Safety",
+      "cost": 50,
+      "desc": "Heavy duty cotton canvas safety work gloves (Large) for industrial and construction grip",
+      "id": "H29",
+      "name": "Safety Hand Gloves",
+      "price": 85,
+      "size": "Large",
+      "stock": 150,
+      "tamil": "கையுறை"
+    },
+    "sku": "H29"
+  },
+  {
+    "billingSimulation": {
+      "basePaise": 2000,
+      "billPaise": 2360,
+      "gstPercent": "18",
+      "mrpPaise": 2200,
+      "name": "PVC Bush 1x0.75 inch Reducer",
+      "profitPaise": 1000,
+      "taxPaise": 360
+    },
+    "costPaise": 1000,
+    "detailsRecord": {
+      "costPaise": 1000,
+      "gstPercent": "18",
+      "mrpPaise": 2200,
+      "name": "PVC Bush 1x0.75 inch Reducer",
+      "pricePaise": 2000,
+      "stock": 300,
+      "stockUnit": "pcs"
+    },
+    "marginPaise": 1000,
+    "originalRecord": {
+      "brand": "Generic",
+      "category": "Fittings",
+      "cost": 10,
+      "desc": "1 inch to 0.75 inch Schedule 40 PVC reducer bush adapter (NSF-pw)",
+      "id": "H30",
+      "name": "PVC Bush 1x0.75 inch Reducer",
+      "price": 20,
+      "size": "1 to 0.75",
+      "stock": 300,
+      "tamil": "புஷ் 1x0.75"
+    },
+    "sku": "H30"
+  }
+]

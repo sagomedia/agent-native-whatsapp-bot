@@ -1,0 +1,212 @@
+[
+  {
+    "normalizedPath": "images/H01.jpg",
+    "originalFilename": "H01_1_inch_PVC_Heavy_Pipe_Local.jpg",
+    "sha256": "ba5d571155f6801104cd3ea7f16cfc159e2066adfb7d18c040e26f027a098e67",
+    "sku": "H01",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H02.jpg",
+    "originalFilename": "H02_1_inch_PVC_Pipe_Finolex_ISI.jpg",
+    "sha256": "16daeb8d7a6f14e95f1a35c3ba941bd138a2a1faaf14d152f2b7385c077f9651",
+    "sku": "H02",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H03.jpg",
+    "originalFilename": "H03_0.75_inch_PVC_Pipe_Local.jpg",
+    "sha256": "7da9f35831d63f4d67f017850a6af519f0314d1b5350879b91a70bd4b1e50dc9",
+    "sku": "H03",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H04.jpg",
+    "originalFilename": "H04_1.5_inch_PVC_Pipe_Local.jpg",
+    "sha256": "9a25254899a50e12c357cbf01219e8d5fb65d7e2a58a24eb9dc038976d689bc8",
+    "sku": "H04",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H05.jpg",
+    "originalFilename": "H05_PVC_Elbow_1_inch.jpg",
+    "sha256": "cce7b11b34269e24bca716c3aaf4fa33868cf47888cc4ed94040b8b7a5b34369",
+    "sku": "H05",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H06.jpg",
+    "originalFilename": "H06_PVC_Tee_1_inch.jpg",
+    "sha256": "f67a173d5bde2550abeead829de882c93c411344a14785536c059fbb26752859",
+    "sku": "H06",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H07.jpg",
+    "originalFilename": "H07_PVC_Solvent_Gum_100ml.jpg",
+    "sha256": "c62cb2a0d3093b85c91e847fa89ad91c7bedfdda9408ad665bd0add265f3cd4f",
+    "sku": "H07",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H08.jpg",
+    "originalFilename": "H08_Teflon_Tape.jpg",
+    "sha256": "b98da9854a2a649d3f0c9eafe1c6801d7fbd4abe11933e355c65a52a2481e78e",
+    "sku": "H08",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H09.jpg",
+    "originalFilename": "H09_PVC_End_Cap_1_inch.jpg",
+    "sha256": "df4f74d9c3ff49383b33d10bb6dfb5ee090cd5c28e8629dd8fe5d3c682059540",
+    "sku": "H09",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H10.jpg",
+    "originalFilename": "H10_Water_Tank_Connector_1_inch.jpg",
+    "sha256": "389f557212e22c58e1303a1b4cd87f735370fe9a7217ae7a6bcea26d010a47fe",
+    "sku": "H10",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H11.jpg",
+    "originalFilename": "H11_Ball_Valve_1_inch.jpg",
+    "sha256": "df1fa078c124ddbd4b34d800ab7a28d149503a122f0527a629e57e96c7628b90",
+    "sku": "H11",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H12.jpg",
+    "originalFilename": "H12_Pipe_Clamp_1_inch.jpg",
+    "sha256": "2573e44bc802cd8ed97e5f8c225075a3daa57374d661fd88a9b425935d4f35bc",
+    "sku": "H12",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H13.jpg",
+    "originalFilename": "H13_Garden_Hose_Pipe_10m.jpg",
+    "sha256": "e7ffc0ab5a2a8865f69936fffa8370c5327382c8d11d5495c7f2e63a28aa7331",
+    "sku": "H13",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H14.jpg",
+    "originalFilename": "H14_TEZZ_INOX_Cutting_Wheel_4_inch.jpg",
+    "sha256": "6c195194bf783a13d0451f201222511c1085f0d42934d43027a17ff6e426be2d",
+    "sku": "H14",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H15.jpg",
+    "originalFilename": "H15_Bosch_Cutting_Wheel_4_inch.jpg",
+    "sha256": "ae6102148d25d2ded2afe7dcc7fbe83f7dc6cb930ef3586b0fcfd62f4dc7e0c0",
+    "sku": "H15",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H16.jpg",
+    "originalFilename": "H16_Hacksaw_Blade.jpg",
+    "sha256": "4353934d77f0c9cbf37050a976eb23f92e595ccbed33ce620b34e7d5ce97470c",
+    "sku": "H16",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H17.jpg",
+    "originalFilename": "H17_Hedge_Shear_Garden_Scissor.jpg",
+    "sha256": "4bdf9ad192e91f12028c54d0847d331379b4362d5fd42ce5de51075ea233c3d5",
+    "sku": "H17",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H18.jpg",
+    "originalFilename": "H18_Falcon_Bypass_Pruner.jpg",
+    "sha256": "3a7f58ba257a48432e88be4dd955ba0dde01b8276a2cbea86e8305afb6df2bb5",
+    "sku": "H18",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H19.jpg",
+    "originalFilename": "H19_Pipe_Cutter_Small.jpg",
+    "sha256": "b8099aa2db8c2a1e66ee3e7976430fd7f6231b1930b29e218b09e65a891b743a",
+    "sku": "H19",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H20.jpg",
+    "originalFilename": "H20_Measuring_Tape_5m.jpg",
+    "sha256": "6ecfe4d5156e4c165a888bb172eea85ad8e4e481e44380da71de2958bf0bf4f6",
+    "sku": "H20",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H21.jpg",
+    "originalFilename": "H21_M-Seal_90g.jpg",
+    "sha256": "cf6e5160c73b66ac390df4ab57c2597bba8b1a98e54a26bf5b1ec6a0d74a94d5",
+    "sku": "H21",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H22.jpg",
+    "originalFilename": "H22_Wall_Putty_Blade_Scraper.jpg",
+    "sha256": "7675df1c98d3d8313c75b478e62bb15bb6ab8e1093aa46a6477bc3fde0865495",
+    "sku": "H22",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H23.jpg",
+    "originalFilename": "H23_Wall_Stencil_Butterfly_Design.jpg",
+    "sha256": "949eba10252e47cb14def039336bbd16a0e0688cfb535eac2eed37de5edf86ec",
+    "sku": "H23",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H24.jpg",
+    "originalFilename": "H24_Wall_Stencil_Ganesha_Design.jpg",
+    "sha256": "96a21ea9fedb545211be5259c62db93adae23d7d38420571058c3e0c217854af",
+    "sku": "H24",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H25.jpg",
+    "originalFilename": "H25_Wall_Stencil_Damask_Design.jpg",
+    "sha256": "96d64fe8de183e85e1f0589e8841b3b5001ae79bc909d3f1aa2e77d5e3db4c6a",
+    "sku": "H25",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H26.jpg",
+    "originalFilename": "H26_L-Angle_Clamp_1_inch.jpg",
+    "sha256": "6c52c071758dc0af90543eb79278e2bed6500aed710039dae3a1da9289601368",
+    "sku": "H26",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H27.jpg",
+    "originalFilename": "H27_Screw_Box_1_inch_Stainless.jpg",
+    "sha256": "c070ed9834ea801e0fa2699eddb3fd7d6fae335a565f008a20b08f6357b1d3ca",
+    "sku": "H27",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H28.jpg",
+    "originalFilename": "H28_Water_Level_Tube_10m.jpg",
+    "sha256": "d9dcb06b81b584b827116370c9daee9032bf0d3605bec4e8e7bd180d31f686a4",
+    "sku": "H28",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H29.jpg",
+    "originalFilename": "H29_Safety_Hand_Gloves.jpg",
+    "sha256": "f951a6e419020c84ee17c1d6867408cdb836a8a6f121c0b55ee689fe7b857d31",
+    "sku": "H29",
+    "synthetic": true
+  },
+  {
+    "normalizedPath": "images/H30.jpg",
+    "originalFilename": "H30_PVC_Bush_1x0.75_inch_Reducer.jpg",
+    "sha256": "1108760fbe42ff5c1e98a7d6eb7c0a786d1b70187d4ea5fc35bf556e64f8c98a",
+    "sku": "H30",
+    "synthetic": true
+  }
+]

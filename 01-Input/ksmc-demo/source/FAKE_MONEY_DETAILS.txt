@@ -1,0 +1,37 @@
+FAKE MONEY / BILLING SIMULATION FOR DEMO
+============================================================
+Note: This is FAKE DEMO DATA for testing only, not real accounting
+
+H01 | 1 inch PVC Heavy Pipe Local                | Base: Rs.245 | GST 18%: Rs.44.1 | Bill: Rs.289.10 | MRP: Rs.270 | Profit: Rs.65
+H02 | 1 inch PVC Pipe Blueguard ISI              | Base: Rs.380 | GST 18%: Rs.68.4 | Bill: Rs.448.40 | MRP: Rs.418 | Profit: Rs.60
+H03 | 0.75 inch PVC Pipe Local                   | Base: Rs.180 | GST 18%: Rs.32.4 | Bill: Rs.212.40 | MRP: Rs.198 | Profit: Rs.50
+H04 | 1.5 inch PVC Pipe Schedule 40              | Base: Rs.340 | GST 18%: Rs.61.2 | Bill: Rs.401.20 | MRP: Rs.374 | Profit: Rs.90
+H05 | PVC Elbow 1 inch                           | Base: Rs.25 | GST 18%: Rs.4.5 | Bill: Rs.29.50 | MRP: Rs.28 | Profit: Rs.13
+H06 | PVC Tee 1 inch                             | Base: Rs.35 | GST 18%: Rs.6.3 | Bill: Rs.41.30 | MRP: Rs.38 | Profit: Rs.17
+H07 | PVC Solvent Gum 100ml                      | Base: Rs.85 | GST 18%: Rs.15.3 | Bill: Rs.100.30 | MRP: Rs.94 | Profit: Rs.40
+H08 | Teflon Tape                                | Base: Rs.20 | GST 18%: Rs.3.6 | Bill: Rs.23.60 | MRP: Rs.22 | Profit: Rs.12
+H09 | PVC End Cap 1 inch                         | Base: Rs.15 | GST 18%: Rs.2.7 | Bill: Rs.17.70 | MRP: Rs.16 | Profit: Rs.9
+H10 | Water Tank Connector 1 inch                | Base: Rs.95 | GST 18%: Rs.17.1 | Bill: Rs.112.10 | MRP: Rs.105 | Profit: Rs.35
+H11 | Ball Valve 1 inch                          | Base: Rs.180 | GST 18%: Rs.32.4 | Bill: Rs.212.40 | MRP: Rs.198 | Profit: Rs.60
+H12 | Pipe Clamp 1 inch                          | Base: Rs.18 | GST 18%: Rs.3.24 | Bill: Rs.21.24 | MRP: Rs.20 | Profit: Rs.9
+H13 | Garden Hose Pipe 10m                       | Base: Rs.450 | GST 18%: Rs.81.0 | Bill: Rs.531.00 | MRP: Rs.495 | Profit: Rs.150
+H14 | Pro-Cut Cutting Wheel 4 inch               | Base: Rs.35 | GST 18%: Rs.6.3 | Bill: Rs.41.30 | MRP: Rs.38 | Profit: Rs.13
+H15 | Premium Cutting Wheel 4 inch               | Base: Rs.55 | GST 18%: Rs.9.9 | Bill: Rs.64.90 | MRP: Rs.61 | Profit: Rs.20
+H16 | 12 inch Carbon Steel Hacksaw Blade         | Base: Rs.30 | GST 18%: Rs.5.4 | Bill: Rs.35.40 | MRP: Rs.33 | Profit: Rs.12
+H17 | GardenPro Hedge Shear Garden Scissor 10 inch | Base: Rs.480 | GST 18%: Rs.86.4 | Bill: Rs.566.40 | MRP: Rs.528 | Profit: Rs.160
+H18 | Falcon Bypass Pruner                       | Base: Rs.620 | GST 18%: Rs.111.6 | Bill: Rs.731.60 | MRP: Rs.682 | Profit: Rs.170
+H19 | Ratchet PVC Pipe Cutter 42mm               | Base: Rs.350 | GST 18%: Rs.63.0 | Bill: Rs.413.00 | MRP: Rs.385 | Profit: Rs.120
+H20 | Measuring Tape 5m                          | Base: Rs.120 | GST 18%: Rs.21.6 | Bill: Rs.141.60 | MRP: Rs.132 | Profit: Rs.45
+H21 | M-Seal 90g                                 | Base: Rs.55 | GST 18%: Rs.9.9 | Bill: Rs.64.90 | MRP: Rs.61 | Profit: Rs.20
+H22 | Wall Putty Blade Scraper                   | Base: Rs.65 | GST 18%: Rs.11.7 | Bill: Rs.76.70 | MRP: Rs.72 | Profit: Rs.25
+H23 | Wall Stencil Butterfly Design              | Base: Rs.150 | GST 18%: Rs.27.0 | Bill: Rs.177.00 | MRP: Rs.165 | Profit: Rs.60
+H24 | Wall Stencil Ganesha Design                | Base: Rs.150 | GST 18%: Rs.27.0 | Bill: Rs.177.00 | MRP: Rs.165 | Profit: Rs.60
+H25 | Wall Stencil Damask Design                 | Base: Rs.180 | GST 18%: Rs.32.4 | Bill: Rs.212.40 | MRP: Rs.198 | Profit: Rs.70
+H26 | L-Angle Clamp 1 inch                       | Base: Rs.45 | GST 18%: Rs.8.1 | Bill: Rs.53.10 | MRP: Rs.50 | Profit: Rs.17
+H27 | Stainless Steel Screws 1 inch (100 pcs)    | Base: Rs.95 | GST 18%: Rs.17.1 | Bill: Rs.112.10 | MRP: Rs.105 | Profit: Rs.35
+H28 | Water Level Tube 10m                       | Base: Rs.110 | GST 18%: Rs.19.8 | Bill: Rs.129.80 | MRP: Rs.121 | Profit: Rs.40
+H29 | Safety Hand Gloves                         | Base: Rs.85 | GST 18%: Rs.15.3 | Bill: Rs.100.30 | MRP: Rs.94 | Profit: Rs.35
+H30 | PVC Bush 1x0.75 inch Reducer               | Base: Rs.20 | GST 18%: Rs.3.6 | Bill: Rs.23.60 | MRP: Rs.22 | Profit: Rs.10
+
+
+Total demo inventory value: Rs.476850

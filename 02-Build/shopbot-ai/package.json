@@ -1,0 +1,40 @@
+{
+  "name": "shopbot-ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0 <23"
+  },
+  "scripts": {
+    "build": "npm run typecheck && vite build --config apps/dashboard/vite.config.ts && tsc -p tsconfig.server.json",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/apps/server/src/index.js",
+    "dev": "tsx apps/server/src/index.ts",
+    "test:integration": "tsx --test tests/*.test.ts",
+    "db:migrate": "tsx apps/server/src/db/maintenance.ts migrate",
+    "db:reset:mock": "tsx apps/server/src/db/maintenance.ts reset",
+    "native:eval": "tsx scripts/evaluate-native.ts",
+    "native:preflight": "tsx scripts/evaluate-native.ts --preflight"
+  },
+  "dependencies": {
+    "@fastify/static": "10.1.5",
+    "@google/genai": "2.26.0",
+    "drizzle-orm": "0.45.3",
+    "fastify": "5.12.5",
+    "pg": "8.23.1",
+    "pg-boss": "12.35.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.4",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.2"
+  }
+}

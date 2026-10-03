@@ -1,0 +1,365 @@
+[
+  {
+    "code": "invalid_source_json",
+    "resolution": "Recovered all 30 complete objects; emitted valid JSON. Raw file remains unchanged.",
+    "sku": null
+  },
+  {
+    "code": "misleading_product_count",
+    "resolution": "Catalog count is 30, not the 50 stated by filenames/README. No products invented.",
+    "sku": null
+  },
+  {
+    "code": "synthetic_data",
+    "resolution": "All photos, prices, stock and specification claims remain demo-only; production approval required.",
+    "sku": null
+  },
+  {
+    "billingMrpPaise": 27000,
+    "code": "mrp_conflict",
+    "detailsMrpPaise": 26900,
+    "resolution": "Neither MRP selected; both kept owner-only.",
+    "sku": "H01"
+  },
+  {
+    "billPaise": 28910,
+    "billingMrpPaise": 27000,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H01"
+  },
+  {
+    "code": "brand_conflict",
+    "conflictingBrand": "Finolex",
+    "resolution": "Retained structured demo brand; conflicting brand excluded from search aliases. Owner must choose before production.",
+    "sku": "H02",
+    "structuredBrand": "Blueguard"
+  },
+  {
+    "billPaise": 44840,
+    "billingMrpPaise": 41800,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H02"
+  },
+  {
+    "billPaise": 21240,
+    "billingMrpPaise": 19800,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H03"
+  },
+  {
+    "billPaise": 40120,
+    "billingMrpPaise": 37400,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H04"
+  },
+  {
+    "billingMrpPaise": 2800,
+    "code": "mrp_conflict",
+    "detailsMrpPaise": 2700,
+    "resolution": "Neither MRP selected; both kept owner-only.",
+    "sku": "H05"
+  },
+  {
+    "billPaise": 2950,
+    "billingMrpPaise": 2800,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H05"
+  },
+  {
+    "billPaise": 4130,
+    "billingMrpPaise": 3800,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H06"
+  },
+  {
+    "billingMrpPaise": 9400,
+    "code": "mrp_conflict",
+    "detailsMrpPaise": 9300,
+    "resolution": "Neither MRP selected; both kept owner-only.",
+    "sku": "H07"
+  },
+  {
+    "billPaise": 10030,
+    "billingMrpPaise": 9400,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H07"
+  },
+  {
+    "code": "stock_unit_unresolved",
+    "proposedSellUnit": "bottle",
+    "resolution": "Source says pcs; no conversion to bottles/rolls/packs/boxes/pairs guessed. Normalized stock is unknown.",
+    "sku": "H07",
+    "sourceStockQuantity": 200,
+    "sourceStockUnit": "pcs"
+  },
+  {
+    "billPaise": 2360,
+    "billingMrpPaise": 2200,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H08"
+  },
+  {
+    "code": "stock_unit_unresolved",
+    "proposedSellUnit": "roll",
+    "resolution": "Source says pcs; no conversion to bottles/rolls/packs/boxes/pairs guessed. Normalized stock is unknown.",
+    "sku": "H08",
+    "sourceStockQuantity": 500,
+    "sourceStockUnit": "pcs"
+  },
+  {
+    "billPaise": 1770,
+    "billingMrpPaise": 1600,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H09"
+  },
+  {
+    "billingMrpPaise": 10500,
+    "code": "mrp_conflict",
+    "detailsMrpPaise": 10400,
+    "resolution": "Neither MRP selected; both kept owner-only.",
+    "sku": "H10"
+  },
+  {
+    "billPaise": 11210,
+    "billingMrpPaise": 10500,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H10"
+  },
+  {
+    "billPaise": 21240,
+    "billingMrpPaise": 19800,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H11"
+  },
+  {
+    "billingMrpPaise": 2000,
+    "code": "mrp_conflict",
+    "detailsMrpPaise": 1900,
+    "resolution": "Neither MRP selected; both kept owner-only.",
+    "sku": "H12"
+  },
+  {
+    "billPaise": 2124,
+    "billingMrpPaise": 2000,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H12"
+  },
+  {
+    "billPaise": 53100,
+    "billingMrpPaise": 49500,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H13"
+  },
+  {
+    "code": "brand_conflict",
+    "conflictingBrand": "TEZZ INOX",
+    "resolution": "Retained structured demo brand; conflicting brand excluded from search aliases. Owner must choose before production.",
+    "sku": "H14",
+    "structuredBrand": "Pro-Cut"
+  },
+  {
+    "billPaise": 4130,
+    "billingMrpPaise": 3800,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H14"
+  },
+  {
+    "code": "brand_conflict",
+    "conflictingBrand": "Bosch",
+    "resolution": "Retained structured demo brand; conflicting brand excluded from search aliases. Owner must choose before production.",
+    "sku": "H15",
+    "structuredBrand": "Premium Industrial"
+  },
+  {
+    "billingMrpPaise": 6100,
+    "code": "mrp_conflict",
+    "detailsMrpPaise": 6000,
+    "resolution": "Neither MRP selected; both kept owner-only.",
+    "sku": "H15"
+  },
+  {
+    "billPaise": 6490,
+    "billingMrpPaise": 6100,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H15"
+  },
+  {
+    "billPaise": 3540,
+    "billingMrpPaise": 3300,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H16"
+  },
+  {
+    "billPaise": 56640,
+    "billingMrpPaise": 52800,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H17"
+  },
+  {
+    "billPaise": 73160,
+    "billingMrpPaise": 68200,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H18"
+  },
+  {
+    "billPaise": 41300,
+    "billingMrpPaise": 38500,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H19"
+  },
+  {
+    "billPaise": 14160,
+    "billingMrpPaise": 13200,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H20"
+  },
+  {
+    "billingMrpPaise": 6100,
+    "code": "mrp_conflict",
+    "detailsMrpPaise": 6000,
+    "resolution": "Neither MRP selected; both kept owner-only.",
+    "sku": "H21"
+  },
+  {
+    "billPaise": 6490,
+    "billingMrpPaise": 6100,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H21"
+  },
+  {
+    "code": "stock_unit_unresolved",
+    "proposedSellUnit": "pack",
+    "resolution": "Source says pcs; no conversion to bottles/rolls/packs/boxes/pairs guessed. Normalized stock is unknown.",
+    "sku": "H21",
+    "sourceStockQuantity": 180,
+    "sourceStockUnit": "pcs"
+  },
+  {
+    "billingMrpPaise": 7200,
+    "code": "mrp_conflict",
+    "detailsMrpPaise": 7100,
+    "resolution": "Neither MRP selected; both kept owner-only.",
+    "sku": "H22"
+  },
+  {
+    "billPaise": 7670,
+    "billingMrpPaise": 7200,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H22"
+  },
+  {
+    "billPaise": 17700,
+    "billingMrpPaise": 16500,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H23"
+  },
+  {
+    "billPaise": 17700,
+    "billingMrpPaise": 16500,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H24"
+  },
+  {
+    "billPaise": 21240,
+    "billingMrpPaise": 19800,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H25"
+  },
+  {
+    "billingMrpPaise": 5000,
+    "code": "mrp_conflict",
+    "detailsMrpPaise": 4900,
+    "resolution": "Neither MRP selected; both kept owner-only.",
+    "sku": "H26"
+  },
+  {
+    "billPaise": 5310,
+    "billingMrpPaise": 5000,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H26"
+  },
+  {
+    "billingMrpPaise": 10500,
+    "code": "mrp_conflict",
+    "detailsMrpPaise": 10400,
+    "resolution": "Neither MRP selected; both kept owner-only.",
+    "sku": "H27"
+  },
+  {
+    "billPaise": 11210,
+    "billingMrpPaise": 10500,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H27"
+  },
+  {
+    "code": "stock_unit_unresolved",
+    "proposedSellUnit": "box",
+    "resolution": "Source says pcs; no conversion to bottles/rolls/packs/boxes/pairs guessed. Normalized stock is unknown.",
+    "sku": "H27",
+    "sourceStockQuantity": 200,
+    "sourceStockUnit": "pcs"
+  },
+  {
+    "billPaise": 12980,
+    "billingMrpPaise": 12100,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H28"
+  },
+  {
+    "billingMrpPaise": 9400,
+    "code": "mrp_conflict",
+    "detailsMrpPaise": 9300,
+    "resolution": "Neither MRP selected; both kept owner-only.",
+    "sku": "H29"
+  },
+  {
+    "billPaise": 10030,
+    "billingMrpPaise": 9400,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H29"
+  },
+  {
+    "code": "stock_unit_unresolved",
+    "proposedSellUnit": "pair",
+    "resolution": "Source says pcs; no conversion to bottles/rolls/packs/boxes/pairs guessed. Normalized stock is unknown.",
+    "sku": "H29",
+    "sourceStockQuantity": 150,
+    "sourceStockUnit": "pcs"
+  },
+  {
+    "billPaise": 2360,
+    "billingMrpPaise": 2200,
+    "code": "billing_total_exceeds_demo_mrp",
+    "resolution": "Billing simulation not imported as customer payable price.",
+    "sku": "H30"
+  }
+]

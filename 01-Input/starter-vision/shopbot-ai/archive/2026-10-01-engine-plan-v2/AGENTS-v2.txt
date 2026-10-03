@@ -1,0 +1,44 @@
+# Coding agent instructions
+
+## Objective and context
+
+Implement the reusable bot engine before merchant onboarding. First deliver a runnable local version with synthetic fixtures and mock AI/payment adapters. Then connect real providers and trial the hardware-store profile with 50 approved SKUs.
+
+For a substantial task, read PROJECT.md, STATUS.md, relevant DECISIONS.md entries, and ARCHITECTURE.md. Read only the relevant flow/schema/billing document and work item after that. Archived documents are inactive.
+
+## Implementation baseline
+
+Use TypeScript, Fastify, React/Vite, PostgreSQL, Drizzle, pg-boss, Better Auth, Vercel AI SDK ToolLoopAgent with direct Google provider access, and the official TypeScript MCP SDK. Use Google GenAI only where native media handling requires it, behind a media adapter. This is a recommended baseline, not an existing installation. Confirm compatible stable package versions, pin them, and record them in the lockfile.
+
+Use one modular codebase and two processes from the same container image: HTTP/API and worker. Serve the built dashboard from the API. PostgreSQL supplies application state and the job queue. Local media uses a persistent shared volume; an S3-compatible adapter supports hosted operation.
+
+Do not introduce separate agent services, Redis, a vector database, or hosted AI orchestration for the initial engine without evidence of a need.
+
+## Runtime rules
+
+- Normalize incoming channel events to the same typed contract. Establish tenant, role, customer, and conversation in trusted server code.
+- Use a customer agent for customer tool use. A dashboard owner agent has a different tool allowlist. External owner MCP calls invoke domain services directly and do not require a second server LLM call.
+- AI selects typed tools or proposes structured changes; application services validate identity, permissions, schema, state, prices, quantities, and transactions.
+- Customer media creates attachment/analysis records. It never publishes or changes catalog products.
+- Owner media can create a product draft. Publishing requires explicit owner review; uncertain model/size/price/stock fields remain unknown.
+- Owner voice edits create a change proposal showing the transcript, exact target, and before/after values. Price/stock changes need explicit confirmation, version checking, and an audit record.
+- Source-backed price/stock and exact SKU identity remain authoritative. Similar appearance does not prove size/thread/grade. Customer clarification is required before selecting an ambiguous variant.
+- Maintain a short conversation window and structured state in PostgreSQL. Retrieve a bounded candidate set instead of placing the catalog in the prompt.
+- Configure agent step limits, all-call budgets, media limits, concurrency, and retry limits. SDK loop defaults are not our cost policy.
+- Imports, webhook processing, cart mutations, change application, payment creation, and usage recording must be idempotent. External provider effects still need reconciliation after ambiguous failures.
+
+## Billing and payments
+
+Store AI usage billing and customer product payments are separate domains and accounts. Capture provider usage, dated rates, and estimated/settled status; do not silently double-charge retries or round each tiny usage event to a whole paise.
+
+Keep order acceptance, payment, and fulfillment as independent states. Staff approve the quote before a product payment link can be issued. A screenshot, customer message, or browser redirect cannot mark a payment captured. Verify signed provider events and merchant/amount/currency/reference before state changes.
+
+Do not assume IDE allowances, free API tiers, or all WhatsApp replies make production cost-free. Use supported API credentials and configuration-driven rates.
+
+## Delivery
+
+Continue authorized reversible local work without routine permission questions. Missing client data or credentials does not block mocks, schema, services, UI, simulator, or adapter contracts. Do not publish, contact customers, spend paid API money, or change live merchant records without authorization for that action.
+
+Test meaningful behavior: tenant isolation, variant clarification, media role separation, stale owner changes, crash/retry recovery, budgets, usage reconciliation, staff quote approval, and duplicate/out-of-order payment events.
+
+Complete the current work item with evidence; move it to work/completed/ and update STATUS.md. Distinguish a mock demo, a real provider smoke test, and a real-store evaluation. Never call the application runnable until the documented commands actually work from a clean setup.
