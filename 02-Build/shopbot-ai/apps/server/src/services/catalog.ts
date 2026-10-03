@@ -2,7 +2,7 @@ import type { PoolClient } from 'pg';
 import type { Product } from '../../../../packages/contracts/index.js';
 import type { ActorContext } from './context.js';
 export function normalize(text: string): string {
-  return text.toLowerCase().replace(/½|1\/2|half[- ]inch/g, '0.5 inch').replace(/¾|3\/4/g, '0.75 inch').replace(/one[- ]inch/g, '1 inch').replace(/ten[- ]inch/g, '10 inch').normalize('NFKC').replace(/[^\p{L}\p{N}.]+/gu,' ').trim();
+  return text.toLowerCase().replace(/½|1\/2|half[- ]inch/g, '0.5 inch').replace(/¾|3\/4/g, '0.75 inch').replace(/one[- ]inch/g, '1 inch').replace(/ten[- ]inch/g, '10 inch').normalize('NFKC').replace(/[^\p{L}\p{M}\p{N}.]+/gu,' ').trim();
 }
 export function tokens(text: string) { return normalize(text).split(/\s+/).filter(t => t && !['the','a','an','of','inch','inches','some'].includes(t)).map(t => t==='boxes'?'box':/^[a-z]+s$/.test(t) ? t.slice(0,-1) : t); }
 export function matches(query: string, values: string[]) {

@@ -1,0 +1,46 @@
+{
+  "format": "proposed-merchant-review-v1",
+  "runtimeImportSupported": false,
+  "sku": "REPLACE_WITH_STABLE_SHOP_SKU",
+  "merchantRecord": {
+    "name": null,
+    "localNames": {
+      "en": null,
+      "ta": null,
+      "ta-Latn": null
+    },
+    "aliases": {
+      "en": [],
+      "ta": [],
+      "ta-Latn": []
+    },
+    "familyId": null,
+    "brand": null,
+    "specifications": {},
+    "unit": null,
+    "quantityStep": null,
+    "packQuantity": null,
+    "pricePaise": null,
+    "currency": "INR",
+    "taxBasis": null,
+    "stock": null,
+    "stockStatus": "unknown",
+    "images": [],
+    "verified": false,
+    "reviewedBy": null,
+    "reviewedAt": null,
+    "evidence": [],
+    "issues": []
+  },
+  "suggestedImageMetadata": {
+    "mediaId": null,
+    "storageKey": null,
+    "checksumSha256": null,
+    "mimeType": null,
+    "width": null,
+    "height": null,
+    "byteSize": null,
+    "source": null,
+    "reviewed": false
+  }
+}

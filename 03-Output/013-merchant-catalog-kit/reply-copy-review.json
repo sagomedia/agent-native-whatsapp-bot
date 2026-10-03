@@ -1,0 +1,27 @@
+{
+  "format": "proposed-reply-copy-v1",
+  "runtimeConfigurationSupported": false,
+  "merchantLanguageReviewRequired": true,
+  "messages": {
+    "blade_type": {
+      "en": "Do you need a cutting wheel or a hacksaw blade? Check the photos and choose. What will you cut?",
+      "ta": "கட்டிங் வீலா, ஹாக்சா பிளேடா வேண்டும்? படங்களைப் பார்த்து தேர்வு செய்யுங்கள். எதை வெட்டப் போகிறீர்கள்?",
+      "ta-Latn": "Cutting wheel-aa, hacksaw blade-aa venum? Padangalai paathu choose pannunga. Ethai cut panna poringa?"
+    },
+    "verify_product": {
+      "en": "Is this the product you meant? Check the photo, brand and size before choosing.",
+      "ta": "நீங்கள் கேட்ட பொருள் இதுதானா? படத்தையும் பிராண்டையும் அளவையும் பார்த்துத் தேர்வு செய்யுங்கள்.",
+      "ta-Latn": "Neenga ketta porul ithuthaana? Photo, brand, size paathu choose pannunga."
+    },
+    "quantity": {
+      "en": "How many {unit} of {productName} do you need?",
+      "ta": "{productName} எத்தனை {unit} வேண்டும்?",
+      "ta-Latn": "{productName} eththanai {unit} venum?"
+    },
+    "new_request_after_submission": {
+      "en": "Your previous request is already with the shop. Start a new request for these items, or contact the shop to amend the previous request.",
+      "ta": "உங்கள் முந்தைய கோரிக்கை கடைக்கு அனுப்பப்பட்டுள்ளது. இந்தப் பொருட்களுக்கு புதிய கோரிக்கையைத் தொடங்குங்கள். முந்தைய கோரிக்கையை மாற்றக் கடையைத் தொடர்புகொள்ளுங்கள்.",
+      "ta-Latn": "Unga munthaya request kadaikku anuppiyaachu. Intha porutkalukku pudhu request start pannunga. Munthaya request-ai maatha kadaiyai contact pannunga."
+    }
+  }
+}

@@ -1,3 +1,13 @@
+# Language and storage audit — 3 October 2026
+
+The local app is healthy. Fixed Tamil normalization to preserve vowel marks and changed voice players to load duration metadata. All 83 offline regression/integration tests and the Docker typecheck/build pass. All 30 demo product JPEGs load; the existing Tamil voice note plays for 5.4 seconds.
+
+Three guarded free-tier synthetic text attempts used zero paid inference: English and Tamil failed structured-output validation without changing drafts; Tanglish preserved quantity two, offered actual H14/H15 photos and replied in English. Complete multilingual replies and reliable output planning are not ready. Personal voice retransmission was blocked pending explicit approval, so no additional personal recording was sent. No test order was submitted.
+
+Current next phase: fix the planning-output validation failures, add reviewed Tamil/Tanglish replies and language preference, then validated merchant catalog/media import. Read `../../03-Output/013-catalog-storage-and-language-guide.md` and its preparation kit.
+
+---
+
 # Current checkpoint — 3 October 2026
 
 Indexed generic catalog hierarchy, keyword retrieval, scoped narrowing callbacks, explicit product photos and recorded voice are implemented and deployed locally. All 82 integration/regression tests, typecheck, Docker build and final live text/audio desktop/mobile checks pass. The voice request preserves two pipes and five bottles of solvent; checking both photos produces a separate ₹1,185 review, with no submitted order.

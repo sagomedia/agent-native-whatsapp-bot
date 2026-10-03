@@ -1,0 +1,305 @@
+{
+  "recordedAt": "2026-10-03T14:11:27.272Z",
+  "results": [
+    {
+      "mode": "English text",
+      "http": 200,
+      "conversationId": "ef2c1faf-d615-479e-973b-72cfb768d70a",
+      "lastFailure": "invalid_operations",
+      "attempts": [
+        {
+          "state": "failed",
+          "failure_code": "invalid_operations",
+          "usage": {
+            "totalTokenCount": 6038,
+            "promptTokenCount": 5960,
+            "candidatesTokenCount": 78
+          }
+        }
+      ],
+      "inbound": "I want two cutting blades. Which types do you have?",
+      "reply": "I’m having trouble processing that message. Your list is kept. You can recheck the item, use the product choices, or try a new description shortly.",
+      "draft": [],
+      "requests": 0
+    },
+    {
+      "mode": "Tamil synthetic text",
+      "http": 200,
+      "conversationId": "b637f131-ed8d-49c6-a392-aba331992164",
+      "lastFailure": "invalid_operations",
+      "attempts": [
+        {
+          "state": "failed",
+          "failure_code": "invalid_operations",
+          "usage": {
+            "totalTokenCount": 6011,
+            "promptTokenCount": 5911,
+            "candidatesTokenCount": 100
+          }
+        }
+      ],
+      "inbound": "எனக்கு இரண்டு கட்டிங் பிளேடு வேண்டும். என்ன வகைகள் உள்ளன?",
+      "reply": "I’m having trouble processing that message. Your list is kept. You can recheck the item, use the product choices, or try a new description shortly.",
+      "draft": [],
+      "requests": 0
+    },
+    {
+      "mode": "Tanglish text",
+      "http": 200,
+      "conversationId": "4098a2ea-1e54-4873-b69a-b251e4674e00",
+      "lastFailure": null,
+      "attempts": [
+        {
+          "state": "succeeded",
+          "failure_code": null,
+          "usage": {
+            "totalTokenCount": 5990,
+            "promptTokenCount": 5967,
+            "candidatesTokenCount": 23
+          }
+        }
+      ],
+      "inbound": "Enakku rendu cutting blade venum. Enna types irukku?",
+      "reply": "Please check what I understood:\n1. 2 × cutting blade: which brand did you mean—Pro-Cut, Premium Industrial?\n\nThese are related suggestions, not an exact match. Tell me the job you need it for, or choose one if you want it instead. Check the photos and names, then add the right items. If anything is wrong, send the correct name, size or type. Nothing is sent to the shop yet.",
+      "photos": [
+        {
+          "sku": "H14",
+          "name": "Pro-Cut Cutting Wheel 4 inch",
+          "image": "/demo-images/H14.jpg",
+          "label": "Related option · please check"
+        },
+        {
+          "sku": "H15",
+          "name": "Premium Cutting Wheel 4 inch",
+          "image": "/demo-images/H15.jpg",
+          "label": "Related option · please check"
+        }
+      ],
+      "draft": [
+        {
+          "query": "cutting blade",
+          "quantity": 2,
+          "resolution": "needs_choice"
+        }
+      ],
+      "requests": 0,
+      "photoChecks": [
+        "Pro-Cut",
+        "Premium Industrial"
+      ]
+    }
+  ],
+  "images": [
+    {
+      "sku": "H01",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 86961
+    },
+    {
+      "sku": "H02",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 135912
+    },
+    {
+      "sku": "H03",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 75813
+    },
+    {
+      "sku": "H04",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 78585
+    },
+    {
+      "sku": "H05",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 85263
+    },
+    {
+      "sku": "H06",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 83615
+    },
+    {
+      "sku": "H07",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 193943
+    },
+    {
+      "sku": "H08",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 160839
+    },
+    {
+      "sku": "H09",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 84801
+    },
+    {
+      "sku": "H10",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 166591
+    },
+    {
+      "sku": "H11",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 141882
+    },
+    {
+      "sku": "H12",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 198536
+    },
+    {
+      "sku": "H13",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 280767
+    },
+    {
+      "sku": "H14",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 520366
+    },
+    {
+      "sku": "H15",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 445643
+    },
+    {
+      "sku": "H16",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 134336
+    },
+    {
+      "sku": "H17",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 127963
+    },
+    {
+      "sku": "H18",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 197303
+    },
+    {
+      "sku": "H19",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 128246
+    },
+    {
+      "sku": "H20",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 165805
+    },
+    {
+      "sku": "H21",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 203597
+    },
+    {
+      "sku": "H22",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 159828
+    },
+    {
+      "sku": "H23",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 209273
+    },
+    {
+      "sku": "H24",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 208530
+    },
+    {
+      "sku": "H25",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 319791
+    },
+    {
+      "sku": "H26",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 125107
+    },
+    {
+      "sku": "H27",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 292786
+    },
+    {
+      "sku": "H28",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 288353
+    },
+    {
+      "sku": "H29",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 389874
+    },
+    {
+      "sku": "H30",
+      "http": 200,
+      "type": "image/jpeg",
+      "jpeg": true,
+      "bytes": 70150
+    }
+  ],
+  "attemptCount": 3
+}

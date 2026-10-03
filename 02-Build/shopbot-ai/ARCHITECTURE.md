@@ -1,55 +1,40 @@
-# Reusable agent tool core
+# ShopBot architecture — 3 October 2026
 
-2 October 2026. Implemented locally; native adapter and spending guards are available for explicit evaluation. The simulator still uses mock interpretation.
+The running app is a local test channel over reusable retail services. `/native-test` uses a guarded free-only Gemini planning adapter; the original mock simulator remains separate. Actual WhatsApp delivery is not connected.
 
 ```mermaid
-flowchart LR
-  A[Simulator / future verified WhatsApp] --> B[Durable inbox + trusted actor context]
-  B --> C[Conversation runtime]
-  C --> D[Known action]
-  C --> E[Interpreter adapter]
-  E --> F[Strict operation validation]
-  D --> G[Shared retail tools]
-  F --> G
-  G --> H[PostgreSQL business facts]
-  G --> I[Transactional reply]
+flowchart TD
+  Input[Text or recorded voice] --> Ingress[Signed local session + durable inbox]
+  Ingress --> Runtime[Claimed turn + versioned draft + short assistant memory]
+  Runtime --> Known{Known action?}
+  Known -->|Yes| Tools[Deterministic retail tools]
+  Known -->|No| Quota[Free quota + provider attempt ledger]
+  Quota --> AI[One Gemini transcript / planning request]
+  AI --> Validate[Strict structured operation validation]
+  Validate --> Tools
+  Tools <--> SQL[Scoped PostgreSQL catalog and state]
+  SQL --> Photos[Actual SKU-bound catalog photos]
+  Tools --> Reply[Backend reply renderer: English today]
+  Photos --> Reply
+  Reply --> Customer[Product check → quantity → review → separate consent]
+  Customer --> Ingress
+  Tools --> Request[Immutable request awaiting shop approval]
 ```
 
-## Boundaries
+## Implemented boundaries
 
-The channel adapter owns verified identity and current-question/review binding at ingress. The model's operation arguments contain no actor, store, staff role, payment status or confirmation authority. The local simulator supplies fixed synthetic identity; production channel verification is future work.
+The trusted channel owns actor/store scope and current question/review bindings. The model proposes typed queries, quantities and operations; it cannot supply prices, images, stock assurances, pack conversions, acceptance or final submission authority. Invalid output applies no changes. Atomic tool batches, optimistic versions, idempotency receipts, current-photo identity checks and separate final consent protect orders. Submitted snapshots are immutable; a conversation currently permits one submitted request.
 
-The interpreter proposes shopping operations only. It cannot submit an order. Deterministic confirmation handling supplies a trusted consentReviewId to the submission service. A queued yes is bound to the review visible when it arrived, so it cannot approve a later edited review. Candidate callbacks carry question/line IDs and are rejected when stale. Price-only requests cannot mutate a draft.
+Catalog hierarchy uses `catalog_profiles`, `catalog_nodes` and product family/brand/specification/keyword metadata. Indexed store-scoped retrieval is bounded to 120 candidates; discovery returns at most three photos. The model receives a bounded map/sample and actual search observations. Product checks fit at most three groups and ten cards per local reply envelope. Refinement and choice callbacks can use zero inference.
 
-The services check scope, validate quantities, resolve catalog facts, preserve every unresolved line, enforce expected versions and apply operation batches under a transaction. A failure in a dependent operation rolls back all effects of that turn. Operation keys and canonical argument hashes prevent conflicting replay.
+Voice recording is explicit, previewed before upload and limited to 30 seconds. FFmpeg validates bytes and produces mono 16 kHz WAV. Audio bytes/hash/duration/source version are stored in scoped `voice_media`, separate from message JSON. One free-only planning call transcribes and extracts shopping intent. Playback uses the signed session. Audio cannot approve products or submit an order.
 
-## Tools
+The quota ledger records every attempted live invocation, with no automatic retry or paid fallback. Current configured project limits are three calls/minute, 15-second spacing and 100/day. Message effects, outbound payload and processed marker commit together after rechecking the claim lease and source version. An external delivery outbox and webhook verification remain future work.
 
-| Tool | Purpose and guard |
-| --- | --- |
-| search_products | Public facts from the trusted store; no cost/margin fields |
-| get_draft | Resolved and unresolved lines for the authorized conversation |
-| apply_draft_changes | Add, set/remove, resolve line or pickup; expected version and atomic batch |
-| preview_order | Refresh current facts, clarify unresolved lines or issue a complete expiring review |
-| submit_order_request | Trusted consent plus matching current review/version/hash/expiry; recheck facts |
-| get_order_status | Read this actor's request snapshot; currently awaiting shop approval |
+## Current language and catalog gaps
 
-Tools are internal services, not an unauthenticated public tool execution endpoint. Future native function-call/MCP/channel adapters must use this boundary. The current registry is customer-only; staff/payment/ready actions do not exist in it.
+Source JSON contains Tamil names and aliases; aliases are searchable, but localized display names and a persisted reply-language preference are not yet implemented. Tamil vowel signs are now preserved by normalization. English and Tamil synthetic live requests in the latest audit failed strict model-output validation; one Tanglish request preserved quantity and showed actual photos but replied in English. Offline test passes do not establish multilingual conversation quality.
 
-## Runtime and recovery
+Demo product facts/stock/technical claims are unverified. JSON edits do not automatically overwrite existing SQL catalog rows. Authenticated merchant imports, reviewed translations/media metadata, object storage/retention, explicit new-request/amendment lifecycle and real WhatsApp integration remain implementation milestones.
 
-A conversation lock claims one inbound turn with a 30-second lease. Known buttons, review/status, exact confirmation and current candidate ordinals need zero interpretation calls. Other text uses a mock adapter outside the database lock, with a 10-second timeout and at most two persisted attempts per message. An attempt is recorded before invocation. Interrupted attempts count as unknown; validated output is reusable only at the same source version. Mock usage is null and provider cost is zero.
-
-Finalization rechecks the claim token and draft version. Tool effects, outbound reply and processed inbox marker commit together. A worker that loses its lease discards its result. The durable inbox and pg-boss dispatcher recover pending/expired work. This proves local mutation/reply recovery; it does not promise exactly-once execution of an external provider or WhatsApp send.
-
-## Order meaning
-
-Review totals use authoritative price paise, at most three decimal quantity places and half-up rounding per line. Unit steps come from catalog metadata. Review expiry is 15 minutes. Unknown stock remains subject to shop approval. No draft or customer confirmation reserves stock.
-
-Submission consumes the review and stores an immutable lines/total snapshot. Acceptance, payment and fulfillment start separately as awaiting_approval, not_requested and awaiting_approval. Shop approval, payment evidence and physical readiness require future authorized staff tools. Current demo conversations allow one submitted request; amendment/new-order lifecycle is deferred.
-
-## Native provider milestone
-
-The adapter interface accepts text/current state and returns unknown structured output, a truncation flag and usage. Every result passes the shared schema before use. A native Google adapter now implements the contract with priced reservations, unknown-cost holds and bounded SDK requests. It runs only through explicitly authorized local evaluation; live quality is still unverified. The simulator remains mock-only. See NATIVE-AI.md. The English mock recognizes limited patterns and is not evidence of real-model language quality.
-
-Catalog search currently scans active public products in one store. Hardware fixtures and aliases live in profiles/seeding, outside the core. Grocery tests prove reuse and decimal units. The cleaned KSMC pack is optional onboarding input. Production auth, database policies, concurrency/scale evaluation and merchant onboarding remain required.
+See workspace `03-Output/013-catalog-storage-and-language-guide.md` for detailed message/storage maps, database fields, photo collection and the multilingual design. `03-Output/013-merchant-catalog-kit/` contains proposed review documents, not runtime imports. Verification: `03-Output/013-multilingual-verification.md`.

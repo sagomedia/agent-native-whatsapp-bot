@@ -33,3 +33,15 @@ test('multi-query AI discovery combines keywords into one scoped broad search an
 
 
 test('narrowing choices reflect shown photo families; solvent, tape and epoxy remain separate product natures',async()=>fixture(async(pool,inbox)=>{const c=await pool.connect();try{const r=await discoverProducts(c,inbox.context,'blade',{keywords:['saw blade','cutting tool','scraper']});const f=r.facets.find(f=>f.key==='family')!;assert.deepEqual(new Set(f.values.map(v=>v.value)),new Set(r.products.map(p=>p.familyId)));const gum=await discoverProducts(c,inbox.context,'solvent gum',{keywords:['solvent cement','pipe glue']});assert.deepEqual(gum.products.map(p=>p.sku),['H07']);assert.equal(gum.products[0].familyId,'solvent-cement');assert.ok(!gum.facets.some(f=>f.key==='brand'));await pool.query("UPDATE products SET family_id='sealing',brand='Edited fixture brand' WHERE store_id=$1 AND sku='H07'",[inbox.context.storeId]);await setupImageDemo(pool);assert.equal((await pool.query("SELECT family_id FROM products WHERE store_id=$1 AND sku='H07'",[inbox.context.storeId])).rows[0].family_id,'solvent-cement');assert.equal((await pool.query("SELECT brand FROM products WHERE store_id=$1 AND sku='H07'",[inbox.context.storeId])).rows[0].brand,'Edited fixture brand');}finally{c.release();}}));
+
+
+test('Tamil vowel marks survive normalization and Tamil catalog aliases retrieve the actual SKUs',async()=>fixture(async(pool,inbox)=>{
+  const {normalize,searchProducts}=await import('../apps/server/src/services/catalog.js');
+  assert.equal(normalize('பைப் பசை'),'பைப் பசை');
+  assert.equal(normalize('கட்டிங் வீல் 4 இன்ச்'),'கட்டிங் வீல் 4 இன்ச்');
+  const client=await pool.connect();try{
+    assert.deepEqual((await searchProducts(client,inbox.context,'பைப் பசை')).map(p=>p.sku),['H07']);
+    assert.deepEqual((await searchProducts(client,inbox.context,'கட்டிங் வீல் 4 இன்ச்')).map(p=>p.sku),['H14','H15']);
+    assert.deepEqual((await searchProducts(client,inbox.context,'வாள் பிளேடு')).map(p=>p.sku),['H16']);
+  }finally{client.release();}
+}));
