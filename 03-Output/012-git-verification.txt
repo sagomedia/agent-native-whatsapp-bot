@@ -1,0 +1,23 @@
+Local Git verification, 3 October 2026
+
+Implementation commit: 6b8efa5
+Baseline commit: 7dd651b
+Main worktree: switched to main, then returned to feature/catalog-mindmap.
+Working tree after the switches: clean.
+GitHub remote: none configured; no push performed.
+
+Portable bundle: git bundle verify succeeded and reported complete history.
+Independent recovery check:
+Cloning into '/tmp/shopbot-portable-history-check'...
+Switched to a new branch 'main'
+branch 'main' set up to track 'origin/main'.
+Switched to branch 'feature/catalog-mindmap'
+Your branch is up to date with 'origin/feature/catalog-mindmap'.
+
+Independent recovered worktree status: clean.
+Both branches switch successfully on the project share and in the independent local clone.
+The checkpoint tag and final bundle are refreshed after this evidence-only commit.
+
+Running app after source switches: GET /health/ready returned ready/mock.
+Docker app health: healthy.
+Source switches do not restart the immutable running image or reset the database.
