@@ -1,6 +1,6 @@
 # ShopBot VPS migration plan — 4 October 2026
 
-Deploy the current agent-based ShopBot on the Google Cloud VM, verify it privately, and then connect the intended WhatsApp sender through Cloudflare. The user selected a trial on the existing e2-micro: retain backups and old app files, then stop the two older services after the new release is healthy. The new application has not yet been uploaded. See `018-vps-native-preview-progress.md` for executed work.
+Deploy the current agent-based ShopBot on the Google Cloud VM, verify it privately, and then connect the intended WhatsApp sender through Cloudflare. The user selected a trial on the existing e2-micro. That private mock preview is now running and passed VPS smoke/restart checks; both older services were stopped and disabled, with their files and backups retained. See `018-vps-native-preview-progress.md` for executed work. Live AI, public access and WhatsApp remain subsequent work.
 
 The selected trial uses a compiled native release and systemd, rather than the development Docker image. It keeps the 1 GB machine and 10 GB disk unchanged. The release is 63,492,702 bytes compressed and 208,451,704 bytes unpacked; the native Debian PostgreSQL/FFmpeg installation completed successfully. Google Cloud's ongoing compute allowance covers the eligible e2-micro; changing to e2-small/e2-medium would be paid even for an India/INR billing account. Remaining account credits and actual billing have not been audited. [Free-tier rules](https://docs.cloud.google.com/free/docs/free-cloud-features#free-tier-usage-limits), [billing currencies](https://docs.cloud.google.com/billing/docs/resources/currency).
 
@@ -10,14 +10,14 @@ The full account/project/resource inventory is saved locally at `secrets/deploym
 
 | Resource | Finding | Implication |
 | --- | --- | --- |
-| Google Cloud VPS | sago-counter-ksmc, e2-micro, Debian 13; about 427 MiB available RAM and 3.0 GB free disk; swap already in use | Review a capacity increase before adding the app/PostgreSQL; build the image off the VPS |
-| Previous application | ksmc-counter.service runs Python/uvicorn from /opt/ksmc-counter-assistant; configured Meta/WhatsApp fields | Preserve its SQLite data and existing credentials; validate token validity and sender identity before reuse |
-| Existing native test application | sago-agent-native.service runs Python/uvicorn from /opt/sago-agent-native; AI and WhatsApp sends disabled | This is a separate existing implementation; the new Node/PostgreSQL ShopBot is not deployed there |
-| Existing HTTPS route | demo.sagoautomation.tech → healthy ksmc-retail tunnel → localhost:8097 on the VM | Preserve it throughout the initial deployment |
+| Google Cloud VPS | sago-counter-ksmc, e2-micro, Debian 13; private preview running with about 404 MiB available RAM and 1.8 GB free disk; swap in use | Keep the current capacity for this mock preview; measure real AI/media load before deciding on a paid upgrade |
+| Previous application | ksmc-counter.service uses Python/uvicorn from /opt/ksmc-counter-assistant; now inactive/disabled; configured Meta/WhatsApp fields retained | Preserve its SQLite data and existing credentials; validate token validity and sender identity before reuse |
+| Existing native test application | sago-agent-native.service uses Python/uvicorn from /opt/sago-agent-native; now inactive/disabled | This separate implementation is retained for rollback; the new Node/PostgreSQL ShopBot runs under /opt/shopbot-vps |
+| Existing HTTPS route | demo.sagoautomation.tech → ksmc-retail tunnel → localhost:8097 on the VM; origin service now stopped | Tunnel configuration is retained for rollback; this hostname does not serve the new preview |
 | Existing native test route | native-test.sagoautomation.tech → sago-agent-native-test tunnel → localhost:8099 | Four existing path rules target an older interface, not this build's /native-test and /api/native-test routes |
 | Native tunnel replicas | One VPS connector and one desktop connector | Do not use it as a VPS-only endpoint without resolving which origin receives requests |
 | Cloudflare routes | Both bot tunnels are locally managed | Review host configuration files; DNS changes alone do not update their ingress rules |
-| Current repository | Private sagomedia/agent-native-whatsapp-bot; GitHub main is an older snapshot | Freeze and verify the latest shared-workspace edits before exporting a release |
+| Current repository | Private sagomedia/agent-native-whatsapp-bot; GitHub main is an older snapshot; deployed source frozen locally in e801589 | Use the verified release and preserve the shared workspace; no branch push was performed |
 | Gemini | invisible-erp is on the free tier | Retain its persistent quota accounting and keep paid inference disabled |
 | Current browser demo | Local-only host/origin checks and no owner login | First use an SSH tunnel; public hosting requires authenticated access and deliberate HTTPS/session handling |
 
@@ -37,11 +37,11 @@ Remaining deliverable: validate sender/token access and establish a restorable a
 
 ### 2. Freeze a deployable source release
 
-The shared source has newer Tamil and intent-discovery changes than GitHub main and this managed checkout. Preserve those edits, reconcile the checkout/Git working-tree pointer, create a reviewed release commit, run the existing build and regression suite, and record its image digest. Check the archive/build context excludes .env, keys, customer media, local databases and owner-only material that the hosted app does not need.
+The newer Tamil and intent-discovery changes were copied into the managed checkout without altering the shared workspace or its Git configuration. The source and native deployment kit are frozen in commit `e801589` on `codex/vps-free-tier-preview`. The Node 22 build, four catalog tests and 109 integration tests passed. The exact portable release was also checked for startup, asynchronous synthetic replies and persistence after restart.
 
-Build the runtime image on a machine with enough memory, using the pinned Node 22 setup and required ffmpeg. Supply the VPS an immutable release rather than an unversioned copy of the entire SMB workspace. Debian 13 is supported by the official Docker Engine installation flow. Inspect an existing Docker installation before changing packages. [Docker Debian installation](https://docs.docker.com/engine/install/debian/).
+The selected release contains the official checksum-verified Node 22.22.1 runtime, compiled app/dashboard and production dependencies. It excludes .env, keys, private owner-only material, runtime media/databases and development dependencies. The VPS needs Debian PostgreSQL/FFmpeg, which are already installed. Docker installation is not part of this trial.
 
-Deliverable: exact source commit, verified image, migration notes and a retained previous release.
+Deliverable completed: source commit, immutable archive and SHA-256, native install/smoke/rollback scripts, verified VPS upload and startup/restart checks.
 
 ### 3. Deploy a private VPS preview and switch the active services
 
@@ -88,13 +88,15 @@ flowchart LR
 
 ## Deployment record
 
-- Latest reviewed release commit/image digest: pending.
-- Existing server services, source and data locations: verified in the private inventory; new deployment directory/port/Compose project still pending.
+- Latest release source commit: `e801589`; package `preview-8f06fd2bcec5`, SHA-256 recorded in `018-vps-native-preview-progress.md`.
+- Existing server services, source and data locations: verified in the private inventory. New native deployment is active under `/opt/shopbot-vps`, on loopback port 3017 with a separate PostgreSQL database. Both older apps are inactive/disabled, with their files retained.
 - Credential store/file locations and required key names: verified; values remain private and token validity remains untested.
 - Old Meta sender/app identifiers and webhook subscription: pending targeted account validation.
-- Capacity decision: native trial on the unchanged e2-micro; hosted app memory/disk measurements pending.
+- Capacity decision: private mock preview running on unchanged e2-micro; after switching services, about 404 MiB RAM available and 1.8 GB disk free. App about 45 MiB and PostgreSQL about 60 MiB; production AI/media load remains untested.
 - VPS-only tunnel, selected subdomain and access policy: pending implementation.
-- Database/media backup destination, restore test and rollback commands: pending.
-- Hosted application / WhatsApp end-to-end verification: pending.
+- Database/media backup: `/var/backups/shopbot-migration/20261004T065723Z`, five SQLite copies passed integrity checks; full restore drill pending. Native rollback script prepared.
+- Hosted application: readiness, dashboard, async synthetic reply and app restart persistence passed. Live AI / WhatsApp end-to-end verification pending.
 
-The initial inventory was read-only apart from the approved one-hour SSH key refresh. In the subsequent user-authorized deployment preparation, private legacy backups were created and verified, and Debian PostgreSQL/FFmpeg packages were installed. Both older apps remain running while the release upload is pending. No Docker installation, machine/disk resize, DNS/tunnel change, token rotation or customer message has occurred.
+The initial inventory was read-only apart from the approved one-hour SSH key refresh. During user-authorized deployment, private legacy backups were created and verified, Debian PostgreSQL/FFmpeg packages were installed and the native preview was uploaded, installed and verified. Both older apps are now stopped/disabled. No Docker installation, machine/disk resize, DNS/tunnel change, API token rotation or customer message has occurred.
+
+At the user's request, Google Cloud MCP/direct access replaced the browser transfer workflow. The official Compute Engine remote MCP and Google's local gcloud MCP both returned the VM successfully using the existing account. The local `google-cloud` MCP is configured in Codex; direct SSH/SCP completed deployment because gcloud MCP blocks SSH commands. No IAM or cloud resource change was made while connecting MCP. A temporary loopback-only SSH tunnel exposes the private VPS preview locally at `http://127.0.0.1:3018/` for at most one hour.

@@ -1,6 +1,6 @@
 # Native VPS preview progress — 4 October 2026
 
-The user authorized starting a trial on the existing e2-micro to preserve free compute eligibility. The two older services remain available for rollback; neither has been stopped yet. No paid VM upgrade, disk increase or public routing change has been made.
+The user authorized starting a trial on the existing e2-micro to preserve free compute eligibility. The private native preview is now running, and both older services were stopped and disabled after the new app passed its VPS smoke and restart checks. Their files and backups remain available for rollback. No paid VM upgrade, disk increase or public routing change has been made.
 
 ## Prepared release
 
@@ -17,12 +17,22 @@ The user authorized starting a trial on the existing e2-micro to preserve free c
 
 - Private backup: `/var/backups/shopbot-migration/20261004T065723Z`. Five SQLite copies passed integrity checks. Configuration and media retained on the same server with restricted access; no values or customer rows printed. This verifies backup integrity, not a complete recovery drill.
 - Debian package installation completed with exit code 0: PostgreSQL 17.11 and FFmpeg 7.1.5. The preview uses a separate new database; legacy SQLite data remains untouched.
-- After package installation: 406 MiB available RAM, 251 MiB swap used, 2.1 GB free disk at observation. Both older applications still running. The new Node app is not running on the VPS yet.
+- Direct SSH succeeded using the user's existing encrypted key after they unlocked it in a private local agent for one hour. The existing project SSH public-key authorization was refreshed for one hour.
+- SCP transfer completed, and the archive SHA-256 matched before extraction into `/opt/shopbot-vps/releases/preview-8f06fd2bcec5`. The prepared installer completed with exit code 0.
+- `shopbot-vps.service` is enabled and active. Readiness returned ready / mock; the dashboard loaded; an asynchronous synthetic conversation produced a reply. Synthetic message `ebdc2d43-03b6-4cf2-a55e-f58a0ac556f4` and its reply survived an app restart; pending jobs: 0; unexpected service restarts: 0.
+- `ksmc-counter.service` and `sago-agent-native.service` are now inactive and disabled. Their source, databases, media, environment, service files and tunnel configurations were retained.
+- App listener: `127.0.0.1:3017`; PostgreSQL: `127.0.0.1:5432`. No listeners remain on the old app ports 8097/8099. `/etc/shopbot-vps.env` is root-owned mode 600; media/data directory is service-owned mode 700.
+- After switching services: app service 46,657,536 bytes (about 44.5 MiB), PostgreSQL service 63,066,112 bytes (about 60.1 MiB), 404 MiB available RAM, 106 MiB swap used and 1.8 GB free disk. This is a mock-preview measurement, not a production AI/photo/voice load test.
+- The private VPS dashboard was verified in Chrome through a localhost-only SSH tunnel at `http://127.0.0.1:3018/`, showing the retained synthetic conversation. The tunnel has a maximum one-hour lifetime from startup and creates no public endpoint.
 
 ## Remaining work
 
-Chrome rejected automated file selection because the ChatGPT browser extension's local-file access is disabled. The user was asked to enable "Allow access to file URLs". Release transfer is pending that action.
+The user enabled the ChatGPT extension's local-file access, and automated file selection began working. Google SSH-in-browser then failed its file-transfer authorization. The user allowed popups for `https://ssh.cloud.google.com`, then requested a switch to MCP/direct access. Direct SSH/SCP completed the transfer and deployment.
 
-After transfer, verify the archive checksum, install the private service, run its smoke and restart-persistence checks, stop/disable the older applications and measure the resulting memory/disk use. Keep their code, databases, environment and tunnel configuration for rollback. Leave the machine type and disk allocation unchanged.
+Google's official Compute Engine remote MCP at `https://compute.googleapis.com/mcp` authenticated with the existing gcloud account, listed 29 tools and returned the existing VM as RUNNING / e2-micro. Google's local `@google-cloud/gcloud-mcp@0.5.3` also initialized and successfully described the VM. It is installed on the local computer and configured as the enabled `google-cloud` server in Codex. No new IAM grants, account credentials, cloud resources or API enablement were needed. [Google gcloud MCP](https://github.com/googleapis/gcloud-mcp), [Compute Engine MCP](https://docs.cloud.google.com/compute/docs/use-compute-engine-mcp).
 
-The initial private preview defaults to mock mode, AI off, paid inference false and budget zero. Gemini-key placement/free-only AI enablement, authenticated browser access and verified WhatsApp delivery are subsequent steps. The mock simulator must remain on loopback.
+The gcloud MCP deliberately blocks SSH commands; direct SSH/SCP was used for deployment. The user unlocked the existing local key for one hour without sharing its passphrase. New native MCP tools have not appeared in this already running chat's tool catalog yet; MCP protocol initialization/read operations were verified separately.
+
+Rollback: `sudo bash /opt/shopbot-vps/current/deploy/rollback.sh`. This stops/disables the new app and restores both older services. The new PostgreSQL database and media are retained; stop the new PostgreSQL cluster separately if abandoning this preview. A full backup restore drill remains outstanding.
+
+The running private preview uses mock mode, AI off, paid inference false and budget zero. Gemini-key placement/free-only AI enablement, authenticated public browser access and verified WhatsApp delivery are subsequent steps. The mock simulator remains on loopback. Existing Cloudflare bot routes still target the old applications; they have not been switched to this release. The old native tunnel also has a desktop connector, so its public hostname does not reliably represent this VPS.
