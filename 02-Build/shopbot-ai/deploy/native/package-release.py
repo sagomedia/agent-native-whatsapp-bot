@@ -61,7 +61,7 @@ with tarfile.open(args.node_archive, 'r:xz') as archive:
         destination.write_bytes(source.read())
 (stage / 'node/bin/node').chmod(0o755)
 shutil.copytree(app / 'deploy/native', stage / 'deploy', ignore=shutil.ignore_patterns('__pycache__'))
-for name in ['install.sh', 'rollback.sh']:
+for name in ['install.sh', 'rollback.sh', 'upgrade.sh']:
     (stage / 'deploy' / name).chmod(0o755)
 
 git = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=app, text=True, capture_output=True, check=True)

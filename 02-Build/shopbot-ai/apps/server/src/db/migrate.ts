@@ -87,9 +87,16 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       ALTER TABLE catalog_nodes ADD COLUMN local_names jsonb NOT NULL DEFAULT '{}';
       INSERT INTO schema_migrations(version) VALUES(14);
     `);}
+    const v15=await client.query('SELECT version FROM schema_migrations WHERE version=15');
+    if(!v15.rowCount){await client.query(`
+      ALTER TABLE stores ADD COLUMN operator_paused boolean NOT NULL DEFAULT false, ADD COLUMN operator_revision integer NOT NULL DEFAULT 0;
+      ALTER TABLE conversations ADD COLUMN operator_mode text NOT NULL DEFAULT 'assistant' CHECK(operator_mode IN ('assistant','owner')), ADD COLUMN operator_revision integer NOT NULL DEFAULT 0;
+      CREATE TABLE owner_audit(sequence bigserial PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),email text NOT NULL,action text NOT NULL,target_id uuid NOT NULL,details jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+      INSERT INTO schema_migrations(version) VALUES(15);
+    `);}
     if (mode === 'mock') {
       assertMock(mode);
-      await client.query('INSERT INTO stores VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [fixtureStore, 'Workshop supply demo', 'true']);
+      await client.query('INSERT INTO stores(id,name,synthetic) VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [fixtureStore, 'Workshop supply demo', 'true']);
       await client.query('INSERT INTO conversations(id,store_id,actor) VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [fixtureConversation, fixtureStore, 'local-simulator']);
       for (const p of hardwareFixtures) await client.query('INSERT INTO products(store_id,sku,name,unit,price_paise,stock) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING', [fixtureStore, p.sku, p.name, p.unit, p.pricePaise, p.stock]);
     }

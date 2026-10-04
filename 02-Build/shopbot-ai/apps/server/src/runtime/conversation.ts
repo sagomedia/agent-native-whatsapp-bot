@@ -27,6 +27,8 @@ export class ConversationRuntime {
   }
   async processNext(ctx:ActorContext):Promise<boolean> {
     const claimed=await withConversation(this.pool,ctx,async client=>{
+      const controls=await client.query('SELECT c.operator_mode,s.operator_paused FROM conversations c JOIN stores s ON s.id=c.store_id WHERE c.id=$1',[ctx.conversationId]);
+      if(controls.rows[0].operator_mode==='owner'||controls.rows[0].operator_paused)return null;
       const active=await client.query("SELECT id FROM messages WHERE conversation_id=$1 AND status='processing' AND lease_until>now() LIMIT 1",[ctx.conversationId]);
       if(active.rowCount) return null;
       const row=await client.query("SELECT id,payload,binding_id FROM messages WHERE conversation_id=$1 AND (status='pending' OR (status='processing' AND lease_until<=now())) ORDER BY sequence LIMIT 1 FOR UPDATE",[ctx.conversationId]);
@@ -64,6 +66,11 @@ export class ConversationRuntime {
     }
     if(claimed.event.type==='voice'&&interpretation?.transcript&&interpretation.operations.length===0&&interpretation.next==='continue')requestedLanguage=languageRequest(interpretation.transcript);
     await withConversation(this.pool,ctx,async client=>{
+      const controls=await client.query('SELECT c.operator_mode,s.operator_paused FROM conversations c JOIN stores s ON s.id=c.store_id WHERE c.id=$1',[ctx.conversationId]);
+      if(controls.rows[0].operator_mode==='owner'||controls.rows[0].operator_paused){
+        await client.query("UPDATE messages SET status='pending',claim_token=NULL,lease_until=NULL WHERE id=$1 AND claim_token=$2",[claimed.id,claimed.token]);
+        return;
+      }
       const held=await client.query("SELECT id FROM messages WHERE id=$1 AND conversation_id=$2 AND status='processing' AND claim_token=$3",[claimed.id,ctx.conversationId,claimed.token]);
       if(!held.rowCount) return; // Another worker acquired the expired lease; old result is discarded.
       const current=await loadState(client,ctx);

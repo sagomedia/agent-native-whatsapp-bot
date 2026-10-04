@@ -1,3 +1,9 @@
+# Owner dashboard foundation — 4 October 2026
+
+Added an opt-in owner preview at `/owner`: scoped conversation history/takeover, request accept/reject, connection/usage status and persisted shop-wide pause. Every owner API verifies a Cloudflare Access RS256 signature, pinned issuer/application audience, expiry and the exact configured owner email; store membership comes from server configuration. Writes require the matching HTTPS Origin and an explicit same-origin JSON header. Public owner routing excludes simulator/native-test endpoints. Migration 15 adds controls and an owner audit trail. Takeover invalidates in-flight work leases; worker/store locks prevent a reply being saved across pause/takeover changes. Manual sending and customer decision notifications remain unavailable until a real channel adapter is implemented.
+
+The owner preview requires loopback binding, mock mode and local AI disabled. No live WhatsApp sender or AI is enabled. Node 22 production build and all 111 isolated integration tests passed; focused authorization/control tests additionally cover takeover followed by resume while interpretation is in flight. Cloudflare publication and VPS configuration are separate deployment steps; see workspace `03-Output/020-owner-dashboard-and-whatsapp-test-audit.md` for current execution evidence.
+
 # Current correction: intent-led discovery
 
 English simulator controls and an independent Tamil/Tanglish/English bot reply preference. Fixed the reported 42mm pipe-cutter lookup failure; support up to six relevant photos, practical AI job questions and remembered purchase quantities through browsing. All 109 regression tests and the production Node 22 build pass. See INTENT-DISCOVERY.md and workspace 03-Output/016-intent-discovery-verification.md for final validation.

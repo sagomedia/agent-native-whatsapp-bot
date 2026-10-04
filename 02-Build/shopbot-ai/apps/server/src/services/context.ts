@@ -9,6 +9,7 @@ export async function withConversation<T>(pool: Pool, context: ActorContext, fn:
 }
 export async function authorize(client: PoolClient, context: ActorContext) {
   if (context.role !== 'customer') throw new ToolError('Customer tools require a verified customer identity', 'forbidden');
+  await client.query('SELECT id FROM stores WHERE id=$1 FOR SHARE',[context.storeId]);
   const row = await client.query('SELECT id FROM conversations WHERE id=$1 AND store_id=$2 AND actor=$3 FOR UPDATE', [context.conversationId, context.storeId, context.actor]);
   if (!row.rowCount) throw new ToolError('Conversation is not accessible to this identity', 'forbidden');
 }

@@ -13,3 +13,26 @@ Run `<release>/node/bin/node <release>/deploy/smoke.mjs` for HTTP readiness, das
 Rollback: `sudo bash /opt/shopbot-vps/current/deploy/rollback.sh`. Stop the new PostgreSQL cluster too if it is only serving this preview and the trial is abandoned. Neither rollback step deletes data.
 
 AI enablement requires separately placing the authorized existing free-tier Gemini key in the private environment and enabling `ALLOW_LOCAL_AI_TEST` and `ALLOW_FREE_INFERENCE`. Coordinate the project quota with the desktop instance, which uses a separate database ledger. Public owner access, HTTPS session handling and verified WhatsApp ingress/delivery remain separate work; never expose the unauthenticated mock simulator publicly.
+
+## Protected owner preview
+
+`/owner` is enabled only when the complete five-field owner configuration in
+`.env.example` is supplied. Provision an Access self-hosted application for the
+exact preview hostname and owner email before adding its DNS/Tunnel route. Copy
+its team issuer and application AUD tag into the server environment. The server
+checks the signed Access assertion on each owner request and derives the one
+merchant scope from `OWNER_STORE_ID`; the browser never supplies this scope.
+Keep `HOST=127.0.0.1`, `APP_MODE=mock` and `ALLOW_LOCAL_AI_TEST=false`.
+
+The preview has conversations/takeover, requests/decisions and connections/usage.
+Pause and takeover are durable and invalidate in-flight work leases. Decisions
+are recorded without customer notifications. No manual reply or WhatsApp sender
+exists in this release. Outbound simulator rows marked `sent` mean generated
+preview output, not WhatsApp delivery; the owner view labels this explicitly.
+
+For a subsequent prepared release, run `sudo bash <release>/deploy/upgrade.sh`.
+It backs up the current environment and PostgreSQL database privately on the VM,
+switches the current symlink, and restores the previous native release if
+readiness fails. The backup list check does not constitute a restoration drill.
+Do not use the legacy-app rollback script after public/channel cutover without
+first restoring the matching DNS, Tunnel/Access and webhook configuration.

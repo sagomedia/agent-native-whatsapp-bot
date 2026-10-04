@@ -10,9 +10,14 @@ import { eventSchema } from '../../../../packages/contracts/index.js';
 import type { Config } from '../config.js';
 import { toolDefinitions } from '../services/tools.js';
 import { SimulatorService } from '../services/simulator.js';
+import {registerOwner} from './owner.js';
+import type {AccessVerifier} from './access.js';
 
-export async function createApp(config: Config, pool: Pool, nativeTest?:Interpreter,nativeStore=fixtureStore) {
+export async function createApp(config: Config, pool: Pool, nativeTest?:Interpreter,nativeStore=fixtureStore,ownerVerifier?:AccessVerifier) {
+  if(config.owner&&(config.mode!=='mock'||nativeTest))throw new Error('Hosted owner preview requires mock mode with local AI disabled');
+  if(config.owner&&!['127.0.0.1','::1','localhost'].includes(config.host))throw new Error('Owner preview must listen on loopback');
   const app = Fastify({ logger: true, bodyLimit: 16000 });
+  await registerOwner(app,pool,config,ownerVerifier);
   app.get('/health/live', async () => ({ status: 'alive' }));
   app.get('/health/ready', async (_request, reply) => {
     try { await pool.query('SELECT 1'); return { status: 'ready', mode: config.mode }; }
@@ -32,6 +37,7 @@ export async function createApp(config: Config, pool: Pool, nativeTest?:Interpre
     const dashboard = resolve('dist/dashboard');
     if (existsSync(dashboard)) {
       await app.register(staticPlugin, { root: dashboard });
+      if(config.owner){app.get('/owner',async(_request,reply)=>reply.sendFile('index.html'));app.get('/',async(_request,reply)=>reply.redirect('/owner'));}
       if(nativeTest&&existsSync('resources/catalog/ksmc-demo/images')) await app.register(staticPlugin,{root:resolve('resources/catalog/ksmc-demo/images'),prefix:'/demo-images/',decorateReply:false});
       if(nativeTest) app.get('/native-test',async(_request,reply)=>reply.sendFile('index.html'));
     }
