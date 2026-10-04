@@ -78,3 +78,8 @@ This is now implemented in the local backend and microphone harness; actual evid
 Accepted customer-language direction: Tamil is the default. Tamil and Tanglish are primary; English replies require an explicit customer request/selection. Keep canonical product identity, units, prices, versions and order consent intact while changing customer wording. Demo and handover are the immediate purpose.
 
 Accepted infrastructure sequence: connect the project to GitHub, use the user's existing Google Cloud VPS for server hosting, then connect verified WhatsApp ingress/media/delivery to the hosted retail engine. Development access is through the authorized repository and server deployment/diagnostic workflow; this chat is not a permanent hosted worker. Record deployment IDs, rollback and access procedures in HANDOVER.md. No new VM/paid service has been provisioned.
+
+
+## Intent-led discovery correction — 4 October 2026
+
+The user rejected translating the whole simulator and relying on exact catalog wording. Keep English test controls independent of Tamil-default bot replies; understand Tamil, Tanglish and English descriptions. AI should identify the intended job, compare real catalog evidence, expand purposeful keywords and propose several relevant types or options. SQL remains authoritative for names, photos, prices, units and hard filters. Show three to six options when meaningful, fewer when the catalog has fewer; never pad with unrelated products. Preserve stated purchase quantities during exploration and require explicit product choice and final submission separately.

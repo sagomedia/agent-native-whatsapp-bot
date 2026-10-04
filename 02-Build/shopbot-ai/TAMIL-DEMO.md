@@ -1,8 +1,8 @@
 # தமிழ் ShopBot டெமோ — 4 October 2026
 
-Open http://localhost:3017/native-test and choose **புதிய உரையாடல்**.
+Open http://localhost:3017/native-test and choose **New chat**.
 
-New conversations start in Tamil. Tamil, Tanglish and English input are understood without automatically changing the reply language. Choose **Tanglish** in the மொழி selector or type “Tanglish la pesu” for Tamil in Latin letters. English is available only after an explicit selection/request such as “change to English”. Type “தமிழில் பேசுங்கள்” to return to Tamil. A standalone spoken language request can change the preference after its actual transcript is validated; audio cannot approve products or submit an order.
+The simulator controls stay in English. Bot replies and product cards have a separate language preference. New conversations start in Tamil. Tamil, Tanglish and English input are understood without automatically changing the reply language. Choose **Tanglish** in the **Bot replies** selector or type “Tanglish la pesu” for Tamil in Latin letters. English is available only after an explicit selection/request such as “change to English”. Type “தமிழில் பேசுங்கள்” to return to Tamil. A standalone spoken language request can change the preference after its actual transcript is validated; audio cannot approve products or submit an order.
 
 ## Demo sequence
 
@@ -11,8 +11,8 @@ New conversations start in Tamil. Tamil, Tanglish and English input are understo
 3. Check the photos, brand, size and sales unit. Choose the correct item. An uncertain image/name is a suggestion until you explicitly choose it.
 4. Reply **ரெண்டு பீஸ்** or **2 pieces** to a quantity question. Known quantity answers use no AI; incompatible units require clarification.
 5. Review **என் பட்டியலைப் பார்**. Confirm **கடைக்கு அனுப்பு** only when the current list and total are correct. This submits a request awaiting shop approval; it does not mark stock reserved, payment paid or collection ready.
-6. **படம் பதிவேற்று** → preview → optional Tamil/Tanglish caption → **பொருத்தமான பொருட்களைத் தேடு**. Sending shares the photo with Gemini. Cancel uses no AI. Matches remain read-only until selected.
-7. **குரல் பதிவு செய்** → record up to 30 seconds → preview → send or cancel. Check the resulting product photos. Previous submitted requests need a new chat for new items.
+6. **Upload image** → preview → optional Tamil/Tanglish caption → **பொருத்தமான பொருட்களைத் தேடு**. Sending shares the photo with Gemini. Cancel uses no AI. Matches remain read-only until selected.
+7. **Record voice** → record up to 30 seconds → preview → send or cancel. Check the resulting product photos. Previous submitted requests need a new chat for new items.
 
 ## Implementation
 
@@ -29,3 +29,8 @@ These are proposed Tamil/Tanglish wordings, ready for owner review of local term
 One outbound reply per turn, at most ten cards and three product-check groups; no automatic image fanout. Three Gemini calls/minute, 15-second spacing, 100/day; paid inference stays disabled. Historical messages retain the language in which they were sent. Technical source code and administrator diagnostics remain developer-facing.
 
 Google Cloud and real WhatsApp delivery are subsequent milestones. The current `/api/native-test` endpoints intentionally reject public hosts. Follow workspace `HANDOVER.md` before hosting.
+
+
+## Intent discovery correction
+
+Use English, Tamil or Tanglish input without requiring the catalog name. A vague cutting request can show three to six real options in one reply and ask what will be cut. A specific pipe-cutter request shows H19; fewer than six valid options is expected. Explicit purchase quantities are retained while exploring. The planner compares current database facts; deterministic retrieval rechecks its keywords, proposed families and SKU ranking. Product suitability is tentative until technical metadata is merchant-verified. See INTENT-DISCOVERY.md and 03-Output/016-intent-discovery-verification.md.

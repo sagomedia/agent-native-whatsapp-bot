@@ -54,6 +54,14 @@ export class ConversationRuntime {
       try {interpretation=await this.interpret(ctx,claimed);}
       catch(error) {failure=this.provider.mode==='live'?(error instanceof ToolError&&error.code==='stale_version'?error.message:error instanceof ToolError&&error.code==='quota_unavailable'?'I’m temporarily at the AI request limit. Your list is kept. You can still say “check again”, use a product button, or review your list; please wait a little before sending a new description.':error instanceof FreeQuotaError?'The AI service is temporarily rate limited. Your list is kept; product buttons and catalog rechecks still work.':'I’m having trouble processing that message. Your list is kept. You can recheck the item, use the product choices, or try a new description shortly.'):error instanceof Error?error.message:'Interpretation failed. Your draft is retained.';}
     }
+    // A job answer during read-only exploration is still a product proposal.
+    // The model cannot turn that phase into a cart write or default its amount.
+    // Trusted photo choices bypass this guard through knownAction. Explicit
+    // multi-line shopping lists retain the ordinary photo-confirmation flow.
+    if(claimed.state.requireProductConfirmation&&!deterministic&&claimed.memory?.purpose==='discovery'&&claimed.memory.sourceVersion===claimed.state.version&&!claimed.state.pending&&interpretation?.operations.length===1&&interpretation.operations[0].kind==='add_item') {
+      const proposal=interpretation.operations[0];
+      interpretation={operations:[],next:'assist',assistance:{rootQuery:proposal.query,queries:[proposal.query],search:proposal.search,quantity:claimed.memory.requestedQuantity,requestedUnit:claimed.memory.requestedUnit,question:interpretation.clarifyQuestion}};
+    }
     if(claimed.event.type==='voice'&&interpretation?.transcript&&interpretation.operations.length===0&&interpretation.next==='continue')requestedLanguage=languageRequest(interpretation.transcript);
     await withConversation(this.pool,ctx,async client=>{
       const held=await client.query("SELECT id FROM messages WHERE id=$1 AND conversation_id=$2 AND status='processing' AND claim_token=$3",[claimed.id,ctx.conversationId,claimed.token]);
@@ -89,7 +97,7 @@ export class ConversationRuntime {
             if(assistanceLineId&&pendingItem(current)?.id!==assistanceLineId&&!(current.pending?.kind==='products'&&current.pending.groups.some(g=>g.lineId===assistanceLineId)))throw new ToolError('That search refers to an earlier item. Please name the current item.','stale_question');
             assistance=await observeCatalog(client,ctx,this.tools,queries,`${claimed.id}:assist`,search);
             result={state:current,message:''};
-            assistanceBindingId=await saveAssistantMemory(client,ctx,queries.length?{purpose:assistanceLineId?'pending':'discovery',queries,lineId:assistanceLineId??null,sourceVersion:current.version,observations:assistance}:null);
+            assistanceBindingId=await saveAssistantMemory(client,ctx,queries.length?{purpose:assistanceLineId?'pending':'discovery',queries,lineId:assistanceLineId??null,sourceVersion:current.version,requestedQuantity:rechecking?claimed.memory?.requestedQuantity:interpretation?.assistance?.quantity,requestedUnit:rechecking?claimed.memory?.requestedUnit:interpretation?.assistance?.requestedUnit,observations:assistance}:null);
           } else if(deterministic) {
             result=await invoke(deterministic);
             if(deterministic.name==='confirm_product_choices'||deterministic.name==='apply_draft_changes'&&(current.requireProductConfirmation||claimed.event.type==='select_candidate'||claimed.event.type==='choose_product'||(claimed.event.type==='text'&&claimed.state.pending?.kind==='question'))) result=await invoke({name:'preview_order',args:{expectedVersion:result.state!.version}});
@@ -102,12 +110,12 @@ export class ConversationRuntime {
               result=interpretation.next==='review'||state.requireProductConfirmation&&interpretation.operations.length?await invoke({name:'preview_order',args:{expectedVersion:state.version}}):{state,message:'Draft saved; request review when ready.'};
             }
           } else throw new ToolError('No permitted action found. Review the draft or send a clear shopping request.');
-          if(assistance)rich=assistance.length?assistanceReply(assistance,current,interpretation?.assistance?.question,rechecking,assistanceLineId,assistanceBindingId):plainReply(say(current,'Which item would you like me to check again? Tell me its name or what you need it for.','எந்தப் பொருளை மீண்டும் பார்க்க வேண்டும்? பெயர் அல்லது என்ன வேலைக்குத் தேவை என்று சொல்லுங்கள்.','Entha porulai marubadi paarkkanum? Peyar illa enna velaikku venum-nu sollunga.'));
+          if(assistance)rich=assistance.length?assistanceReply(assistance,current,interpretation?.assistance?.question,rechecking,assistanceLineId,assistanceBindingId,{quantity:rechecking?claimed.memory?.requestedQuantity:interpretation?.assistance?.quantity,unit:rechecking?claimed.memory?.requestedUnit:interpretation?.assistance?.requestedUnit}):plainReply(say(current,'Which item would you like me to check again? Tell me its name or what you need it for.','எந்தப் பொருளை மீண்டும் பார்க்க வேண்டும்? பெயர் அல்லது என்ன வேலைக்குத் தேவை என்று சொல்லுங்கள்.','Entha porulai marubadi paarkkanum? Peyar illa enna velaikku venum-nu sollunga.'));
           else {
             if(result.products) {
               const query=deterministic?.name==='search_products'||deterministic?.name==='discover_products'?deterministic.args.query:interpretation?.priceQuery;
               const quantity=deterministic?.name==='search_products'?deterministic.args.quantity:interpretation?.priceQuantity,unit=deterministic?.name==='search_products'?deterministic.args.requestedUnit:interpretation?.priceUnit;
-              if(query)result.discoveryBindingId=await saveAssistantMemory(client,ctx,{purpose:!!result.discovery||claimed.event.type==='browse'||interpretation?.conversation==='browse'?'discovery':'quote',queries:[query],lineId:null,sourceVersion:current.version,quoteQuantity:quantity,quoteUnit:unit,observations:[{tool:result.discovery?'discover_products':'search_products',query,products:result.products,totalCount:result.totalCount??result.products.length,discovery:result.discovery}]});
+              if(query)result.discoveryBindingId=await saveAssistantMemory(client,ctx,{purpose:!!result.discovery||claimed.event.type==='browse'||interpretation?.conversation==='browse'?'discovery':'quote',queries:[query],lineId:null,sourceVersion:current.version,quoteQuantity:quantity,quoteUnit:unit,...(deterministic?.name==='discover_products'&&claimed.memory?.sourceVersion===current.version?{requestedQuantity:claimed.memory.requestedQuantity,requestedUnit:claimed.memory.requestedUnit}:{}),observations:[{tool:result.discovery?'discover_products':'search_products',query,products:result.products,totalCount:result.totalCount??result.products.length,discovery:result.discovery}]});
             }
             rich=presentReply(result,result.state??current,interpretation,claimed.event);
             if(claimed.event.type==='text'&&canonicalShortcut(claimed.event.text)==='yes'&&deterministic?.name==='get_draft'&&claimed.memory?.sourceVersion===current.version) {
@@ -130,6 +138,7 @@ export class ConversationRuntime {
         await client.query('ROLLBACK TO SAVEPOINT turn_actions');
         message=customerError(error instanceof Error?error.message:'Action failed. Your draft is retained.',current,error instanceof ToolError?error.code:undefined);rich=plainReply(message);
       }
+      rich={...rich,replyLanguage:current.replyLanguage??'en'};
       await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,response_to,payload) VALUES($1,$2,'outbound',$3,'sent',$4,$5::jsonb)",[randomUUID(),ctx.conversationId,message,claimed.id,JSON.stringify(rich)]);
       await client.query("UPDATE messages SET status='processed',claim_token=NULL,lease_until=NULL WHERE id=$1",[claimed.id]);
     });
@@ -147,7 +156,10 @@ export class ConversationRuntime {
     }
     if(e.type==='browse'){if(e.expectedVersion!==s.version)throw new ToolError('Your list changed. Please try again.');const department=claim.catalogMap?.departments.find(d=>d.id===e.query);const family=claim.catalogMap?.departments.flatMap(d=>d.families).find(f=>f.id===e.query);return s.catalogDiscovery?{name:'discover_products',args:{query:department?.label??family?.label??e.query,search:department?{keywords:[department.label],departmentId:department.id}:family?{keywords:[family.label],familyId:family.id}:undefined}}:{name:'search_products',args:{query:e.query}};}
     if(e.type==='quote_product'){if(e.expectedVersion!==s.version)throw new ToolError('Your list changed. Please check the current prices again.');return {name:'search_products',args:{query:e.sku,quantity:e.quantity,requestedUnit:e.requestedUnit}};}
-    if(e.type==='choose_product')return {name:'apply_draft_changes',args:{expectedVersion:e.expectedVersion,operations:[{kind:'add_item',query:e.sku,quantity:e.quantity??null}]}};
+    if(e.type==='choose_product'){
+      const remembered=claim.memory?.sourceVersion===s.version&&claim.memory.purpose==='discovery'&&claim.memory.observations.some(o=>o.products.some(p=>p.sku===e.sku))&&claim.displayedActions.some(action=>digest(action)===digest(e))?claim.memory:undefined;
+      return {name:'apply_draft_changes',args:{expectedVersion:e.expectedVersion,operations:[{kind:'add_item',query:e.sku,quantity:e.quantity??remembered?.requestedQuantity??null,...(remembered?.requestedUnit?{requestedUnit:remembered.requestedUnit}:{})}]}};
+    }
     if(e.type==='add_item') return {name:'apply_draft_changes',args:{expectedVersion:e.expectedVersion,operations:[{kind:'add_item',query:e.sku,quantity:e.quantity}]}};
     if(e.type==='set_quantity') return {name:'apply_draft_changes',args:{expectedVersion:e.expectedVersion,operations:[e.quantity===0?{kind:'remove_item',reference:e.lineId}:{kind:'set_quantity',reference:e.lineId,quantity:e.quantity}]}};
     if(e.type==='review') return {name:'preview_order',args:{expectedVersion:e.expectedVersion}};

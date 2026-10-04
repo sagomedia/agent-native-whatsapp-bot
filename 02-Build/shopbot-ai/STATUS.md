@@ -1,3 +1,7 @@
+# Current correction: intent-led discovery
+
+English simulator controls and an independent Tamil/Tanglish/English bot reply preference. Fixed the reported 42mm pipe-cutter lookup failure; support up to six relevant photos, practical AI job questions and remembered purchase quantities through browsing. All 109 regression tests and the production Node 22 build pass. See INTENT-DISCOVERY.md and workspace 03-Output/016-intent-discovery-verification.md for final validation.
+
 # Tamil-first customer demo — 4 October 2026
 
 Implemented saved Tamil/Tanglish/English preference, default Tamil native sessions, localized customer UI/media controls/product choices/quantity/order review/error replies, localized catalog names/families, bounded Tamil/Tanglish shortcuts and actual-transcript language preference changes. English requires explicit customer choice. Language switches preserve draft versions, products and consent bindings. Optional-null planning fields are normalized without weakening required/unknown-action validation. Fixed the submitted-request acknowledgement being overwritten by a generic yes reply.

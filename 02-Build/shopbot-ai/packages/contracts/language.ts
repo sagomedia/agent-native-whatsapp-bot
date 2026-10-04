@@ -26,7 +26,7 @@ export function canonicalShortcut(text:string):string {
  return shortcuts[s]??s;
 }
 export function safeQuestion(question:string|undefined,context:LanguageContext):string|undefined {
- if(!question?.endsWith('?')||/[\d₹$]|price|cost|discount|payment|stock|ready|approved|guarantee|deliver|https?:|விலை|பணம்|தள்ளுபடி|இருப்பு|உறுதி|டெலிவரி/i.test(question))return;
+ if(!question||!/[?][)\]\"'”’]*$/.test(question.trim())||/[\d₹$]|price|cost|discount|payment|stock|ready|approved|guarantee|deliver|https?:|விலை|பணம்|தள்ளுபடி|இருப்பு|உறுதி|டெலிவரி/i.test(question))return;
  const tamil=/[\u0b80-\u0bff]/.test(question),language=languageOf(context);
  if(language==='ta'&&!tamil||language==='ta-Latn'&&(tamil||!/(venum|por|pann|enna|eth|neenga|unga|thaan|iruk|size-aa|brand-aa)/i.test(question))||language==='en'&&tamil)return;
  return question;

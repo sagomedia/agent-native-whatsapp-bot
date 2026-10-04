@@ -27,7 +27,7 @@ export function productFromRow(p:any):Product {
 }
 export async function catalogEnabled(client:PoolClient,ctx:ActorContext) {return !!(await client.query('SELECT 1 FROM catalog_profiles WHERE store_id=$1',[ctx.storeId])).rowCount;}
 export async function catalogContext(client:PoolClient,ctx:ActorContext) {
- return (await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND active=true ORDER BY sku LIMIT 24`,[ctx.storeId])).rows.map(productFromRow);
+ return (await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND active=true ORDER BY sku LIMIT (SELECT CASE WHEN count(*)<=40 THEN 40 ELSE 24 END FROM products WHERE store_id=$1 AND active=true)`,[ctx.storeId])).rows.map(productFromRow);
 }
 export async function getProducts(client: PoolClient, context: ActorContext): Promise<Product[]> {
   const result=await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND active=true ORDER BY sku`,[context.storeId]);

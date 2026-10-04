@@ -9,8 +9,8 @@ import {discoveryPresentation} from './discovery-replies.js';
 import type {RetailTools} from './tools.js';
 
 export type CatalogObservation={tool:'search_products'|'discover_products';query:string;products:Product[];totalCount:number;discovery?:DiscoveryResult};
-const memorySchema=z.object({id:z.uuid(),purpose:z.enum(['discovery','quote','pending']),queries:z.array(z.string().min(1).max(200)).min(1).max(3),lineId:z.uuid().nullable(),sourceVersion:z.number().int().min(0),quoteQuantity:z.number().min(0.001).max(100).optional(),quoteUnit:z.string().max(200).optional(),observations:z.array(z.object({tool:z.enum(['search_products','discover_products']),query:z.string().max(200),products:z.array(z.any()).max(10),totalCount:z.number().int().min(0),discovery:z.any().optional()})).max(3)});
-export type AssistantMemory={id:string;purpose:'discovery'|'quote'|'pending';queries:string[];lineId:string|null;sourceVersion:number;quoteQuantity?:number;quoteUnit?:string;observations:CatalogObservation[]};
+const memorySchema=z.object({id:z.uuid(),purpose:z.enum(['discovery','quote','pending']),queries:z.array(z.string().min(1).max(200)).min(1).max(3),lineId:z.uuid().nullable(),sourceVersion:z.number().int().min(0),quoteQuantity:z.number().min(0.001).max(100).optional(),quoteUnit:z.string().max(200).optional(),requestedQuantity:z.number().min(0.001).max(100).optional(),requestedUnit:z.string().max(200).optional(),observations:z.array(z.object({tool:z.enum(['search_products','discover_products']),query:z.string().max(200),products:z.array(z.any()).max(10),totalCount:z.number().int().min(0),discovery:z.any().optional()})).max(3)});
+export type AssistantMemory={id:string;purpose:'discovery'|'quote'|'pending';queries:string[];lineId:string|null;sourceVersion:number;quoteQuantity?:number;quoteUnit?:string;requestedQuantity?:number;requestedUnit?:string;observations:CatalogObservation[]};
 export async function loadAssistantMemory(client:PoolClient,ctx:ActorContext):Promise<AssistantMemory|null> {
   const row=(await client.query('SELECT assistant_memory FROM conversations WHERE id=$1 AND store_id=$2 AND actor=$3',[ctx.conversationId,ctx.storeId,ctx.actor])).rows[0];
   const parsed=memorySchema.safeParse(row?.assistant_memory);
@@ -49,11 +49,11 @@ export async function observeCatalog(client:PoolClient,ctx:ActorContext,tools:Re
   }
   return results;
 }
-export function assistanceReply(observations:CatalogObservation[],state:ConversationState,question?:string,rechecked=false,targetLineId?:string,memoryId?:string):RichReply {
-  if(observations[0]?.discovery&&observations.length===1)return discoveryPresentation(observations[0].discovery,state,memoryId,targetLineId);
+export function assistanceReply(observations:CatalogObservation[],state:ConversationState,question?:string,rechecked=false,targetLineId?:string,memoryId?:string,selection?:{quantity?:number;unit?:string}):RichReply {
+  if(observations[0]?.discovery&&observations.length===1)return discoveryPresentation(observations[0].discovery,state,memoryId,targetLineId,question,selection);
   const available=[...new Map(observations.flatMap(o=>o.products).map(p=>[p.sku,p])).values()];
   const diverse=state.catalogDiscovery?available.filter((p,i)=>available.findIndex(v=>v.familyId===p.familyId)===i):available;
-  const products=(state.catalogDiscovery?[...diverse,...available.filter(p=>!diverse.includes(p))]:available).slice(0,state.catalogDiscovery?3:10);
+  const products=(state.catalogDiscovery?[...diverse,...available.filter(p=>!diverse.includes(p))]:available).slice(0,state.catalogDiscovery?6:10);
   // Questions are authored by the model; factual commerce statements always
   // come from verified tool results and the backend presentation below.
   const focusedQuestion=safeQuestion(question,state);
