@@ -1,3 +1,11 @@
+# Tamil-first customer demo — 4 October 2026
+
+Implemented saved Tamil/Tanglish/English preference, default Tamil native sessions, localized customer UI/media controls/product choices/quantity/order review/error replies, localized catalog names/families, bounded Tamil/Tanglish shortcuts and actual-transcript language preference changes. English requires explicit customer choice. Language switches preserve draft versions, products and consent bindings. Optional-null planning fields are normalized without weakening required/unknown-action validation. Fixed the submitted-request acknowledgement being overwritten by a generic yes reply.
+
+All 99 isolated regression/integration tests pass in the production Node 22 container. Typecheck/build and deployed local health pass. Three successful free-only live synthetic attempts verified Tamil selection/review, Tanglish multi-item quantities and Tamil photo matching, with no submitted orders. Local deployment and live free-tier evidence are recorded in workspace `03-Output/015-tamil-demo-verification.md`. Instructions: `TAMIL-DEMO.md` and workspace `HANDOVER.md`. No GitHub remote/remote deployment or WhatsApp connection is established yet; repo name/URL and intended VM confirmation are pending. Read-only checks verified sagomedia GitHub sign-in and candidate hermes-mcp-test / sago-counter-ksmc / us-central1-a / e2-micro. Owner terminology review and fresh actual Tamil/Tanglish voice evaluation remain.
+
+---
+
 # Image upload — 3 October 2026
 
 Customer product-photo upload/search is implemented and running on `/native-test`: Upload image → preview → optional caption → Find matching products. JPG/PNG/WebP under 2 MB; scoped normalized images; one free-only visual planning call; read-only catalog suggestions; explicit product selection and separate review consent.

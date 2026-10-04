@@ -1,3 +1,4 @@
+import {say,canonicalShortcut,languageRequest,languageAcknowledgement,customerError} from '../../../../packages/contracts/language.js';
 import {loadImage} from '../services/image-media.js';
 import {loadVoice} from '../services/voice-media.js';
 import {priceInquiry,quantityReply} from '../services/shopping-language.js';
@@ -38,6 +39,7 @@ export class ConversationRuntime {
       return {id:m.id,token,event:m.payload,bindingId:m.binding_id,state:await loadState(client,ctx),catalog:await catalogEnabled(client,ctx)?await catalogContext(client,ctx):await getProducts(client,ctx),catalogMap:await catalogEnabled(client,ctx)?await getCatalogMap(client,ctx):undefined,memory:await loadAssistantMemory(client,ctx),displayedActions,displayedProducts} as Claimed;
     });
     if(!claimed) return false;
+    let requestedLanguage=claimed.event.type==='change_language'?claimed.event.language:claimed.event.type==='text'?languageRequest(claimed.event.text):undefined;
     let interpretation:Interpretation|undefined;
     let failure:string|undefined;
     let deterministic:ToolCall|undefined;
@@ -48,20 +50,27 @@ export class ConversationRuntime {
     const inquiry=claimed.event.type==='text'?shopInquiry(claimed.event.text):undefined;
     if(inquiry&&!deterministic)interpretation=inquiry;
     if(social&&!deterministic)interpretation={operations:[],next:'continue',conversation:social};
-    if(!failure&&!deterministic&&!social&&!inquiry&&(claimed.event.type==='text'||claimed.event.type==='voice'||claimed.event.type==='image')) {
+    if(!failure&&!deterministic&&!social&&!inquiry&&!requestedLanguage&&(claimed.event.type==='text'||claimed.event.type==='voice'||claimed.event.type==='image')) {
       try {interpretation=await this.interpret(ctx,claimed);}
       catch(error) {failure=this.provider.mode==='live'?(error instanceof ToolError&&error.code==='stale_version'?error.message:error instanceof ToolError&&error.code==='quota_unavailable'?'I’m temporarily at the AI request limit. Your list is kept. You can still say “check again”, use a product button, or review your list; please wait a little before sending a new description.':error instanceof FreeQuotaError?'The AI service is temporarily rate limited. Your list is kept; product buttons and catalog rechecks still work.':'I’m having trouble processing that message. Your list is kept. You can recheck the item, use the product choices, or try a new description shortly.'):error instanceof Error?error.message:'Interpretation failed. Your draft is retained.';}
     }
+    if(claimed.event.type==='voice'&&interpretation?.transcript&&interpretation.operations.length===0&&interpretation.next==='continue')requestedLanguage=languageRequest(interpretation.transcript);
     await withConversation(this.pool,ctx,async client=>{
       const held=await client.query("SELECT id FROM messages WHERE id=$1 AND conversation_id=$2 AND status='processing' AND claim_token=$3",[claimed.id,ctx.conversationId,claimed.token]);
       if(!held.rowCount) return; // Another worker acquired the expired lease; old result is discarded.
       const current=await loadState(client,ctx);
       if(claimed.event.type==='voice'&&interpretation?.transcript)await client.query('UPDATE messages SET text=$1 WHERE id=$2 AND conversation_id=$3',[interpretation.transcript,claimed.id,ctx.conversationId]);
+      if(failure)failure=customerError(failure,current);
       let message=failure??'';let rich:RichReply=plainReply(message);
       // The savepoint ensures invalid dependent operations cannot partially mutate the draft.
       await client.query('SAVEPOINT turn_actions');
       try {
-        if(!failure) {
+        if(requestedLanguage&&!failure) {
+          current.replyLanguage=requestedLanguage;
+          await client.query('UPDATE conversations SET reply_language=$1 WHERE id=$2 AND store_id=$3 AND actor=$4',[requestedLanguage,ctx.conversationId,ctx.storeId,ctx.actor]);
+          rich=presentReply({state:current,message:''},current);
+          rich={...rich,text:languageAcknowledgement(requestedLanguage)+'\n\n'+rich.text};message=rich.text;
+        } else if(!failure) {
           if(current.version!==claimed.state.version) throw new ToolError('The draft changed during interpretation. Please resend against the current draft.','stale_version');
           const selectedCatalogProduct=claimed.displayedProducts.find(p=>digest(p.event)===digest(claimed.event))?.product;
           const selectedCatalogSku=(claimed.event.type==='choose_product'||claimed.event.type==='select_candidate')&&claimed.displayedActions.some(action=>digest(action)===digest(claimed.event))?claimed.event.sku:undefined;
@@ -93,7 +102,7 @@ export class ConversationRuntime {
               result=interpretation.next==='review'||state.requireProductConfirmation&&interpretation.operations.length?await invoke({name:'preview_order',args:{expectedVersion:state.version}}):{state,message:'Draft saved; request review when ready.'};
             }
           } else throw new ToolError('No permitted action found. Review the draft or send a clear shopping request.');
-          if(assistance)rich=assistance.length?assistanceReply(assistance,current,interpretation?.assistance?.question,rechecking,assistanceLineId,assistanceBindingId):plainReply('Which item would you like me to check again? Tell me its name or what you need it for.');
+          if(assistance)rich=assistance.length?assistanceReply(assistance,current,interpretation?.assistance?.question,rechecking,assistanceLineId,assistanceBindingId):plainReply(say(current,'Which item would you like me to check again? Tell me its name or what you need it for.','எந்தப் பொருளை மீண்டும் பார்க்க வேண்டும்? பெயர் அல்லது என்ன வேலைக்குத் தேவை என்று சொல்லுங்கள்.','Entha porulai marubadi paarkkanum? Peyar illa enna velaikku venum-nu sollunga.'));
           else {
             if(result.products) {
               const query=deterministic?.name==='search_products'||deterministic?.name==='discover_products'?deterministic.args.query:interpretation?.priceQuery;
@@ -101,9 +110,9 @@ export class ConversationRuntime {
               if(query)result.discoveryBindingId=await saveAssistantMemory(client,ctx,{purpose:!!result.discovery||claimed.event.type==='browse'||interpretation?.conversation==='browse'?'discovery':'quote',queries:[query],lineId:null,sourceVersion:current.version,quoteQuantity:quantity,quoteUnit:unit,observations:[{tool:result.discovery?'discover_products':'search_products',query,products:result.products,totalCount:result.totalCount??result.products.length,discovery:result.discovery}]});
             }
             rich=presentReply(result,result.state??current,interpretation,claimed.event);
-            if(claimed.event.type==='text'&&claimed.event.text.trim().toLowerCase()==='yes'&&deterministic?.name==='get_draft'&&claimed.memory?.sourceVersion===current.version) {
-              if(claimed.memory.purpose==='quote')rich=plainReply('That was a price check; nothing has been added. Use “Add to my list” or tell me which item and quantity you want.');
-              else if(claimed.memory.observations.flatMap(o=>o.products).length>1)rich=plainReply('Which of the options would you like? Choose a product or tell me its name; I haven’t changed your list.');
+            if(claimed.event.type==='text'&&canonicalShortcut(claimed.event.text)==='yes'&&deterministic?.name==='get_draft'&&claimed.memory?.sourceVersion===current.version) {
+              if(claimed.memory.purpose==='quote')rich=plainReply(say(current,'That was a price check; nothing has been added. Use “Add to my list” or tell me which item and quantity you want.','அது விலை விவரம் மட்டுமே; பொருள் சேர்க்கவில்லை. “பட்டியலில் சேர்” என்பதைத் தேர்வு செய்யுங்கள் அல்லது பொருளையும் எண்ணிக்கையையும் சொல்லுங்கள்.','Athu price detail mattum; porul serkkala. “List-la seru” choose pannunga illa porulaiyum quantity-aiyum sollunga.'));
+              else if(claimed.memory.observations.flatMap(o=>o.products).length>1)rich=plainReply(say(current,'Which of the options would you like? Choose a product or tell me its name; I haven’t changed your list.','எந்தப் பொருள் வேண்டும்? படத்தில் தேர்வு செய்யுங்கள் அல்லது பெயரைச் சொல்லுங்கள். உங்கள் பட்டியலில் மாற்றம் செய்யவில்லை.','Entha porul venum? Photo-la choose pannunga illa peyarai sollunga. Unga list-la maaththam seyyala.'));
             }
             if(result.state&&(interpretation?.operations.length||deterministic?.name==='apply_draft_changes'||deterministic?.name==='confirm_product_choices'||deterministic?.name==='preview_order')) {
               const line=pendingItem(result.state);
@@ -113,13 +122,13 @@ export class ConversationRuntime {
               } else await saveAssistantMemory(client,ctx,null);
             }
           }
-          if(claimed.event.type==='image'&&interpretation?.next==='assist')rich={...rich,text:(rich.cards?.length?'These are possible catalog matches for your photo. Check the brand, size and type before choosing.\n\n':'I could not find a confirmed catalog match for this photo.\n\n')+rich.text};
+          if(claimed.event.type==='image'&&interpretation?.next==='assist')rich={...rich,text:(rich.cards?.length?say(current,'These are possible catalog matches for your photo. Check the brand, size and type before choosing.\n\n','உங்கள் படத்திற்கு பொருத்தமாக இருக்கக்கூடிய பொருட்கள் இவை. பிராண்ட், அளவு மற்றும் வகையைச் சரிபார்த்துத் தேர்வு செய்யுங்கள்.\n\n','Unga photo-ku poruthamaaga irukkakoodiya porutkal ivai. Brand, size, type-ai check panni choose pannunga.\n\n'):say(current,'I could not find a confirmed catalog match for this photo.\n\n','இந்தப் படத்திற்குச் சரியான பொருத்தத்தை உறுதி செய்ய முடியவில்லை.\n\n','Intha photo-ku sariyana match-ai confirm panna mudiyala.\n\n'))+rich.text};
           message=rich.text;
         }
         await client.query('RELEASE SAVEPOINT turn_actions');
       } catch(error) {
         await client.query('ROLLBACK TO SAVEPOINT turn_actions');
-        message=error instanceof Error?error.message:'Action failed. Your draft is retained.';rich=plainReply(message);
+        message=customerError(error instanceof Error?error.message:'Action failed. Your draft is retained.',current,error instanceof ToolError?error.code:undefined);rich=plainReply(message);
       }
       await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,response_to,payload) VALUES($1,$2,'outbound',$3,'sent',$4,$5::jsonb)",[randomUUID(),ctx.conversationId,message,claimed.id,JSON.stringify(rich)]);
       await client.query("UPDATE messages SET status='processed',claim_token=NULL,lease_until=NULL WHERE id=$1",[claimed.id]);
@@ -151,7 +160,7 @@ export class ConversationRuntime {
       return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[{kind:'resolve_line',lineId:e.lineId,query:e.sku}]}};
     }
     if(e.type!=='text') return;
-    const text=e.text.trim().toLowerCase().replace(/[.!?]+$/,'');
+    const text=canonicalShortcut(e.text);
     if(isRecheck(e.text)) {
       if(claim.bindingId&&claim.bindingId!==conversationBinding(s,claim.memory))throw new ToolError('That recheck referred to an earlier question. Please name the current item; your list is unchanged.','stale_question');
       if(claim.memory?.purpose==='quote'&&claim.memory.sourceVersion===s.version)return {name:'search_products',args:{query:claim.memory.queries[0],quantity:claim.memory.quoteQuantity,requestedUnit:claim.memory.quoteUnit}};
@@ -159,7 +168,7 @@ export class ConversationRuntime {
       return {name:'get_draft',args:{}};
     }
     const remembered=claim.memory?.sourceVersion===s.version&&claim.memory.purpose==='discovery'?claim.memory.observations.find(o=>o.discovery)?.discovery:undefined;
-    const filter=remembered?.facets[0]?.values.find(v=>v.value.toLowerCase()===text||v.label.toLowerCase()===text);
+    const filter=remembered?.facets[0]?.values.find(v=>v.value.toLowerCase()===text||v.label.toLowerCase()===text||Object.values(v.localNames??{}).some(n=>n?.toLowerCase()===text));
     if(filter){if(claim.bindingId!==claim.memory!.id)throw new ToolError('That filter answer was for an earlier search.','stale_question');return {name:'discover_products',args:{query:remembered!.query,search:refinementPlan(remembered!,remembered!.facets[0].key,filter.value)}};}
     const quote=priceInquiry(e.text);if(quote)return {name:'search_products',args:quote};
     if(['review','checkout','enough',"that's all",'view cart','cart'].includes(text)) return {name:'preview_order',args:{expectedVersion:s.version}};
@@ -171,7 +180,7 @@ export class ConversationRuntime {
     if(s.pending?.kind==='products'&&['yes','confirm','add these','add these items','add this','add this item','add to my list','add to list','add to catalog','add these to my list','yes add these','yes add these items','yes add to my list','add into catalog','add into the catalog','add to the catalog'].includes(text)&&claim.bindingId!==s.pending.id&&!(claim.memory?.sourceVersion===s.version&&claim.memory.purpose!=='pending'))throw new ToolError('That answer was for an earlier product check. Please use the current choices.','stale_question');
     if(s.pending?.kind==='products'&&claim.bindingId===s.pending.id) {
       const check=s.pending;
-      const matching=check.groups.flatMap(g=>(g.discovery?.facets[0]?.values??[]).filter(v=>v.value.toLowerCase()===text||v.label.toLowerCase()===text).map(v=>({group:g,value:v})));
+      const matching=check.groups.flatMap(g=>(g.discovery?.facets[0]?.values??[]).filter(v=>v.value.toLowerCase()===text||v.label.toLowerCase()===text||Object.values(v.localNames??{}).some(n=>n?.toLowerCase()===text)).map(v=>({group:g,value:v})));
       if(matching.length===1){if(claim.bindingId!==check.id)throw new ToolError('That answer was for an earlier category question.','stale_question');const m=matching[0],line=s.draft.find(l=>l.id===m.group.lineId)!;return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[{kind:'resolve_line',lineId:line.id,query:line.query??line.name,search:refinementPlan(m.group.discovery!,m.group.discovery!.facets[0].key,m.value.value)}]}};}
       if(['yes','confirm','add these','add these items','add this','add this item','add to my list','add to list','add to catalog','add these to my list','yes add these','yes add these items','yes add to my list','add into catalog','add into the catalog','add to the catalog'].includes(text)) {
         if(claim.bindingId!==check.id)throw new ToolError('That answer was for an earlier product check. Please use the current choices.','stale_question');

@@ -11,12 +11,12 @@ function bound(client:PoolClient,sql:string,parameters:unknown[]) {
 export async function getCatalogMap(client:PoolClient,ctx:ActorContext,departmentId?:string):Promise<CatalogMap> {
  const store=(await client.query('SELECT s.name,c.store_type FROM stores s LEFT JOIN catalog_profiles c ON c.store_id=s.id WHERE s.id=$1',[ctx.storeId])).rows[0];
  if(!store)throw new ToolError('Store is not accessible.','forbidden');
- const rows=(await client.query(`SELECT n.id,n.parent_id,n.kind,n.label,n.aliases,count(p.sku)::int AS count
+ const rows=(await client.query(`SELECT n.id,n.parent_id,n.kind,n.label,n.local_names,n.aliases,count(p.sku)::int AS count
  FROM catalog_nodes n LEFT JOIN products p ON p.store_id=n.store_id AND p.family_id=n.id AND p.active=true
- WHERE n.store_id=$1 GROUP BY n.id,n.parent_id,n.kind,n.label,n.aliases ORDER BY n.kind,n.label`,[ctx.storeId])).rows;
+ WHERE n.store_id=$1 GROUP BY n.id,n.parent_id,n.kind,n.label,n.local_names,n.aliases ORDER BY n.kind,n.label`,[ctx.storeId])).rows;
  const departments=rows.filter(n=>n.kind==='department'&&(!departmentId||n.id===departmentId)).slice(0,20).map(n=>{
-   const families=rows.filter(f=>f.parent_id===n.id&&f.kind==='family').slice(0,30).map(f=>({id:f.id,label:f.label,aliases:f.aliases,count:f.count}));
-   return {id:n.id,label:n.label,count:families.reduce((a,f)=>a+f.count,0),families};
+   const families=rows.filter(f=>f.parent_id===n.id&&f.kind==='family').slice(0,30).map(f=>({id:f.id,label:f.label,localNames:f.local_names,aliases:f.aliases,count:f.count}));
+   return {id:n.id,label:n.label,localNames:n.local_names,count:families.reduce((a,f)=>a+f.count,0),families};
  });
  const count=Number((await client.query('SELECT count(*) FROM products WHERE store_id=$1 AND active=true',[ctx.storeId])).rows[0].count);
  return {store:{name:store.name,type:store.store_type??'general retail'},productCount:count,departments,truncated:rows.length>departments.length+departments.reduce((a,d)=>a+d.families.length,0)};
@@ -43,7 +43,7 @@ function choosePhotos(products:Product[],rank:Map<string,ReturnType<typeof keywo
 // Every product fact is read from the current, scoped SQL catalog.
 export async function discoverProducts(client:PoolClient,ctx:ActorContext,query:string,input?:DiscoveryPlan):Promise<DiscoveryResult> {
  const plan=discoveryPlanSchema.parse(input??{keywords:[query]});
- const nodes=(await client.query('SELECT id,parent_id,kind,label,aliases FROM catalog_nodes WHERE store_id=$1',[ctx.storeId])).rows;
+ const nodes=(await client.query('SELECT id,parent_id,kind,label,local_names,aliases FROM catalog_nodes WHERE store_id=$1',[ctx.storeId])).rows;
  if(plan.familyId&&!nodes.some(n=>n.id===plan.familyId&&n.kind==='family'))throw new ToolError('Choose a product family from this shop’s catalog.');
  if(plan.departmentId&&!nodes.some(n=>n.id===plan.departmentId&&n.kind==='department'))throw new ToolError('Choose a department from this shop’s catalog.');
  if(plan.familyId&&plan.departmentId&&!nodes.some(n=>n.id===plan.familyId&&n.parent_id===plan.departmentId))throw new ToolError('That family does not belong to the selected department.');
@@ -95,7 +95,7 @@ export async function discoverProducts(client:PoolClient,ctx:ActorContext,query:
  for(const key of unique(allFacets.map(f=>f.key)).sort((a,b)=>a==='family'?-1:b==='family'?1:a==='brand'?-1:b==='brand'?1:a.localeCompare(b))){
   const vals=allFacets.filter(f=>f.key===key);
   if(vals.length<2||key==='family'&&effective.familyId||key==='brand'&&(effective.brand||root?.brand)||key.startsWith('spec:')&&effective.specifications?.[key.slice(5)])continue;
-  facets.push({key,label:key==='family'?'product type':key==='brand'?'brand':key.slice(5).replaceAll('_',' '),values:vals.slice(0,3).map(f=>({value:f.value,label:key==='family'?nodes.find(n=>n.id===f.value)?.label??f.value:f.value,count:f.count}))});
+  facets.push({key,label:key==='family'?'product type':key==='brand'?'brand':key.slice(5).replaceAll('_',' '),values:vals.slice(0,3).map(f=>({value:f.value,localNames:key==='family'?nodes.find(n=>n.id===f.value)?.local_names:undefined,label:key==='family'?nodes.find(n=>n.id===f.value)?.label??f.value:f.value,count:f.count}))});
  }
  const candidates=rows.map(productFromRow),scores=new Map(candidates.map(p=>[p.sku,keywordScore(query,effective,p)]));
  if(root){const found=candidates.find(p=>p.sku===root.sku);if(!found)candidates.unshift(root);scores.set(root.sku,{score:1000,match:'keyword_match',reason:'This catalog item matches the requested identity; check its photo'});}
@@ -104,7 +104,7 @@ export async function discoverProducts(client:PoolClient,ctx:ActorContext,query:
  const products=choosePhotos(candidates,scores);
  // Present the most relevant photo families/brands/specifications first. Counts
  // still come from the complete SQL scope; popularity must not hide a shown type.
- for(const facet of facets){const shown=unique(products.map(p=>facet.key==='family'?p.familyId:facet.key==='brand'?p.brand:p.specifications?.[facet.key.slice(5)]).filter((s):s is string=>!!s));const values=allFacets.filter(f=>f.key===facet.key);values.sort((a,b)=>{const ai=shown.indexOf(a.value),bi=shown.indexOf(b.value);return (ai<0?999:ai)-(bi<0?999:bi)||b.count-a.count||a.value.localeCompare(b.value);});facet.values=values.slice(0,3).map(f=>({value:f.value,label:facet.key==='family'?nodes.find(n=>n.id===f.value)?.label??f.value:f.value,count:f.count}));}
+ for(const facet of facets){const shown=unique(products.map(p=>facet.key==='family'?p.familyId:facet.key==='brand'?p.brand:p.specifications?.[facet.key.slice(5)]).filter((s):s is string=>!!s));const values=allFacets.filter(f=>f.key===facet.key);values.sort((a,b)=>{const ai=shown.indexOf(a.value),bi=shown.indexOf(b.value);return (ai<0?999:ai)-(bi<0?999:bi)||b.count-a.count||a.value.localeCompare(b.value);});facet.values=values.slice(0,3).map(f=>({value:f.value,localNames:facet.key==='family'?nodes.find(n=>n.id===f.value)?.local_names:undefined,label:facet.key==='family'?nodes.find(n=>n.id===f.value)?.label??f.value:f.value,count:f.count}));}
  return {query,plan:effective,products,rankings:products.map(p=>({sku:p.sku,...scores.get(p.sku)!})),totalCount:rows[0]?.total_count??products.length,retrievedCount:rows.length,facets,noExactMatch:!products.some(p=>scores.get(p.sku)!.match==='keyword_match')};
 }
 export function refinementPlan(result:DiscoveryResult,key:string,value:string):DiscoveryPlan {

@@ -14,7 +14,7 @@ flowchart TD
   Validate --> Tools
   Tools <--> SQL[Scoped PostgreSQL catalog and state]
   SQL --> Photos[Actual SKU-bound catalog photos]
-  Tools --> Reply[Backend reply renderer: English today]
+  Tools --> Reply[Backend reply renderer: saved Tamil / Tanglish / English locale]
   Photos --> Reply
   Reply --> Customer[Product check → quantity → review → separate consent]
   Customer --> Ingress
@@ -33,9 +33,11 @@ Customer image search now validates JPG/PNG/WebP uploads, normalizes a bounded J
 
 The quota ledger records every attempted live invocation, with no automatic retry or paid fallback. Current configured project limits are three calls/minute, 15-second spacing and 100/day. Message effects, outbound payload and processed marker commit together after rechecking the claim lease and source version. An external delivery outbox and webhook verification remain future work.
 
-## Current language and catalog gaps
+## Language and catalog boundaries
 
-Source JSON contains Tamil names and aliases; aliases are searchable, but localized display names and a persisted reply-language preference are not yet implemented. Tamil vowel signs are now preserved by normalization. English and Tamil synthetic live requests in the latest audit failed strict model-output validation; one Tanglish request preserved quantity and showed actual photos but replied in English. Offline test passes do not establish multilingual conversation quality.
+New native customer conversations persist Tamil as their default. Explicit text/button language requests switch to Tanglish or English without inference; a spoken request can switch only from its validated actual transcript. Language is separate from the order version, so switching keeps product and review consent bindings. The model receives the locale for bounded questions; backend templates own routine commerce copy. Unexpected-language or unsupported commerce questions fall back to backend wording. Localized product/family names are SQL metadata; SKUs, canonical names, measurements and integer-paise calculations remain authoritative.
+
+Optional-null compatibility strips only explicitly named optional provider fields. Missing required values, extra fields, unknown kinds and invalid plans still fail the whole turn. `TAMIL-DEMO.md` describes the customer flow. Merchant review of dialect/terminology and fresh real Tamil voice recognition remain evaluation tasks; offline transcript fixtures do not establish acoustic quality.
 
 Demo product facts/stock/technical claims are unverified. JSON edits do not automatically overwrite existing SQL catalog rows. Authenticated merchant imports, reviewed translations/media metadata, object storage/retention, explicit new-request/amendment lifecycle and real WhatsApp integration remain implementation milestones.
 

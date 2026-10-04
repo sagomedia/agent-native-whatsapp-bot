@@ -1,3 +1,4 @@
+import {say,canonicalShortcut,safeQuestion} from '../../../../packages/contracts/language.js';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import type {PoolClient} from 'pg';
@@ -34,7 +35,7 @@ export function observationQueries(text:string,state:ConversationState,memory:As
   const pending=pendingItem(state);
   return [...new Set([current,pending?.query??memory?.queries[0]].filter((x):x is string=>!!x))].slice(0,2);
 }
-export function isRecheck(text:string) {return /^(?:(?:please|can you|could you) )?(?:check|look|search|try)(?: it| that| the catalog)? again(?: please)?[.!?]*$/i.test(text.trim());}
+export function isRecheck(text:string) {return /^(?:(?:please|can you|could you) )?(?:check|look|search|try)(?: it| that| the catalog)? again(?: please)?[.!?]*$/i.test(canonicalShortcut(text));}
 export function recheckQueries(state:ConversationState,memory:AssistantMemory|null) {
   const pending=pendingItem(state),queries=memory?.sourceVersion===state.version?memory.queries:pending?[pending.query??pending.name]:[];
   return [...new Set(queries.flatMap(q=>[q,...(/^[a-z]+\s+[a-z]+$/i.test(q)?[q.replace(/\s+/g,'')]:[])]))].slice(0,3);
@@ -55,13 +56,15 @@ export function assistanceReply(observations:CatalogObservation[],state:Conversa
   const products=(state.catalogDiscovery?[...diverse,...available.filter(p=>!diverse.includes(p))]:available).slice(0,state.catalogDiscovery?3:10);
   // Questions are authored by the model; factual commerce statements always
   // come from verified tool results and the backend presentation below.
-  const safeQuestion=question?.endsWith('?')&&!/[\d₹$]|price|cost|discount|payment|stock|ready|approved|guarantee|deliver|https?:/i.test(question)?question:undefined;
+  const focusedQuestion=safeQuestion(question,state);
   const queries=observations.map(o=>o.query).join(' / ');
   const line=targetLineId?state.draft.find(l=>l.id===targetLineId):undefined;
-  let text=products.length?`${rechecked?'I checked again. ':''}Here are the catalog options I found. ${safeQuestion??'Which one fits what you need? You can also tell me what you’ll use it for.'}`:`${rechecked?'I checked again':'I checked the catalog'}, including ${queries}. There’s no matching listing here. That doesn’t tell us whether the shop can source it. ${safeQuestion??'What will you use it for, or would you like to leave it for the shop to check?'}`;
+  let text=products.length?`${rechecked?'I checked again. ':''}Here are the catalog options I found. ${focusedQuestion??'Which one fits what you need? You can also tell me what you’ll use it for.'}`:`${rechecked?'I checked again':'I checked the catalog'}, including ${queries}. There’s no matching listing here. That doesn’t tell us whether the shop can source it. ${focusedQuestion??'What will you use it for, or would you like to leave it for the shop to check?'}`;
   if(state.catalogDiscovery&&!products.length)text='What job will you use it for, and do you know the size or brand? I’ll help identify the product and keep your request for the shop to check.';
   if(!products.length&&line)text+=' I’ve kept your request on the list; I haven’t substituted another product.';
   if(state.catalogDiscovery&&observations.some(o=>o.discovery?.noExactMatch))text+=' Some photos are related suggestions. Choose them only if you want those items instead.';
-  const cards=products.map(product=>({product,matchLabel:observations.some(o=>o.discovery?.rankings.some(r=>r.sku===product.sku&&r.match==='related'))?'Related option · please check':undefined,label:line?'Use for this item':'Choose this',action:line?{id:randomUUID(),type:'select_candidate' as const,questionId:state.pending!.id,lineId:line.id,sku:product.sku}:{id:randomUUID(),type:'choose_product' as const,sku:product.sku,expectedVersion:state.version}}));
+  text=say(state,text,products.length?`${rechecked?'மீண்டும் பார்த்தேன். ':''}இந்தப் பொருட்கள் பட்டியலில் உள்ளன. ${focusedQuestion??'படங்களில் எது வேண்டும்? என்ன வேலைக்குத் தேவை என்றும் சொல்லலாம்.'}`:'என்ன வேலைக்குத் தேவை? அளவு அல்லது பிராண்ட் தெரியுமா? பொருளைக் கண்டறிய உதவுகிறேன். உங்கள் கோரிக்கையை கடை சரிபார்க்க வைத்துள்ளேன்.',products.length?`${rechecked?'Marubadi paarththen. ':''}Intha porutkal catalog-la irukku. ${focusedQuestion??'Photos-la ethu venum? Enna velaikku venum-num sollalaam.'}`:'Enna velaikku venum? Size illa brand theriyuma? Porulai kandupidikka udhavuren. Unga request-ai kadai check panna vechchirukken.');
+  if(products.length&&state.catalogDiscovery&&observations.some(o=>o.discovery?.noExactMatch))text+=say(state,'',' தொடர்புடைய பரிந்துரைகளை மட்டும் காட்டுகிறேன்; வேண்டிய பொருளா என்று சரிபாருங்கள்.','Thodarbudaiya suggestions mattum kaatturen; venum porula-nu check pannunga.');
+  const cards=products.map(product=>({product,matchLabel:observations.some(o=>o.discovery?.rankings.some(r=>r.sku===product.sku&&r.match==='related'))?say(state,'Related option · please check','தொடர்புடைய பொருள் · சரிபார்க்கவும்','Thodarbudaiya porul · check pannunga'):undefined,label:line?say(state,'Use for this item','இந்தப் பொருளை பயன்படுத்து','Intha porulai use pannu'):say(state,'Choose this','இதைத் தேர்வு செய்','Ithai choose pannu'),action:line?{id:randomUUID(),type:'select_candidate' as const,questionId:state.pending!.id,lineId:line.id,sku:product.sku}:{id:randomUUID(),type:'choose_product' as const,sku:product.sku,expectedVersion:state.version}}));
   return {version:1,kind:cards.length?'product_choices':'text',text,cards:cards.length?cards:undefined,presentation:cards.length===1?'single_product':cards.length&&cards.every(c=>c.product.imageUrl)?'carousel_preview':cards.length?'list':'text',outboundMessages:1};
 }

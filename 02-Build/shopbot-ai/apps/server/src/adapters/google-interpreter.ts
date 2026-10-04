@@ -1,3 +1,4 @@
+import {languageOf,say} from '../../../../packages/contracts/language.js';
 import {GoogleGenAI,ThinkingLevel,ServiceTier,type GenerateContentParameters,type GenerateContentResponse} from '@google/genai';
 import {z} from 'zod';
 import {interpretationSchema,operationSchema} from '../../../../packages/contracts/index.js';
@@ -56,7 +57,7 @@ export function readNativeSettings(env=process.env):NativeSettings {
 function prompt(input:InterpretationInput) {
   const publicCatalog=(input.catalog??[]).map(p=>({sku:p.sku,name:p.name,aliases:p.aliases,unit:p.unit,quantityStep:p.quantityStep,brand:p.brand,familyId:p.familyId,specifications:p.specifications}));
   const publicObservations=(items:NonNullable<InterpretationInput['observations']>)=>items.map(o=>({tool:o.tool,query:o.query,totalCount:o.totalCount,discovery:o.discovery?{plan:o.discovery.plan,facets:o.discovery.facets,noExactMatch:o.discovery.noExactMatch}:undefined,products:o.products.map(p=>({sku:p.sku,name:p.name,unit:p.unit,category:p.category,aliases:p.aliases,brand:p.brand,familyId:p.familyId,specifications:p.specifications}))}));
-  return JSON.stringify({customerMessage:input.text,currentDraft:input.state.draft,pendingQuestion:input.state.pending?.kind==='question'?input.state.pending:null,pendingProductCheck:input.state.pending?.kind==='products'?{groups:input.state.pending.groups.map(g=>({lineId:g.lineId,products:g.products.map(p=>({sku:p.sku,name:p.name,unit:p.unit}))})),remaining:input.state.pending.remaining}:null,fulfillment:input.state.fulfillment,recentMessages:(input.history??[]).slice(-8),publicCatalog,storeCatalogMap:input.catalogMap?{...input.catalogMap,departments:input.catalogMap.departments.slice(0,10).map(d=>({...d,families:d.families.slice(0,8).map(f=>({...f,aliases:f.aliases.slice(0,2)}))})),truncated:input.catalogMap.truncated||input.catalogMap.departments.length>10||input.catalogMap.departments.some(d=>d.families.length>8)}:null,assistantMemory:input.assistantMemory?{purpose:input.assistantMemory.purpose,queries:input.assistantMemory.queries,lineId:input.assistantMemory.lineId,observations:publicObservations(input.assistantMemory.observations)}:null,toolObservations:publicObservations(input.observations??[])});
+  return JSON.stringify({replyLanguage:languageOf(input.state),customerMessage:input.text,currentDraft:input.state.draft,pendingQuestion:input.state.pending?.kind==='question'?input.state.pending:null,pendingProductCheck:input.state.pending?.kind==='products'?{groups:input.state.pending.groups.map(g=>({lineId:g.lineId,products:g.products.map(p=>({sku:p.sku,name:p.name,unit:p.unit}))})),remaining:input.state.pending.remaining}:null,fulfillment:input.state.fulfillment,recentMessages:(input.history??[]).slice(-8),publicCatalog,storeCatalogMap:input.catalogMap?{...input.catalogMap,departments:input.catalogMap.departments.slice(0,10).map(d=>({...d,families:d.families.slice(0,8).map(f=>({...f,aliases:f.aliases.slice(0,2)}))})),truncated:input.catalogMap.truncated||input.catalogMap.departments.length>10||input.catalogMap.departments.some(d=>d.families.length>8)}:null,assistantMemory:input.assistantMemory?{purpose:input.assistantMemory.purpose,queries:input.assistantMemory.queries,lineId:input.assistantMemory.lineId,observations:publicObservations(input.assistantMemory.observations)}:null,toolObservations:publicObservations(input.observations??[])});
 }
 export class GoogleInterpreter implements Interpreter {
   readonly mode='live' as const;
@@ -80,7 +81,7 @@ export class GoogleInterpreter implements Interpreter {
   async interpret(input:InterpretationInput,signal:AbortSignal):Promise<ProviderResult> {
     this.validateInput(input);
     let r:GenerateContentResponse;
-    try {r=await this.transport.generateContent({model:this.billing.model,contents:(input.image||input.audio)?[{role:'user',parts:[{text:prompt(input)},{inlineData:{mimeType:(input.image??input.audio)!.mimeType,data:(input.image??input.audio)!.data}}]}]:prompt(input),config:{systemInstruction:input.image?imageInstruction:planningInstruction,responseMimeType:'application/json',maxOutputTokens:this.billing.maxOutputTokens,candidateCount:1,serviceTier:ServiceTier.STANDARD,thinkingConfig:{thinkingLevel:ThinkingLevel.MINIMAL},automaticFunctionCalling:{disable:true},abortSignal:signal,httpOptions:{timeout:9500,retryOptions:{attempts:1}}}});} catch(error) {if(typeof error==='object'&&error!==null&&'status' in error&&error.status===429) throw new FreeQuotaError();throw error;}
+    try {r=await this.transport.generateContent({model:this.billing.model,contents:(input.image||input.audio)?[{role:'user',parts:[{text:prompt(input)},{inlineData:{mimeType:(input.image??input.audio)!.mimeType,data:(input.image??input.audio)!.data}}]}]:prompt(input),config:{systemInstruction:replyLanguageInstruction(input)+'\n'+(input.image?imageInstruction:planningInstruction),responseMimeType:'application/json',maxOutputTokens:this.billing.maxOutputTokens,candidateCount:1,serviceTier:ServiceTier.STANDARD,thinkingConfig:{thinkingLevel:ThinkingLevel.MINIMAL},automaticFunctionCalling:{disable:true},abortSignal:signal,httpOptions:{timeout:9500,retryOptions:{attempts:1}}}});} catch(error) {if(typeof error==='object'&&error!==null&&'status' in error&&error.status===429) throw new FreeQuotaError();throw error;}
     const u=r.usageMetadata;
     const usage=u?Object.fromEntries(['promptTokenCount','candidatesTokenCount','thoughtsTokenCount','totalTokenCount','cachedContentTokenCount','toolUsePromptTokenCount'].filter(k=>u[k as keyof typeof u]!==undefined).map(k=>[k,u[k as keyof typeof u] as number])):null;
     const parts=r.candidates?.[0]?.content?.parts??[];
@@ -92,13 +93,13 @@ export class GoogleInterpreter implements Interpreter {
       if(input.image){
         const parsed=imagePlanSchema.safeParse(output);
         if(!parsed.success){validationIssues=issues(parsed.error);output=null;}
-        else if(!parsed.data.query)output={operations:[],next:'continue',clarifyQuestion:'Could you send a clearer product photo or describe the item you need?'};
+        else if(!parsed.data.query)output={operations:[],next:'continue',clarifyQuestion:say(input.state,'Could you send a clearer product photo or describe the item you need?','தெளிவான பொருள் படத்தை அனுப்ப முடியுமா? அல்லது வேண்டிய பொருளை விவரிக்க முடியுமா?','Thelivaana porul photo anuppa mudiyuma? Illa venum porulai vivarikka mudiyuma?')};
         else {
           const p=parsed.data;
           output={operations:[],next:'assist',assistance:{rootQuery:p.query,queries:[p.query],question:p.question??undefined,search:canonicalPlan({keywords:p.keywords,departmentId:p.departmentId??undefined,familyId:p.familyId??undefined,brand:p.brand??undefined,specificationFilters:p.specificationFilters??undefined})}};
         }
       }else{
-        const wire=wireSchema.safeParse(output);
+        const wire=wireSchema.safeParse(normalizeOptionalNulls(output));
         if(!wire.success)validationIssues=issues(wire.error);
         else {
           const {searchPlans,assistanceSearch,...decision}=wire.data;
@@ -114,3 +115,19 @@ export class GoogleInterpreter implements Interpreter {
 }
 
 export class FreeQuotaError extends Error {constructor(){super('Provider rate limit reached.');}}
+
+function replyLanguageInstruction(input:InterpretationInput) {
+ const language=languageOf(input.state);
+ return `Customer reply language is ${language}. Write clarifyQuestion and assistance.question in ${language==='ta'?'natural Tamil script':language==='ta-Latn'?'Tamil in Latin letters (Tanglish), not English sentences':'English'}. Understand Tamil, Tanglish and English input. Keep canonical enum strings, IDs, specification values and catalog search keywords unchanged. Never switch language because a product name or customer message uses English. A standalone explicit request to change language returns operations=[], next=continue; retain the exact audible transcript for voice so the backend can recognize the preference. Do not invent commerce facts. Omit unused optional fields rather than returning null.`;
+}
+function normalizeOptionalNulls(value:unknown):unknown {
+ if(!value||typeof value!=='object'||Array.isArray(value))return value;
+ const result={...value} as Record<string,unknown>;
+ for(const key of ['transcript','priceQuery','priceQuantity','priceUnit','conversation','shopQuestions','clarifyQuestion','assistance','searchPlans','assistanceSearch'])if(result[key]===null)delete result[key];
+ const plan=(value:unknown)=>{if(!value||typeof value!=='object'||Array.isArray(value))return value;const p={...value} as Record<string,unknown>;for(const k of ['departmentId','familyId','brand','specificationFilters'])if(p[k]===null)delete p[k];return p;};
+ if(Array.isArray(result.operations))result.operations=result.operations.map(value=>{if(!value||typeof value!=='object'||Array.isArray(value))return value;const op={...value} as Record<string,unknown>;for(const key of ['requestedUnit','search'])if(op[key]===null)delete op[key];if(op.kind==='resolve_line')for(const key of ['query','quantity'])if(op[key]===null)delete op[key];return op;});
+ if(result.assistance&&typeof result.assistance==='object'&&!Array.isArray(result.assistance)){const a={...result.assistance} as Record<string,unknown>;for(const key of ['rootQuery','lineId','question','search'])if(a[key]===null)delete a[key];result.assistance=a;}
+ if(Array.isArray(result.searchPlans))result.searchPlans=result.searchPlans.map(plan);
+ if(result.assistanceSearch)result.assistanceSearch=plan(result.assistanceSearch);
+ return result;
+}

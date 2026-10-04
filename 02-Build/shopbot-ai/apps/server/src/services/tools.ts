@@ -1,3 +1,4 @@
+import {say,lineName} from '../../../../packages/contracts/language.js';
 import { createHash, randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { toolCallSchema, type ConversationState, type DraftLine, type OrderRequest, type Product, type ToolCall,type DiscoveryPlan,type DiscoveryResult,type CatalogMap } from '../../../../packages/contracts/index.js';
@@ -23,10 +24,10 @@ export const toolDefinitions = [
 function canonical(value: any): any { return Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value; }
 export function digest(value: unknown) { return createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex'); }
 export async function loadState(client: PoolClient, ctx: ActorContext): Promise<ConversationState> {
-  const { rows } = await client.query('SELECT c.version,c.draft,c.pending,c.fulfillment,c.last_request_id,p.require_product_confirmation,cp.store_type FROM conversations c LEFT JOIN store_policies p ON p.store_id=c.store_id LEFT JOIN catalog_profiles cp ON cp.store_id=c.store_id WHERE c.id=$1 AND c.store_id=$2 AND c.actor=$3', [ctx.conversationId,ctx.storeId,ctx.actor]);
+  const { rows } = await client.query('SELECT c.reply_language,c.version,c.draft,c.pending,c.fulfillment,c.last_request_id,p.require_product_confirmation,cp.store_type FROM conversations c LEFT JOIN store_policies p ON p.store_id=c.store_id LEFT JOIN catalog_profiles cp ON cp.store_id=c.store_id WHERE c.id=$1 AND c.store_id=$2 AND c.actor=$3', [ctx.conversationId,ctx.storeId,ctx.actor]);
   if (!rows[0]) throw new ToolError('Conversation unavailable', 'forbidden');
   const c = rows[0];
-  return { version:c.version,draft:c.draft,pending:c.pending,fulfillment:c.fulfillment,lastRequestId:c.last_request_id,...(c.store_type?{catalogDiscovery:true as const}:{}),...(c.require_product_confirmation?{requireProductConfirmation:true as const}:{}) };
+  return { replyLanguage:c.reply_language,version:c.version,draft:c.draft,pending:c.pending,fulfillment:c.fulfillment,lastRequestId:c.last_request_id,...(c.store_type?{catalogDiscovery:true as const}:{}),...(c.require_product_confirmation?{requireProductConfirmation:true as const}:{}) };
 }
 async function saveState(client: PoolClient, ctx: ActorContext, state: ConversationState) {
   await client.query('UPDATE conversations SET draft=$1::jsonb,version=$2,pending=$3::jsonb,fulfillment=$4,last_request_id=$5 WHERE id=$6 AND store_id=$7 AND actor=$8', [JSON.stringify(state.draft),state.version,JSON.stringify(state.pending),state.fulfillment,state.lastRequestId,ctx.conversationId,ctx.storeId,ctx.actor]);
@@ -62,7 +63,7 @@ function referenceLine(state: ConversationState, reference: string): DraftLine {
   return result[0];
 }
 export function renderDraft(state: ConversationState) {
-  return state.draft.map((l,i) => `${i+1}. ${l.quantity??'?'} × ${l.name}${l.resolution==='matched'&&l.pricePaise!==undefined?` — ${formatMoney(lineTotal(l.pricePaise,l.quantity!))}`:` — ${l.resolution.replaceAll('_',' ')}`}`).join('\n');
+  return state.draft.map((l,i) => `${i+1}. ${l.quantity??'?'} × ${lineName(l,state)}${l.resolution==='matched'&&l.pricePaise!==undefined?` — ${formatMoney(lineTotal(l.pricePaise,l.quantity!))}`:` — ${say(state,l.resolution.replaceAll('_',' '),({needs_choice:'பொருளைத் தேர்வு செய்ய வேண்டும்',needs_quantity:'எண்ணிக்கை வேண்டும்',needs_unit:'விற்பனை அலகு வேண்டும்',unavailable:'கடை சரிபார்க்க வேண்டும்'} as Record<string,string>)[l.resolution],({needs_choice:'Porulai choose pannanum',needs_quantity:'Quantity venum',needs_unit:'Virpanai unit venum',unavailable:'Kadai check pannanum'} as Record<string,string>)[l.resolution])}`}`).join('\n');
 }
 function requestFromRow(row: Record<string,any>): OrderRequest {
   return {id:row.id,acceptance:row.acceptance,payment:row.payment,fulfillment:row.fulfillment,totalPaise:Number(row.total_paise),lines:row.lines};
