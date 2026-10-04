@@ -16,6 +16,10 @@ env/
 node_modules/
 __pycache__/
 *.pyc
+*.tsbuildinfo
+*.log
+.pytest_cache/
+.npm/
 
 # Local Data & SQLite Databases
 *.db
@@ -44,6 +48,8 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+.codex/
+.agents/
 
 # Application build/runtime artifacts
 dist/
