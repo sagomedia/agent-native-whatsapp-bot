@@ -1,0 +1,35 @@
+[Unit]
+Description=ShopBot private VPS preview
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=shopbot-vps
+Group=shopbot-vps
+WorkingDirectory=/opt/shopbot-vps/current/app
+EnvironmentFile=/etc/shopbot-vps.env
+Environment=NODE_OPTIONS=--max-old-space-size=128
+ExecStart=/opt/shopbot-vps/current/node/bin/node dist/apps/server/src/index.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+MemoryHigh=256M
+MemoryMax=384M
+TasksMax=128
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/shopbot-vps
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SyslogIdentifier=shopbot-vps
+LogRateLimitIntervalSec=30s
+LogRateLimitBurst=100
+
+[Install]
+WantedBy=multi-user.target

@@ -30,7 +30,7 @@ export async function registerNativeTest(app:FastifyInstance,pool:Pool,provider:
     });
     routes.post('/api/native-test/session',async(_request,reply)=>{
       const id=randomUUID();
-      await pool.query('INSERT INTO conversations(id,store_id,actor) VALUES($1,$2,$3)',[id,storeId,'local-ai-test']);
+      await pool.query("INSERT INTO conversations(id,store_id,actor,reply_language) VALUES($1,$2,$3,'ta')",[id,storeId,'local-ai-test']);
       reply.header('Set-Cookie',`shopbot_test=${id}.${sign(id)}; HttpOnly; SameSite=Strict; Path=/api/native-test`);
       return {created:true};
     });

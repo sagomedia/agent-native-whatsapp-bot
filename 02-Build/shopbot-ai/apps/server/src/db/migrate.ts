@@ -79,6 +79,14 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
     if(!v12.rowCount){await client.query(`CREATE TABLE image_media(id uuid PRIMARY KEY,store_id uuid NOT NULL,conversation_id uuid NOT NULL,actor text NOT NULL,source_hash text NOT NULL,image bytea NOT NULL CHECK(octet_length(image)<=2097152),width integer NOT NULL CHECK(width>0 AND width<=1280),height integer NOT NULL CHECK(height>0 AND height<=1280),source_version integer NOT NULL CHECK(source_version>=0),created_at timestamptz NOT NULL DEFAULT now(),FOREIGN KEY(store_id,conversation_id,actor) REFERENCES conversations(store_id,id,actor)); INSERT INTO schema_migrations(version) VALUES(12);`);}
     const v13=await client.query('SELECT version FROM schema_migrations WHERE version=13');
     if(!v13.rowCount){await client.query('ALTER TABLE provider_attempts ADD COLUMN validation_issues jsonb');await client.query('INSERT INTO schema_migrations(version) VALUES(13)');}
+    const v14=await client.query('SELECT version FROM schema_migrations WHERE version=14');
+    if(!v14.rowCount){await client.query(`
+      ALTER TABLE conversations ADD COLUMN reply_language text NOT NULL DEFAULT 'en' CHECK(reply_language IN ('ta','ta-Latn','en'));
+      UPDATE conversations SET reply_language='ta' WHERE actor='local-ai-test';
+      ALTER TABLE products ADD COLUMN local_names jsonb NOT NULL DEFAULT '{}';
+      ALTER TABLE catalog_nodes ADD COLUMN local_names jsonb NOT NULL DEFAULT '{}';
+      INSERT INTO schema_migrations(version) VALUES(14);
+    `);}
     if (mode === 'mock') {
       assertMock(mode);
       await client.query('INSERT INTO stores VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [fixtureStore, 'Workshop supply demo', 'true']);
