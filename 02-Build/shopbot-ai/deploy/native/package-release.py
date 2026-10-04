@@ -64,7 +64,13 @@ shutil.copytree(app / 'deploy/native', stage / 'deploy', ignore=shutil.ignore_pa
 for name in ['install.sh', 'rollback.sh', 'upgrade.sh']:
     (stage / 'deploy' / name).chmod(0o755)
 
-git = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=app, text=True, capture_output=True, check=True)
+repository = next((path for path in [app, *app.parents] if (path / '.git').exists()), None)
+assert repository is not None, 'The release source must belong to a Git checkout'
+# Managed worktrees may inherit core.worktree from a different/shared checkout.
+# Override it for this metadata read without changing the user's Git config.
+git = subprocess.run(['git', '-c', 'core.worktree=' + str(repository),
+                      '--work-tree=' + str(repository), 'rev-parse', 'HEAD'],
+                     cwd=app, text=True, capture_output=True, check=True)
 manifest = {
     'release_id': release_id,
     'source_base_commit': git.stdout.strip(),
