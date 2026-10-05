@@ -21,7 +21,8 @@ try {
   await mkdir(config.mediaDir, { recursive: true });
   const nativeTest=process.env.ALLOW_LOCAL_AI_TEST==='true'?new GoogleInterpreter(readNativeSettings()):undefined;
   const nativeStore=nativeTest?await setupImageDemo(pool):undefined;
-  const channel=config.whatsapp?new WhatsAppChannel(pool,config.whatsapp):undefined;
+  const whatsappAI=config.whatsapp?.aiEnabled?new GoogleInterpreter(readNativeSettings()):undefined;
+  const channel=config.whatsapp?new WhatsAppChannel(pool,config.whatsapp,undefined,whatsappAI):undefined;
   app = await createApp(config, pool,nativeTest,nativeStore,undefined,channel);
   if(channel)stopWhatsApp=await startWhatsAppJobs(channel,()=>app?.log.error('WhatsApp worker failed; durable work retained'));
   if (config.mode === 'mock') stopJobs = await startSimulatorJobs(config.databaseUrl, new SimulatorService(pool), error => app?.log.error(error));

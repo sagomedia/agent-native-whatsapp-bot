@@ -58,7 +58,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       const wa=config.whatsapp?(await client.query('SELECT verified_at,last_webhook_at,last_received_at,send_blocked,last_error FROM whatsapp_channels WHERE phone_id=$1 AND store_id=$2',[config.whatsapp.phoneId,owner.storeId])).rows[0]:undefined;
       const channel={whatsapp:!wa?'not_connected':wa.send_blocked?'attention_required':wa.last_received_at?'receiving':wa.verified_at||wa.last_webhook_at?'webhook_verified':'awaiting_verification',liveSending:Boolean(wa&&config.whatsapp?.sendEnabled&&!wa.send_blocked),processing:Boolean(config.whatsapp?.processEnabled),lastReceivedAt:wa?.last_webhook_at??null,error:wa?.last_error??null,testOnly:true};
       await client.query('COMMIT');
-      return {store,conversations,requests,usage,audit,mode:config.mode,ownerEmail:owner.email,channel,inference:{enabled:false,paidEnabled:false},limits:{conversations:100,requests:100},generatedAt:new Date().toISOString()};
+      return {store,conversations,requests,usage,audit,mode:config.mode,ownerEmail:owner.email,channel,inference:{enabled:!!(wa&&config.whatsapp?.aiEnabled&&config.whatsapp.processEnabled),paidEnabled:false},limits:{conversations:100,requests:100},generatedAt:new Date().toISOString()};
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
   });
   app.get<{Params:{id:string}}>('/api/owner/conversations/:id',async(request,reply)=>{

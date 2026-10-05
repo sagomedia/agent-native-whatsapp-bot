@@ -182,6 +182,17 @@ export class ConversationRuntime {
     }
     if(e.type!=='text') return;
     const text=canonicalShortcut(e.text);
+    // Text channels can select a code that the backend actually displayed.
+    // Never treat an arbitrary model-proposed or stale SKU as trusted consent.
+    const code=e.text.trim().toLowerCase();
+    if(s.pending?.kind==='products'&&claim.bindingId===s.pending.id){
+      const choices=s.pending.groups.flatMap(g=>g.products.filter(p=>p.sku.toLowerCase()===code).map(p=>({lineId:g.lineId,sku:p.sku})));
+      if(choices.length===1)return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[{kind:'resolve_line',lineId:choices[0].lineId,query:choices[0].sku}]}};
+    }
+    if(claim.memory?.purpose==='discovery'&&claim.memory.sourceVersion===s.version&&claim.bindingId===claim.memory.id){
+      const found=[...new Map(claim.memory.observations.flatMap(o=>o.products).filter(p=>p.sku.toLowerCase()===code).map(p=>[p.sku,p])).values()];
+      if(found.length===1)return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[{kind:'add_item',query:found[0].sku,quantity:claim.memory.requestedQuantity??null,...(claim.memory.requestedUnit?{requestedUnit:claim.memory.requestedUnit}:{})}]}};
+    }
     if(isRecheck(e.text)) {
       if(claim.bindingId&&claim.bindingId!==conversationBinding(s,claim.memory))throw new ToolError('That recheck referred to an earlier question. Please name the current item; your list is unchanged.','stale_question');
       if(claim.memory?.purpose==='quote'&&claim.memory.sourceVersion===s.version)return {name:'search_products',args:{query:claim.memory.queries[0],quantity:claim.memory.quoteQuantity,requestedUnit:claim.memory.quoteUnit}};
@@ -254,7 +265,7 @@ export class ConversationRuntime {
     return undefined;
   }
   private async interpret(ctx:ActorContext,claim:Claimed):Promise<Interpretation> {
-    const recent=(await this.pool.query("SELECT direction,left(text,500) AS text FROM messages WHERE conversation_id=$1 AND status IN ('processed','sent') ORDER BY sequence DESC LIMIT 8",[ctx.conversationId])).rows.reverse();
+    const recent=(await this.pool.query("SELECT direction,left(text,500) AS text FROM messages WHERE conversation_id=$1 AND (status='processed' OR direction='outbound' AND status IN ('sent','accepted','delivered','read')) ORDER BY sequence DESC LIMIT 8",[ctx.conversationId])).rows.reverse();
     const voice=claim.event.type==='voice',image=claim.event.type==='image';
     if(image&&!this.provider.supportsImages)throw new ToolError('Image input is not configured. Please describe the item.');
     if(voice&&!this.provider.supportsAudio)throw new ToolError('Voice input is not configured. Please type your request.');

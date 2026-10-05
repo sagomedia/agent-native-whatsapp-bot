@@ -8,6 +8,9 @@ import {createApp} from '../apps/server/src/http/app.js';
 import {WhatsAppChannel,webhookSchema} from '../apps/server/src/services/whatsapp-channel.js';
 import {readWhatsAppConfig,type WhatsAppConfig} from '../apps/server/src/services/whatsapp-config.js';
 import {validSignature} from '../apps/server/src/http/whatsapp.js';
+import {setupImageDemo} from '../apps/server/src/services/demo-catalog.js';
+import {GoogleInterpreter} from '../apps/server/src/adapters/google-interpreter.js';
+import {geminiTextRate} from '../apps/server/src/services/inference-budget.js';
 
 const cfg:WhatsAppConfig={hostname:'shopbot-api.example.test',storeId:fixtureStore,appId:'123456789',wabaId:'987654321',phoneId:'123987654',appSecret:'test-app-secret-not-real',verifyToken:'test-verification-token',accessToken:'test-api-token-not-a-real-credential',graphVersion:'v25.0',recipients:['919000000001','919000000002'],processEnabled:true,sendEnabled:true};
 const owner={hostname:'shopbot-preview.example.test',issuer:'https://shopbot-test.cloudflareaccess.com',audience:'test_application_audience_123',email:'owner@example.test',storeId:fixtureStore};
@@ -20,6 +23,35 @@ test('WhatsApp signature covers exact bytes and channel flags require complete c
  assert.equal(validSignature(bytes,'sha256=bad',cfg.appSecret),false);
  assert.throws(()=>readWhatsAppConfig({WHATSAPP_SEND_ENABLED:'true'}),/explicit/);
  assert.throws(()=>readWhatsAppConfig({WHATSAPP_ENABLED:'true'}),/Complete/);
+ assert.throws(()=>readWhatsAppConfig({WHATSAPP_ENABLED:'true',WHATSAPP_AI_ENABLED:'true'}),/free-only/);
+});
+test('WhatsApp free AI uses the scoped hardware catalog, delivered history and text product-code choices without repeating inference',async()=>{
+ const admin=new pg.Pool({connectionString:process.env.DATABASE_URL}),schema='wa_ai_'+randomUUID().replaceAll('-','');
+ await admin.query(`CREATE SCHEMA "${schema}"`);
+ const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:`-c search_path=${schema}`});
+ try{
+  await setupDatabase(pool,'mock');await setupImageDemo(pool,fixtureStore);
+  assert.equal((await pool.query('SELECT count(*) FROM products WHERE store_id=$1 AND sku ~ $2',[fixtureStore,'^H[0-9]{2}$'])).rows[0].count,'30');
+  assert.equal((await pool.query('SELECT count(*) FROM products WHERE store_id=$1',[fixtureStore])).rows[0].count,'36');
+  let calls=0,history:unknown;
+  const provider=new GoogleInterpreter({allowPaidInference:false,apiKey:'offline',model:geminiTextRate.model,budgetMicrousd:0,freeQuota:{scope:'wa-ai-test',model:geminiTextRate.model}},{generateContent:async params=>{
+   calls++;history=JSON.parse(String(params.contents)).recentMessages;
+   return {modelVersion:geminiTextRate.model,candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({operations:[],next:'assist',assistance:{rootQuery:'pipe cutter',queries:['pipe cutter'],question:'What pipe material will you cut?'}})}]}}],usageMetadata:{promptTokenCount:1000,candidatesTokenCount:100,totalTokenCount:1100}} as any;
+  }});
+  assert.throws(()=>new WhatsAppChannel(pool,{...cfg,aiEnabled:true}),/free-tier/);
+  const channel=new WhatsAppChannel(pool,{...cfg,aiEnabled:true},async()=>new Response(JSON.stringify({messages:[{id:'wamid.ai-out'}]}),{status:200}),provider);
+  await channel.setup();await channel.receive(webhookSchema.parse(event('wamid.greeting',undefined,'hi')));await channel.processNext();await channel.sendNext();
+  await channel.receive(webhookSchema.parse(status('wamid.ai-out','delivered')));
+  await channel.receive(webhookSchema.parse(event('wamid.cutter',undefined,'i want cutter')));await channel.processNext();
+  assert.equal(calls,1);assert.ok(JSON.stringify(history).includes('What are you looking for'));
+  const reply=(await pool.query("SELECT text FROM messages WHERE direction='outbound' ORDER BY sequence DESC LIMIT 1")).rows[0].text;
+  assert.match(reply,/H19:.*[Cc]utter/);assert.ok(!reply.includes('hi i want cutter'));
+  await channel.receive(webhookSchema.parse(event('wamid.code',undefined,'H19')));await channel.processNext();assert.equal(calls,1);
+  const draft=(await pool.query('SELECT draft FROM conversations WHERE id IN (SELECT conversation_id FROM whatsapp_conversations)')).rows[0].draft;
+  assert.equal(draft[0].sku,'H19');assert.equal(draft[0].quantity,null);
+  const attempts=(await pool.query("SELECT provider_mode,billing_state FROM provider_attempts WHERE provider_mode='live'")).rows;
+  assert.deepEqual(attempts,[{provider_mode:'live',billing_state:'free_declared'}]);
+ }finally{await pool.end();await admin.query(`DROP SCHEMA "${schema}" CASCADE`);await admin.end();}
 });
 test('signed ingress isolates hosts/assets/recipients, commits before ACK, deduplicates batches and honors owner controls',async()=>{
  const admin=new pg.Pool({connectionString:process.env.DATABASE_URL}),schema='whatsapp_'+randomUUID().replaceAll('-','');

@@ -2,6 +2,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import type {Pool,PoolClient} from 'pg';
 import {MockInterpreter} from '../adapters/mock-interpreter.js';
+import type {Interpreter} from '../adapters/interpreter.js';
 import {ConversationRuntime} from '../runtime/conversation.js';
 import {loadState} from './tools.js';
 import {loadAssistantMemory,conversationBinding} from './agent-assistance.js';
@@ -17,11 +18,13 @@ export type WhatsAppFetch=typeof fetch;
 
 export class WhatsAppChannel {
   readonly runtime:ConversationRuntime;
-  constructor(private pool:Pool,readonly config:WhatsAppConfig,private request:WhatsAppFetch=fetch){
-    this.runtime=new ConversationRuntime(pool,new MockInterpreter(),{queueReply:async(client,ctx,messageId,rich)=>{
+  constructor(private pool:Pool,readonly config:WhatsAppConfig,private request:WhatsAppFetch=fetch,provider?:Interpreter){
+    if(config.aiEnabled&&(!provider?.freeQuota||provider.mode!=='live'))throw new Error('WhatsApp AI requires the configured free-tier interpreter');
+    if(!config.aiEnabled&&provider)throw new Error('WhatsApp AI has not been enabled');
+    this.runtime=new ConversationRuntime(pool,provider??new MockInterpreter(),{allowFreeInference:!!config.aiEnabled,queueReply:async(client,ctx,messageId,rich)=>{
       const revision=(await client.query('SELECT operator_revision FROM conversations WHERE id=$1',[ctx.conversationId])).rows[0].operator_revision;
       // A single text reply is the initial test format; no paid templates or fan-out.
-      const body=Array.from(rich.text+(rich.cards?.length?'\n\n'+rich.cards.map(c=>`${c.product.name} · ${c.product.unit} · ₹${(c.product.pricePaise/100).toFixed(2)}`).join('\n'):'')).slice(0,4096).join('');
+      const body=Array.from(rich.text+(rich.cards?.length?'\n\n'+rich.cards.map(c=>`${c.product.sku}: ${c.product.name} · ${c.product.unit} · ₹${(c.product.pricePaise/100).toFixed(2)}`).join('\n')+'\n\nReply with the product code to choose an option. Catalog availability is subject to the shop’s confirmation.':'')).slice(0,4096).join('');
       await client.query('UPDATE messages SET text=$1 WHERE id=$2',[body,messageId]);
       await client.query('INSERT INTO whatsapp_outbox(message_id,conversation_id,operator_revision) VALUES($1,$2,$3)',[messageId,ctx.conversationId,revision]);
     }});
