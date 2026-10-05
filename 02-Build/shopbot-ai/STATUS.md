@@ -1,5 +1,7 @@
 # WhatsApp test channel — 5 October 2026
 
+**Activation update:** automatic processing/sending are now enabled with explicit user authorization, restricted to verified recipient ending 7308. Actual inbound hi/hello were processed and their replies confirmed delivered through signed Meta callbacks. AI/free/paid inference remain off. See `../../03-Output/023-whatsapp-automatic-replies-enabled.md` for activation, backup and evidence; this supersedes the pending test in the paragraph below.
+
 Implemented and deployed a signed, asset-scoped WhatsApp receiver and durable text sender, retaining the private owner dashboard and existing retail VPS tunnel. The owner approved the public test privacy policy, saving its Meta URL and separately publishing KSMC RETAIL. Meta now shows Published. The user-selected existing test sender/recipient produced a real hello_world bootstrap send and signed delivered callback; the actual phone reply and bounded automatic conversation test are pending. Processing/sending gates and all AI/paid inference remain off. Initial interpretation is deterministic English over the demo catalog. Production build/typecheck and all 114 isolated tests pass. See `../../03-Output/022-whatsapp-connection-progress.md` for exact evidence, deployment, backups and outstanding work.
 
 # Owner dashboard foundation — 4 October 2026

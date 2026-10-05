@@ -16,6 +16,8 @@ The existing Meta sender and one verified test recipient ending **7308** were ex
 
 ## Current gates and remaining test
 
+**Later update, 5 October:** the user approved enabling backend replies. The actual inbound conversation and delivered automatic replies are verified in [report 023](023-whatsapp-automatic-replies-enabled.md); that report supersedes the disabled gates and pending test described below.
+
 The receiver is enabled. **Automatic processing and sending remain disabled** while waiting for the user to reply “hello shopbot” directly in the received test-number chat. AI and paid inference remain disabled. The initial channel adapter deliberately uses a deterministic English interpreter and the Workshop supply demo catalog. Voice, photo downloading, real merchant fulfillment, manual WhatsApp replies and customer request-decision notifications are not part of this initial test.
 
 After an actual approved-recipient inbound message is stored, the next step is enabling the bounded test processing/sending gates, observing an actual reply and its signed delivery status, and checking the public owner dashboard. The backend remains restricted to the exact selected recipient. No general customer rollout is implied by Meta app publication.
