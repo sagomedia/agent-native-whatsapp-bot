@@ -162,6 +162,28 @@ test('free 429 cooldown survives runtime restart and never retries or exposes pr
   assert.equal(calls,1);assert.ok(!(await inbox.snapshot()).messages.some(m=>m.text.includes('secret-provider-body')));
   assert.equal((await pool.query('SELECT cooldown_until>now() AS cooling FROM free_inference_quota')).rows[0].cooling,true);
 }));
+test('free quota admits ten small requests across conversations, rejects the eleventh and retains unknown-token reservations',async()=>fixture(async(pool,inbox)=>{
+  let calls=0;
+  const provider=new GoogleInterpreter(freeSettings,{generateContent:async()=>{calls++;return response();}});
+  const send=async()=>{
+    const ctx={...simulatorContext,conversationId:randomUUID(),actor:'quota-'+randomUUID()};
+    await pool.query('INSERT INTO conversations(id,store_id,actor) VALUES($1,$2,$3)',[ctx.conversationId,ctx.storeId,ctx.actor]);
+    await turn(new SimulatorService(pool,ctx),new ConversationRuntime(pool,provider,{allowFreeInference:true}),'shopping');
+  };
+  for(let i=0;i<10;i++){
+    await pool.query("UPDATE provider_attempts SET created_at=now()-interval '7 seconds'");
+    await send();assert.equal(calls,i+1);
+  }
+  await pool.query("UPDATE provider_attempts SET created_at=now()-interval '7 seconds'");
+  await send();assert.equal(calls,10);
+  // Keep only three requests in the rolling window, but make usage unknown.
+  await pool.query("UPDATE provider_attempts SET created_at=now()-interval '2 minutes'");
+  await pool.query("UPDATE provider_attempts SET created_at=now()-interval '7 seconds',usage=NULL,settled_at=NULL WHERE id IN (SELECT id FROM provider_attempts LIMIT 3)");
+  await send();assert.equal(calls,10);
+  // Settled input usage frees reservations without resetting request counts.
+  await pool.query("UPDATE provider_attempts SET usage=$1::jsonb,settled_at=now() WHERE created_at>now()-interval '1 minute'",[JSON.stringify({promptTokenCount:1000})]);
+  await send();assert.equal(calls,11);
+}));
 test('free daily cap counts failed and unknown requests at Pacific day boundaries',async()=>fixture(async(pool,inbox)=>{
   let calls=0;const provider=new GoogleInterpreter(freeSettings,{generateContent:async()=>{calls++;return response();}});
   const runtime=new ConversationRuntime(pool,provider,{allowFreeInference:true});
