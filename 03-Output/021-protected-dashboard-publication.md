@@ -35,6 +35,8 @@ Proof: [saved exact-email policy](021-cloudflare-owner-policy.png), [saved DNS r
 
 ## Remaining channel work
 
+**Update, 5 October:** report [022](022-whatsapp-connection-progress.md) supersedes this historical channel status with the implemented/deployed receiver and sender, approved policy and published Meta app. Refer to that report for the actual controlled delivery results and remaining gates.
+
 This release still has no live WhatsApp receiver, sender, manual replies or customer decision notifications. Connecting Meta requires implementing and testing the channel adapter, then validating the intended app/token asset permissions and publication restrictions, publishing an exact webhook route separately from interactive owner Access, configuring its challenge/signature verification and subscriptions, and running a controlled approved-recipient test. No Meta app, sender, token, subscription, paid service or customer send was changed during this publication.
 
 ## Temporary deployment access cleanup

@@ -1,4 +1,4 @@
-# ShopBot test integration privacy policy — owner-review draft
+# ShopBot test integration privacy policy — approved publication
 
 Prepared 5 October 2026 for Sago Automation's KSMC RETAIL WhatsApp test integration.
 
@@ -12,8 +12,8 @@ Messages pass through Meta's WhatsApp Business Platform. Google Cloud hosts the 
 
 Test records remain in the server database until the operator deletes them; there is no automatic retention deadline. Private deployment backups can retain copies after active-database deletion until backup copies are removed. Records/deletion requests go to the operator below and are checked against the relevant WhatsApp identity before changing records.
 
-Proposed public contact: **Sago Automation — admin.sagomedia@gmail.com**.
+Approved public contact: **Sago Automation — admin.sagomedia@gmail.com**.
 
 Do not send passwords, payment-card information or other sensitive information to the test bot.
 
-Publication is pending owner review, including approval of the contact address and the actual storage/deletion practices described here. This draft does not authorize publishing the Meta app or accepting its terms.
+The owner approved publication, this contact address and saving the URL in KSMC RETAIL's Meta settings on 5 October 2026. The policy is public at https://demo.sagoautomation.tech/privacy; Meta confirmed “Changes saved.” The owner separately approved publishing KSMC RETAIL, and Meta subsequently showed Published. No new agreement prompt appeared during that action. See `022-whatsapp-connection-progress.md` for channel verification and the remaining test.
