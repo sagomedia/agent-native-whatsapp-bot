@@ -2,6 +2,8 @@
 
 4 October 2026. This continues Astra’s high-effort connection plan (019).
 
+Update, 5 October: the staged release was subsequently activated and its protected Cloudflare hostname published after explicit approval. See [report 021](021-protected-dashboard-publication.md) for the current configuration and verification; the pending-publication details below are the historical staging record.
+
 ## Implemented locally
 
 Three owner views: conversations and takeover, submitted requests and accept/reject decisions, connections/usage with a shop-wide pause. Changes persist in PostgreSQL with an owner audit trail. Request decisions do not send notifications. The WhatsApp adapter and manual sending are not implemented or enabled. Preview-generated messages are explicitly distinguished from WhatsApp delivery.
