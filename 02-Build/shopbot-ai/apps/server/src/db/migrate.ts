@@ -94,6 +94,18 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       CREATE TABLE owner_audit(sequence bigserial PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),email text NOT NULL,action text NOT NULL,target_id uuid NOT NULL,details jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
       INSERT INTO schema_migrations(version) VALUES(15);
     `);}
+    const v16=await client.query('SELECT version FROM schema_migrations WHERE version=16');
+    if(!v16.rowCount){await client.query(`
+      CREATE TABLE whatsapp_channels(phone_id text PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),app_id text NOT NULL,waba_id text NOT NULL,verified_at timestamptz,last_webhook_at timestamptz,last_received_at timestamptz,send_blocked boolean NOT NULL DEFAULT false,last_error text);
+      CREATE TABLE whatsapp_conversations(conversation_id uuid PRIMARY KEY REFERENCES conversations(id),phone_id text NOT NULL REFERENCES whatsapp_channels(phone_id),recipient text NOT NULL,last_inbound_at timestamptz NOT NULL,UNIQUE(phone_id,recipient));
+      CREATE TABLE whatsapp_inbound(phone_id text NOT NULL REFERENCES whatsapp_channels(phone_id),provider_id text NOT NULL,message_id uuid NOT NULL UNIQUE REFERENCES messages(id),PRIMARY KEY(phone_id,provider_id));
+      ALTER TABLE messages DROP CONSTRAINT messages_status_check;
+      ALTER TABLE messages ADD CONSTRAINT messages_status_check CHECK(status IN ('pending','processing','processed','sent','queued','sending','accepted','delivered','read','failed','unknown','blocked','cancelled'));
+      CREATE TABLE whatsapp_outbox(message_id uuid PRIMARY KEY REFERENCES messages(id),conversation_id uuid NOT NULL REFERENCES whatsapp_conversations(conversation_id),state text NOT NULL DEFAULT 'queued' CHECK(state IN ('queued','sending','accepted','delivered','read','failed','unknown','blocked','cancelled')),provider_id text UNIQUE,operator_revision integer NOT NULL,attempts integer NOT NULL DEFAULT 0,next_attempt_at timestamptz NOT NULL DEFAULT now(),started_at timestamptz,last_error text,created_at timestamptz NOT NULL DEFAULT now());
+      CREATE TABLE whatsapp_statuses(phone_id text NOT NULL,provider_id text NOT NULL,recipient text NOT NULL,state text NOT NULL CHECK(state IN ('sent','delivered','read','failed')),provider_timestamp bigint NOT NULL,callback_id uuid,error_code integer,PRIMARY KEY(phone_id,provider_id,state,provider_timestamp));
+      CREATE INDEX whatsapp_outbox_pending ON whatsapp_outbox(next_attempt_at) WHERE state='queued';
+      INSERT INTO schema_migrations(version) VALUES(16);
+    `);}
     if (mode === 'mock') {
       assertMock(mode);
       await client.query('INSERT INTO stores(id,name,synthetic) VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [fixtureStore, 'Workshop supply demo', 'true']);

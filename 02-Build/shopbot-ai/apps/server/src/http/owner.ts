@@ -15,6 +15,8 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     const host=request.headers.host?.toLowerCase();
     const local=host!==undefined&&/^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
     const publicOwner=host===owner.hostname;
+    if(config.whatsapp?.privacyPublished&&host===config.whatsapp.hostname&&request.url.split('?')[0]==='/privacy'&&request.method==='GET')return;
+    if(config.whatsapp&&host===config.whatsapp.hostname&&request.url.split('?')[0]===(config.whatsapp.path??'/webhooks/whatsapp')&&['GET','POST'].includes(request.method))return;
     if(!local&&!publicOwner)return reply.code(404).send({error:'Not found'});
     const path=request.url.split('?')[0];
     if(publicOwner&&!['/','/owner'].includes(path)&&!path.startsWith('/api/owner/')&&!path.startsWith('/assets/'))return reply.code(404).send({error:'Not found'});
@@ -53,13 +55,15 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       const requests=(await client.query('SELECT id,conversation_id,acceptance,payment,fulfillment,total_paise,lines,created_at FROM order_requests WHERE store_id=$1 ORDER BY created_at DESC LIMIT 100',[owner.storeId])).rows;
       const usage=(await client.query(`SELECT count(*)::int AS attempts,count(*) FILTER(WHERE state='failed')::int AS failures,count(*) FILTER(WHERE state='unknown')::int AS unknown,coalesce(sum(estimated_cost_microusd),0)::text AS estimated_microusd FROM provider_attempts WHERE store_id=$1`,[owner.storeId])).rows[0];
       const audit=(await client.query('SELECT action,target_id,details,created_at FROM owner_audit WHERE store_id=$1 ORDER BY sequence DESC LIMIT 20',[owner.storeId])).rows;
+      const wa=config.whatsapp?(await client.query('SELECT verified_at,last_webhook_at,last_received_at,send_blocked,last_error FROM whatsapp_channels WHERE phone_id=$1 AND store_id=$2',[config.whatsapp.phoneId,owner.storeId])).rows[0]:undefined;
+      const channel={whatsapp:!wa?'not_connected':wa.send_blocked?'attention_required':wa.last_received_at?'receiving':wa.verified_at||wa.last_webhook_at?'webhook_verified':'awaiting_verification',liveSending:Boolean(wa&&config.whatsapp?.sendEnabled&&!wa.send_blocked),processing:Boolean(config.whatsapp?.processEnabled),lastReceivedAt:wa?.last_webhook_at??null,error:wa?.last_error??null,testOnly:true};
       await client.query('COMMIT');
-      return {store,conversations,requests,usage,audit,mode:config.mode,ownerEmail:owner.email,channel:{whatsapp:'not_connected',liveSending:false},inference:{enabled:false,paidEnabled:false},limits:{conversations:100,requests:100},generatedAt:new Date().toISOString()};
+      return {store,conversations,requests,usage,audit,mode:config.mode,ownerEmail:owner.email,channel,inference:{enabled:false,paidEnabled:false},limits:{conversations:100,requests:100},generatedAt:new Date().toISOString()};
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
   });
   app.get<{Params:{id:string}}>('/api/owner/conversations/:id',async(request,reply)=>{
     if(!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Invalid conversation'});
-    const messages=(await pool.query(`SELECT m.id,m.direction,m.text,m.status,m.created_at FROM messages m JOIN conversations c ON c.id=m.conversation_id WHERE c.store_id=$1 AND c.id=$2 ORDER BY m.sequence DESC LIMIT 200`,[owner.storeId,request.params.id])).rows.reverse();
+    const messages=(await pool.query(`SELECT m.id,m.direction,m.text,m.status,m.created_at,(w.conversation_id IS NOT NULL) AS whatsapp FROM messages m JOIN conversations c ON c.id=m.conversation_id LEFT JOIN whatsapp_conversations w ON w.conversation_id=c.id WHERE c.store_id=$1 AND c.id=$2 ORDER BY m.sequence DESC LIMIT 200`,[owner.storeId,request.params.id])).rows.reverse();
     if(!(await pool.query('SELECT id FROM conversations WHERE store_id=$1 AND id=$2',[owner.storeId,request.params.id])).rowCount)return reply.code(404).send({error:'Conversation not found'});
     return {messages,limit:200};
   });

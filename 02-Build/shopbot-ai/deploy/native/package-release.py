@@ -10,16 +10,24 @@ import subprocess
 import tarfile
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--node-archive', type=Path, required=True)
-parser.add_argument('--node-shasums', type=Path, required=True)
+runtime = parser.add_mutually_exclusive_group(required=True)
+runtime.add_argument('--node-archive', type=Path)
+runtime.add_argument('--reuse-release', help='Installed immutable release whose runtime and identical production dependencies will be hard-linked on the VPS')
+parser.add_argument('--node-shasums', type=Path)
 parser.add_argument('--output-dir', type=Path, required=True)
 args = parser.parse_args()
 app = Path(__file__).resolve().parents[2]
 assert (app / 'dist/apps/server/src/index.js').is_file(), 'Run npm run build first'
 node_name = 'node-v22.22.1-linux-x64.tar.xz'
-expected = next(line.split()[0] for line in args.node_shasums.read_text().splitlines()
-                if line.endswith('  ' + node_name))
-assert hashlib.sha256(args.node_archive.read_bytes()).hexdigest() == expected, 'Node checksum mismatch'
+expected = None
+if args.node_archive:
+    assert args.node_shasums, 'Node checksums are required for a new runtime'
+    expected = next(line.split()[0] for line in args.node_shasums.read_text().splitlines()
+                    if line.endswith('  ' + node_name))
+    assert hashlib.sha256(args.node_archive.read_bytes()).hexdigest() == expected, 'Node checksum mismatch'
+else:
+    import re
+    assert re.fullmatch(r'preview-[a-f0-9]{12}', args.reuse_release), 'Invalid installed runtime release'
 
 source_hash = hashlib.sha256()
 excluded = {'node_modules', 'dist', 'data', 'owner-only', '__pycache__', '.git'}
@@ -49,17 +57,18 @@ for name in ['catalog.json', 'catalog-map.json']:
     shutil.copy2(app / 'resources/catalog/ksmc-demo' / name, catalog / name)
 shutil.copytree(app / 'resources/catalog/ksmc-demo/images', catalog / 'images')
 
-subprocess.run(['npm', 'ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'],
-               cwd=stage / 'app', check=True)
-(stage / 'node/bin').mkdir(parents=True)
-with tarfile.open(args.node_archive, 'r:xz') as archive:
-    root = node_name.removesuffix('.tar.xz')
-    for member, destination in [(root + '/bin/node', stage / 'node/bin/node'),
-                                (root + '/LICENSE', stage / 'node/LICENSE')]:
-        source = archive.extractfile(member)
-        assert source is not None
-        destination.write_bytes(source.read())
-(stage / 'node/bin/node').chmod(0o755)
+if args.node_archive:
+    subprocess.run(['npm', 'ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'],
+                   cwd=stage / 'app', check=True)
+    (stage / 'node/bin').mkdir(parents=True)
+    with tarfile.open(args.node_archive, 'r:xz') as archive:
+        root = node_name.removesuffix('.tar.xz')
+        for member, destination in [(root + '/bin/node', stage / 'node/bin/node'),
+                                    (root + '/LICENSE', stage / 'node/LICENSE')]:
+            source = archive.extractfile(member)
+            assert source is not None
+            destination.write_bytes(source.read())
+    (stage / 'node/bin/node').chmod(0o755)
 shutil.copytree(app / 'deploy/native', stage / 'deploy', ignore=shutil.ignore_patterns('__pycache__'))
 for name in ['install.sh', 'rollback.sh', 'upgrade.sh']:
     (stage / 'deploy' / name).chmod(0o755)
@@ -78,6 +87,8 @@ manifest = {
     'source_files': source_files,
     'node_version': '22.22.1',
     'node_archive_sha256': expected,
+    'runtime_from_release': args.reuse_release,
+    'runtime_dependencies_lock_sha256': hashlib.sha256((app / 'package-lock.json').read_bytes()).hexdigest(),
     'database_major': 17,
     'default_mode': 'mock',
     'default_listen': '127.0.0.1:3017',

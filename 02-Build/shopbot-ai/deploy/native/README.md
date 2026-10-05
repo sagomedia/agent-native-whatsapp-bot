@@ -36,3 +36,41 @@ switches the current symlink, and restores the previous native release if
 readiness fails. The backup list check does not constitute a restoration drill.
 Do not use the legacy-app rollback script after public/channel cutover without
 first restoring the matching DNS, Tunnel/Access and webhook configuration.
+
+
+## WhatsApp text test connection
+
+The optional channel uses the existing Meta test sender and a maximum of five
+server-configured verified recipients. Configure its app ID, WABA, sender ID,
+secret, verification token and API token in the root-private VPS environment.
+Never include these values in the release. Receive, process and send are separate
+gates; start with process/send false. The first integration uses the existing
+`demo.sagoautomation.tech/webhook` callback and an exact-path ingress rule,
+retaining the dashboard's owner Access policy. No new tunnel is required.
+
+The webhook verifies exact raw-body HMAC before JSON parsing and durable inbox
+commit. Workers deduplicate provider IDs and maintain scoped conversations and
+a transactional outbox. Text-only replies require an approved recipient and an
+open 24-hour service window; no templates, media download or marketing fan-out
+are implemented. Provider acceptance, delivery, failure and unknown outcome are
+distinct. Unknown sends are held rather than automatically repeated. Owner pause
+and takeover also apply to channel processing and delivery. Authentication or
+permission errors persist a send block. After credential repair, clear that block
+only through a reviewed operator action; restarting alone does not clear it.
+
+The current Meta app is unpublished. Its setup page warns that unpublished apps
+receive only dashboard test webhooks. The Publish page currently requires a
+privacy-policy URL. The factual draft is available privately to the owner at
+`/api/owner/privacy-draft`. Public `/privacy` serving is off until the owner reviews
+the content and approves publication. A signed test webhook proves routing and
+signature validation, not delivery of real phone messages or outgoing replies.
+AI remains disabled in this initial deterministic English test adapter.
+
+For disk-constrained upgrades with unchanged production dependencies, package
+with `--reuse-release <installed-release>` instead of the Node archive options.
+Upload the checksummed slim archive and run `stage-reused.py` with sudo. It verifies
+the archive, paths, manifest Node version and identical package/lock files, retains
+at least 1 GiB free, and hard-links the existing immutable runtime and dependencies.
+Do not modify shared runtime/dependency files in place. Then use the existing
+backup/readiness/rollback upgrade script. Dependency changes require a complete
+new-runtime bundle.

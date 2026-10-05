@@ -5,7 +5,7 @@ import {priceInquiry,quantityReply} from '../services/shopping-language.js';
 import {socialIntent,shopInquiry,presentReply,plainReply} from '../services/replies.js';
 import {FreeQuotaError} from '../adapters/google-interpreter.js';
 import { randomUUID } from 'node:crypto';
-import type { Pool } from 'pg';
+import type { Pool,PoolClient } from 'pg';
 import { interpretationSchema, type ConversationState, type Interpretation, type SimulatorEvent, type ToolCall, type Product, type RichReply } from '../../../../packages/contracts/index.js';
 import type { Interpreter } from '../adapters/interpreter.js';
 import {reserveAttempt,settleAttempt,validateRateCard,coolDownFreeQuota} from '../services/inference-budget.js';
@@ -18,7 +18,7 @@ import {loadAssistantMemory,saveAssistantMemory,observeCatalog,observationQuerie
 type Claimed = { id:string; token:string; event:SimulatorEvent; bindingId:string|null; state:ConversationState; catalog:Product[];catalogMap?:import('../../../../packages/contracts/index.js').CatalogMap;memory:AssistantMemory|null;displayedActions:SimulatorEvent[];displayedProducts:{event:SimulatorEvent;product:Product}[] };
 export class ConversationRuntime {
   readonly tools:RetailTools;
-  constructor(private pool:Pool,private provider:Interpreter,options:{allowPaidInference?:boolean;allowFreeInference?:boolean}={}) {
+  constructor(private pool:Pool,private provider:Interpreter,private options:{allowPaidInference?:boolean;allowFreeInference?:boolean;queueReply?:(client:PoolClient,ctx:ActorContext,id:string,reply:RichReply)=>Promise<void>}={}) {
     if(provider.mode==='live') {
       if(!(provider.freeQuota?options.allowFreeInference:options.allowPaidInference)||!provider.billing) throw new ToolError('Live interpretation is disabled until explicitly authorized metered configuration is supplied');
       validateRateCard(provider.billing);
@@ -146,7 +146,9 @@ export class ConversationRuntime {
         message=customerError(error instanceof Error?error.message:'Action failed. Your draft is retained.',current,error instanceof ToolError?error.code:undefined);rich=plainReply(message);
       }
       rich={...rich,replyLanguage:current.replyLanguage??'en'};
-      await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,response_to,payload) VALUES($1,$2,'outbound',$3,'sent',$4,$5::jsonb)",[randomUUID(),ctx.conversationId,message,claimed.id,JSON.stringify(rich)]);
+      const replyId=randomUUID();
+      await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,response_to,payload) VALUES($1,$2,'outbound',$3,$4,$5,$6::jsonb)",[replyId,ctx.conversationId,message,this.options.queueReply?'queued':'sent',claimed.id,JSON.stringify(rich)]);
+      await this.options.queueReply?.(client,ctx,replyId,rich);
       await client.query("UPDATE messages SET status='processed',claim_token=NULL,lease_until=NULL WHERE id=$1",[claimed.id]);
     });
     return true;

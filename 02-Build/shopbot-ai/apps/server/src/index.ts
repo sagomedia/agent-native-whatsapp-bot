@@ -7,10 +7,13 @@ import { setupDatabase } from './db/migrate.js';
 import { createApp } from './http/app.js';
 import { SimulatorService } from './services/simulator.js';
 import { startSimulatorJobs } from './jobs/simulator.js';
+import {WhatsAppChannel} from './services/whatsapp-channel.js';
+import {startWhatsAppJobs} from './jobs/whatsapp.js';
 
 const config = readConfig();
 const pool = new pg.Pool({ connectionString: config.databaseUrl, max: 10 });
 let stopJobs: (() => Promise<void>) | undefined;
+let stopWhatsApp: (() => Promise<void>) | undefined;
 let app: Awaited<ReturnType<typeof createApp>> | undefined;
 try {
   // No HTTP readiness until the locked setup and queue startup complete.
@@ -18,12 +21,15 @@ try {
   await mkdir(config.mediaDir, { recursive: true });
   const nativeTest=process.env.ALLOW_LOCAL_AI_TEST==='true'?new GoogleInterpreter(readNativeSettings()):undefined;
   const nativeStore=nativeTest?await setupImageDemo(pool):undefined;
-  app = await createApp(config, pool,nativeTest,nativeStore);
+  const channel=config.whatsapp?new WhatsAppChannel(pool,config.whatsapp):undefined;
+  app = await createApp(config, pool,nativeTest,nativeStore,undefined,channel);
+  if(channel)stopWhatsApp=await startWhatsAppJobs(channel,()=>app?.log.error('WhatsApp worker failed; durable work retained'));
   if (config.mode === 'mock') stopJobs = await startSimulatorJobs(config.databaseUrl, new SimulatorService(pool), error => app?.log.error(error));
   await app.listen({ port: config.port, host: config.host });
 } catch (error) {
   console.error(error);
   await stopJobs?.();
+  await stopWhatsApp?.();
   await app?.close();
   await pool.end();
   process.exit(1);
@@ -34,6 +40,7 @@ async function shutdown() {
   stopping = true;
   await app?.close();
   await stopJobs?.();
+  await stopWhatsApp?.();
   await pool.end();
 }
 process.on('SIGTERM', () => { void shutdown(); });
