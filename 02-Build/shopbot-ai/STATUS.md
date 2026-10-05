@@ -1,3 +1,7 @@
+# AI quota — 5 October 2026
+
+Requested free AI quota increase deployed to the VPS: 10 requests per rolling minute, 6-second spacing, shared 200K input-token guard with retained 64K unknown reservations. Daily application cap remains 100; paid inference stays off. Build/typecheck and all 115 isolated tests pass. This limit update does not activate the still-unwired native WhatsApp AI/media adapter. See `../../03-Output/024-ai-request-limit.md`.
+
 # WhatsApp test channel — 5 October 2026
 
 **Activation update:** automatic processing/sending are now enabled with explicit user authorization, restricted to verified recipient ending 7308. Actual inbound hi/hello were processed and their replies confirmed delivered through signed Meta callbacks. AI/free/paid inference remain off. See `../../03-Output/023-whatsapp-automatic-replies-enabled.md` for activation, backup and evidence; this supersedes the pending test in the paragraph below.
