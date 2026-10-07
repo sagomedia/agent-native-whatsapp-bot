@@ -15,7 +15,8 @@
     "db:migrate": "tsx apps/server/src/db/maintenance.ts migrate",
     "db:reset:mock": "tsx apps/server/src/db/maintenance.ts reset",
     "native:eval": "tsx scripts/evaluate-native.ts",
-    "native:preflight": "tsx scripts/evaluate-native.ts --preflight"
+    "native:preflight": "tsx scripts/evaluate-native.ts --preflight",
+    "preview:customer": "node --import tsx scripts/customer-preview.ts"
   },
   "dependencies": {
     "@fastify/static": "10.1.5",

@@ -56,7 +56,8 @@ test('local foundation: locking, seed, durable drafts, replay, stale edits and m
     assert.equal((await service.snapshot()).conversation.version, state.conversation.version + 1);
     assert.equal(eventSchema.safeParse({...first, storeId: randomUUID()}).success, false);
     assert.equal(eventSchema.safeParse({...first, quantity: -2}).success, false);
-    assert.equal(eventSchema.safeParse({...first, quantity: 1.5}).success, false);
+    assert.equal(eventSchema.safeParse({...first, quantity: 1.5}).success, true);
+    assert.equal(eventSchema.safeParse({...first, quantity: 1.0001}).success, false);
     const app = await createApp(config, pool);
     try {
       assert.equal((await app.inject({method:'GET',url:'/health/ready'})).statusCode,200);

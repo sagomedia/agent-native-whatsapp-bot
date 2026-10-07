@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ $(id -u) != 0 ]]; then echo 'Run with sudo.' >&2; exit 1; fi
+release=$(cd "$(dirname "$0")/.." && pwd)
+[[ "$release" =~ ^/opt/shopbot-vps/releases/preview-[a-f0-9]{12}$ ]]
+test -f "$release/manifest.json"
+test -x "$release/node/bin/node"
+test -f "$release/app/dist/apps/server/src/index.js"
+test -L /opt/shopbot-vps/current
+test -f /etc/shopbot-vps.env
+available=$(df --output=avail -k / | tail -1 | tr -d ' ')
+if (( available < 1048576 )); then echo 'Less than 1 GiB free; upgrade refused.' >&2; exit 1; fi
+previous=$(readlink -f /opt/shopbot-vps/current)
+backup=/var/backups/shopbot-migration/owner-$(date -u +%Y%m%dT%H%M%SZ)
+umask 0077
+install -d -m 0700 "$backup"
+cp -p /etc/shopbot-vps.env "$backup/shopbot-vps.env"
+runuser -u postgres -- pg_dump --format=custom shopbot_vps_preview > "$backup/database.dump"
+pg_restore --list "$backup/database.dump" >/dev/null
+printf '%s\n' "$previous" > "$backup/previous-release.txt"
+printf '%s\n' "$previous" > /opt/shopbot-vps/previous-release.txt
+install -m 0644 "$release/deploy/shopbot-vps.service" /etc/systemd/system/shopbot-vps.service
+systemctl daemon-reload
+ln -s "$release" /opt/shopbot-vps/next-release
+mv -Tf /opt/shopbot-vps/next-release /opt/shopbot-vps/current
+systemctl restart shopbot-vps.service
+for attempt in {1..30}; do
+  if curl --fail --silent http://127.0.0.1:3017/health/ready >/dev/null; then
+    echo "Upgraded to $(basename "$release"); private backup: $backup"
+    exit 0
+  fi
+  sleep 1
+done
+echo 'Readiness failed; restoring the previous native preview.' >&2
+ln -s "$previous" /opt/shopbot-vps/next-release
+mv -Tf /opt/shopbot-vps/next-release /opt/shopbot-vps/current
+systemctl restart shopbot-vps.service
+exit 1

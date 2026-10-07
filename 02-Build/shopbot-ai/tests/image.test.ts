@@ -31,6 +31,26 @@ test('unrelated photo and malformed model search cannot mutate or approve an ord
   await pool.query("UPDATE provider_attempts SET created_at=created_at-interval '1 hour'");output=value;const u=await upload(),media=await normalizeImage(u);await inbox.ingest({id:u.id,type:'image',mediaId:u.id,caption:u.caption},undefined,media);await runtime.processNext(inbox.context);const s=await inbox.snapshot();assert.equal(s.conversation.draft.length,0);assert.equal(s.requests.length,0);assert.equal(s.messages.at(-1)!.rich?.cards,undefined);
  }
 }));
+test('photo recognition cannot force an absent nail into the screw-box catalog family',async()=>fixture(async(pool,inbox)=>{
+ const provider=new GoogleInterpreter(settings,{generateContent:async params=>{
+  const context=JSON.parse((params.contents as any)[0].parts[0].text);assert.equal(context.storeCatalogMap,null);assert.deepEqual(context.publicCatalog,[]);assert.deepEqual(context.toolObservations,[]);
+  return response({query:'nail',keywords:['nail','iron nail','wood nail'],familyId:'screw-boxes',departmentId:'hardware',specificationFilters:null});
+ }}),runtime=new ConversationRuntime(pool,provider,{allowFreeInference:true});
+ const u=await upload(),media=await normalizeImage(u);await inbox.ingest({id:u.id,type:'image',mediaId:u.id,caption:''},undefined,media);await runtime.processNext(inbox.context);
+ const snapshot=await inbox.snapshot();assert.equal(snapshot.conversation.draft.length,0);assert.equal(snapshot.requests.length,0);assert.equal(snapshot.messages.at(-1)!.rich!.cards?.length??0,0);
+ const memory=(await pool.query('SELECT assistant_memory FROM conversations WHERE id=$1',[inbox.context.conversationId])).rows[0].assistant_memory;
+ assert.equal(memory.observations[0].discovery.plan.familyId,undefined);assert.equal(memory.observations[0].discovery.plan.departmentId,undefined);assert.equal(memory.observations[0].discovery.noExactMatch,true);
+}));
+test('photo labels use supported size filters; unmodeled material stays a keyword rather than hiding a valid listing',async()=>fixture(async(pool,inbox)=>{
+ const provider=new GoogleInterpreter(settings,{generateContent:async params=>{
+  const context=JSON.parse((params.contents as any)[0].parts[0].text);assert.deepEqual(context.photoSpecificationKeys,['size']);
+  return response({query:'hacksaw blade',keywords:['hacksaw blade','carbon steel'],specificationFilters:[{key:'size',value:'12 inch'},{key:'material',value:'carbon steel'}]});
+ }}),runtime=new ConversationRuntime(pool,provider,{allowFreeInference:true});
+ const u=await upload(),media=await normalizeImage(u);await inbox.ingest({id:u.id,type:'image',mediaId:u.id,caption:''},undefined,media);await runtime.processNext(inbox.context);
+ const snapshot=await inbox.snapshot();assert.deepEqual(snapshot.messages.at(-1)!.rich!.cards!.map(card=>card.product.sku),['H16']);assert.equal(snapshot.conversation.draft.length,0);assert.equal(snapshot.requests.length,0);
+ const memory=(await pool.query('SELECT assistant_memory FROM conversations WHERE id=$1',[inbox.context.conversationId])).rows[0].assistant_memory;
+ assert.deepEqual(memory.observations[0].discovery.plan.specifications,{size:'12 inch'});assert.ok(memory.observations[0].discovery.plan.keywords.includes('carbon steel'));
+}));
 
 test('the runtime rejects mutation attempts from another image-capable provider and rejects stale queued photos before inference',async()=>fixture(async(pool,inbox)=>{
  let calls=0;const runtime=new ConversationRuntime(pool,{name:'hostile-image-test',mode:'mock',supportsImages:true,interpret:async()=>{calls++;return {output:{operations:[{kind:'add_item',query:'H14',quantity:3}],next:'review'},truncated:false,usage:null};}});

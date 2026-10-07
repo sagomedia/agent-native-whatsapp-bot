@@ -79,9 +79,54 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
     if(!v12.rowCount){await client.query(`CREATE TABLE image_media(id uuid PRIMARY KEY,store_id uuid NOT NULL,conversation_id uuid NOT NULL,actor text NOT NULL,source_hash text NOT NULL,image bytea NOT NULL CHECK(octet_length(image)<=2097152),width integer NOT NULL CHECK(width>0 AND width<=1280),height integer NOT NULL CHECK(height>0 AND height<=1280),source_version integer NOT NULL CHECK(source_version>=0),created_at timestamptz NOT NULL DEFAULT now(),FOREIGN KEY(store_id,conversation_id,actor) REFERENCES conversations(store_id,id,actor)); INSERT INTO schema_migrations(version) VALUES(12);`);}
     const v13=await client.query('SELECT version FROM schema_migrations WHERE version=13');
     if(!v13.rowCount){await client.query('ALTER TABLE provider_attempts ADD COLUMN validation_issues jsonb');await client.query('INSERT INTO schema_migrations(version) VALUES(13)');}
+    const v14=await client.query('SELECT version FROM schema_migrations WHERE version=14');
+    if(!v14.rowCount){await client.query(`
+      ALTER TABLE conversations ADD COLUMN reply_language text NOT NULL DEFAULT 'en' CHECK(reply_language IN ('ta','ta-Latn','en'));
+      UPDATE conversations SET reply_language='ta' WHERE actor='local-ai-test';
+      ALTER TABLE products ADD COLUMN local_names jsonb NOT NULL DEFAULT '{}';
+      ALTER TABLE catalog_nodes ADD COLUMN local_names jsonb NOT NULL DEFAULT '{}';
+      INSERT INTO schema_migrations(version) VALUES(14);
+    `);}
+    const v15=await client.query('SELECT version FROM schema_migrations WHERE version=15');
+    if(!v15.rowCount){await client.query(`
+      ALTER TABLE stores ADD COLUMN operator_paused boolean NOT NULL DEFAULT false, ADD COLUMN operator_revision integer NOT NULL DEFAULT 0;
+      ALTER TABLE conversations ADD COLUMN operator_mode text NOT NULL DEFAULT 'assistant' CHECK(operator_mode IN ('assistant','owner')), ADD COLUMN operator_revision integer NOT NULL DEFAULT 0;
+      CREATE TABLE owner_audit(sequence bigserial PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),email text NOT NULL,action text NOT NULL,target_id uuid NOT NULL,details jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+      INSERT INTO schema_migrations(version) VALUES(15);
+    `);}
+    const v16=await client.query('SELECT version FROM schema_migrations WHERE version=16');
+    if(!v16.rowCount){await client.query(`
+      CREATE TABLE whatsapp_channels(phone_id text PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),app_id text NOT NULL,waba_id text NOT NULL,verified_at timestamptz,last_webhook_at timestamptz,last_received_at timestamptz,send_blocked boolean NOT NULL DEFAULT false,last_error text);
+      CREATE TABLE whatsapp_conversations(conversation_id uuid PRIMARY KEY REFERENCES conversations(id),phone_id text NOT NULL REFERENCES whatsapp_channels(phone_id),recipient text NOT NULL,last_inbound_at timestamptz NOT NULL,UNIQUE(phone_id,recipient));
+      CREATE TABLE whatsapp_inbound(phone_id text NOT NULL REFERENCES whatsapp_channels(phone_id),provider_id text NOT NULL,message_id uuid NOT NULL UNIQUE REFERENCES messages(id),PRIMARY KEY(phone_id,provider_id));
+      ALTER TABLE messages DROP CONSTRAINT messages_status_check;
+      ALTER TABLE messages ADD CONSTRAINT messages_status_check CHECK(status IN ('pending','processing','processed','sent','queued','sending','accepted','delivered','read','failed','unknown','blocked','cancelled'));
+      CREATE TABLE whatsapp_outbox(message_id uuid PRIMARY KEY REFERENCES messages(id),conversation_id uuid NOT NULL REFERENCES whatsapp_conversations(conversation_id),state text NOT NULL DEFAULT 'queued' CHECK(state IN ('queued','sending','accepted','delivered','read','failed','unknown','blocked','cancelled')),provider_id text UNIQUE,operator_revision integer NOT NULL,attempts integer NOT NULL DEFAULT 0,next_attempt_at timestamptz NOT NULL DEFAULT now(),started_at timestamptz,last_error text,created_at timestamptz NOT NULL DEFAULT now());
+      CREATE TABLE whatsapp_statuses(phone_id text NOT NULL,provider_id text NOT NULL,recipient text NOT NULL,state text NOT NULL CHECK(state IN ('sent','delivered','read','failed')),provider_timestamp bigint NOT NULL,callback_id uuid,error_code integer,PRIMARY KEY(phone_id,provider_id,state,provider_timestamp));
+      CREATE INDEX whatsapp_outbox_pending ON whatsapp_outbox(next_attempt_at) WHERE state='queued';
+      INSERT INTO schema_migrations(version) VALUES(16);
+    `);}
+    const v17=await client.query('SELECT version FROM schema_migrations WHERE version=17');
+    if(!v17.rowCount){await client.query(`
+      ALTER TABLE whatsapp_outbox ADD COLUMN reply_payload jsonb;
+      CREATE TABLE whatsapp_actions(id text PRIMARY KEY,message_id uuid NOT NULL REFERENCES whatsapp_outbox(message_id),conversation_id uuid NOT NULL REFERENCES conversations(id),event jsonb NOT NULL,label text NOT NULL,source_version integer NOT NULL,operator_revision integer NOT NULL,binding_id uuid,expires_at timestamptz NOT NULL DEFAULT now()+interval '24 hours');
+      CREATE INDEX whatsapp_actions_conversation ON whatsapp_actions(conversation_id,message_id);
+      INSERT INTO schema_migrations(version) VALUES(17);
+    `);}
+    const v18=await client.query('SELECT version FROM schema_migrations WHERE version=18');
+    if(!v18.rowCount){await client.query(`
+      ALTER TABLE conversations ADD COLUMN editing_line_id uuid, ADD COLUMN handoff_requested boolean NOT NULL DEFAULT false, ADD COLUMN session_started_at timestamptz;
+      ALTER TABLE whatsapp_outbox ADD COLUMN sender_kind text NOT NULL DEFAULT 'assistant' CHECK(sender_kind IN ('assistant','owner','system'));
+      ALTER TABLE provider_attempts ADD COLUMN stage text NOT NULL DEFAULT 'identify' CHECK(stage IN ('identify','recommend'));
+      ALTER TABLE messages ADD COLUMN not_before timestamptz;
+      CREATE TABLE whatsapp_media(message_id uuid PRIMARY KEY REFERENCES messages(id),media_id text NOT NULL,kind text NOT NULL CHECK(kind IN ('image','voice')),source_version integer NOT NULL,state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','fetching','ready','failed')),lease_until timestamptz,last_error text);
+      INSERT INTO schema_migrations(version) VALUES(18);
+    `);}
+    const v19=await client.query('SELECT version FROM schema_migrations WHERE version=19');
+    if(!v19.rowCount){await client.query('ALTER TABLE messages ADD COLUMN typing_indicated_at timestamptz');await client.query('INSERT INTO schema_migrations(version) VALUES(19)');}
     if (mode === 'mock') {
       assertMock(mode);
-      await client.query('INSERT INTO stores VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [fixtureStore, 'Workshop supply demo', 'true']);
+      await client.query('INSERT INTO stores(id,name,synthetic) VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [fixtureStore, 'Workshop supply demo', 'true']);
       await client.query('INSERT INTO conversations(id,store_id,actor) VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [fixtureConversation, fixtureStore, 'local-simulator']);
       for (const p of hardwareFixtures) await client.query('INSERT INTO products(store_id,sku,name,unit,price_paise,stock) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING', [fixtureStore, p.sku, p.name, p.unit, p.pricePaise, p.stock]);
     }

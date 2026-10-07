@@ -162,6 +162,28 @@ test('free 429 cooldown survives runtime restart and never retries or exposes pr
   assert.equal(calls,1);assert.ok(!(await inbox.snapshot()).messages.some(m=>m.text.includes('secret-provider-body')));
   assert.equal((await pool.query('SELECT cooldown_until>now() AS cooling FROM free_inference_quota')).rows[0].cooling,true);
 }));
+test('free quota admits ten small requests across conversations, rejects the eleventh and retains unknown-token reservations',async()=>fixture(async(pool,inbox)=>{
+  let calls=0;
+  const provider=new GoogleInterpreter(freeSettings,{generateContent:async()=>{calls++;return response();}});
+  const send=async()=>{
+    const ctx={...simulatorContext,conversationId:randomUUID(),actor:'quota-'+randomUUID()};
+    await pool.query('INSERT INTO conversations(id,store_id,actor) VALUES($1,$2,$3)',[ctx.conversationId,ctx.storeId,ctx.actor]);
+    await turn(new SimulatorService(pool,ctx),new ConversationRuntime(pool,provider,{allowFreeInference:true}),'shopping');
+  };
+  for(let i=0;i<10;i++){
+    await pool.query("UPDATE provider_attempts SET created_at=now()-interval '7 seconds'");
+    await send();assert.equal(calls,i+1);
+  }
+  await pool.query("UPDATE provider_attempts SET created_at=now()-interval '7 seconds'");
+  await send();assert.equal(calls,10);
+  // Keep only three requests in the rolling window, but make usage unknown.
+  await pool.query("UPDATE provider_attempts SET created_at=now()-interval '2 minutes'");
+  await pool.query("UPDATE provider_attempts SET created_at=now()-interval '7 seconds',usage=NULL,settled_at=NULL WHERE id IN (SELECT id FROM provider_attempts LIMIT 3)");
+  await send();assert.equal(calls,10);
+  // Settled input usage frees reservations without resetting request counts.
+  await pool.query("UPDATE provider_attempts SET usage=$1::jsonb,settled_at=now() WHERE created_at>now()-interval '1 minute'",[JSON.stringify({promptTokenCount:1000})]);
+  await send();assert.equal(calls,11);
+}));
 test('free daily cap counts failed and unknown requests at Pacific day boundaries',async()=>fixture(async(pool,inbox)=>{
   let calls=0;const provider=new GoogleInterpreter(freeSettings,{generateContent:async()=>{calls++;return response();}});
   const runtime=new ConversationRuntime(pool,provider,{allowFreeInference:true});
@@ -223,13 +245,13 @@ test('vague screw box plus paint retains both, asks size then quantity, and send
   const select=state.messages.at(-1)!.rich!.cards![0].action!;await inbox.ingest(select);await runtime.processNext(inbox.context);state=await inbox.snapshot();assert.equal(state.conversation.draft[0].resolution,'needs_quantity');assert.equal(state.interpretationAttempts,1);
   state=await turn(inbox,runtime,'2');assert.equal(state.conversation.draft[0].quantity,2);assert.equal(state.conversation.draft[1].resolution,'unavailable');assert.match(state.messages.at(-1)!.text,/What are you painting/);assert.equal(state.interpretationAttempts,1);assert.equal(state.requests.length,0);
 }));
-test('typo matches are choices, numeric specs stay exact, and browse caps at ten without adding or auto-paging',async()=>fixture(async(pool,inbox)=>{
+test('typo matches are choices, numeric specs stay exact, and browse caps at four without adding or auto-paging',async()=>fixture(async(pool,inbox)=>{
   const runtime=inbox.runtime;
   await inbox.ingest({id:randomUUID(),type:'browse',query:'PVC elbw',expectedVersion:0});await runtime.processNext(inbox.context);let state=await inbox.snapshot();assert.equal(state.conversation.draft.length,0);assert.equal(state.messages.at(-1)!.rich?.cards?.length,2);
   await inbox.ingest({id:randomUUID(),type:'text',text:'add PVC elbw'});await runtime.processNext(inbox.context);state=await inbox.snapshot();assert.equal(state.conversation.draft[0].resolution,'needs_choice');
   const {searchProducts}=await import('../apps/server/src/services/catalog.js');const client=await pool.connect();try{assert.equal((await searchProducts(client,simulatorContext,'0.6 PVC elbow')).length,0);}finally{client.release();}
   for(let i=0;i<15;i++)await pool.query('INSERT INTO products(store_id,sku,name,unit,price_paise,stock) VALUES($1,$2,$3,$4,100,10)',[simulatorContext.storeId,'P'+i,'Garden clamp '+i,'piece']);
-  await inbox.ingest({id:randomUUID(),type:'browse',query:'garden clamp',expectedVersion:state.conversation.version});await runtime.processNext(inbox.context);state=await inbox.snapshot();assert.equal(state.messages.at(-1)!.rich?.cards?.length,10);assert.equal(state.conversation.draft.length,1);assert.equal(state.messages.filter(m=>m.direction==='outbound').length,3);
+  await inbox.ingest({id:randomUUID(),type:'browse',query:'garden clamp',expectedVersion:state.conversation.version});await runtime.processNext(inbox.context);state=await inbox.snapshot();assert.equal(state.messages.at(-1)!.rich?.cards?.length,4);assert.equal(state.conversation.draft.length,1);assert.equal(state.messages.filter(m=>m.direction==='outbound').length,3);
 }));
 
 test('WhatsApp planning respects approved card count, marketing cost, service window and one-message ceiling',async()=>{
@@ -336,7 +358,7 @@ test('exact SKU refresh preserves loose-piece versus box identity even when SKU 
   await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,aliases) VALUES($1,'AAA-BOX','M4 screws box','box',9500,10,'[\"M4 screw box\",\"M4 screws\"]'),($1,'M4-SCREWS','Loose M4 screws','piece',100,100,'[\"loose M4 screws\"]')",[simulatorContext.storeId]);
   const {searchProducts}=await import('../apps/server/src/services/catalog.js');const client=await pool.connect();try{assert.deepEqual((await searchProducts(client,simulatorContext,'M4-SCREWS')).map(p=>p.sku),['M4-SCREWS']);}finally{client.release();}
   let s=await turn(inbox,inbox.runtime,'I need two M4 screw boxes and five loose M4 screws');assert.equal(s.conversation.draft.length,2);assert.equal(s.conversation.draft[0].sku,'AAA-BOX');assert.equal(s.conversation.draft[0].unit,'box');assert.equal(s.conversation.draft[1].sku,'M4-SCREWS');assert.equal(s.conversation.draft[1].unit,'piece');assert.equal(s.conversation.pending?.kind==='review'?s.conversation.pending.totalPaise:0,19500);
-  s=await turn(inbox,inbox.runtime,'review');assert.equal(s.conversation.draft[1].sku,'M4-SCREWS');assert.equal(s.conversation.draft[1].pricePaise,100);assert.match(s.messages.at(-1)!.text,/Loose M4 screws.*₹5\.00/);
+  s=await turn(inbox,inbox.runtime,'review');assert.equal(s.conversation.draft[1].sku,'M4-SCREWS');assert.equal(s.conversation.draft[1].pricePaise,100);assert.match(s.messages.at(-1)!.text,/Loose M4 screws\n\s+5 pieces × ₹1\.00 = ₹5\.00/);
   s=await turn(inbox,inbox.runtime,'yes');assert.equal(s.requests[0].totalPaise,19500);assert.equal(s.requests[0].lines[1].sku,'M4-SCREWS');assert.equal(s.requests[0].lines[1].unit,'piece');
 }));
 

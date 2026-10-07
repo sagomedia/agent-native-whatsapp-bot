@@ -7,7 +7,9 @@
     {
       "aliases": [
         "1 inch PVC Heavy Pipe Local",
-        "1 இன்ச் பைப் லோக்கல்"
+        "1 இன்ச் பைப் லோக்கல்",
+        "1 இன்ச் PVC ஹெவி பைப் லோக்கல்",
+        "1 inch PVC heavy pipe local"
       ],
       "brand": "Local Heavy",
       "category": "Pipes & Fittings",
@@ -15,7 +17,8 @@
       "description": "Heavy duty 1 inch Schedule 40 PVC pipe for water line, 10ft length (600 PSI rated)",
       "imagePath": "images/H01.jpg",
       "localNames": {
-        "ta": "1 இன்ச் பைப் லோக்கல்"
+        "ta": "1 இன்ச் PVC ஹெவி பைப் லோக்கல்",
+        "ta-Latn": "1 inch PVC heavy pipe local"
       },
       "name": "1 inch PVC Heavy Pipe Local",
       "packQuantity": null,
@@ -41,7 +44,9 @@
     {
       "aliases": [
         "1 inch PVC Pipe Blueguard ISI",
-        "1 இன்ச் பைப்"
+        "1 இன்ச் பைப்",
+        "Blueguard ISI · 1 இன்ச் PVC பைப்",
+        "Blueguard ISI 1 inch PVC pipe"
       ],
       "brand": "Blueguard",
       "category": "Pipes & Fittings",
@@ -49,7 +54,8 @@
       "description": "ISI marked (IS 4985:2000) 1 inch Schedule 40 PVC pipe for cold water supply, 10 bar / 150 PSI, 10ft",
       "imagePath": "images/H02.jpg",
       "localNames": {
-        "ta": "1 இன்ச் பைப்"
+        "ta": "Blueguard ISI · 1 இன்ச் PVC பைப்",
+        "ta-Latn": "Blueguard ISI 1 inch PVC pipe"
       },
       "name": "1 inch PVC Pipe Blueguard ISI",
       "packQuantity": null,
@@ -75,7 +81,9 @@
     {
       "aliases": [
         "0.75 inch PVC Pipe Local",
-        "0.75 இன்ச் பைப்"
+        "0.75 இன்ச் பைப்",
+        "0.75 இன்ச் PVC பைப் லோக்கல்",
+        "0.75 inch PVC pipe local"
       ],
       "brand": "Local",
       "category": "Pipes & Fittings",
@@ -83,7 +91,8 @@
       "description": "0.75 inch Schedule 40 PVC pipe (ASTM D1785) for bathroom and domestic water lines",
       "imagePath": "images/H03.jpg",
       "localNames": {
-        "ta": "0.75 இன்ச் பைப்"
+        "ta": "0.75 இன்ச் PVC பைப் லோக்கல்",
+        "ta-Latn": "0.75 inch PVC pipe local"
       },
       "name": "0.75 inch PVC Pipe Local",
       "packQuantity": null,
@@ -108,7 +117,9 @@
     {
       "aliases": [
         "1.5 inch PVC Pipe Schedule 40",
-        "1.5 இன்ச் பைப்"
+        "1.5 இன்ச் பைப்",
+        "1.5 இன்ச் PVC பைப் Schedule 40",
+        "1.5 inch Schedule 40 PVC pipe"
       ],
       "brand": "Local",
       "category": "Pipes & Fittings",
@@ -116,7 +127,8 @@
       "description": "1.5 inch Schedule 40 PVC pipe (ASTM D2665) large diameter for main water line and drainage",
       "imagePath": "images/H04.jpg",
       "localNames": {
-        "ta": "1.5 இன்ச் பைப்"
+        "ta": "1.5 இன்ச் PVC பைப் Schedule 40",
+        "ta-Latn": "1.5 inch Schedule 40 PVC pipe"
       },
       "name": "1.5 inch PVC Pipe Schedule 40",
       "packQuantity": null,
@@ -145,7 +157,9 @@
         "PVC elbow 1 inch",
         "1 inch elbow",
         "L bend 1 inch",
-        "1 இன்ச் எல்போ"
+        "1 இன்ச் எல்போ",
+        "1 இன்ச் PVC எல்-பெண்டு",
+        "1 inch PVC L-bend"
       ],
       "brand": "Generic",
       "category": "Fittings",
@@ -153,7 +167,8 @@
       "description": "1 inch Schedule 40 PVC 90 degree elbow joint fitting (ASTM D2466)",
       "imagePath": "images/H05.jpg",
       "localNames": {
-        "ta": "L-bend 1 இன்ச்"
+        "ta": "1 இன்ச் PVC எல்-பெண்டு",
+        "ta-Latn": "1 inch PVC L-bend"
       },
       "name": "PVC Elbow 1 inch",
       "packQuantity": null,
@@ -182,7 +197,9 @@
         "T-bend 1 இன்ச்",
         "PVC tee 1 inch",
         "1 inch tee",
-        "T bend 1 inch"
+        "T bend 1 inch",
+        "1 இன்ச் PVC டீ-பெண்டு",
+        "1 inch PVC T-bend"
       ],
       "brand": "Generic",
       "category": "Fittings",
@@ -190,7 +207,8 @@
       "description": "1 inch Schedule 40 PVC tee fitting (ASTM D2466) for 3-way line branching",
       "imagePath": "images/H06.jpg",
       "localNames": {
-        "ta": "T-bend 1 இன்ச்"
+        "ta": "1 இன்ச் PVC டீ-பெண்டு",
+        "ta-Latn": "1 inch PVC T-bend"
       },
       "name": "PVC Tee 1 inch",
       "packQuantity": null,
@@ -215,7 +233,9 @@
     {
       "aliases": [
         "PVC Solvent Gum 100ml",
-        "பைப் பசை"
+        "பைப் பசை",
+        "PVC பைப் பசை 100ml",
+        "PVC pipe pasai 100ml"
       ],
       "brand": "Pipelock",
       "category": "Chemicals",
@@ -223,7 +243,8 @@
       "description": "Pipelock 100ml heavy duty fast-drying clear solvent cement for PVC pipes & fittings",
       "imagePath": "images/H07.jpg",
       "localNames": {
-        "ta": "பைப் பசை"
+        "ta": "PVC பைப் பசை 100ml",
+        "ta-Latn": "PVC pipe pasai 100ml"
       },
       "name": "PVC Solvent Gum 100ml",
       "packQuantity": null,
@@ -253,7 +274,9 @@
         "PTFE tape",
         "thread seal tape",
         "Teflon tape",
-        "டெஃப்லான் டேப்"
+        "டெஃப்லான் டேப்",
+        "டெஃப்லான் திரெட் சீல் டேப்",
+        "Teflon thread seal tape"
       ],
       "brand": "Generic",
       "category": "Tape",
@@ -261,7 +284,8 @@
       "description": "PTFE thread seal tape 12mm x 13m (1/2\" x 520\") for leakproof threaded plumbing joints",
       "imagePath": "images/H08.jpg",
       "localNames": {
-        "ta": "Teflon Tape"
+        "ta": "டெஃப்லான் திரெட் சீல் டேப்",
+        "ta-Latn": "Teflon thread seal tape"
       },
       "name": "Teflon Tape",
       "packQuantity": null,
@@ -287,7 +311,9 @@
     {
       "aliases": [
         "PVC End Cap 1 inch",
-        "மூடி 1 இன்ச்"
+        "மூடி 1 இன்ச்",
+        "1 இன்ச் PVC மூடி",
+        "1 inch PVC moodi"
       ],
       "brand": "Generic",
       "category": "Fittings",
@@ -295,7 +321,8 @@
       "description": "1 inch Schedule 40 PVC slip end cap (ASTM D2466) to close pipe ends",
       "imagePath": "images/H09.jpg",
       "localNames": {
-        "ta": "மூடி 1 இன்ச்"
+        "ta": "1 இன்ச் PVC மூடி",
+        "ta-Latn": "1 inch PVC moodi"
       },
       "name": "PVC End Cap 1 inch",
       "packQuantity": null,
@@ -320,7 +347,9 @@
     {
       "aliases": [
         "Water Tank Connector 1 inch",
-        "டேங்க் கனெக்டர்"
+        "டேங்க் கனெக்டர்",
+        "1 இன்ச் டேங்க் கனெக்டர்",
+        "1 inch tank connector"
       ],
       "brand": "Generic",
       "category": "Tank Fittings",
@@ -328,7 +357,8 @@
       "description": "Heavy duty 1 inch solid brass water tank connector with locknut and washer for tank outlet",
       "imagePath": "images/H10.jpg",
       "localNames": {
-        "ta": "டேங்க் கனெக்டர்"
+        "ta": "1 இன்ச் டேங்க் கனெக்டர்",
+        "ta-Latn": "1 inch tank connector"
       },
       "name": "Water Tank Connector 1 inch",
       "packQuantity": null,
@@ -354,7 +384,9 @@
     {
       "aliases": [
         "Ball Valve 1 inch",
-        "பால் வால்வு 1 இன்ச்"
+        "பால் வால்வு 1 இன்ச்",
+        "1 இன்ச் பால் வால்வு",
+        "1 inch ball valve"
       ],
       "brand": "Generic",
       "category": "Tank Fittings",
@@ -362,7 +394,8 @@
       "description": "1 inch Schedule 80 PVC quarter-turn water control ball valve (150 PSI / 10 Bar)",
       "imagePath": "images/H11.jpg",
       "localNames": {
-        "ta": "பால் வால்வு 1 இன்ச்"
+        "ta": "1 இன்ச் பால் வால்வு",
+        "ta-Latn": "1 inch ball valve"
       },
       "name": "Ball Valve 1 inch",
       "packQuantity": null,
@@ -387,7 +420,9 @@
     {
       "aliases": [
         "Pipe Clamp 1 inch",
-        "கிளாம்ப் 1 இன்ச்"
+        "கிளாம்ப் 1 இன்ச்",
+        "1 இன்ச் பைப் கிளாம்ப்",
+        "1 inch pipe clamp"
       ],
       "brand": "Generic",
       "category": "Clamps",
@@ -395,7 +430,8 @@
       "description": "1 inch heavy duty galvanized steel U-bolt clamp with mounting base plate and nuts",
       "imagePath": "images/H12.jpg",
       "localNames": {
-        "ta": "கிளாம்ப் 1 இன்ச்"
+        "ta": "1 இன்ச் பைப் கிளாம்ப்",
+        "ta-Latn": "1 inch pipe clamp"
       },
       "name": "Pipe Clamp 1 inch",
       "packQuantity": null,
@@ -421,7 +457,9 @@
     {
       "aliases": [
         "Garden Hose Pipe 10m",
-        "தோட்ட பைப் 10m"
+        "தோட்ட பைப் 10m",
+        "தோட்ட ஹோஸ் பைப் 10m",
+        "Thotta hose pipe 10m"
       ],
       "brand": "Generic",
       "category": "Garden",
@@ -429,7 +467,8 @@
       "description": "10 meter flexible ribbed green garden watering hose with heavy duty brass connector",
       "imagePath": "images/H13.jpg",
       "localNames": {
-        "ta": "தோட்ட பைப் 10m"
+        "ta": "தோட்ட ஹோஸ் பைப் 10m",
+        "ta-Latn": "Thotta hose pipe 10m"
       },
       "name": "Garden Hose Pipe 10m",
       "packQuantity": null,
@@ -454,7 +493,9 @@
     {
       "aliases": [
         "Pro-Cut Cutting Wheel 4 inch",
-        "கட்டிங் வீல் 4 இன்ச்"
+        "கட்டிங் வீல் 4 இன்ச்",
+        "Pro-Cut · கட்டிங் வீல் 4 இன்ச்",
+        "Pro-Cut cutting wheel 4 inch"
       ],
       "brand": "Pro-Cut",
       "category": "Cutting Tools",
@@ -462,7 +503,8 @@
       "description": "4 inch (100x1.0x16mm) Pro-Cut abrasive metal cutting disc for steel and stainless metal",
       "imagePath": "images/H14.jpg",
       "localNames": {
-        "ta": "கட்டிங் வீல் 4 இன்ச்"
+        "ta": "Pro-Cut · கட்டிங் வீல் 4 இன்ச்",
+        "ta-Latn": "Pro-Cut cutting wheel 4 inch"
       },
       "name": "Pro-Cut Cutting Wheel 4 inch",
       "packQuantity": null,
@@ -488,7 +530,9 @@
     {
       "aliases": [
         "Premium Cutting Wheel 4 inch",
-        "கட்டிங் வீல் 4 இன்ச்"
+        "கட்டிங் வீல் 4 இன்ச்",
+        "Premium · கட்டிங் வீல் 4 இன்ச்",
+        "Premium cutting wheel 4 inch"
       ],
       "brand": "Premium Industrial",
       "category": "Cutting Tools",
@@ -496,7 +540,8 @@
       "description": "4 inch (100x1.0x16mm) premium industrial cutting wheel for metal and stainless steel (max 15,300 RPM)",
       "imagePath": "images/H15.jpg",
       "localNames": {
-        "ta": "கட்டிங் வீல் 4 இன்ச்"
+        "ta": "Premium · கட்டிங் வீல் 4 இன்ச்",
+        "ta-Latn": "Premium cutting wheel 4 inch"
       },
       "name": "Premium Cutting Wheel 4 inch",
       "packQuantity": null,
@@ -523,7 +568,9 @@
     {
       "aliases": [
         "12 inch Carbon Steel Hacksaw Blade",
-        "வாள் பிளேடு"
+        "வாள் பிளேடு",
+        "12 இன்ச் கார்பன் ஸ்டீல் ஹாக்சா பிளேடு",
+        "12 inch carbon steel hacksaw blade"
       ],
       "brand": "Generic",
       "category": "Cutting Tools",
@@ -531,7 +578,8 @@
       "description": "12 inch (300mm) 18 TPI heat treated high carbon steel hacksaw blade for metal and PVC",
       "imagePath": "images/H16.jpg",
       "localNames": {
-        "ta": "வாள் பிளேடு"
+        "ta": "12 இன்ச் கார்பன் ஸ்டீல் ஹாக்சா பிளேடு",
+        "ta-Latn": "12 inch carbon steel hacksaw blade"
       },
       "name": "12 inch Carbon Steel Hacksaw Blade",
       "packQuantity": null,
@@ -556,7 +604,9 @@
     {
       "aliases": [
         "GardenPro Hedge Shear Garden Scissor 10 inch",
-        "தோட்ட கத்தரி"
+        "தோட்ட கத்தரி",
+        "GardenPro · தோட்ட கத்தரி 10 இன்ச்",
+        "GardenPro thotta kaththari 10 inch"
       ],
       "brand": "GardenPro",
       "category": "Garden Tools",
@@ -564,7 +614,8 @@
       "description": "GardenPro HS-1000 heavy duty 10 inch hedge shear for garden trimming with serrated blade",
       "imagePath": "images/H17.jpg",
       "localNames": {
-        "ta": "தோட்ட கத்தரி"
+        "ta": "GardenPro · தோட்ட கத்தரி 10 இன்ச்",
+        "ta-Latn": "GardenPro thotta kaththari 10 inch"
       },
       "name": "GardenPro Hedge Shear Garden Scissor 10 inch",
       "packQuantity": null,
@@ -589,7 +640,9 @@
     {
       "aliases": [
         "Falcon Bypass Pruner",
-        "Falcon கத்தரி"
+        "Falcon கத்தரி",
+        "Falcon · பைபாஸ் ப்ரூனர்",
+        "Falcon bypass pruner"
       ],
       "brand": "Falcon",
       "category": "Garden Tools",
@@ -597,7 +650,8 @@
       "description": "Falcon 8 inch (200mm) bypass pruner model F-150/8 with locking mechanism for garden branches",
       "imagePath": "images/H18.jpg",
       "localNames": {
-        "ta": "Falcon கத்தரி"
+        "ta": "Falcon · பைபாஸ் ப்ரூனர்",
+        "ta-Latn": "Falcon bypass pruner"
       },
       "name": "Falcon Bypass Pruner",
       "packQuantity": null,
@@ -622,7 +676,9 @@
     {
       "aliases": [
         "Ratchet PVC Pipe Cutter 42mm",
-        "பைப் கட்டர்"
+        "பைப் கட்டர்",
+        "ராட்செட் PVC பைப் கட்டர் 42mm",
+        "Ratchet PVC pipe cutter 42mm"
       ],
       "brand": "Generic",
       "category": "Cutting Tools",
@@ -630,7 +686,8 @@
       "description": "Quick ratchet PVC pipe cutter (0-42mm / 1-1.6 inch) with SK5 blade and safety lock",
       "imagePath": "images/H19.jpg",
       "localNames": {
-        "ta": "பைப் கட்டர்"
+        "ta": "ராட்செட் PVC பைப் கட்டர் 42mm",
+        "ta-Latn": "Ratchet PVC pipe cutter 42mm"
       },
       "name": "Ratchet PVC Pipe Cutter 42mm",
       "packQuantity": null,
@@ -655,7 +712,8 @@
     {
       "aliases": [
         "Measuring Tape 5m",
-        "அளவு நாடா 5m"
+        "அளவு நாடா 5m",
+        "Alavu naada 5m"
       ],
       "brand": "Generic",
       "category": "Tools",
@@ -663,7 +721,8 @@
       "description": "5 meter / 19mm steel measuring tape with locking button and belt clip",
       "imagePath": "images/H20.jpg",
       "localNames": {
-        "ta": "அளவு நாடா 5m"
+        "ta": "அளவு நாடா 5m",
+        "ta-Latn": "Alavu naada 5m"
       },
       "name": "Measuring Tape 5m",
       "packQuantity": null,
@@ -696,7 +755,8 @@
       "description": "Pidilite M-Seal 90g 2-part epoxy compound putty for sealing leaks, joints and builds",
       "imagePath": "images/H21.jpg",
       "localNames": {
-        "ta": "M-Seal"
+        "ta": "M-Seal 90g",
+        "ta-Latn": "M-Seal 90g"
       },
       "name": "M-Seal 90g",
       "packQuantity": null,
@@ -723,7 +783,9 @@
     {
       "aliases": [
         "Wall Putty Blade Scraper",
-        "புட்டி கத்தி"
+        "புட்டி கத்தி",
+        "சுவர் புட்டி சுரண்டும் கத்தி",
+        "Wall putty surandum kaththi"
       ],
       "brand": "Generic",
       "category": "Wall Decor",
@@ -731,7 +793,8 @@
       "description": "Stainless steel 4 inch wall putty blade scraper with knurled non-slip handle",
       "imagePath": "images/H22.jpg",
       "localNames": {
-        "ta": "புட்டி கத்தி"
+        "ta": "சுவர் புட்டி சுரண்டும் கத்தி",
+        "ta-Latn": "Wall putty surandum kaththi"
       },
       "name": "Wall Putty Blade Scraper",
       "packQuantity": null,
@@ -757,7 +820,9 @@
     {
       "aliases": [
         "Wall Stencil Butterfly Design",
-        "பட்டர்பிளை ஸ்டென்சில்"
+        "பட்டர்பிளை ஸ்டென்சில்",
+        "பட்டாம்பூச்சி சுவர் ஸ்டென்சில்",
+        "Pattampoochi wall stencil"
       ],
       "brand": "Rainbow",
       "category": "Wall Decor",
@@ -765,7 +830,8 @@
       "description": "Reusable washable plastic butterfly design wall stencil 12x12 inch (30.5x30.5cm)",
       "imagePath": "images/H23.jpg",
       "localNames": {
-        "ta": "பட்டர்பிளை ஸ்டென்சில்"
+        "ta": "பட்டாம்பூச்சி சுவர் ஸ்டென்சில்",
+        "ta-Latn": "Pattampoochi wall stencil"
       },
       "name": "Wall Stencil Butterfly Design",
       "packQuantity": null,
@@ -790,7 +856,9 @@
     {
       "aliases": [
         "Wall Stencil Ganesha Design",
-        "கணேஷ் ஸ்டென்சில்"
+        "கணேஷ் ஸ்டென்சில்",
+        "கணேஷ் சுவர் ஸ்டென்சில்",
+        "Ganesha wall stencil"
       ],
       "brand": "Rainbow",
       "category": "Wall Decor",
@@ -798,7 +866,8 @@
       "description": "Lord Ganesha 12x12 inch reusable washable Mylar wall stencil for pooja room wall painting and craft",
       "imagePath": "images/H24.jpg",
       "localNames": {
-        "ta": "கணேஷ் ஸ்டென்சில்"
+        "ta": "கணேஷ் சுவர் ஸ்டென்சில்",
+        "ta-Latn": "Ganesha wall stencil"
       },
       "name": "Wall Stencil Ganesha Design",
       "packQuantity": null,
@@ -823,7 +892,9 @@
     {
       "aliases": [
         "Wall Stencil Damask Design",
-        "டிசைன் ஸ்டென்சில்"
+        "டிசைன் ஸ்டென்சில்",
+        "Damask வடிவ சுவர் ஸ்டென்சில்",
+        "Damask design wall stencil"
       ],
       "brand": "Rainbow",
       "category": "Wall Decor",
@@ -831,7 +902,8 @@
       "description": "Reusable classic damask pattern wall stencil 16x16 inch (0.25mm clear Mylar) for home decor",
       "imagePath": "images/H25.jpg",
       "localNames": {
-        "ta": "டிசைன் ஸ்டென்சில்"
+        "ta": "Damask வடிவ சுவர் ஸ்டென்சில்",
+        "ta-Latn": "Damask design wall stencil"
       },
       "name": "Wall Stencil Damask Design",
       "packQuantity": null,
@@ -856,7 +928,9 @@
     {
       "aliases": [
         "L-Angle Clamp 1 inch",
-        "L கிளாம்ப்"
+        "L கிளாம்ப்",
+        "1 இன்ச் எல்-ஆங்கிள் கிளாம்ப்",
+        "1 inch L-angle clamp"
       ],
       "brand": "Generic",
       "category": "Hardware",
@@ -864,7 +938,8 @@
       "description": "Heavy duty galvanized steel L-angle clamp bracket 1 inch with knurled adjustment knob for shelf support",
       "imagePath": "images/H26.jpg",
       "localNames": {
-        "ta": "L கிளாம்ப்"
+        "ta": "1 இன்ச் எல்-ஆங்கிள் கிளாம்ப்",
+        "ta-Latn": "1 inch L-angle clamp"
       },
       "name": "L-Angle Clamp 1 inch",
       "packQuantity": null,
@@ -890,7 +965,9 @@
     {
       "aliases": [
         "Stainless Steel Screws 1 inch (100 pcs)",
-        "ஸ்க்ரூ பாக்ஸ்"
+        "ஸ்க்ரூ பாக்ஸ்",
+        "1 இன்ச் ஸ்டெயின்லெஸ் ஸ்டீல் ஸ்க்ரூ பெட்டி (100 pcs)",
+        "1 inch stainless steel screw petti (100 pcs)"
       ],
       "brand": "Build-Rite",
       "category": "Hardware",
@@ -898,7 +975,8 @@
       "description": "Build-Rite 304 stainless steel #8 pan head Phillips screws 1 inch (25mm) box of 100",
       "imagePath": "images/H27.jpg",
       "localNames": {
-        "ta": "ஸ்க்ரூ பாக்ஸ்"
+        "ta": "1 இன்ச் ஸ்டெயின்லெஸ் ஸ்டீல் ஸ்க்ரூ பெட்டி (100 pcs)",
+        "ta-Latn": "1 inch stainless steel screw petti (100 pcs)"
       },
       "name": "Stainless Steel Screws 1 inch (100 pcs)",
       "packQuantity": 100,
@@ -925,7 +1003,9 @@
     {
       "aliases": [
         "Water Level Tube 10m",
-        "வாட்டர் லெவல்"
+        "வாட்டர் லெவல்",
+        "வாட்டர் லெவல் குழாய் 10m",
+        "Water level tube 10m"
       ],
       "brand": "Generic",
       "category": "Tools",
@@ -933,7 +1013,8 @@
       "description": "Clear flexible transparent PVC water level tube 10m for masonry and construction leveling",
       "imagePath": "images/H28.jpg",
       "localNames": {
-        "ta": "வாட்டர் லெவல்"
+        "ta": "வாட்டர் லெவல் குழாய் 10m",
+        "ta-Latn": "Water level tube 10m"
       },
       "name": "Water Level Tube 10m",
       "packQuantity": null,
@@ -958,7 +1039,9 @@
     {
       "aliases": [
         "Safety Hand Gloves",
-        "கையுறை"
+        "கையுறை",
+        "பாதுகாப்பு கையுறை",
+        "Paathukaappu kaiyurai"
       ],
       "brand": "Generic",
       "category": "Safety",
@@ -966,7 +1049,8 @@
       "description": "Heavy duty cotton canvas safety work gloves (Large) for industrial and construction grip",
       "imagePath": "images/H29.jpg",
       "localNames": {
-        "ta": "கையுறை"
+        "ta": "பாதுகாப்பு கையுறை",
+        "ta-Latn": "Paathukaappu kaiyurai"
       },
       "name": "Safety Hand Gloves",
       "packQuantity": null,
@@ -996,7 +1080,9 @@
         "புஷ் 1x0.75",
         "PVC reducer bush",
         "1 inch to 3/4 inch reducer",
-        "1 x 0.75 bush"
+        "1 x 0.75 bush",
+        "PVC புஷ் ரெடியூசர் 1 x 0.75 இன்ச்",
+        "PVC bush reducer 1 x 0.75 inch"
       ],
       "brand": "Generic",
       "category": "Fittings",
@@ -1004,7 +1090,8 @@
       "description": "1 inch to 0.75 inch Schedule 40 PVC reducer bush adapter (NSF-pw)",
       "imagePath": "images/H30.jpg",
       "localNames": {
-        "ta": "புஷ் 1x0.75"
+        "ta": "PVC புஷ் ரெடியூசர் 1 x 0.75 இன்ச்",
+        "ta-Latn": "PVC bush reducer 1 x 0.75 inch"
       },
       "name": "PVC Bush 1x0.75 inch Reducer",
       "packQuantity": null,

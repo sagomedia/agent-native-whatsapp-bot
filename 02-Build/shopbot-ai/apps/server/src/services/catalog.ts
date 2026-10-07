@@ -21,13 +21,13 @@ export function oneEdit(a:string,b:string) {
 }
 const values=(p:Product)=>[p.name,p.unit,p.category??'',...p.aliases];
 export function exactProductMatch(query:string,p:Product){return normalize(query)===normalize(p.sku)||matches(query,values(p));}
-export const productColumns='sku,name,unit,price_paise,stock,version,aliases,quantity_step,category,image_path,family_id,brand,specifications,keywords';
+export const productColumns='sku,name,local_names,unit,price_paise,stock,version,aliases,quantity_step,category,image_path,family_id,brand,specifications,keywords';
 export function productFromRow(p:any):Product {
- return {sku:p.sku,name:p.name,unit:p.unit,pricePaise:p.price_paise,stock:p.stock,version:p.version,aliases:p.aliases,quantityStep:Number(p.quantity_step),...(p.category?{category:p.category}:{}),...(p.image_path?{imageUrl:p.image_path}:{}),...(p.family_id?{familyId:p.family_id}:{}),...(p.brand?{brand:p.brand}:{}),...(p.specifications&&Object.keys(p.specifications).length?{specifications:p.specifications}:{}),...(p.keywords?.length?{keywords:p.keywords}:{})};
+ return {sku:p.sku,name:p.name,localNames:p.local_names,unit:p.unit,pricePaise:p.price_paise,stock:p.stock,version:p.version,aliases:p.aliases,quantityStep:Number(p.quantity_step),...(p.category?{category:p.category}:{}),...(p.image_path?{imageUrl:p.image_path}:{}),...(p.family_id?{familyId:p.family_id}:{}),...(p.brand?{brand:p.brand}:{}),...(p.specifications&&Object.keys(p.specifications).length?{specifications:p.specifications}:{}),...(p.keywords?.length?{keywords:p.keywords}:{})};
 }
 export async function catalogEnabled(client:PoolClient,ctx:ActorContext) {return !!(await client.query('SELECT 1 FROM catalog_profiles WHERE store_id=$1',[ctx.storeId])).rowCount;}
 export async function catalogContext(client:PoolClient,ctx:ActorContext) {
- return (await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND active=true ORDER BY sku LIMIT 24`,[ctx.storeId])).rows.map(productFromRow);
+ return (await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND active=true ORDER BY sku LIMIT (SELECT CASE WHEN count(*)<=40 THEN 40 ELSE 24 END FROM products WHERE store_id=$1 AND active=true)`,[ctx.storeId])).rows.map(productFromRow);
 }
 export async function getProducts(client: PoolClient, context: ActorContext): Promise<Product[]> {
   const result=await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND active=true ORDER BY sku`,[context.storeId]);
@@ -61,7 +61,7 @@ export async function searchProducts(client: PoolClient, context: ActorContext, 
 // Packaging and measurements are compared without inferring conversions.
 export function normalizeUnit(value:string) {
   const v=normalize(value);
-  const units:Record<string,string>={pieces:'piece',pcs:'piece',pc:'piece',nos:'piece',each:'piece',units:'piece',unit:'piece',boxes:'box',rolls:'roll',feet:'foot',ft:'foot',meters:'metre',meter:'metre',metres:'metre',m:'metre',kilograms:'kg',kilogram:'kg',kilos:'kg',litres:'litre',liter:'litre',liters:'litre',bottles:'bottle',packs:'pack',pairs:'pair'};
+  const units:Record<string,string>={'எண்ணம்':'piece','பீஸ்':'piece','பெட்டி':'box','பெட்டிகள்':'box','பாக்ஸ்':'box','பாட்டில்':'bottle','பாட்டில்கள்':'bottle','ரோல்':'roll','ரோல்கள்':'roll','அடி':'foot','மீட்டர்':'metre','கிலோ':'kg','ஜோடி':'pair','பேக்':'pack','லிட்டர்':'litre',ennam:'piece',petti:'box',pettigal:'box',adi:'foot',jodi:'pair',kilo:'kg',pieces:'piece',pcs:'piece',pc:'piece',nos:'piece',each:'piece',units:'piece',unit:'piece',boxes:'box',rolls:'roll',feet:'foot',ft:'foot',meters:'metre',meter:'metre',metres:'metre',m:'metre',kilograms:'kg',kilogram:'kg',kilos:'kg',litres:'litre',liter:'litre',liters:'litre',bottles:'bottle',packs:'pack',pairs:'pair'};
   return units[v]??v;
 }
 export function sameUnit(a:string,b:string){return normalizeUnit(a)===normalizeUnit(b);}

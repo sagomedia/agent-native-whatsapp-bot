@@ -4,8 +4,9 @@ import type {Interpreter,ProviderResult} from '../adapters/interpreter.js';
 import {ToolError,withConversation,type ActorContext} from './context.js';
 
 export type RateCard={model:string;currency:'USD';verifiedOn:string;validUntil:string;source:string;inputMicrousdPerMillion:number;outputMicrousdPerMillion:number;inputTokenLimit:number;maxOutputTokens:number};
-// Text-only, standard tier. Cached input is conservatively priced as uncached.
+// Standard text/image/audio inputs share this verified price. No audio output.
 export const geminiTextRate:Readonly<RateCard>=Object.freeze({model:'gemini-3.5-flash-lite',currency:'USD',verifiedOn:'2026-10-02',validUntil:'2026-11-01',source:'https://ai.google.dev/gemini-api/docs/pricing',inputMicrousdPerMillion:300000,outputMicrousdPerMillion:2500000,inputTokenLimit:1048576,maxOutputTokens:4096});
+export const freeQuotaLimits=Object.freeze({requestsPerMinute:10,inputTokensPerMinute:200000,requestsPerDay:100,minIntervalSeconds:6,reservedInputTokens:64000});
 const integer=(n:unknown):n is number=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0;
 export function validateRateCard(rate:RateCard,now=Date.now()) {
   const verified=Date.parse(rate.verifiedOn+'T00:00:00Z'),expires=Date.parse(rate.validUntil+'T00:00:00Z');
@@ -37,23 +38,28 @@ export async function initializeBudget(pool:Pool,ctx:ActorContext,limitMicrousd:
     if(Number(b.rows[0].limit_microusd)!==limitMicrousd) throw new ToolError('Stored inference budget differs. Budget increases require an explicit administrative change; this run cannot reset it.');
   });
 }
-export async function reserveAttempt(client:PoolClient,ctx:ActorContext,messageId:string,sourceVersion:number,provider:Interpreter) {
+export async function reserveAttempt(client:PoolClient,ctx:ActorContext,messageId:string,sourceVersion:number,provider:Interpreter,stage:'identify'|'recommend'='identify') {
   const previous=await client.query('SELECT * FROM provider_attempts WHERE message_id=$1 ORDER BY attempt DESC',[messageId]);
-  const cached=previous.rows.find(p=>p.state==='succeeded'&&p.source_version===sourceVersion&&p.provider===provider.name&&p.provider_mode===provider.mode);
+  const cached=previous.rows.find(p=>p.stage===stage&&p.state==='succeeded'&&p.source_version===sourceVersion&&p.provider===provider.name&&p.provider_mode===provider.mode);
   if(cached) return {cached:cached.response,id:null,exhausted:false};
-  await client.query("UPDATE provider_attempts SET state='unknown',billing_state=CASE WHEN billing_state='held' THEN 'unknown' ELSE billing_state END WHERE message_id=$1 AND state='started'",[messageId]);
-  if((previous.rowCount??0)>=(provider.freeQuota?1:2)) return {cached:null,id:null,exhausted:true};
+  await client.query("UPDATE provider_attempts SET state='unknown',billing_state=CASE WHEN billing_state='held' THEN 'unknown' ELSE billing_state END WHERE message_id=$1 AND stage=$2 AND state='started'",[messageId,stage]);
+  if((previous.rowCount??0)>=2||provider.freeQuota&&previous.rows.some(p=>p.stage===stage)) return {cached:null,id:null,exhausted:true};
   let reserved=0,rate:RateCard|null=null;
   if(provider.freeQuota) {
     const {scope,model}=provider.freeQuota;
     await client.query('INSERT INTO free_inference_quota(scope,model) VALUES($1,$2) ON CONFLICT DO NOTHING',[scope,model]);
     const q=(await client.query('SELECT cooldown_until>now() AS cooling FROM free_inference_quota WHERE scope=$1 AND model=$2 FOR UPDATE',[scope,model])).rows[0];
-    // Reserve a full 64K input allowance, retain failed/unknown requests, and serialize all stores on this project/model.
+    // Reserve 64K for pending/unknown usage; settled verified usage releases
+    // that allowance. Serialize all stores on this project/model.
     const counts=(await client.query(`SELECT count(*) FILTER(WHERE created_at>now()-interval '1 minute') AS minute,
-      count(*) FILTER(WHERE created_at>now()-interval '15 seconds') AS recent,
+      count(*) FILTER(WHERE created_at>now()-($3*interval '1 second')) AS recent,
+      COALESCE(sum(CASE WHEN settled_at IS NOT NULL AND response_model=$4
+        AND jsonb_typeof(usage->'promptTokenCount')='number' AND usage->>'promptTokenCount' ~ '^[0-9]{1,5}$'
+        THEN (usage->>'promptTokenCount')::integer ELSE $5 END)
+        FILTER(WHERE created_at>now()-interval '1 minute'),0) AS input_tokens,
       count(*) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'America/Los_Angeles') AT TIME ZONE 'America/Los_Angeles') AS daily
-      FROM provider_attempts WHERE quota_scope=$1 AND provider=$2`,[scope,provider.name])).rows[0];
-    if(q.cooling||Number(counts.minute)>=3||Number(counts.recent)>0||Number(counts.daily)>=100) return {cached:null,id:null,exhausted:false,denied:true};
+      FROM provider_attempts WHERE quota_scope=$1 AND provider=$2`,[scope,provider.name,freeQuotaLimits.minIntervalSeconds,model,freeQuotaLimits.reservedInputTokens])).rows[0];
+    if(q.cooling||Number(counts.minute)>=freeQuotaLimits.requestsPerMinute||Number(counts.recent)>0||Number(counts.daily)>=freeQuotaLimits.requestsPerDay||Number(counts.input_tokens)+freeQuotaLimits.reservedInputTokens>freeQuotaLimits.inputTokensPerMinute) return {cached:null,id:null,exhausted:false,denied:true,defer:stage==='recommend'&&!q.cooling&&Number(counts.daily)<freeQuotaLimits.requestsPerDay&&Number(counts.minute)<freeQuotaLimits.requestsPerMinute&&Number(counts.input_tokens)+freeQuotaLimits.reservedInputTokens<=freeQuotaLimits.inputTokensPerMinute};
   } else if(provider.mode==='live') {
     rate=provider.billing!;validateRateCard(rate);reserved=worstCaseReservation(rate);
     const b=(await client.query('SELECT * FROM inference_budgets WHERE store_id=$1 FOR UPDATE',[ctx.storeId])).rows[0];
@@ -62,6 +68,7 @@ export async function reserveAttempt(client:PoolClient,ctx:ActorContext,messageI
   }
   const id=randomUUID();
   await client.query("INSERT INTO provider_attempts(id,store_id,conversation_id,actor,message_id,attempt,provider,source_version,state,provider_cost_paise,provider_mode,billing_state,rate_snapshot,reserved_microusd,quota_scope) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'started',$9,$10,$11,$12::jsonb,$13,$14)",[id,ctx.storeId,ctx.conversationId,ctx.actor,messageId,(previous.rowCount??0)+1,provider.name,sourceVersion,provider.mode==='mock'?0:null,provider.mode,provider.freeQuota?'free_declared':rate?'held':'not_billable',JSON.stringify(rate),reserved,provider.freeQuota?.scope??null]);
+  await client.query('UPDATE provider_attempts SET stage=$1 WHERE id=$2',[stage,id]);
   return {cached:null,id,exhausted:false};
 }
 export async function settleAttempt(pool:Pool,ctx:ActorContext,id:string,result?:ProviderResult) {

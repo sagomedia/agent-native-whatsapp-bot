@@ -13,8 +13,14 @@
         "leak",
         "hose",
         "connector",
-        "tap"
-      ]
+        "tap",
+        "குழாய் வேலைப் பொருட்கள்",
+        "Kuzhaai velai porutkal"
+      ],
+      "localNames": {
+        "ta": "குழாய் வேலைப் பொருட்கள்",
+        "ta-Latn": "Kuzhaai velai porutkal"
+      }
     },
     {
       "id": "tools",
@@ -29,8 +35,14 @@
         "wrench",
         "spanner",
         "measure",
-        "cut"
-      ]
+        "cut",
+        "கருவிகள் மற்றும் வெட்டும் பொருட்கள்",
+        "Karuvi matrum vettum porutkal"
+      ],
+      "localNames": {
+        "ta": "கருவிகள் மற்றும் வெட்டும் பொருட்கள்",
+        "ta-Latn": "Karuvi matrum vettum porutkal"
+      }
     },
     {
       "id": "surfaces",
@@ -44,8 +56,14 @@
         "putty",
         "decor",
         "finish",
-        "scrape"
-      ]
+        "scrape",
+        "பெயிண்ட் மற்றும் சுவர் வேலை",
+        "Paint matrum suvar velai"
+      ],
+      "localNames": {
+        "ta": "பெயிண்ட் மற்றும் சுவர் வேலை",
+        "ta-Latn": "Paint matrum suvar velai"
+      }
     },
     {
       "id": "garden",
@@ -57,8 +75,14 @@
         "plant",
         "hedge",
         "prune",
-        "watering"
-      ]
+        "watering",
+        "தோட்டப் பொருட்கள்",
+        "Thotta porutkal"
+      ],
+      "localNames": {
+        "ta": "தோட்டப் பொருட்கள்",
+        "ta-Latn": "Thotta porutkal"
+      }
     },
     {
       "id": "hardware",
@@ -69,8 +93,14 @@
         "screw",
         "fastener",
         "clamp",
-        "bracket"
-      ]
+        "bracket",
+        "ஸ்க்ரூ மற்றும் ஹார்டுவேர்",
+        "Screw matrum hardware"
+      ],
+      "localNames": {
+        "ta": "ஸ்க்ரூ மற்றும் ஹார்டுவேர்",
+        "ta-Latn": "Screw matrum hardware"
+      }
     },
     {
       "id": "safety",
@@ -80,8 +110,14 @@
       "aliases": [
         "glove",
         "safety",
-        "protection"
-      ]
+        "protection",
+        "பாதுகாப்புப் பொருட்கள்",
+        "Paathukaappu porutkal"
+      ],
+      "localNames": {
+        "ta": "பாதுகாப்புப் பொருட்கள்",
+        "ta-Latn": "Paathukaappu porutkal"
+      }
     },
     {
       "id": "pvc-pipes",
@@ -90,8 +126,14 @@
       "parentId": "plumbing",
       "aliases": [
         "pvc pipe",
-        "water pipe"
-      ]
+        "water pipe",
+        "PVC பைப்புகள்",
+        "PVC pipegal"
+      ],
+      "localNames": {
+        "ta": "PVC பைப்புகள்",
+        "ta-Latn": "PVC pipegal"
+      }
     },
     {
       "id": "pipe-fittings",
@@ -103,8 +145,14 @@
         "tee",
         "end cap",
         "reducer",
-        "bush"
-      ]
+        "bush",
+        "பைப் இணைப்புகள்",
+        "Pipe inaippugal"
+      ],
+      "localNames": {
+        "ta": "பைப் இணைப்புகள்",
+        "ta-Latn": "Pipe inaippugal"
+      }
     },
     {
       "id": "tank-valves",
@@ -114,16 +162,29 @@
       "aliases": [
         "tank connector",
         "ball valve",
-        "tap"
-      ]
+        "tap",
+        "டேங்க் கனெக்டர் மற்றும் வால்வுகள்",
+        "Tank connector matrum valvegal"
+      ],
+      "localNames": {
+        "ta": "டேங்க் கனெக்டர் மற்றும் வால்வுகள்",
+        "ta-Latn": "Tank connector matrum valvegal"
+      }
     },
     {
       "id": "sealing",
       "label": "Sealing materials (legacy)",
       "kind": "family",
       "parentId": "plumbing",
-      "aliases": [],
-      "deprecated": true
+      "aliases": [
+        "சீல் பொருட்கள்",
+        "Seal porutkal"
+      ],
+      "deprecated": true,
+      "localNames": {
+        "ta": "சீல் பொருட்கள்",
+        "ta-Latn": "Seal porutkal"
+      }
     },
     {
       "id": "hose",
@@ -132,8 +193,14 @@
       "parentId": "garden",
       "aliases": [
         "garden hose",
-        "watering hose"
-      ]
+        "watering hose",
+        "தோட்ட ஹோஸ் பைப்புகள்",
+        "Thotta hose pipegal"
+      ],
+      "localNames": {
+        "ta": "தோட்ட ஹோஸ் பைப்புகள்",
+        "ta-Latn": "Thotta hose pipegal"
+      }
     },
     {
       "id": "cutting-discs",
@@ -144,8 +211,14 @@
         "cutting wheel",
         "cutting disc",
         "grinder blade",
-        "metal cutting"
-      ]
+        "metal cutting",
+        "கட்டிங் வீல்கள் மற்றும் டிஸ்க்குகள்",
+        "Cutting wheel matrum discgal"
+      ],
+      "localNames": {
+        "ta": "கட்டிங் வீல்கள் மற்றும் டிஸ்க்குகள்",
+        "ta-Latn": "Cutting wheel matrum discgal"
+      }
     },
     {
       "id": "saw-blades",
@@ -156,8 +229,14 @@
         "hacksaw",
         "saw blade",
         "metal blade",
-        "blade"
-      ]
+        "blade",
+        "ஹாக்சா பிளேடுகள்",
+        "Hacksaw bladegal"
+      ],
+      "localNames": {
+        "ta": "ஹாக்சா பிளேடுகள்",
+        "ta-Latn": "Hacksaw bladegal"
+      }
     },
     {
       "id": "pipe-cutters",
@@ -167,8 +246,14 @@
       "aliases": [
         "pvc cutter",
         "pipe cutter",
-        "plastic cutting"
-      ]
+        "plastic cutting",
+        "பைப் கட்டர்கள்",
+        "Pipe cuttergal"
+      ],
+      "localNames": {
+        "ta": "பைப் கட்டர்கள்",
+        "ta-Latn": "Pipe cuttergal"
+      }
     },
     {
       "id": "measuring",
@@ -178,8 +263,14 @@
       "aliases": [
         "measuring tape",
         "water level",
-        "measure"
-      ]
+        "measure",
+        "அளவிடும் கருவிகள்",
+        "Alavidum karuvigal"
+      ],
+      "localNames": {
+        "ta": "அளவிடும் கருவிகள்",
+        "ta-Latn": "Alavidum karuvigal"
+      }
     },
     {
       "id": "hand-tools",
@@ -190,8 +281,14 @@
         "screwdriver",
         "wrench",
         "spanner",
-        "hammer"
-      ]
+        "hammer",
+        "கைக் கருவிகள்",
+        "Kai karuvigal"
+      ],
+      "localNames": {
+        "ta": "கைக் கருவிகள்",
+        "ta-Latn": "Kai karuvigal"
+      }
     },
     {
       "id": "scrapers",
@@ -203,8 +300,14 @@
         "scraper",
         "wall blade",
         "paint scraper",
-        "blade"
-      ]
+        "blade",
+        "புட்டி கத்திகள்",
+        "Putty kaththigal"
+      ],
+      "localNames": {
+        "ta": "புட்டி கத்திகள்",
+        "ta-Latn": "Putty kaththigal"
+      }
     },
     {
       "id": "wall-stencils",
@@ -214,8 +317,14 @@
       "aliases": [
         "wall stencil",
         "painting pattern",
-        "wall decor"
-      ]
+        "wall decor",
+        "சுவர் ஸ்டென்சில்கள்",
+        "Suvar stencilgal"
+      ],
+      "localNames": {
+        "ta": "சுவர் ஸ்டென்சில்கள்",
+        "ta-Latn": "Suvar stencilgal"
+      }
     },
     {
       "id": "paint",
@@ -226,8 +335,14 @@
         "paint",
         "wall paint",
         "metal paint",
-        "wood paint"
-      ]
+        "wood paint",
+        "பெயிண்டுகள்",
+        "Paintgal"
+      ],
+      "localNames": {
+        "ta": "பெயிண்டுகள்",
+        "ta-Latn": "Paintgal"
+      }
     },
     {
       "id": "garden-cutters",
@@ -238,8 +353,14 @@
         "pruner",
         "hedge shear",
         "garden scissors",
-        "plant cutting"
-      ]
+        "plant cutting",
+        "தோட்ட கத்தரிகள்",
+        "Thotta kaththarigal"
+      ],
+      "localNames": {
+        "ta": "தோட்ட கத்தரிகள்",
+        "ta-Latn": "Thotta kaththarigal"
+      }
     },
     {
       "id": "clamps",
@@ -250,8 +371,14 @@
         "pipe clamp",
         "l angle",
         "bracket",
-        "clamp"
-      ]
+        "clamp",
+        "கிளாம்ப் மற்றும் பிராக்கெட்டுகள்",
+        "Clamp matrum bracketgal"
+      ],
+      "localNames": {
+        "ta": "கிளாம்ப் மற்றும் பிராக்கெட்டுகள்",
+        "ta-Latn": "Clamp matrum bracketgal"
+      }
     },
     {
       "id": "screw-boxes",
@@ -261,8 +388,14 @@
       "aliases": [
         "screw box",
         "screws",
-        "fasteners"
-      ]
+        "fasteners",
+        "ஸ்க்ரூ மற்றும் ஸ்க்ரூ பெட்டிகள்",
+        "Screw matrum screw pettigal"
+      ],
+      "localNames": {
+        "ta": "ஸ்க்ரூ மற்றும் ஸ்க்ரூ பெட்டிகள்",
+        "ta-Latn": "Screw matrum screw pettigal"
+      }
     },
     {
       "id": "gloves",
@@ -271,8 +404,14 @@
       "parentId": "safety",
       "aliases": [
         "glove",
-        "hand protection"
-      ]
+        "hand protection",
+        "பாதுகாப்பு கையுறைகள்",
+        "Paathukaappu kaiyuraigal"
+      ],
+      "localNames": {
+        "ta": "பாதுகாப்பு கையுறைகள்",
+        "ta-Latn": "Paathukaappu kaiyuraigal"
+      }
     },
     {
       "id": "solvent-cement",
@@ -284,8 +423,14 @@
         "solvent solution",
         "solvent cement",
         "PVC cement",
-        "pipe glue"
-      ]
+        "pipe glue",
+        "PVC பைப் பசை",
+        "PVC pipe pasai"
+      ],
+      "localNames": {
+        "ta": "PVC பைப் பசை",
+        "ta-Latn": "PVC pipe pasai"
+      }
     },
     {
       "id": "thread-tape",
@@ -295,8 +440,14 @@
       "aliases": [
         "PTFE tape",
         "teflon tape",
-        "thread tape"
-      ]
+        "thread tape",
+        "திரெட் சீல் டேப்",
+        "Thread seal tape"
+      ],
+      "localNames": {
+        "ta": "திரெட் சீல் டேப்",
+        "ta-Latn": "Thread seal tape"
+      }
     },
     {
       "id": "repair-epoxy",
@@ -307,8 +458,14 @@
         "epoxy",
         "m seal",
         "m-seal",
-        "repair putty"
-      ]
+        "repair putty",
+        "பழுது பார்க்கும் எபாக்சி",
+        "Pazhuthu paarkkum epoxy"
+      ],
+      "localNames": {
+        "ta": "பழுது பார்க்கும் எபாக்சி",
+        "ta-Latn": "Pazhuthu paarkkum epoxy"
+      }
     }
   ],
   "placements": [

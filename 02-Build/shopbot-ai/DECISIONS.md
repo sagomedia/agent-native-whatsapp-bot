@@ -44,3 +44,14 @@ Normalized voice notes use bounded PostgreSQL bytea storage in this local phase,
 Recorded voice uses one free-only transcription/planning request. The paid text rate profile does not authorize audio. Photo acceptance and final submission remain separate deterministic consent actions.
 
 Provider compatibility: the live endpoint rejected the expanded generation grammar. Use JSON mode with the compact contract in the instruction and strict backend validation, rather than trusting unvalidated model text. Keep one call/attempt, no automatic repair, and complete rollback on malformed plans. Narrowing values are ordered to match the photos shown, while their counts remain scoped SQL facts.
+
+## 4 October — Tamil-first demo and existing VPS sequence
+
+Persist a reply locale outside the business version. New native sessions initialize Tamil; only an explicit customer command/selection changes it. Tanglish is a first-class presentation option; canonical enums, SKU/fact identity and arithmetic remain unchanged. Backend templates localize business replies without paid translation calls; optional short model questions must follow the saved locale. Reviewed source names populate empty SQL translation fields once and preserve merchant edits. Existing English mock fixtures remain compatible.
+
+The user has an existing Google Cloud VPS. Prefer verifying/reusing that target after GitHub checkpointing, rather than creating a second hosting service. Current localhost-only native-test permissions remain in force; a private server demo can use an authorized tunnel, while public demo/WhatsApp access needs its own verified identity/HTTPS/delivery implementation. No cloud provisioning, external delivery or paid inference is part of this checkpoint.
+
+
+## 4 October 2026 — intent, interface language and catalog evidence
+
+The user corrected over-localization of the simulator and exact-word dependence. Keep English test controls separate from persisted customer reply language. Use one metered AI decision to compare observed catalog facts, extract job-specific synonyms and propose relevant alternative families/SKU priorities; then recheck SQL scope and hard constraints. Show up to six meaningful photos without padding. Preserve explicit purchase amounts and units while browsing, but wait for a current photo choice and separate final submission consent. Retain the free-tier guard; no second automatic model call or compatibility claim based on unverified metadata.

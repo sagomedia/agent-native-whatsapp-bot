@@ -3,7 +3,7 @@ import pg from 'pg';
 import {readConfig} from '../apps/server/src/config.js';
 import {setupDatabase} from '../apps/server/src/db/migrate.js';
 import {readNativeSettings,GoogleInterpreter} from '../apps/server/src/adapters/google-interpreter.js';
-import {geminiTextRate,initializeBudget,worstCaseReservation} from '../apps/server/src/services/inference-budget.js';
+import {geminiTextRate,freeQuotaLimits,initializeBudget,worstCaseReservation} from '../apps/server/src/services/inference-budget.js';
 import {ConversationRuntime} from '../apps/server/src/runtime/conversation.js';
 import {SimulatorService} from '../apps/server/src/services/simulator.js';
 import {hardwareFixtures} from '../profiles/hardware.js';
@@ -14,7 +14,7 @@ async function main() {
   try {settings=readNativeSettings();}
   catch(error) {console.error(error instanceof Error?error.message:'Invalid native configuration.');process.exitCode=1;return;}
   if(process.argv.includes('--preflight')) {
-    console.log(JSON.stringify({configured:true,model:settings.model,tier:settings.freeQuota?'free':'paid',quota:settings.freeQuota?{requestsPerMinute:3,inputTokensPerMinute:192000,requestsPerDay:100,minIntervalSeconds:15}:null,currency:'USD',budgetMicrousd:settings.budgetMicrousd,reservationMicrousd:settings.freeQuota?0:worstCaseReservation(geminiTextRate),rateVerifiedOn:geminiTextRate.verifiedOn,networkCalls:0}));return;
+    console.log(JSON.stringify({configured:true,model:settings.model,tier:settings.freeQuota?'free':'paid',quota:settings.freeQuota?freeQuotaLimits:null,currency:'USD',budgetMicrousd:settings.budgetMicrousd,reservationMicrousd:settings.freeQuota?0:worstCaseReservation(geminiTextRate),rateVerifiedOn:geminiTextRate.verifiedOn,networkCalls:0}));return;
   }
   const config=readConfig();
   if(config.mode!=='mock') throw new Error('Native evaluation is restricted to the local synthetic database.');
