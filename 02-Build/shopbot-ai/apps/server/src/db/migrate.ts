@@ -106,6 +106,24 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       CREATE INDEX whatsapp_outbox_pending ON whatsapp_outbox(next_attempt_at) WHERE state='queued';
       INSERT INTO schema_migrations(version) VALUES(16);
     `);}
+    const v17=await client.query('SELECT version FROM schema_migrations WHERE version=17');
+    if(!v17.rowCount){await client.query(`
+      ALTER TABLE whatsapp_outbox ADD COLUMN reply_payload jsonb;
+      CREATE TABLE whatsapp_actions(id text PRIMARY KEY,message_id uuid NOT NULL REFERENCES whatsapp_outbox(message_id),conversation_id uuid NOT NULL REFERENCES conversations(id),event jsonb NOT NULL,label text NOT NULL,source_version integer NOT NULL,operator_revision integer NOT NULL,binding_id uuid,expires_at timestamptz NOT NULL DEFAULT now()+interval '24 hours');
+      CREATE INDEX whatsapp_actions_conversation ON whatsapp_actions(conversation_id,message_id);
+      INSERT INTO schema_migrations(version) VALUES(17);
+    `);}
+    const v18=await client.query('SELECT version FROM schema_migrations WHERE version=18');
+    if(!v18.rowCount){await client.query(`
+      ALTER TABLE conversations ADD COLUMN editing_line_id uuid, ADD COLUMN handoff_requested boolean NOT NULL DEFAULT false, ADD COLUMN session_started_at timestamptz;
+      ALTER TABLE whatsapp_outbox ADD COLUMN sender_kind text NOT NULL DEFAULT 'assistant' CHECK(sender_kind IN ('assistant','owner','system'));
+      ALTER TABLE provider_attempts ADD COLUMN stage text NOT NULL DEFAULT 'identify' CHECK(stage IN ('identify','recommend'));
+      ALTER TABLE messages ADD COLUMN not_before timestamptz;
+      CREATE TABLE whatsapp_media(message_id uuid PRIMARY KEY REFERENCES messages(id),media_id text NOT NULL,kind text NOT NULL CHECK(kind IN ('image','voice')),source_version integer NOT NULL,state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','fetching','ready','failed')),lease_until timestamptz,last_error text);
+      INSERT INTO schema_migrations(version) VALUES(18);
+    `);}
+    const v19=await client.query('SELECT version FROM schema_migrations WHERE version=19');
+    if(!v19.rowCount){await client.query('ALTER TABLE messages ADD COLUMN typing_indicated_at timestamptz');await client.query('INSERT INTO schema_migrations(version) VALUES(19)');}
     if (mode === 'mock') {
       assertMock(mode);
       await client.query('INSERT INTO stores(id,name,synthetic) VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [fixtureStore, 'Workshop supply demo', 'true']);

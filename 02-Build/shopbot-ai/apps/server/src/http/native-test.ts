@@ -8,12 +8,24 @@ import {ConversationRuntime} from '../runtime/conversation.js';
 import {SimulatorService} from '../services/simulator.js';
 import {fixtureStore} from '../../../../profiles/hardware.js';
 import {eventSchema} from '../../../../packages/contracts/index.js';
+import {freeQuotaLimits} from '../services/inference-budget.js';
 
 // Explicit, free-only local test channel. No customer delivery or production identities.
 export async function registerNativeTest(app:FastifyInstance,pool:Pool,provider:Interpreter,storeId=fixtureStore,planningPaise=50) {
   if(provider.mode!=='live'||!provider.freeQuota) throw new Error('Local AI testing requires the explicitly configured free-tier adapter.');
   const secret=randomBytes(32),sign=(id:string)=>createHmac('sha256',secret).update(id).digest('hex');
   const runtime=new ConversationRuntime(pool,provider,{allowFreeInference:true});
+  let running:Promise<void>|undefined,stopping=false,timer:ReturnType<typeof setInterval>;
+  app.addHook('onReady',async()=>{
+    timer=setInterval(()=>{
+      if(running||stopping)return;
+      running=(async()=>{
+        const row=(await pool.query(`SELECT c.id,c.store_id FROM conversations c JOIN messages m ON m.conversation_id=c.id WHERE c.actor='local-ai-test' AND c.store_id=$1 AND c.operator_mode='assistant' AND (m.status='pending' OR m.status='processing' AND m.lease_until<=now()) AND (m.not_before IS NULL OR m.not_before<=now()) ORDER BY m.sequence LIMIT 1`,[storeId])).rows[0];
+        if(row)await runtime.processNext({storeId:row.store_id,conversationId:row.id,actor:'local-ai-test',role:'customer'});
+      })().catch(()=>app.log.error('Local conversation work failed; inbox retained')).finally(()=>{running=undefined;});
+    },1000);
+  });
+  app.addHook('onClose',async()=>{stopping=true;clearInterval(timer);await running;});
   async function channel(request:FastifyRequest) {
     const cookie=String(request.headers.cookie??'').split(';').map(x=>x.trim()).find(x=>x.startsWith('shopbot_test='))?.slice(13)??'';
     const [id='',signature='']=cookie.split('.');
@@ -38,7 +50,7 @@ export async function registerNativeTest(app:FastifyInstance,pool:Pool,provider:
       const inbox=await channel(request);if(!inbox)return reply.code(401).send({error:'Start a new AI test conversation.'});
       const snapshot=await inbox.snapshot();
       const a=(await pool.query('SELECT failure_code,validation_issues FROM provider_attempts WHERE conversation_id=$1 ORDER BY created_at DESC LIMIT 1',[inbox.context.conversationId])).rows[0];
-      return {...snapshot,provider:provider.name,lastFailure:a?.failure_code??null,lastValidationIssues:a?.validation_issues??null,deliveryPreview:{outboundMessages:snapshot.messages.filter(m=>m.direction==='outbound').length,planningPaisePerMessage:planningPaise,estimateOnly:true,whatsAppConnected:false}};
+      return {...snapshot,capabilities:{voice:!!provider.supportsAudio,image:!!provider.supportsImages,quota:freeQuotaLimits},provider:provider.name,lastFailure:a?.failure_code??null,lastValidationIssues:a?.validation_issues??null,deliveryPreview:{outboundMessages:snapshot.messages.filter(m=>m.direction==='outbound').length,planningPaisePerMessage:planningPaise,estimateOnly:true,whatsAppConnected:false}};
     });
     routes.post('/api/native-test/image',{bodyLimit:2850000},async(request,reply)=>{
       const inbox=await channel(request);if(!inbox)return reply.code(401).send({error:'Start a new AI test conversation.'});

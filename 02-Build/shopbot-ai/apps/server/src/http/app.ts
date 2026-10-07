@@ -24,16 +24,17 @@ export async function createApp(config: Config, pool: Pool, nativeTest?:Interpre
   if(config.whatsapp){
     const hookPath=config.whatsapp.path??whatsappPath;
     app.addHook('onRequest',async(req,reply)=>{
+      const publicCatalog=req.method==='GET'&&/^\/catalog-images\/H\d{2}\.jpg$/.test(req.url.split('?')[0]);
       const publicPrivacy=config.whatsapp!.privacyPublished&&req.url.split('?')[0]==='/privacy'&&req.method==='GET';
-      if(req.headers.host===config.whatsapp!.hostname&&!publicPrivacy&& (req.url.split('?')[0]!==hookPath||!['GET','POST'].includes(req.method)))return reply.code(404).send({error:'Not found'});
+      if(req.headers.host===config.whatsapp!.hostname&&!publicPrivacy&&!publicCatalog&& (req.url.split('?')[0]!==hookPath||!['GET','POST'].includes(req.method)))return reply.code(404).send({error:'Not found'});
       if(req.url.split('?')[0]===hookPath&&req.headers.host!==config.whatsapp!.hostname)return reply.code(404).send({error:'Not found'});
     });
   }
   await registerOwner(app,pool,config,ownerVerifier);
   if(config.whatsapp)await registerWhatsApp(app,channel??new WhatsAppChannel(pool,config.whatsapp));
   const privacyPolicy="default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
-  if(config.whatsapp?.privacyPublished)app.get('/privacy',async(_req,reply)=>reply.header('Cache-Control','no-store').header('Content-Security-Policy',privacyPolicy).type('text/html').send(renderPrivacy(config.whatsapp?.aiEnabled)));
-  if(config.owner)app.get('/api/owner/privacy-draft',async(_req,reply)=>reply.header('Content-Security-Policy',privacyPolicy).type('text/html').send(renderPrivacy(config.whatsapp?.aiEnabled)));
+  if(config.whatsapp?.privacyPublished)app.get('/privacy',async(_req,reply)=>reply.header('Cache-Control','no-store').header('Content-Security-Policy',privacyPolicy).type('text/html').send(renderPrivacy(config.whatsapp?.aiEnabled,config.whatsapp?.mediaEnabled)));
+  if(config.owner)app.get('/api/owner/privacy-draft',async(_req,reply)=>reply.header('Content-Security-Policy',privacyPolicy).type('text/html').send(renderPrivacy(config.whatsapp?.aiEnabled,config.whatsapp?.mediaEnabled)));
   app.get('/health/live', async () => ({ status: 'alive' }));
   app.get('/health/ready', async (_request, reply) => {
     try { await pool.query('SELECT 1'); return { status: 'ready', mode: config.mode }; }

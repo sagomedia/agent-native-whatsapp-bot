@@ -35,8 +35,12 @@ with tarfile.open(a.archive,'r:gz') as archive:
     old_manifest=json.loads((previous/'manifest.json').read_text())
     assert old_manifest['node_version']==manifest['node_version']=='22.22.1'
     assert subprocess.check_output([str(previous/'node/bin/node'),'--version'],text=True).strip()=='v22.22.1'
-    for filename in ['package.json','package-lock.json']:
-        assert (previous/'app'/filename).read_bytes()==archive.extractfile(name+'/app/'+filename).read(), 'Runtime dependency change requires a complete bundle'
+    assert (previous/'app/package-lock.json').read_bytes()==archive.extractfile(name+'/app/package-lock.json').read(), 'Runtime dependency change requires a complete bundle'
+    old_package=json.loads((previous/'app/package.json').read_text())
+    new_package=json.load(archive.extractfile(name+'/app/package.json'))
+    old_scripts=old_package.pop('scripts',{})
+    new_scripts=new_package.pop('scripts',{})
+    assert old_package==new_package and old_scripts.get('start')==new_scripts.get('start'), 'Runtime package change requires a complete bundle'
     unpacked=sum(m.size for m in members)
     assert shutil.disk_usage(base).free-unpacked>1024**3, 'Keep at least 1 GiB free'
     stage=base/name

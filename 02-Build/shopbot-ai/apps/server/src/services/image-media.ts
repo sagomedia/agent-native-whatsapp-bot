@@ -8,7 +8,7 @@ export const imageUploadSchema=z.object({id:z.uuid(),mimeType:z.enum(['image/jpe
 export type ImageMedia={image:Buffer;sourceHash:string;width:number;height:number};
 function run(binary:string,args:string[],bytes:Buffer,maxOutput:number){return new Promise<Buffer>((resolve,reject)=>{
  const child=spawn(binary,args,{stdio:['pipe','pipe','ignore']});let finished=false,size=0;const chunks:Buffer[]=[];
- const timer=setTimeout(()=>{child.kill('SIGKILL');finish(new ToolError('That image took too long to read. Try a smaller photo.'));},5000);
+ const timer=setTimeout(()=>{child.kill('SIGKILL');finish(new ToolError('That image took too long to read. Try a smaller photo.'));},10000);
  function finish(error?:Error){if(finished)return;finished=true;clearTimeout(timer);error?reject(error):resolve(Buffer.concat(chunks));}
  child.on('error',()=>finish(new ToolError('The image decoder is unavailable. Please describe the product instead.')));child.stdin.on('error',()=>{});
  child.stdout.on('data',(b:Buffer)=>{size+=b.length;if(size>maxOutput){child.kill('SIGKILL');finish(new ToolError('That photo is too large to process.'));}else chunks.push(b);});

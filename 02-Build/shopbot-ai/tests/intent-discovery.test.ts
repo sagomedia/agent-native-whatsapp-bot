@@ -19,6 +19,16 @@ async function fixture(run:(pool:pg.Pool,inbox:SimulatorService)=>Promise<void>)
 }
 async function send(inbox:SimulatorService,runtime:ConversationRuntime,text:string){await inbox.ingest({id:randomUUID(),type:'text',text});await runtime.processNext(inbox.context);return inbox.snapshot();}
 const last=(s:Snapshot)=>s.messages.at(-1)!.rich!;
+test('photo label inch notation matches catalog inches without weakening numeric or unit constraints',async()=>fixture(async(pool,inbox)=>{
+ const client=await pool.connect();try{
+  for(const size of ['12"','12 in','12 inches','12 inch','twelve inches']){const result=await discoverProducts(client,inbox.context,'hacksaw blade',{keywords:['hacksaw blade'],familyId:'saw-blades',specifications:{size}});assert.deepEqual(result.products.map(p=>p.sku),['H16'],size);}
+  const spoken=await discoverProducts(client,inbox.context,'one inch PVC pipe',{keywords:['one inch PVC pipe']});assert.ok(spoken.products.length);assert.ok(spoken.products.every(p=>p.specifications?.size==='1 inch'));
+  for(const size of ['12.5"','12 mm','12']){const result=await discoverProducts(client,inbox.context,'hacksaw blade',{keywords:['hacksaw blade'],familyId:'saw-blades',specifications:{size}});assert.equal(result.products.length,0,size);}
+ }finally{client.release();}
+}));
+test('a named tool with an empty catalog family does not receive unrelated department filler',async()=>fixture(async(pool,inbox)=>{
+ const client=await pool.connect();try{const result=await discoverProducts(client,inbox.context,'screwdriver',{keywords:['screwdriver'],familyId:'hand-tools'});assert.equal(result.products.length,0);const plain=await discoverProducts(client,inbox.context,'screwdriver');assert.equal(plain.products.length,0);}finally{client.release();}
+}));
 test('actual failed pipe cutter name and 42mm size return H19, never the reducer',async()=>fixture(async(pool,inbox)=>{
  const c=await pool.connect();try{for(const query of ['Ratchet PVC Pipe Cutter 42mm','pipe cutter 42mm','PVC pipe cuter','பைப் கட்டர்']){const r=await discoverProducts(c,inbox.context,query);assert.deepEqual(r.products.map(p=>p.sku),['H19'],query);assert.equal(r.noExactMatch,false);}
  const r=await discoverProducts(c,inbox.context,'1.25 inch PVC pipe');assert.equal(r.products.length,0);
@@ -35,10 +45,10 @@ test('a vague cutting job can compare six actual alternatives; hard job filters 
 }));
 test('typed semantic plans preserve job question, multilingual input, read-only choices, history language and zero-call rechecks',async()=>fixture(async(pool,inbox)=>{
  let calls=0;const runtime=new ConversationRuntime(pool,{name:'offline-semantic-plan',mode:'mock',interpret:async input=>{calls++;assert.equal(input.state.replyLanguage,'ta');assert.ok(input.catalog!.some(p=>p.sku==='H27'));return {output:{operations:[],next:'assist',assistance:{rootQuery:'cutter',queries:['pipe cutter','garden shear','hacksaw blade'],question:'எந்தப் பொருளை வெட்ட வேண்டும்?',search:{keywords:['pipe cutter','garden shear','cutting wheel','hacksaw blade'],familyIds:['pipe-cutters','garden-cutters','cutting-discs','saw-blades'],preferredSkus:['H19','H16','H14','H15','H17','H18'],useCase:'identify the cutting job'}}},usage:null,truncated:false};}});
- for(const text of ['ennaku oru cuter veeanum, options kaatu','I need something for cutting, what options do you have?','வெட்டுவதற்கு ஒரு கருவி வேண்டும், என்ன வகைகள் உள்ளன?']){const s=await send(inbox,runtime,text);assert.equal(last(s).cards?.length,6);assert.match(last(s).text,/எந்தப் பொருளை வெட்ட வேண்டும்/);assert.equal(last(s).outboundMessages,1);assert.equal(last(s).replyLanguage,'ta');assert.equal(s.conversation.draft.length,0);assert.equal(s.requests.length,0);}
- const before=calls;let s=await send(inbox,runtime,'check again');assert.equal(calls,before);assert.equal(last(s).cards!.length,6);
+ for(const text of ['ennaku oru cuter veeanum, options kaatu','I need something for cutting, what options do you have?','வெட்டுவதற்கு ஒரு கருவி வேண்டும், என்ன வகைகள் உள்ளன?']){const s=await send(inbox,runtime,text);assert.equal(last(s).cards?.length,4);assert.match(last(s).text,/எந்தப் பொருளை வெட்ட வேண்டும்/);assert.equal(last(s).outboundMessages,1);assert.equal(last(s).replyLanguage,'ta');assert.equal(s.conversation.draft.length,0);assert.equal(s.requests.length,0);}
+ const before=calls;let s=await send(inbox,runtime,'check again');assert.equal(calls,before);assert.equal(last(s).cards!.length,4);
  const old=last(s).buttons!.find(b=>b.event.type==='refine_discovery'&&b.event.value==='pipe-cutters')!.event;await inbox.ingest(old);await runtime.processNext(inbox.context);s=await inbox.snapshot();assert.deepEqual(last(s).cards!.map(c=>c.product.sku),['H19']);assert.equal(calls,before);
- await send(inbox,runtime,'Reply in English');s=await inbox.snapshot();assert.equal(s.conversation.replyLanguage,'en');assert.equal(s.messages.find(m=>m.rich?.cards?.length===6)!.rich!.replyLanguage,'ta');assert.equal(s.requests.length,0);
+ await send(inbox,runtime,'Reply in English');s=await inbox.snapshot();assert.equal(s.conversation.replyLanguage,'en');assert.equal(s.messages.find(m=>m.rich?.cards?.length===4)!.rich!.replyLanguage,'ta');assert.equal(s.requests.length,0);
 }));
 test('strict official adapter carries semantic keyword plans while rejecting mixed assistance and order actions',async()=>{
  const state={draft:[],version:0,pending:null,fulfillment:'pickup' as const,lastRequestId:null,replyLanguage:'ta' as const};

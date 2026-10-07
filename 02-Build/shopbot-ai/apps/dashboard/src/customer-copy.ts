@@ -14,7 +14,7 @@ const customerCopy:Record<string,[string,string]>={
   ],
   "Your shop assistant · AI": [
     "உங்கள் கடை உதவியாளர் · AI",
-    "Unga kadai udhaviyaalar · AI"
+    "Unga kadai assistant · AI"
   ],
   "New chat": [
     "புதிய உரையாடல்",
@@ -89,8 +89,8 @@ const customerCopy:Record<string,[string,string]>={
     "ShopBot-ku message"
   ],
   "Message ShopBot…": [
-    "வேண்டிய பொருளை தமிழில் அல்லது Tanglish-ல் சொல்லுங்கள்…",
-    "Venum porulai Tamil illa Tanglish-la sollunga…"
+    "என்ன பொருள் வேண்டும்?",
+    "Enna porul venum?"
   ],
   "Send": [
     "அனுப்பு",
@@ -268,13 +268,14 @@ const customerCopy:Record<string,[string,string]>={
     "AI கோரிக்கைகளுக்கு இடையில் 15 வினாடி காத்திருங்கள்; நிமிடத்திற்கு 3, நாளுக்கு 100 அதிகபட்சம். வணக்கமும் படத் தேர்வுகளும் AI அழைப்பைப் பயன்படுத்தாது.",
     "AI request-kku idaiyil 15 vinadi wait pannunga; nimidaththukku 3, naalukku 100 adhigapatcham. Vanakkam-um photo choices-um AI call use pannaathu."
   ],
-  "New chats use the 30-product KSMC image demo. Photos and prices are demo references; the shop must verify brands, units, tax and availability. No paint is listed. Carousel here is a preview of a marketing template; approval and matching card counts are required for real delivery.": [
-    "புதிய உரையாடலில் 30 KSMC மாதிரிப் பொருட்கள் உள்ளன. படங்களும் விலைகளும் மாதிரி விவரங்கள்; பிராண்ட், அலகு, வரி மற்றும் இருப்பைக் கடை உறுதி செய்ய வேண்டும். பெயிண்ட் பட்டியலில் இல்லை. படத் தொகுப்பு இங்கே முன்னோட்டம் மட்டுமே; WhatsApp-ல் அனுப்ப டெம்ப்ளேட் ஒப்புதலும் சரியான பட எண்ணிக்கையும் தேவை.",
-    "Pudhu chat-la 30 KSMC maathiri porutkal irukku. Photos-um vilaiyum demo vivarangal; brand, unit, tax, stock-ai kadai verify pannanum. Paint catalog-la illa. Photo thoguppu inga preview mattum; WhatsApp-la anuppa template approval-um sariyana card count-um venum."
+  "New chats use the 30-product KSMC image demo. Photos and prices are demo references; the shop must verify brands, units, tax and availability. No paint is listed. Product choices use 2–10 photo cards in a service carousel. Single products use a photo and buttons. Outside the service window, an approved template is required.": [
+    "புதிய உரையாடலில் 30 KSMC மாதிரிப் பொருட்கள் உள்ளன. படங்களும் விலைகளும் மாதிரி விவரங்கள்; பிராண்ட், அலகு, வரி மற்றும் இருப்பைக் கடை உறுதி செய்ய வேண்டும். பெயிண்ட் பட்டியலில் இல்லை. பொருள் தேர்வில் ஒரே செய்தியில் 2–10 பட அட்டைகளைக் காட்டலாம். ஒரு பொருளுக்கு படமும் பொத்தான்களும் இருக்கும். சேவை நேரத்திற்கு வெளியே அனுப்ப ஒப்புதல் பெற்ற டெம்ப்ளேட் தேவை.",
+    "Pudhu chat-la 30 KSMC maathiri porutkal irukku. Photos-um vilaiyum demo vivarangal; brand, unit, tax, stock-ai kadai verify pannanum. Paint catalog-la illa. Porul choices-ku ore message-la 2–10 photo cards kaattalaam. Oru porulukku photo-vum buttons-um irukkum. Service window-ku veliya approved template venum."
   ],
   "Language": [
     "மொழி",
     "Mozhi"
-  ]
+  ],
+  "Offline demo.": ["மாதிரி உரையாடல்.","Demo chat."]
 };
 export function ui(language:ReplyLanguage,text:string):string {const translated=customerCopy[text];return translated?say(language,text,...translated):text;}

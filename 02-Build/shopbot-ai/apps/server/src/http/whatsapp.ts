@@ -1,3 +1,5 @@
+import {readFile} from 'node:fs/promises';
+import {resolve} from 'node:path';
 import {createHmac,timingSafeEqual} from 'node:crypto';
 import type {FastifyInstance} from 'fastify';
 import type {WhatsAppChannel} from '../services/whatsapp-channel.js';
@@ -10,6 +12,13 @@ export function validSignature(body:Buffer,header:unknown,secret:string){
 export async function registerWhatsApp(app:FastifyInstance,channel:WhatsAppChannel){
   await channel.setup();
   const path=channel.config.path??whatsappPath;
+  // Only active, store-scoped catalog photos are public. Never customer uploads.
+  app.get<{Params:{filename:string}}>('/catalog-images/:filename',async(req,reply)=>{
+    const file=req.params.filename;
+    if(req.headers.host!==channel.config.hostname||!/^H\d{2}\.jpg$/.test(file)||!await channel.hasCatalogImage(file))return reply.code(404).send({error:'Not found'});
+    try{return reply.header('Cache-Control','public, max-age=300').header('X-Content-Type-Options','nosniff').type('image/jpeg').send(await readFile(resolve('resources/catalog/ksmc-demo/images',file)));}
+    catch{return reply.code(404).send({error:'Not found'});}
+  });
   await app.register(async scope=>{
     scope.removeContentTypeParser('application/json');
     scope.addContentTypeParser('application/json',{parseAs:'buffer',bodyLimit:262144},(_req,body,done)=>done(null,body));

@@ -36,7 +36,9 @@ export const eventSchema = z.discriminatedUnion('type', [
   z.object({id:z.uuid(),type:z.literal('choose_product'),sku:query,quantity:quantity.optional(),expectedVersion:z.number().int().min(0)}).strict(),
   z.object({id:z.uuid(),type:z.literal('quote_product'),sku:query,quantity:quantity.optional(),requestedUnit:query.optional(),expectedVersion:z.number().int().min(0)}).strict(),
   z.object({ id: z.uuid(), type: z.literal('add_item'), sku: z.string().min(1).max(80), quantity: z.number().int().min(1).max(100), expectedVersion: z.number().int().min(0) }).strict(),
-  z.object({ id: z.uuid(), type: z.literal('set_quantity'), lineId: z.uuid(), quantity: z.number().int().min(0).max(100), expectedVersion: z.number().int().min(0) }).strict(),
+  z.object({ id: z.uuid(), type: z.literal('set_quantity'), lineId: z.uuid(), quantity: z.union([z.literal(0),quantity]), expectedVersion: z.number().int().min(0) }).strict(),
+  z.object({id:z.uuid(),type:z.literal('shopping_action'),action:z.enum(['browse','help','handoff','edit_list','keep_list','status','new_list','options']),expectedVersion:z.number().int().min(0)}).strict(),
+  z.object({id:z.uuid(),type:z.literal('edit_item'),lineId:z.uuid(),expectedVersion:z.number().int().min(0)}).strict(),
   z.object({ id: z.uuid(), type: z.literal('review'), expectedVersion: z.number().int().min(0) }).strict(),
   z.object({ id: z.uuid(), type: z.literal('confirm'), reviewId: z.uuid() }).strict(),
   z.object({ id: z.uuid(), type: z.literal('select_candidate'), questionId: z.uuid(), lineId: z.uuid(), sku: z.string().min(1).max(80) }).strict(),
@@ -50,9 +52,9 @@ export type Product = { sku: string; name: string; localNames?:import('./languag
 export type DraftLine = { id: string; query?: string; sku?: string; quantity: number | null; name: string; unit?: string; pricePaise?: number; productVersion?: number; requestedUnit?:string; requestedQuantity?:number; discovery?:DiscoveryResult;productConfirmation?:{sku:string;version:number;identityHash:string}; resolution: 'matched' | 'needs_choice' | 'needs_quantity' | 'needs_unit' | 'unavailable'; candidates?: Product[] };
 export type ProductCheck={kind:'products';id:string;version:number;expiresAt:string;groups:{lineId:string;products:Product[];discovery?:DiscoveryResult}[];remaining:number};
 export type Pending = { kind: 'question'; id: string; lineId: string; version: number } | ProductCheck | { kind: 'review'; id: string; version: number; hash: string; expiresAt: string; lines: DraftLine[]; totalPaise: number; fulfillment: 'pickup' };
-export type ConversationState = { replyLanguage?:import('./language.js').ReplyLanguage; version: number; draft: DraftLine[]; pending: Pending | null; fulfillment: 'pickup'; lastRequestId: string | null;requireProductConfirmation?:true;catalogDiscovery?:true };
-export type OrderRequest = { id: string; acceptance: 'awaiting_approval'; payment: 'not_requested'; fulfillment: 'awaiting_approval'; totalPaise: number; lines: DraftLine[] };
+export type ConversationState = { replyLanguage?:import('./language.js').ReplyLanguage; version: number; draft: DraftLine[]; pending: Pending | null; fulfillment: 'pickup'; lastRequestId: string | null;requireProductConfirmation?:true;catalogDiscovery?:true;editingLineId?:string|null;handoffRequested?:boolean };
+export type OrderRequest = { id: string; acceptance: 'awaiting_approval'|'accepted'|'rejected'; payment: 'not_requested'; fulfillment: 'awaiting_approval'; totalPaise: number; lines: DraftLine[] };
 export type Snapshot = { mode: 'mock'; provider: string; catalog: Product[]; conversation: ConversationState; messages: { id: string; direction: string; text: string; status: string; createdAt?:string; voice?:{mediaId:string;durationSeconds:number}; image?:{mediaId:string}; rich?:RichReply }[]; pending: number; requests: OrderRequest[]; interpretationAttempts: number;catalogMap?:CatalogMap;discoveryBindingId?:string };
 
 export type ProductCard={product:Product;action?:SimulatorEvent;label:string;requestLabel?:string;quantityLabel?:string;matchLabel?:string;detailLabel?:string};
-export type RichReply={version:1;replyLanguage?:import('./language.js').ReplyLanguage;kind:'text'|'product_choices'|'order_review';text:string;cards?:ProductCard[];buttons?:{label:string;event:SimulatorEvent}[];presentation:'text'|'single_product'|'carousel_preview'|'list';outboundMessages:1;remainingChoices?:number};
+export type RichReply={version:1;replyLanguage?:import('./language.js').ReplyLanguage;kind:'text'|'product_choices'|'order_review';text:string;cards?:ProductCard[];buttons?:{label:string;event:SimulatorEvent}[];presentation:'text'|'single_product'|'carousel_preview'|'list';outboundMessages:1;remainingChoices?:number;handoffRequested?:true};

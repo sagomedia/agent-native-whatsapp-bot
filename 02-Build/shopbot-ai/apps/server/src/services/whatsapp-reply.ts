@@ -1,0 +1,76 @@
+import {createHash} from 'node:crypto';
+import type {RichReply,SimulatorEvent,ProductCard} from '../../../../packages/contracts/index.js';
+import {productName,unitName,say} from '../../../../packages/contracts/language.js';
+import {formatMoney} from '../../../../packages/contracts/money.js';
+
+export type WhatsAppAction={id:string;label:string;event:SimulatorEvent};
+export type WhatsAppReply={payload:Record<string,unknown>;actions:WhatsAppAction[];format:'text'|'buttons'|'image'|'carousel'|'list'};
+// Count Unicode code points but cut only at grapheme boundaries, including Tamil.
+export function fitText(text:string,limit:number):string {
+  if(Array.from(text).length<=limit)return text;
+  let result='';
+  for(const {segment} of new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text)){
+    if(Array.from(result+segment+'…').length>limit)break;
+    result+=segment;
+  }
+  return result+'…';
+}
+export function productMediaUrl(image:string|undefined,hostname:string):string|undefined {
+  if(!image)return;
+  if(/^\/demo-images\/H\d{2}\.jpg$/.test(image))return `https://${hostname}/catalog-images/${image.split('/').at(-1)}`;
+  try{const url=new URL(image);if(url.protocol==='https:'&&!url.username&&!url.password)return url.href;}catch{}
+}
+export function cardText(card:ProductCard,reply:RichReply):string {
+  const language=reply.replyLanguage??'en';
+  const price=`${formatMoney(card.product.pricePaise)} / ${unitName(card.product.unit,language)}`;
+  const detail=[card.quantityLabel,card.matchLabel??card.detailLabel].filter(Boolean).join(' · ').replace(/\s+/g,' ');
+  const last=fitText(detail,45),reserved=Array.from(price).length+(last?Array.from(last).length+1:0)+1;
+  const name=fitText([card.requestLabel,productName(card.product,language)].filter(Boolean).join(' · ').replace(/\s+/g,' '),Math.max(20,160-reserved));
+  return fitText([name,price,last||undefined].filter(Boolean).join('\n'),160);
+}
+export function renderWhatsAppReply(reply:RichReply,messageId:string,hostname:string):WhatsAppReply {
+  if((reply.cards?.length??0)>10)throw new Error('A WhatsApp reply may contain at most ten product cards');
+  const actions:WhatsAppAction[]=[];
+  const bind=(label:string,event:SimulatorEvent):WhatsAppAction=>{
+    const id='w'+createHash('sha256').update(messageId+':'+actions.length+':'+event.id).digest('base64url').slice(0,19);
+    const action={id,label:fitText(label.trim().replace(/\s+/g,' ')||say(reply.replyLanguage??'en','Choose','தேர்வு','Choose'),20),event};actions.push(action);return action;
+  };
+  const cards=reply.kind==='order_review'?[]:reply.cards??[],body=fitText(reply.text,1024);
+  const media=cards.map(c=>productMediaUrl(c.product.imageUrl,hostname));
+  const shared=reply.buttons??[];
+  const start=shared.find(b=>b.event.type==='shopping_action'&&b.event.action==='new_list');
+  // Ambiguous multi-line previews already use Start this list as their primary
+  // action. A carousel must not repeat that title within the same card.
+  const menu=start&&cards.some(c=>c.action?.id===start.event.id||fitText(c.label,20)===fitText(start.label,20))
+    ?shared.find(b=>b.event.type==='shopping_action'&&b.event.action==='handoff')
+    :start??shared.find(b=>b.event.type==='shopping_action'&&b.event.action==='options');
+  if(reply.kind==='order_review'&&Array.from(reply.text).length>1024)throw new Error('Order review must fit in full before confirmation');
+  if(reply.presentation==='carousel_preview'&&cards.length>=2&&media.every(Boolean)&&cards.every(c=>c.action||shared.length)){
+    const entries=cards.map((card,index)=>{
+      const batch=shared.find(b=>b.event.type==='confirm_products');
+      const buttons=batch&&menu?[bind(batch.label,batch.event),bind(menu.label,menu.event)]:card.action?[bind(card.label,card.action),...(menu?[bind(menu.label,menu.event)]:shared.filter(b=>b.event.type==='review'||b.event.type==='confirm_products').slice(0,1).map(b=>bind(b.label,b.event)))]:shared.slice(0,2).map(b=>bind(b.label,b.event));
+      if(new Set(buttons.map(b=>b.label)).size!==buttons.length)throw new Error('Carousel button titles must be unique within each card');
+      return {card_index:index,type:'cta_url',header:{type:'image',image:{link:media[index]}},body:{text:cardText(card,reply)},action:{buttons:buttons.map(b=>({type:'quick_reply',quick_reply:{id:b.id,title:b.label}}))}};
+    });
+    if(new Set(entries.map(c=>c.action.buttons.length)).size!==1)throw new Error('Carousel cards must have the same button count');
+    return {format:'carousel',actions,payload:{type:'interactive',interactive:{type:'carousel',body:{text:body},action:{cards:entries}}}};
+  }
+  if(cards.length===1&&media[0]){
+    const card=cards[0],batch=shared.find(b=>b.event.type==='confirm_products');
+    const buttons=batch&&menu?[bind(batch.label,batch.event),bind(menu.label,menu.event)]:card.action?[bind(card.label,card.action),...(menu?[bind(menu.label,menu.event)]:shared.slice(0,2).map(b=>bind(b.label,b.event)))]:shared.slice(0,3).map(b=>bind(b.label,b.event));
+    const text=fitText(reply.text+'\n\n'+cardText(card,reply),1024);
+    if(new Set(buttons.map(b=>b.label)).size!==buttons.length)throw new Error('Reply button titles must be unique');
+    if(buttons.length)return {format:'buttons',actions,payload:{type:'interactive',interactive:{type:'button',header:{type:'image',image:{link:media[0]}},body:{text},action:{buttons:buttons.map(b=>({type:'reply',reply:{id:b.id,title:b.label}}))}}}};
+    return {format:'image',actions,payload:{type:'image',image:{link:media[0],caption:text}}};
+  }
+  const choiceCards=cards.filter(c=>c.action);
+  const productOptions=choiceCards.map(c=>({label:productName(c.product,reply.replyLanguage??'en'),event:c.action!}));
+  const rawOptions=choiceCards.length?shared.length+productOptions.length<=10?[...shared,...productOptions]:[...productOptions,...shared].slice(0,10):shared;
+  const options=rawOptions.map(b=>bind(b.label,b.event));
+  if(options.length>10)throw new Error('A WhatsApp list may contain at most ten choices');
+  if((options.length>0&&choiceCards.length>0)||options.length>3){
+    return {format:'list',actions,payload:{type:'interactive',interactive:{type:'list',body:{text:body},action:{button:say(reply.replyLanguage??'en','Choose an option','தேர்வு செய்யுங்கள்','Choose'),sections:[{rows:options.map((b,index)=>{const card=choiceCards.find(c=>c.action===rawOptions[index].event);return {id:b.id,title:fitText(`${index+1}. ${b.label}`,24),...(card?{description:fitText(`${formatMoney(card.product.pricePaise)} / ${card.product.unit}`,72)}:{})};})}]}}}};
+  }
+  if(options.length)return {format:'buttons',actions,payload:{type:'interactive',interactive:{type:'button',body:{text:body},action:{buttons:options.map(b=>({type:'reply',reply:{id:b.id,title:b.label}}))}}}};
+  return {format:'text',actions,payload:{type:'text',text:{preview_url:false,body:fitText(reply.text,4096)}}};
+}

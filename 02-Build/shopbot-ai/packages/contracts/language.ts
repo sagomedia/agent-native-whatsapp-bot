@@ -14,6 +14,8 @@ const units:Record<string,[string,string]>={piece:['எண்ணம்','ennam']
 export function unitName(unit:string,context:LanguageContext,quantity=1):string {const translated=units[unit];if(languageOf(context)!=='en')return translated?say(context,unit,...translated):unit;return quantity===1?unit:({box:'boxes',foot:'feet',kg:'kg',g:'g',m:'m',mm:'mm',cm:'cm',litre:'litres'} as Record<string,string>)[unit]??unit+'s';}
 export function languageRequest(text:string):ReplyLanguage|undefined {
  const s=text.normalize('NFC').trim().toLowerCase().replace(/[.!?]+$/,'');
+ if(/^(?:tamil(?: la| le) (?:sollu(?:nga)?|pesa(?:nga)?|pesanum)|தமிழ்ல (?:பேசு(?:ங்க)?|சொல்லு(?:ங்க)?))$/.test(s))return 'ta';
+ if(/^(?:tanglish(?: la| le) (?:sollu(?:nga)?|pesa(?:nga)?|pesanum))$/.test(s))return 'ta-Latn';
  if(/^(?:english|in english|change to english|switch to english|reply in english|speak english|please (?:reply in|switch to) english|ஆங்கிலம்|ஆங்கிலத்தில் பேசு(?:ங்கள்)?|ஆங்கிலத்தில் பதில் (?:சொல்(?:லுங்கள்)?|தரவும்)|english(?: la| le|க்கு|ல) (?:pesu(?:nga)?|maathu(?:nga)?|reply pannu(?:nga)?))$/.test(s))return 'en';
  if(/^(?:tanglish|in tanglish|change to tanglish|switch to tanglish|reply in tanglish|தங்கிலிஷ்|டாங்க்லிஷ்|tanglish(?: la| le) (?:pesu(?:nga)?|maathu(?:nga)?|reply pannu(?:nga)?))$/.test(s))return 'ta-Latn';
  if(/^(?:tamil|in tamil|change to tamil|switch to tamil|reply in tamil|தமிழ்|தமிழில் பேசு(?:ங்கள்)?|தமிழில் பதில் (?:சொல்(?:லுங்கள்)?|தரவும்)|tamil(?: la| le) (?:pesu(?:nga)?|maathu(?:nga)?|reply pannu(?:nga)?))$/.test(s))return 'ta';

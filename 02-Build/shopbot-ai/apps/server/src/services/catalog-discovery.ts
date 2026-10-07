@@ -22,7 +22,11 @@ export async function getCatalogMap(client:PoolClient,ctx:ActorContext,departmen
  return {store:{name:store.name,type:store.store_type??'general retail'},productCount:count,departments,truncated:rows.length>departments.length+departments.reduce((a,d)=>a+d.families.length,0)};
 }
 function unique(a:string[]){return [...new Set(a.map(s=>s.trim()).filter(Boolean))];}
-function normalizedSpec(s:string){return normalize(s).replace(/\s+/g,'');}
+function numericDimensions(text:string){
+ const numbers:Record<string,number>={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12};
+ return text.replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+(?=inch(?:es)?\b|in\b|mm\b|cm\b)/gi,word=>String(numbers[word.trim().toLowerCase()])+' ');
+}
+function normalizedSpec(s:string){return normalize(numericDimensions(s.toLowerCase()).replace(/(\d)\s*(?:["\u2033]|inches?\b|in\b)/g,'$1 inch')).replace(/\s+/g,'');}
 function keywordScore(query:string,plan:DiscoveryPlan,product:Product) {
  const source=[product.name,...product.aliases,...(product.keywords??[])],words=unique(source.flatMap(tokens));
  const needles=tokens(query).filter(t=>!/^\d/.test(t));
@@ -37,14 +41,16 @@ function keywordScore(query:string,plan:DiscoveryPlan,product:Product) {
 function choosePhotos(products:Product[],rank:Map<string,ReturnType<typeof keywordScore>>) {
  const ordered=[...products].sort((a,b)=>rank.get(b.sku)!.score-rank.get(a.sku)!.score||a.sku.localeCompare(b.sku));
  const selected:Product[]=[];
- for(const p of ordered)if(!selected.some(s=>s.familyId===p.familyId&&s.brand===p.brand)){selected.push(p);if(selected.length===6)break;}
- for(const p of ordered)if(selected.length<6&&!selected.some(s=>s.sku===p.sku))selected.push(p);
+ for(const p of ordered)if(!selected.some(s=>s.familyId===p.familyId&&s.brand===p.brand)){selected.push(p);if(selected.length===10)break;}
+ for(const p of ordered)if(selected.length<10&&!selected.some(s=>s.sku===p.sku))selected.push(p);
  return selected;
 }
 // Scores are deterministic ordering weights, never calibrated probabilities.
 // Every product fact is read from the current, scoped SQL catalog.
 export async function discoverProducts(client:PoolClient,ctx:ActorContext,query:string,input?:DiscoveryPlan):Promise<DiscoveryResult> {
+ query=numericDimensions(query);
  const plan=discoveryPlanSchema.parse(input??{keywords:[query]});
+ plan.keywords=plan.keywords.map(numericDimensions);
  if(plan.familyId&&plan.familyIds&&!plan.familyIds.includes(plan.familyId))throw new ToolError('The chosen family conflicts with the proposed product types.');
  const nodes=(await client.query('SELECT id,parent_id,kind,label,local_names,aliases FROM catalog_nodes WHERE store_id=$1',[ctx.storeId])).rows;
  if(plan.familyId&&!nodes.some(n=>n.id===plan.familyId&&n.kind==='family'))throw new ToolError('Choose a product family from this shop’s catalog.');
@@ -65,7 +71,7 @@ export async function discoverProducts(client:PoolClient,ctx:ActorContext,query:
  else if(effective.familyIds)constraints.push('p.family_id=ANY('+add(effective.familyIds)+'::text[])');
  else if(effective.departmentId)constraints.push(`p.family_id IN (SELECT id FROM catalog_nodes WHERE store_id=$1 AND parent_id=${add(effective.departmentId)})`);
  if(effective.brand)constraints.push('lower(p.brand)=lower('+add(effective.brand)+')');
- for(const [key,value] of Object.entries(effective.specifications??{}))constraints.push(`regexp_replace(lower(p.specifications->>${add(key)}),'[^[:alnum:].]+','','g')=${add(normalizedSpec(value))}`);
+ for(const [key,value] of Object.entries(effective.specifications??{}))constraints.push(`regexp_replace(regexp_replace(lower(p.specifications->>${add(key)}),'([0-9])[[:space:]]*(inches?\\M|in\\M|["\u2033])','\\1 inch','g'),'[^[:alnum:].]+','','g')=${add(normalizedSpec(value))}`);
  if(root)constraints.push('p.unit='+add(root.unit));
  const numeric=root?[]:unique(normalize(query).match(/\d+(?:\.\d+)?/g)??[]);
  for(const n of numeric)constraints.push(`p.search_text ~ ${add('(^|[^0-9.])'+n.replaceAll('.','\\.')+'([^0-9.]|$)')}`);
@@ -93,7 +99,7 @@ export async function discoverProducts(client:PoolClient,ctx:ActorContext,query:
  let usedWhere=where;
  // A department-level suggestion is only allowed when curated taxonomy aliases
  // support it. An unknown unrelated word never becomes a random shop-wide list.
- if(!rows.length&&!effective.familyId&&!effective.familyIds&&!effective.brand&&!numeric.length&&!Object.keys(effective.specifications??{}).length){
+ if(!rows.length&&!intendedFamilies.length&&!effective.familyId&&!effective.familyIds&&!effective.brand&&!numeric.length&&!Object.keys(effective.specifications??{}).length){
   const relatedDepartments=unique([...nodes.filter(n=>intendedFamilies.includes(n.id)).map(n=>n.parent_id),...(intendedFamilies.length?[]:nodes.filter(n=>n.kind==='department'&&tokens([n.label,...n.aliases].join(' ')).some((t:string)=>words.includes(t))).map(n=>n.id))].filter((s):s is string=>!!s));
   if(relatedDepartments.length){usedWhere=base+` AND p.family_id IN (SELECT id FROM catalog_nodes WHERE store_id=$1 AND parent_id=ANY(${add(relatedDepartments)}::text[]))`;rows=(await bound(client,`SELECT ${productColumns.split(',').map(c=>'p.'+c).join(',')},count(*) OVER()::int AS total_count FROM products p WHERE ${usedWhere} ORDER BY p.sku LIMIT 120`,parameters.slice(0,-1).concat([relatedDepartments]))).rows;}
  }
@@ -117,7 +123,7 @@ export async function discoverProducts(client:PoolClient,ctx:ActorContext,query:
  for(const p of candidates)if(intendedFamilies.length&&!intendedFamilies.includes(p.familyId))scores.set(p.sku,{...scores.get(p.sku)!,match:'related',reason:'Related option in this department; it is not an exact match for the requested product type'});
  const preferred=effective.preferredSkus??[];
  const preferredProducts=preferred.flatMap(sku=>{const p=candidates.find(p=>p.sku===sku);return p?[p]:[];});
- const products=[...preferredProducts,...choosePhotos(candidates,scores).filter(p=>!preferredProducts.includes(p))].slice(0,6);
+ const products=[...preferredProducts,...choosePhotos(candidates,scores).filter(p=>!preferredProducts.includes(p))].slice(0,10);
  // Present the most relevant photo families/brands/specifications first. Counts
  // still come from the complete SQL scope; popularity must not hide a shown type.
  for(const facet of facets){const shown=unique(products.map(p=>facet.key==='family'?p.familyId:facet.key==='brand'?p.brand:p.specifications?.[facet.key.slice(5)]).filter((s):s is string=>!!s));const values=allFacets.filter(f=>f.key===facet.key);values.sort((a,b)=>{const ai=shown.indexOf(a.value),bi=shown.indexOf(b.value);return (ai<0?999:ai)-(bi<0?999:bi)||b.count-a.count||a.value.localeCompare(b.value);});facet.values=values.slice(0,3).map(f=>({value:f.value,localNames:facet.key==='family'?nodes.find(n=>n.id===f.value)?.local_names:undefined,label:facet.key==='family'?nodes.find(n=>n.id===f.value)?.label??f.value:f.value,count:f.count}));}

@@ -15,6 +15,7 @@ import {canonicalShortcut,languageRequest,productName,safeQuestion,type ReplyLan
 import {quantityReply,priceInquiry} from '../apps/server/src/services/shopping-language.js';
 import {sameUnit} from '../apps/server/src/services/catalog.js';
 import type {SimulatorEvent} from '../packages/contracts/index.js';
+import {ui} from '../apps/dashboard/src/customer-copy.js';
 const settings:NativeSettings={allowPaidInference:false,apiKey:'offline-fixture',model:'gemini-3.5-flash-lite',budgetMicrousd:0,freeQuota:{scope:'language-test',model:'gemini-3.5-flash-lite'}};
 async function fixture(run:(pool:pg.Pool,inbox:SimulatorService)=>Promise<void>){
  const admin=new pg.Pool({connectionString:process.env.DATABASE_URL}),schema='language_'+randomUUID().replaceAll('-','');
@@ -28,12 +29,17 @@ function response(output:unknown){return Object.assign(new GenerateContentRespon
 
 test('Tamil and Tanglish shortcuts are whole-message actions; quantities retain units without pack conversion',()=>{
  assert.equal(languageRequest('change to English'),'en');assert.equal(languageRequest('English la pesunga'),'en');assert.equal(languageRequest('தமிழில் பேசுங்கள்'),'ta');assert.equal(languageRequest('Tanglish la pesu'),'ta-Latn');
+ assert.equal(languageRequest('தமிழ்ல பேசுங்க'),'ta');assert.equal(languageRequest('Tamil la sollunga'),'ta');assert.equal(languageRequest('Tanglish la sollunga'),'ta-Latn');assert.equal(languageRequest('tanglish la sollunga rendu pipe venum'),undefined);
  for(const text of ['English brand paint venum','English-la sonna two pipes add pannu','ஆம் ஆனால் மூன்று வேண்டும்'])assert.equal(languageRequest(text),undefined);
  assert.equal(canonicalShortcut('ஆம் ஆனால் மூன்று வேண்டும்'),'ஆம் ஆனால் மூன்று வேண்டும்');assert.equal(canonicalShortcut('கடைக்கு அனுப்பு'),'send it');
  assert.deepEqual(quantityReply('ரெண்டு பாட்டில் வேண்டும்'),{quantity:2,unit:'பாட்டில்'});assert.deepEqual(quantityReply('rendu petti venum'),{quantity:2,unit:'petti'});
  assert.equal(sameUnit('பெட்டி','box'),true);assert.equal(sameUnit('அடி','piece'),false);assert.equal(quantityReply('rendu inch pipe venum'),undefined);
  assert.deepEqual(priceInquiry('H14 விலை என்ன'),{query:'h14'});assert.equal(priceInquiry('H14 வேண்டும் விலை என்ன'),undefined);
  assert.equal(safeQuestion('Which blade do you need?', 'ta'),undefined);assert.equal(safeQuestion('எதை வெட்டப் போகிறீர்கள்?', 'ta'),'எதை வெட்டப் போகிறீர்கள்?');assert.equal(safeQuestion('என்ன விலை?', 'ta'),undefined);
+});
+test('customer controls use Tamil script or spoken Tanglish while retaining English as an explicit option',()=>{
+ for(const label of ['Start a conversation','New chat','Send','Review my list','Language']){assert.match(ui('ta',label),/[\u0b80-\u0bff]/);assert.doesNotMatch(ui('ta-Latn',label),/[\u0b80-\u0bff]/);assert.notEqual(ui('ta-Latn',label),label);assert.equal(ui('en',label),label);}
+ assert.equal(ui('ta-Latn','Send'),'Anuppu');
 });
 
 test('Tamil is persisted through an English greeting, localized catalog discovery and Tamil quantity response without inference',async()=>fixture(async(pool,inbox)=>{
