@@ -15,6 +15,35 @@ const settings:NativeSettings={allowPaidInference:true,apiKey:'offline-only',mod
 const base=(kind='text')=>({schemaVersion:2,inputKind:kind,intents:['edit'],requestedItems:[],proposedEdits:[],shopQuestions:[],unresolved:[]});
 const response=(output:unknown)=>({modelVersion:settings.model,candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(output)}]}}],usageMetadata:{promptTokenCount:1000,candidatesTokenCount:200,totalTokenCount:1200}} as any);
 const actions=(r:RichReply)=>[...r.buttons??[],...(r.parts??[]).flatMap(p=>[...p.buttons??[],...p.cards.flatMap(c=>c.buttons??[])])];
+test('semantic clear intent keeps the list until a current confirmation is selected',()=>fixture(async(pool,inbox)=>{
+ await new RetailTools(pool).invoke(inbox.context,{name:'apply_draft_changes',args:{expectedVersion:0,operations:[{kind:'add_item',query:'H13',quantity:1}]}},'seed');
+ const transcript='discard everything in this basket';
+ const provider=new GoogleInterpreter(settings,{generateContent:async()=>response({...base('audio'),transcript,intents:['clear_list']})});
+ const runtime=new ConversationRuntime(pool,provider,{allowPaidInference:true,visualOrdering:true});
+ let snapshot=await voice(inbox,runtime);
+ assert.equal(snapshot.conversation.draft.length,1);assert.equal(snapshot.conversation.handoffRequested,false);
+ const confirmation=actions(snapshot.messages.at(-1)!.rich!).find(b=>b.event.type==='shopping_action'&&b.event.action==='confirm_clear')!.event;
+ assert.ok(confirmation);assert.equal(snapshot.requests.length,0);
+ snapshot=await send(inbox,runtime,confirmation);
+ assert.equal(snapshot.conversation.draft.length,0);assert.equal(snapshot.requests.length,0);
+}));
+
+test('audio repair uses retained transcript and receives the exact rejected proposal and feedback',()=>fixture(async(pool,inbox)=>{
+ const transcript="I don't want PVC pipe, I want garden hose";let calls=0;
+ const bad={...base('audio'),transcript,intents:['add'],requestedItems:[{ordinal:0,sourceText:"I don't want PVC pipe",query:'PVC pipe',purchaseCount:1,unresolved:[]}]};
+ const provider=new GoogleInterpreter(settings,{generateContent:async params=>{
+  calls++;const content=params.contents as any[];const context=JSON.parse(content[0].parts[0].text);
+  if(calls===1){assert.ok(content[0].parts.some((p:any)=>p.inlineData));return response(bad);}
+  assert.equal(calls,2);assert.equal(context.inputKind,'text');assert.equal(context.customerText,transcript);
+  assert.equal(context.repair.originalInputKind,'audio');assert.match(context.repair.feedback,/negated|declined/);
+  assert.equal(context.repair.priorProposal.operations[0].query,'PVC pipe');
+  assert.equal(content[0].parts.some((p:any)=>p.inlineData),false);
+  return response({...base(),intents:['add'],requestedItems:[{ordinal:0,sourceText:'I want garden hose',query:'garden hose',purchaseCount:1,unresolved:[]}]});
+ }});
+ const snapshot=await voice(inbox,new ConversationRuntime(pool,provider,{allowPaidInference:true,visualOrdering:true}));
+ assert.equal(calls,2);assert.equal(snapshot.conversation.draft.length,1);assert.equal(snapshot.conversation.draft[0].sku,'H13');
+ assert.equal(snapshot.conversation.draft[0].quantity,1);assert.equal(snapshot.requests.length,0);
+}));
 async function fixture(run:(pool:pg.Pool,inbox:SimulatorService)=>Promise<void>){
  const admin=new pg.Pool({connectionString:process.env.DATABASE_URL}),schema='recovery_'+randomUUID().replaceAll('-','');await admin.query(`CREATE SCHEMA "${schema}"`);
  const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:`-c search_path=${schema}`});

@@ -6,7 +6,7 @@ const numbers:Record<string,number>={one:1,two:2,three:3,four:4,five:5,six:6,sev
 // quoted examples, questions, negation and any second shopping edit.
 // ASR may lengthen the list word's vowels or confuse its lateral consonant.
 // Keep the complete list-word + clear-verb grammar; unrelated nouns do not fit.
-const tamilClear=/(?:^|\s)(?:பா?ட்டியா?[லள]ை(?:க்|ய|யே)?|பட்டியலாய|பட்டியல்(?: எல்லாம்)?)\s+காலி\s+செய்(?=\s|$)/u;
+const tamilClear=/(?:^|\s)(?:பா?ட்டியா?[லள]ை(?:க்|ய|யே)?|பட்டியலாய|பட்டியல்(?: எல்லாம்)?)\s+காலி\s+(?:செய்|செய்யுங்க|செய்யுங்கள்|பண்ணு|பண்ணுங்க)(?=\s|$)/u;
 // "No more items, clear everything" is common spoken Tamil/Tanglish. ASR
 // sometimes hears எல்லாத்தையும் as எல்லாரும்; this route only offers a clear
 // confirmation, so it never erases the cart based on that uncertain wording.
@@ -19,26 +19,28 @@ const secondShoppingEdit=/\b(?:add|remove|delete|change|replace|order)\b|சே�
 const speechText=(text:string)=>text.toLowerCase().replace(/[.!?,;:"“”‘’]+/g,' ').replace(/\s+/g,' ').trim();
 // A complete spoken command may be followed by acknowledgement/background
 // speech. Never extract clearing from a negated or compound shopping command.
+const listClear=/(?:^|\s)(?:(?:லிஸ்ட்|லிஸ்ட்டை|லிஸ்டை|list)\s+(?:(?:ellam|ellaam|எல்லாம்)\s+)?(?:கிளியர்|க்ளியர்|clear)\s+(?:பண்ணு|பண்ணுங்க|பண்ணிடு|பண்ணிரு|pannu|pannidu|panniru|pannunga)|(?:clear (?:my|the) list|empty my list))(?=\s|$)/u;
+function clearMatch(clean:string){return allClear.exec(clean)??tamilClear.exec(clean)??listClear.exec(clean);}
+function clearIsNegated(clean:string,match:RegExpExecArray){
+ const before=clean.slice(0,match.index).trim(),after=clean.slice(match.index+match[0].length).trim();
+ // "No more items" describes shopping, not a negation of the later clear verb.
+ return /(?:\b(?:don't|dont|do not|not|never)|பண்ணாதே|செய்யாதே)\s*$/.test(before)||clearNegation.test(after);
+}
 export function spokenClearCommand(text:string):string|undefined {
- const clean=speechText(text);
- const all=allClear.exec(clean);
- if(all){const rest=clean.slice(all.index+all[0].length).trim(),other=clean.slice(0,all.index)+' '+rest;return clearNegation.test(rest)||quotedOrQuestion.test(text.toLowerCase())||secondShoppingEdit.test(other)?undefined:'clear my list';}
- if(tamilClear.test(clean))return clearNegation.test(clean)||quotedOrQuestion.test(text.toLowerCase())||secondShoppingEdit.test(clean)?undefined:'clear my list';
- const found=/^(?:clear (?:my|the) list|empty my list|(?:பட்டியலை(?:க்|ய)?|பட்டியல்(?: எல்லாம்)?) காலி செய்|list clear pannu)(?:\s|$)/.exec(clean);
- if(!found)return;
- const rest=clean.slice(found[0].length).trim();
- if(/\b(?:don't|dont|not|no|keep|cancel|stop|vendam|venam|illai)\b|do not|வேண்டாம்|வேணாம்|இல்லை/.test(rest))return;
- // Match the whole suffix: an acknowledgement must not hide a second edit.
- // The second form is the non-shopping background phrase in the saved clip.
- if(rest&&!/^(?:(?:please|thanks|okay|ok|yes|ஆமா|ஆமாம்|சரி|aama|sari)(?:\s+(?:please|thanks|okay|ok|yes|ஆமா|ஆமாம்|சரி|aama|sari))*|(?:ஆமா|ஆமாம்|சரி) என்ன வேலையில(?: வேலை)?)$/.test(rest))return;
+ const clean=speechText(text),match=clearMatch(clean);
+ if(!match||clearIsNegated(clean,match)||quotedOrQuestion.test(text.toLowerCase()))return;
+ const other=clean.slice(0,match.index)+' '+clean.slice(match.index+match[0].length);
+ if(secondShoppingEdit.test(other))return;
+ if(/^(?:clear|empty) /.test(match[0].trim())){
+  const prefix=clean.slice(0,match.index).trim(),rest=clean.slice(match.index+match[0].length).trim();
+  if(prefix&&!/^(?:(?:ok|okay|yes|please)\s*)+$/.test(prefix))return;
+  if(rest&&!/^(?:(?:please|thanks|okay|ok|yes|ஆமா|ஆமாம்|சரி|aama|sari)(?:\s+(?:please|thanks|okay|ok|yes|ஆமா|ஆமாம்|சரி|aama|sari))*|(?:ஆமா|ஆமாம்|சரி) என்ன வேலையில(?: வேலை)?)$/.test(rest))return;
+ }
  return 'clear my list';
 }
 export function negatedSpokenClear(text:string):boolean {
- const clean=speechText(text);
- const all=allClear.exec(clean);
- if(all)return clearNegation.test(clean.slice(all.index+all[0].length).trim())||quotedOrQuestion.test(text.toLowerCase());
- if(tamilClear.test(clean))return clearNegation.test(clean)||quotedOrQuestion.test(text.toLowerCase());
- return /^(?:(?:don't|dont|do not)\s+)?(?:clear (?:my|the) list|empty my list|(?:பட்டியலை(?:க்|ய)?|பட்டியல்(?: எல்லாம்)?) காலி செய்|list clear pannu)(?:\s|$)/.test(clean)&&clearNegation.test(clean);
+ const clean=speechText(text),match=clearMatch(clean);
+ return !!match&&(clearIsNegated(clean,match)||quotedOrQuestion.test(text.toLowerCase()));
 }
 export function quantityReply(text:string):{quantity:number;unit?:string}|undefined {
   const m=/^(\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|half|ஒன்று|ஒரு|ஒன்னு|இரண்டு|ரெண்டு|மூன்று|நான்கு|நாலு|ஐந்து|அஞ்சு|ஆறு|ஏழு|எட்டு|ஒன்பது|பத்து|அரை|onnu|oru|ondru|rendu|irandu|moonu|moondru|naalu|naangu|anju|ainthu|aaru|ezhu|ettu|onbathu|paththu|pathu|arai)(?:\s+(pieces?|pcs|box(?:es)?|rolls?|feet|ft|metres?|meters?|kg|packs?|pairs?|bottles?|cans?|tins?|buckets?|கேன்|வாளி|litres?|liters?|units?|nos|எண்ணம்|பீஸ்|பெட்டி|பெட்டிகள்|பாக்ஸ்|பாட்டில்|பாட்டில்கள்|ரோல்|ரோல்கள்|அடி|மீட்டர்|கிலோ|ஜோடி|பேக்|லிட்டர்|ennam|petti|pettigal|adi|jodi|kilo))?(?:\s+(?:please|வேண்டும்|வேணும்|venum))?[.!?]*$/i.exec(text.trim());

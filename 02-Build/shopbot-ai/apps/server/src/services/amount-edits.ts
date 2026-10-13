@@ -1,7 +1,7 @@
 import type {Interpretation,Operation,ConversationState,DraftLine} from '../../../../packages/contracts/index.js';
 import {normalize,sameUnit,tokens} from './catalog.js';
 import {spokenMeasures,convertAmount,matchesProductMeasures} from './quantity-evidence.js';
-const extra=/(?:மேலும்|இன்னும்|கூடுதலா|எக்ஸ்ட்ரா|\b(?:extra|additional|more|innum|kooduthal(?:a)?|melum)\b)/i;
+import {additionalMention as extra} from '../../../../packages/contracts/intent-language.js';
 const change=/(?:மட்டும்|வேணும்|வேண்டும்|மாற்ற|மாத்த|\b(?:only|instead|mattum|venum|maathu|change|make|set|need|want)\b)/i;
 const identityChange=/\b(?:brand|diameter|colour|color|replace|different|another type)\b|பிராண்ட்|விட்டம்|நிறம்|வேறு வகை/i;
 export const continuousAmount=(text:string)=>/\b(?:continuous|unbroken|single length)\b|ஒரே\s*(?:நீள|துண்டு)|ore\s+neelam/i.test(text);

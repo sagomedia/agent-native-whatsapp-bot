@@ -142,6 +142,13 @@ export class ConversationRuntime {
     }
     // A current recording is a customer channel: recognized whole commands
     // share text routing and its version, delivery and review-consent checks.
+    if(!failure&&!deterministic&&claimed.state.visualOrdering&&!claimed.state.lastRequestId&&
+      ['text','voice'].includes(claimed.event.type)&&interpretation?.understanding?.intents.includes('clear_list')&&
+      !interpretation.understanding.unresolved.includes('validation_recovery')&&
+      !negatedSpokenClear(interpretation.transcript??(claimed.event.type==='text'?claimed.event.text:''))){
+      // Model intent can offer a proposal, never authorize erasing the cart.
+      interpretation={...interpretation,operations:[],next:'continue'};clearConfirmation=true;
+    }
     if(!failure&&claimed.event.type==='voice'&&interpretation?.transcript){
       const transcript=interpretation.transcript,spokenClear=spokenClearCommand(transcript),command=spokenClear??canonicalShortcut(transcript);
       if(negatedSpokenClear(transcript))interpretation={operations:[],next:'continue',transcript,conversation:'pause'};
@@ -611,7 +618,7 @@ export class ConversationRuntime {
       if(recovery.length)feedback='The inferred search wording found no SKU. The backend retrieved these real products in the proposed family with the same brand/specification filters. Repair only those search terms using the actual names/SKUs. Preserve every other item, count, explicit brand, dimensions and verbatim evidence. These are photo-check suggestions, not approval.';
       if(feedback){
         if(image)throw new ToolError('Some list details need checking. Please correct the unclear lines or ask the shop.','interpretation_evidence');
-        const repaired=await this.callProvider(ctx,claim,{...input,text,audio:undefined,image:undefined,observations:recovery.length?recovery:input.observations,proposal:identified,planningFeedback:feedback},'repair');
+        const repaired=await this.callProvider(ctx,claim,{...input,text,audio:undefined,image:undefined,observations:recovery.length?recovery:input.observations,proposal:identified,planningFeedback:feedback,repairSourceKind:voice?'audio':'text'},'repair');
         const normalized=normalizeAmountEdits(repaired,text,claim.state);
         identified={...normalized,...(voice?{transcript}:{}),operations:validateCurrentTurn(normalized.operations,text,claim.state)};
       }

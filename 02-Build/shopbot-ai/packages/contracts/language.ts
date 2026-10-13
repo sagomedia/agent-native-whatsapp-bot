@@ -1,9 +1,10 @@
 import type {ConversationState,Product} from './index.js';
+import {normalizeFractionNumbers} from './measurements.js';
 import {formatMoney} from './money.js';
 
 export type ReplyLanguage='ta'|'ta-Latn'|'en';
 export type LocalNames=Partial<Record<ReplyLanguage,string>>;
-export type LanguageContext=Pick<ConversationState,'replyLanguage'>|ReplyLanguage;
+export type LanguageContext=(Pick<ConversationState,'replyLanguage'>&Partial<Pick<ConversationState,'draft'>>)|ReplyLanguage;
 // Missing language belongs to the legacy English renderer. Every new native
 // session explicitly stores Tamil; preferences never come from model guesses.
 export function languageOf(context:LanguageContext):ReplyLanguage {return typeof context==='string'?context:context.replyLanguage??'en';}
@@ -29,7 +30,16 @@ export function canonicalShortcut(text:string):string {
  return shortcuts[s]??s;
 }
 export function safeQuestion(question:string|undefined,context:LanguageContext):string|undefined {
- if(!question||!/[?][)\]\"'”’]*$/.test(question.trim())||/[\d₹$]|price|cost|discount|payment|stock|ready|approved|guarantee|deliver|https?:|விலை|பணம்|தள்ளுபடி|இருப்பு|உறுதி|டெலிவரி/i.test(question))return;
+ if(!question||!/[?][)\]\"'”’]*$/.test(question.trim())||/[₹$]|price|cost|discount|payment|stock|ready|approved|guarantee|deliver|https?:|விலை|பணம்|தள்ளுபடி|இருப்பு|உறுதி|டெலிவரி/i.test(question))return;
+ // Numeric clarification is grounded in current list facts, never model-invented
+ // amounts. Commercial claims remain blocked above even when a number is known.
+ const draft=typeof context==='string'?[]:context.draft??[];
+ const facts=draft.flatMap((line,index)=>[String(index+1),line.query??'',line.name,
+  String(line.quantity??''),JSON.stringify(line.packSize??{}),JSON.stringify(line.productMeasures??[]),
+  ...(line.candidates??[]).flatMap(p=>[p.name,...Object.values(p.localNames??{}),...Object.values(p.specifications??{})])]);
+ const numbers=(text:string)=>normalizeFractionNumbers(text).match(/\d+(?:\.\d+)?/g)??[];
+ const known=new Set(facts.flatMap(numbers));
+ if(numbers(question).some(n=>!known.has(n)))return;
  const tamil=/[\u0b80-\u0bff]/.test(question),language=languageOf(context);
  if(language==='ta'&&!tamil||language==='ta-Latn'&&(tamil||!/(venum|por|pann|enna|eth|neenga|unga|thaan|iruk|size-aa|brand-aa)/i.test(question))||language==='en'&&tamil)return;
  return question;

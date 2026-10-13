@@ -1,12 +1,12 @@
-import {measurementNumber,measurementNumberPattern} from '../../../../packages/contracts/measurements.js';
+import {measurementNumber,measurementNumberPattern,measurementUnitPattern,canonicalMeasurementUnit} from '../../../../packages/contracts/measurements.js';
 import type {Operation,DraftLine,Product} from '../../../../packages/contracts/index.js';
 import {sameUnit} from './catalog.js';
 import {quantityReply} from './shopping-language.js';
 
 type Measure={value:number;unit:string;role?:'size'|'diameter'|'length'|'width'|'height'|'thickness'};
 const countWords='kaal|ara|arai|கால்|அரை|one|two|three|four|five|six|seven|eight|nine|ten|twenty|fifty|hundred|oru|onnu|ondru|rendu|moonu|naalu|anju|paththu|pathu|ஒரு|ஒன்று|ஒன்னு|இரண்டு|ரெண்டு|மூன்று|நான்கு|நாலு|ஐந்து|அஞ்சு|பத்து|இருபது|ஐம்பது|நூறு';
-const measures=new RegExp('(?<![\\p{L}\\p{N}./])('+measurementNumberPattern+'|'+countWords+')\\s*[- ]?\\s*(lit(?:re|er)s?|l|லிட்டர்|liter|inch(?:es)?|இன்ச்|இஞ்ச்|mm|cm|ml|kilograms?|kilos?|kg|g|கிலோ|கிராம்|met(?:re|er)s?|m|மீட்டர்|மீட்ர்|feet|foot|ft|அடி)(?=\\s|$|[^\\p{L}])','giu');
-function measureUnit(s:string){return /^(l|lit|லிட்டர்)/i.test(s)&&s.toLowerCase()!=='ml'?'litre':/^inch|இன்ச்|இஞ்ச்/i.test(s)?'inch':/^(met|m$|மீ)/i.test(s)?'m':/^(feet|foot|ft|அடி)$/i.test(s)?'foot':s==='கிலோ'||/^kilo/i.test(s)?'kg':s==='கிராம்'?'g':s.toLowerCase();}
+const measures=new RegExp('(?<![\\p{L}\\p{N}./])('+measurementNumberPattern+'|'+countWords+')\\s*[- ]?\\s*('+measurementUnitPattern+')(?=\\s|$|[^\\p{L}])','giu');
+const measureUnit=canonicalMeasurementUnit;
 export const physicalMeasure=(measure:Measure)=>['inch','mm','cm','m','foot'].includes(measureUnit(measure.unit));
 function number(s:string){return (/^[\d½¼¾⅛⅜⅝⅞]/.test(s)?measurementNumber(s):undefined)??({kaal:.25,ara:.5,arai:.5,'கால்':.25,'அரை':.5,fifty:50,hundred:100,'இருபது':20,'ஐம்பது':50,'நூறு':100} as Record<string,number>)[s.toLowerCase()]??quantityReply(s)?.quantity;}
 export function spokenMeasures(text:string):Measure[]{return [...text.matchAll(measures)].flatMap(m=>{const value=number(m[1]);return value?[{value,unit:measureUnit(m[2])}]:[];});}

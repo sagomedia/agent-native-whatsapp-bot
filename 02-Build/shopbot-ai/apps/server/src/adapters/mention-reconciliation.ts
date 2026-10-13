@@ -4,9 +4,8 @@ import {normalize,tokens} from '../../../../packages/contracts/catalog-text.js';
 import {say,lineName} from '../../../../packages/contracts/language.js';
 import {matchesProductMeasures,spokenMeasures,convertAmount,catalogPack} from '../services/quantity-evidence.js';
 type Item=TurnUnderstanding['requestedItems'][number];
-export const additionalMention=/(?:மேலும்|இன்னும்|கூடுதலா|எக்ஸ்ட்ரா|\b(?:extra|additional|more|innum|kooduthal(?:a)?|melum)\b)/i;
-const repeatMention=/(?:ஆல்ரெடி|ஏற்கனவே|சொல்லிட்டேன்|அதே|\b(?:already|same|as i said|told you|sonnen|sollitten|adhe)\b)/i;
-const correctionMention=/(?:இல்லை|இல்ல|\b(?:actually|sorry|correction|instead|no)\b)/i;
+import {additionalMention,repeatMention,correctionMention} from '../../../../packages/contracts/intent-language.js';
+export {additionalMention} from '../../../../packages/contracts/intent-language.js';
 function identity(query:string){return tokens(normalize(query).replace(/\b\d+(?:\.\d+)?\s*(?:inch|inches|mm|cm|ml|litre|litres|kg|metre|metres|m)\b/g,' ')).join(' ');}
 // These nouns name several physically different shop products. A one-word
 // mention does not identify a previously selected type by itself.

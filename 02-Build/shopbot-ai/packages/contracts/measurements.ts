@@ -1,5 +1,15 @@
 /** Fractions are parsed as a whole; a denominator can never become the size. */
 const fractions:Record<string,number>={'½':.5,'¼':.25,'¾':.75,'⅛':.125,'⅜':.375,'⅝':.625,'⅞':.875};
+export const measurementUnitPattern = 'lit(?:re|er)s?|ltr?s?|l|லிட்டர்|லிட்டரு|inch(?:es)?|இன்ச்|இஞ்ச்|அங்குலம்|mm|cm|ml|kilograms?|kilos?|kgs?|g|கிலோ|கிராம்|met(?:re|er)s?|mtrs?|m|மீட்டர்|மீட்ர்|feet|foot|ft|அடி';
+export function canonicalMeasurementUnit(value: string): string {
+ const unit = value.toLowerCase();
+ if (/^(?:l|lt|ltr|ltrs|litres?|liters?|லிட்டர்|லிட்டரு)$/.test(unit)) return 'litre';
+ if (/^(?:inch(?:es)?|இன்ச்|இஞ்ச்|அங்குலம்)$/.test(unit)) return 'inch';
+ if (/^(?:metres?|meters?|mtr|mtrs|m|மீட்டர்|மீட்ர்)$/.test(unit)) return 'm';
+ if (/^(?:feet|foot|ft|அடி)$/.test(unit)) return 'foot';
+ if (/^(?:kilograms?|kilos?|kgs?|கிலோ)$/.test(unit)) return 'kg';
+ return unit === 'கிராம்' ? 'g' : unit;
+}
 export const measurementNumberPattern='(?:\\d+\\s+\\d+\\s*/\\s*\\d+|\\d+\\s*/\\s*\\d+|\\d+(?:\\.\\d+)?|[½¼¾⅛⅜⅝⅞])';
 export function measurementNumber(value:string):number|undefined {
  const text=value.trim();if(fractions[text]!==undefined)return fractions[text];

@@ -1,3 +1,4 @@
+import {canonicalMeasurementUnit} from '../../../../packages/contracts/measurements.js';
 import type { PoolClient } from 'pg';
 import type { Product } from '../../../../packages/contracts/index.js';
 import type { ActorContext } from './context.js';
@@ -54,6 +55,7 @@ export async function searchProducts(client: PoolClient, context: ActorContext, 
 export function normalizeUnit(value:string) {
   const v=normalize(value);
   const units:Record<string,string>={'எண்ணம்':'piece','பீஸ்':'piece','பெட்டி':'box','பெட்டிகள்':'box','பாக்ஸ்':'box','பாட்டில்':'bottle','பாட்டில்கள்':'bottle','ரோல்':'roll','ரோல்கள்':'roll','அடி':'foot','மீட்டர்':'metre','கிலோ':'kg','ஜோடி':'pair','பேக்':'pack','லிட்டர்':'litre',ennam:'piece',petti:'box',pettigal:'box',adi:'foot',jodi:'pair',kilo:'kg',pieces:'piece',pcs:'piece',pc:'piece',nos:'piece',each:'piece',units:'piece',unit:'piece',boxes:'box',rolls:'roll',feet:'foot',ft:'foot',meters:'metre',meter:'metre',metres:'metre',m:'metre',kilograms:'kg',kilogram:'kg',kilos:'kg',litres:'litre',liter:'litre',liters:'litre',bottles:'bottle',cans:'can',tins:'tin',buckets:'bucket','கேன்':'can','வாளி':'bucket',packs:'pack',pairs:'pair'};
-  return units[v]??v;
+  const measured=canonicalMeasurementUnit(v);
+  return units[v]??(measured==='m'?'metre':measured);
 }
 export function sameUnit(a:string,b:string){return normalizeUnit(a)===normalizeUnit(b);}

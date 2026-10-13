@@ -11,8 +11,7 @@ export function submissionIntent(text:string):boolean {
  // A complete short command, never a substring of a shopping correction.
  return /^(?:(?:ok(?:ay)?|seri|sari|சரி|ஓகே|perfect|yes)\s*[, ]*\s*)*(?:anup(?:p)?ir?lam|anuppalaam|anupalaam|அனுப்பலாம்|அனுப்பிரலாம்|அனுப்பிடலாம்|கடைக்கு அனுப்புங்க|kadaikku anupp(?:u|unga|irunga)|send (?:it|this|the order|my order|the list|my list)(?: to (?:the )?(?:shop|store))?|(?:place|submit|finish) (?:the |my )?order|(?:ஆர்டரை|ஆர்டர்) (?:பிளேஸ் பண்ணிடலாம்|பிளேஸ் பண்ணலாம்|போட்டுடலாம்|அனுப்புங்க)|(?:இந்த )?பட்டியலை(?:க்)? கடைக்கு அனுப்புங்க)(?:\s+(?:naan vandhu collect pannikkiren|நான் வந்து.*))?$/.test(value);
 }
-const negative=/(?:வேண்டாம்|வெண்டாம்|வேணாம்|வெனாம்|\b(?:venda(?:m)?|vendam|vena(?:am)?|venam|don't want|do not want|not needed)\b)/i;
-const extra=/(?:மேலும்|இன்னும்|கூடுதலா|எக்ஸ்ட்ரா|\b(?:extra|additional|more|innum|kooduthal(?:a)?|melum)\b)/i;
+import {negativeProductMention as negative,additionalMention as extra,intentClauses} from '../../../../packages/contracts/intent-language.js';
 export function validateCurrentTurn(operations:Operation[],description:string,state:ConversationState):Operation[] {
  validateProductMeaningEvidence(operations,description);
  const removals=operations.filter(op=>op.kind==='remove_item');
@@ -26,17 +25,24 @@ export function validateCurrentTurn(operations:Operation[],description:string,st
   if(!focusedOnly&&!replacement&&!clearThenAdd&&!namedRemovalsExplicit(operations,description,state))throw new ToolError('The removal targets need exact current-message evidence. Include supportingPhrase for each named removal; a refusal of photos must not remove the list.','interpretation_evidence');
  }
 
- const clauses=description.split(/[,;.!?\n]|\s+and\s+|\s+அடுத்து\s+/i).filter(Boolean);
+ const clauses=intentClauses(description);
  for(const op of operations){
   if((op.kind==='set_amount'||op.kind==='increment_amount')&&!amountEvidence(op,description))throw new ToolError('Use the exact measured amount and supporting phrase from the current message. Additional amounts need explicit extra wording.','interpretation_evidence');
   if('supportingPhrase' in op&&op.supportingPhrase&&!description.includes(op.supportingPhrase))throw new ToolError('Use the exact supporting phrase from the current message.','interpretation_evidence');
   if(op.kind==='increment_quantity'&&!extra.test(op.supportingPhrase))throw new ToolError('An increment requires an explicitly additional count.','interpretation_evidence');
   if(op.kind==='add_item'||op.kind==='resolve_line'){
    const evidence=op.supportingPhrase??(op.productIntent?.sourcePhrase);
-   if(evidence&&negative.test(evidence))throw new ToolError('A negated product cannot be added or replaced.','interpretation_polarity');
    const name=op.kind==='add_item'?op.query:op.query??'';
-   const words=name.toLowerCase().split(/\s+/).filter(w=>w.length>3);
-   if(clauses.some(c=>negative.test(c)&&words.some(w=>c.toLowerCase().includes(w))))throw new ToolError('The customer declined this product; do not add it.','interpretation_polarity');
+   const words=tokens(name).filter(w=>w.length>2&&!/^\d/.test(w));
+   if(evidence&&negative.test(evidence)){
+    const parts=intentClauses(evidence);
+    const positive=words.length&&parts.some(c=>!negative.test(c)&&words.every(w=>tokens(c).includes(w)));
+    const rejected=words.length&&parts.some(c=>negative.test(c)&&words.every(w=>tokens(c).includes(w)));
+    if(!positive||rejected)throw new ToolError('A negated product cannot be added or replaced.','interpretation_polarity');
+   }
+   // A rejected PVC pipe must not reject a separately requested garden pipe
+   // merely because both share the head noun. Require the requested identity.
+   if(words.length&&clauses.some(c=>negative.test(c)&&words.every(w=>tokens(c).includes(w))))throw new ToolError('The customer declined this product; do not add it.','interpretation_polarity');
    if(/\bscrews?\b/i.test(name)&&/ஆணி/.test(evidence??description)&&!/(?:ஸ்க்ரூ|திருகு)/.test(evidence??description))throw new ToolError('Nails and screws are different products. Keep the requested nail.','interpretation_identity');
   }
   if(op.kind==='set_quantity'||op.kind==='resolve_line'&&op.quantity!==undefined){
