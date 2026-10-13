@@ -38,7 +38,7 @@ An image URL can work and still show the wrong product because the selected SKU 
 
 ## Git and GitHub, step by step
 
-The source application is under `02-Build/shopbot-ai` in the private repository `sagomedia/agent-native-whatsapp-bot`. The feature branch is `codex/voice-order-correctness`.
+The source application is under `02-Build/shopbot-ai` in the private repository `sagomedia/agent-native-whatsapp-bot`. The feature branch is `codex/voice-order-recovery-final`.
 
 - **Git** records local changes in commits. A branch is a line of commits.
 - **Fetch** downloads remote history and updates remote references. It does not merge into your dirty working files.
