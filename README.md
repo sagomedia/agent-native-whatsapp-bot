@@ -37,6 +37,6 @@ Open http://localhost:3017. The optional AI test page is at http://localhost:301
 
 `main` is the current application baseline. Create a `codex/<change>` or `feature/<change>` branch for further work and open a pull request. Historical rollback points are retained as `checkpoint/*` tags. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and [GIT-WORKFLOW.md](GIT-WORKFLOW.md) for recovery.
 
-GitHub Actions runs the locked dependency install, TypeScript checks, production build, PostgreSQL integration tests and catalog cleanup tests on pushes and pull requests. It uses a disposable database and mocked AI providers.
+The proposed GitHub Actions workflow at `03-Output/ci-proposal/project-checks.yml` installs locked dependencies and runs TypeScript checks, the production build, PostgreSQL integration tests and catalog cleanup tests using a disposable database and mocked AI providers. CI is not active yet; activation requires moving it to `.github/workflows/ci.yml` with GitHub workflow permission.
 
 Source, reference documents, demo catalog fixtures and verification evidence are versioned. Credentials, local databases, customer uploads, dependencies and build outputs stay outside Git. This private source repository does not back up runtime database or media volumes.
