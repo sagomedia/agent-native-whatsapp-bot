@@ -77,6 +77,9 @@ export function compatibleLine(item:Item,line:DraftLine){
 export function existingMention(item:Item,state:ConversationState):{line?:DraftLine;clarify?:string}{
  if(item.targetLineId){
   const line=state.draft.find(l=>l.id===item.targetLineId);if(!line)throw new Error('Repeated item target is not current');
+  const focused=state.editingLineId===line.id||state.pending?.kind==='question'&&state.pending.lineId===line.id;
+  const compatible=state.draft.filter(l=>compatibleLine(item,l));
+  if(!focused&&compatible.length>1)return {clarify:say(state,'Which existing item should receive this change?','ஏற்கனவே உள்ள எந்தப் பொருளுக்கு இந்த மாற்றம் வேண்டும்?','Irukkura entha porulukku intha maaththam venum?')};
   if(!refersToCurrentItem(item,state,line)){
    if(!compatibleLine(item,line))return {};
    if(item.query&&ambiguousIdentity(item.query))return {clarify:say(state,`Do you mean your existing ${lineName(line,state)}, or a different ${item.query}?`,`ஏற்கனவே உள்ள ${lineName(line,state)}-ஐ சொல்கிறீர்களா, வேறு ${item.query} வேண்டுமா?`,`Irukkura ${lineName(line,state)}-a solreengala, vera ${item.query} venuma?`)};

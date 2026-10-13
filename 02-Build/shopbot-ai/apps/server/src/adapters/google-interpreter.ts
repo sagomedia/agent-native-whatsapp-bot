@@ -1,4 +1,4 @@
-import {turnUnderstandingSchema} from '../../../../packages/contracts/understanding.js';
+import {turnUnderstandingSchema,normalizeUnderstandingAbsence} from '../../../../packages/contracts/understanding.js';
 import {UNDERSTANDING_PROMPT_VERSION} from '../../../../packages/contracts/model-policy.js';
 import {understandingInstruction,understandingResponseSchema,understandingPrompt,understandingToInterpretation} from './turn-understanding.js';
 import {languageOf,say} from '../../../../packages/contracts/language.js';
@@ -175,7 +175,7 @@ export class GoogleInterpreter implements Interpreter {
       // A valid faithful transcript is still useful when a reference/evidence
       // contract fails. Retain it for a focused correction or deterministic
       // clear command, but execute none of the rejected shopping proposals.
-      try{const parsed=turnUnderstandingSchema.safeParse(JSON.parse(text));
+      try{const parsed=turnUnderstandingSchema.safeParse(normalizeUnderstandingAbsence(JSON.parse(text)));
         if(parsed.success&&!input.image&&(input.audio?parsed.data.inputKind==='audio'&&!!parsed.data.transcript:parsed.data.inputKind==='text')){
           const understood=parsed.data;
           output=interpretationSchema.parse({operations:[],next:'continue',...(input.audio?{transcript:understood.transcript}:{}),clarifyQuestion:say(input.state,'Your list is kept. Which item should I change, and what type and quantity do you want?','பட்டியல் அப்படியே இருக்கு. எந்தப் பொருளை மாற்றணும், அதன் வகையும் எண்ணிக்கையும் என்ன?','List appadiye irukku. Entha porulai maathanum, athan type-um count-um enna?'),understanding:{...understood,requestedItems:[],proposedEdits:[],shopQuestions:[],unresolved:['validation_recovery']}});

@@ -1,6 +1,6 @@
 import {say} from '../../../../packages/contracts/language.js';
 import {z} from 'zod';
-import {turnUnderstandingSchema,type TurnUnderstanding} from '../../../../packages/contracts/understanding.js';
+import {turnUnderstandingSchema,normalizeUnderstandingAbsence,type TurnUnderstanding} from '../../../../packages/contracts/understanding.js';
 import {interpretationSchema,type Interpretation,type Operation} from '../../../../packages/contracts/index.js';
 import {UNDERSTANDING_VERSION} from '../../../../packages/contracts/model-policy.js';
 import type {InterpretationInput} from './interpreter.js';
@@ -40,7 +40,7 @@ function groundIdentityInItem<T extends TurnUnderstanding['requestedItems'][numb
  return {...item,query:query.replace(/\s+/g,' ').trim()||null,brand,material,unresolved:[...new Set([...item.unresolved,'identity' as const])]} as T;
 }
 export function understandingToInterpretation(value:unknown,input:InterpretationInput,allowImageLists:boolean):Interpretation {
- const u=turnUnderstandingSchema.parse(value);
+ const u=turnUnderstandingSchema.parse(normalizeUnderstandingAbsence(value));
  if(input.audio&&u.inputKind!=='audio'||input.image&&!['product_photo','handwritten_list','unknown_image'].includes(u.inputKind)||!input.audio&&!input.image&&u.inputKind!=='text')throw new Error('Input modality mismatch');
  if(input.audio&&!u.transcript?.trim())throw new Error('No clear speech was recognized');
  if(input.image&&u.observedText===undefined)throw new Error('Image evidence is missing');
@@ -61,6 +61,7 @@ export function understandingToInterpretation(value:unknown,input:Interpretation
    if(target.line){
     if(item.unresolved.includes('quantity')){reconciliationQuestion=say(input.state,`How many of ${target.line.name} do you want in total?`,`${target.line.name} மொத்தம் எத்தனை வேணும்?`,`${target.line.name} moththam eththanai venum?`);return;}
     if(item.requestMode==='additional'||additionalMention.test(item.sourceText)){
+     if(!compatibleLine({...item,query:full},target.line)){reconciliationQuestion=say(input.state,'This is a different product type or brand. Should it be a separate item?','இது வேறு வகை அல்லது பிராண்ட். தனி பொருளாக சேர்க்கவா?','Ithu vera type illa brand. Thani porula serkkava?');return;}
      if(item.requestedAmount&&additionalMention.test(item.sourceText))return {kind:'increment_amount',reference:target.line.id,delta:item.requestedAmount,supportingPhrase:item.sourceText};
      if(count===null||!additionalMention.test(item.sourceText))throw new Error('Additional quantity needs explicit current evidence');
      return {kind:'increment_quantity',reference:target.line.id,delta:count,supportingPhrase:item.sourceText};
@@ -81,6 +82,14 @@ export function understandingToInterpretation(value:unknown,input:Interpretation
  const operations:Operation[]=writing?items.map(sourceItem).filter((op):op is Operation=>!!op):[];
  if(writing)for(const e of u.proposedEdits){
   if(!input.state.draft.some(l=>l.id===e.targetLineId)||!sourceIncludes(source,e.sourceText))throw new Error('Edit target or evidence is not current');
+  const target=input.state.draft.find(l=>l.id===e.targetLineId)!;
+  const focused=input.state.editingLineId===target.id||input.state.pending?.kind==='question'&&input.state.pending.lineId===target.id;
+  const group=input.state.draft.filter(l=>compatibleLine({ordinal:0,sourceText:e.sourceText,query:target.query??target.name,purchaseCount:null,unresolved:[]},l));
+  const brand=target.candidates?.find(p=>p.sku===target.sku)?.brand;
+  const explicitGroup=/\b(?:each|both|all)\b|ஒவ்வொரு|இரண்டுக்கும்|எல்லா/iu.test(e.sourceText);
+  if(!focused&&group.length>1&&!explicitGroup&&!(brand&&brand!=='Generic'&&e.sourceText.toLowerCase().includes(brand.toLowerCase()))){
+   reconciliationQuestion=say(input.state,'Which existing item should receive this change?','ஏற்கனவே உள்ள எந்தப் பொருளுக்கு இந்த மாற்றம் வேண்டும்?','Irukkura entha porulukku intha maaththam venum?');continue;
+  }
   const broadcast=u.proposedEdits.some(other=>other.targetLineId!==e.targetLineId&&other.sourceText===e.sourceText);
   if(broadcast&&!/\b(?:each|both|all)\b|ஒவ்வொரு|இரண்டுக்கும்|எல்லா/iu.test(e.sourceText)){
    reconciliationQuestion=say(input.state,'Which one of the existing items should receive this change?','ஏற்கனவே உள்ள எந்த ஒரு பொருளுக்கு இந்த மாற்றம் வேண்டும்?','Irukkura entha oru porulukku intha maaththam venum?');continue;

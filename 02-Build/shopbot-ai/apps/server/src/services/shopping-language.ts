@@ -10,9 +10,9 @@ const tamilClear=/(?:^|\s)(?:பா?ட்டியா?[லள]ை(?:க்|ய|
 // "No more items, clear everything" is common spoken Tamil/Tanglish. ASR
 // sometimes hears எல்லாத்தையும் as எல்லாரும்; this route only offers a clear
 // confirmation, so it never erases the cart based on that uncertain wording.
-const allChange=/(?:^|\s)(?:எல்லாத்தையும்|எல்லாமே|எல்லாம்|எல்லாரும்|everything|all)\s+(?:சேஞ்ச்|மாற்றி|மாத்தி|change|reset)\s+(?:பண்ணிடு|பண்ணிடுங்க|பண்ணு|பண்ணுங்க|விடு|விடுங்க|pannidu|pannu)(?=\s|$)/u;
+const allChange=/(?:^|\s)(?:எல்லாத்தையும்|எல்லாமே|எல்லாம்|எல்லாரும்|ellaam|ellam|ellathaiyum|ellaarum|everything|all)\s+(?:சேஞ்ச்|மாற்றி|மாத்தி|change|reset)\s+(?:பண்ணிடு|பண்ணிடுங்க|பண்ணு|பண்ணுங்க|விடு|விடுங்க|pannidu|panniru|pannunga|pannidunga|pannu)(?=\s|$)/u;
 export function spokenWholeListChange(text:string):boolean {const clean=speechText(text),match=allChange.exec(clean);return !!match&&!quotedOrQuestion.test(text.toLowerCase())&&!clearNegation.test(clean.slice(match.index+match[0].length));}
-const allClear=/(?:^|\s)(?:எல்லாத்தையும்|எல்லாமே|எல்லாம்|எல்லாரும்|everything|all)\s+(?:கிளியர்|க்ளியர்|clear)\s+(?:பண்ணிடு|பண்ணிடுங்க|பண்ணு|பண்ணுங்க|pannidu|pannu)(?=\s|$)/u;
+const allClear=/(?:^|\s)(?:எல்லாத்தையும்|எல்லாமே|எல்லாம்|எல்லாரும்|ellaam|ellam|ellathaiyum|ellaarum|everything|all)\s+(?:கிளியர்|க்ளியர்|clear)\s+(?:பண்ணிடு|பண்ணிடுங்க|பண்ணு|பண்ணுங்க|pannidu|panniru|pannunga|pannidunga|pannu)(?=\s|$)/u;
 const clearNegation=/\b(?:don't|dont|not|no|keep|cancel|stop|vendam|venam|illai)\b|do not|வேண்டாம்|வேணாம்|இல்லை|இல்ல|பண்ணாதே|பண்ணாதீங்க|செய்யாதே|செய்யாதீங்க|சொல்லல/u;
 const quotedOrQuestion=/[?"“”‘’]|\b(?:example|quote|quoted)\b|உதாரண|என்று|ன்னு|சொன்னா|சொல்லலாமா|செய்யலாமா|பண்ணலாமா|வேண்டுமா/u;
 const secondShoppingEdit=/\b(?:add|remove|delete|change|replace|order)\b|சேர்|சேர்க்க|நீக்கு|மாற்று|வாங்க/u;

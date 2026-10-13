@@ -175,6 +175,12 @@ export class ConversationRuntime {
     }
     if(claimed.state.visualOrdering&&interpretation?.operations.length)try{interpretation={...interpretation,operations:protectQuantityEvidence(validateProductMeaningEvidence(interpretation.operations,claimed.event.type==='text'?claimed.event.text:claimed.event.type==='image'?interpretation.understanding?.observedText??'':interpretation.transcript??''),claimed.event.type==='text'?claimed.event.text:claimed.event.type==='image'?interpretation.understanding?.observedText??'':interpretation.transcript??'')};}catch(error){failure=error instanceof Error?error.message:'Product meaning could not be validated.';}
     if(claimed.event.type==='voice'&&interpretation?.transcript&&interpretation.operations.length===0&&interpretation.next==='continue')requestedLanguage=languageRequest(interpretation.transcript);
+    if(claimed.state.visualOrdering&&!failure&&!claimed.state.lastRequestId&&claimed.state.draft.length&&interpretation?.understanding?.intents.includes('cancel')&&!interpretation.operations.length&&!negatedSpokenClear(interpretation.transcript??(claimed.event.type==='text'?claimed.event.text:''))){
+      // Unsent-list cancellation proposes choices; it is neither deletion nor
+      // a human handover. No exact ASR spelling is needed for confirmation.
+      clearConfirmation=true;changeWholeList=!spokenClearCommand(interpretation.transcript??(claimed.event.type==='text'?claimed.event.text:''));
+      interpretation={...interpretation,conversation:undefined};social=undefined;deterministic=undefined;
+    }
     await withConversation(this.pool,ctx,async client=>{
       const controls=await client.query('SELECT c.operator_mode,s.operator_paused FROM conversations c JOIN stores s ON s.id=c.store_id WHERE c.id=$1',[ctx.conversationId]);
       if(controls.rows[0].operator_mode==='owner'||controls.rows[0].operator_paused){

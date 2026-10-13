@@ -25,3 +25,14 @@ export const turnUnderstandingSchema=z.object({
  clarifyQuestion:z.string().trim().min(1).max(180).optional(),explicitLanguageRequest:z.enum(['ta','ta-Latn','en']).optional(),
 }).strict().refine(t=>new Set(t.requestedItems.map(i=>i.ordinal)).size===t.requestedItems.length,'Duplicate source lines');
 export type TurnUnderstanding=z.infer<typeof turnUnderstandingSchema>;
+
+// Normalize only absence representations for known optional fields. Required
+// counts/queries/arrays and all unknown keys still undergo strict validation.
+export function normalizeUnderstandingAbsence(value:unknown):unknown {
+ if(!value||typeof value!=='object'||Array.isArray(value))return value;
+ const clean=(v:Record<string,unknown>,fields:string[])=>{const next={...v};for(const field of fields)if(next[field]===null||next[field]==='')delete next[field];return next;};
+ const result=clean(value as Record<string,unknown>,['transcript','observedText','clarifyQuestion','explicitLanguageRequest']);
+ if(Array.isArray(result.requestedItems))result.requestedItems=result.requestedItems.map(v=>v&&typeof v==='object'&&!Array.isArray(v)?clean(v,['targetLineId','sameItemOrdinal','requestMode','requestedContainer','brand','colour','material','packSize','dimensions','requestedAmount','amountMode','requestedBudgetPaise','crossedOut']):v);
+ if(Array.isArray(result.proposedEdits))result.proposedEdits=result.proposedEdits.map(v=>v&&typeof v==='object'&&!Array.isArray(v)?clean(v,['quantity','query','amount','mode']):v);
+ return result;
+}

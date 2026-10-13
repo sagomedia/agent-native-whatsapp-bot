@@ -69,3 +69,17 @@ test('global change ASR variation offers edit or clear confirmation and never ha
  const transcript='அதே மாதிரி வேண்டா. எல்லாத்தையும் சேஞ்ச் பண்ணிடு.';const r=new ConversationRuntime(pool,new GoogleInterpreter(settings,{generateContent:async()=>response({...base('audio'),transcript,intents:['edit','cancel'],clarifyQuestion:'எந்த பொருளை மாற்ற வேண்டும்?'})}),{allowPaidInference:true,visualOrdering:true});
  const s=await voice(inbox,r);assert.equal(s.conversation.draft.length,1);assert.equal(s.conversation.handoffRequested,false);const a=actions(s.messages.at(-1)!.rich!).map(b=>b.event).filter(e=>e.type==='shopping_action');assert.ok(a.some(e=>e.action==='edit_list'));assert.ok(a.some(e=>e.action==='confirm_clear'));assert.equal(s.requests.length,0);
 }));
+
+test('empty optional clarify text is absence and does not discard a valid spoken list',()=>fixture(async(pool,inbox)=>{
+ const output={...base('audio'),transcript:'two water pumping pipes',intents:['add'],requestedItems:[{ordinal:0,sourceText:'two water pumping pipes',query:'water pumping pipe',purchaseCount:2,unresolved:[],brand:null}],clarifyQuestion:''};
+ const r=new ConversationRuntime(pool,new GoogleInterpreter(settings,{generateContent:async()=>response(output)}),{allowPaidInference:true,visualOrdering:true});const s=await voice(inbox,r);assert.equal(s.conversation.draft.length,1);assert.equal(s.conversation.draft[0].quantity,2);assert.equal(s.conversation.draft[0].sku,undefined);assert.notEqual(s.messages.at(-1)!.rich?.stage,'error');assert.equal(s.requests.length,0);
+}));
+test('Latin Tanglish clear-all variation creates a confirmation rather than a handover',()=>fixture(async(pool,inbox)=>{
+ await new RetailTools(pool).invoke(inbox.context,{name:'apply_draft_changes',args:{expectedVersion:0,operations:[{kind:'add_item',query:'H13',quantity:1}]}},'seed');const transcript='athu mael venaam, ellaam clear panniru';assert.equal(spokenClearCommand(transcript),'clear my list');
+ const r=new ConversationRuntime(pool,new GoogleInterpreter(settings,{generateContent:async()=>response({...base('audio'),transcript,intents:['cancel'],clarifyQuestion:'எதை நீக்க வேண்டும்?'})}),{allowPaidInference:true,visualOrdering:true});const s=await voice(inbox,r);assert.equal(s.conversation.handoffRequested,false);assert.equal(s.conversation.draft.length,1);assert.ok(actions(s.messages.at(-1)!.rich!).some(b=>b.event.type==='shopping_action'&&b.event.action==='confirm_clear'));
+}));
+
+test('unspecified cancellation offers guarded list choices without requiring exact ASR spelling',()=>fixture(async(pool,inbox)=>{
+ await new RetailTools(pool).invoke(inbox.context,{name:'apply_draft_changes',args:{expectedVersion:0,operations:[{kind:'add_item',query:'H13',quantity:1}]}},'seed');
+ const r=new ConversationRuntime(pool,new GoogleInterpreter(settings,{generateContent:async()=>response({...base('audio'),transcript:'ithu venda cancel pannu',intents:['cancel']})}),{allowPaidInference:true,visualOrdering:true});const s=await voice(inbox,r);assert.equal(s.conversation.draft.length,1);assert.equal(s.conversation.handoffRequested,false);assert.ok(actions(s.messages.at(-1)!.rich!).some(b=>b.event.type==='shopping_action'&&b.event.action==='confirm_clear'));assert.equal(s.requests.length,0);
+}));
