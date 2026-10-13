@@ -1,0 +1,55 @@
+{
+  "release": "preview-539dc247a0a0",
+  "model": "gemini-3.5-flash-lite",
+  "cases": [
+    {
+      "name": "recorded-pipe-and-cutter-with-legacy-cart",
+      "pass": true,
+      "elapsedMs": 3857
+    },
+    {
+      "name": "recorded-rejected-correction-recovers",
+      "pass": true,
+      "elapsedMs": 3248
+    },
+    {
+      "name": "recorded-clear-all-requires-confirmation",
+      "pass": true,
+      "elapsedMs": 2148
+    },
+    {
+      "name": "unspecified-pumping-pipe",
+      "pass": true,
+      "elapsedMs": 2097
+    },
+    {
+      "name": "brand-is-not-substituted",
+      "pass": true,
+      "elapsedMs": 1681
+    },
+    {
+      "name": "material-belongs-only-to-cutter",
+      "pass": true,
+      "elapsedMs": 1522
+    },
+    {
+      "name": "extra-is-increment",
+      "pass": true,
+      "elapsedMs": 1668
+    },
+    {
+      "name": "restated-total-is-not-extra",
+      "pass": true,
+      "elapsedMs": 1183
+    },
+    {
+      "name": "negated-clear-keeps-list",
+      "pass": true,
+      "elapsedMs": 214
+    }
+  ],
+  "runEstimatedCostMicrousd": 7429,
+  "cumulativeEstimatedCostMicrousd": "23101",
+  "whatsAppSends": 0,
+  "orders": 0
+}

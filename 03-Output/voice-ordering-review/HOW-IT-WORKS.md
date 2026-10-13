@@ -98,6 +98,6 @@ Consider a move or resize only with a specific measured reason: repeated memory 
 
 ## What to learn first
 
-Practice one clean branch and PR; distinguish a GitHub commit from an active VPS release; inspect the current cart and pending question before blaming the model; use the health and service-log checks above; and learn backup/restore before migration. For a clean customer retest, explicitly start a new list or confirm a clear action before sending a replacement shopping list. A shorter new message alone does not authorize deleting old items.
+Practice one clean branch and PR; distinguish a GitHub commit from an active VPS release; inspect the current cart and pending question before blaming the model; use the health and service-log checks above; and learn backup/restore before migration. For a clean customer retest, first click **Return to assistant** if the dashboard is handling the chat, then explicitly start a new list or confirm a clear action before sending a replacement shopping list. A shorter new message alone does not authorize deleting old items.
 
 The generated illustration is a conceptual overview. The SVG/PNG diagrams have exact editable labels and are produced by `build-diagrams.py`. The image-generation prompt is saved in `image-prompt.txt`; the built-in image tool was used. Customer audio, raw replay responses, credentials and database dumps are excluded from the learning assets and the PR.
