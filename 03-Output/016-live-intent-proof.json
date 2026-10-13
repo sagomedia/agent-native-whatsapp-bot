@@ -1,0 +1,721 @@
+{
+  "date": "2026-10-04",
+  "environment": "Local synthetic KSMC store; Gemini free tier only",
+  "model": "gemini-3.5-flash-lite",
+  "attemptCount": 5,
+  "totalTokens": 45836,
+  "submittedRequests": 0,
+  "semanticIssueFoundAndFixed": "First English job follow-up proposed an unstated quantity of one. Added a photo-confirmation exploration guard and strict prompt; final live follow-up remains read-only with H19 and no amount.",
+  "attempts": [
+    {
+      "conversation_id": "50cca6da-afce-4094-b696-5b760834a178",
+      "state": "succeeded",
+      "billing_state": "free_declared",
+      "quota_scope": "invisible-erp",
+      "response": {
+        "next": "assist",
+        "assistance": {
+          "search": {
+            "useCase": "cutting blade",
+            "keywords": [
+              "saw blade",
+              "cutting disc",
+              "pipe cutter"
+            ],
+            "familyIds": [
+              "saw-blades",
+              "cutting-discs",
+              "pipe-cutters"
+            ]
+          },
+          "queries": [
+            "saw blade",
+            "cutting disc",
+            "pipe cutter"
+          ],
+          "question": "எதை வெட்ட இந்த பிளேடு வேண்டும்?",
+          "rootQuery": "cutting blade"
+        },
+        "operations": [],
+        "clarifyQuestion": "எதை வெட்ட இந்த பிளேடு வேண்டும்?"
+      },
+      "usage": {
+        "totalTokenCount": 9121,
+        "promptTokenCount": 8943,
+        "candidatesTokenCount": 178
+      },
+      "validation_issues": null,
+      "created_at": "2026-10-04T05:15:43.467Z",
+      "text": "ennaku oru cutting blade veeanum"
+    },
+    {
+      "conversation_id": "dc465c90-b810-4e43-ad8c-f3041d3c1737",
+      "state": "succeeded",
+      "billing_state": "free_declared",
+      "quota_scope": "invisible-erp",
+      "response": {
+        "next": "assist",
+        "assistance": {
+          "search": {
+            "useCase": "cutting blade",
+            "keywords": [
+              "cutting disc",
+              "hacksaw blade",
+              "pipe cutter"
+            ],
+            "familyIds": [
+              "cutting-discs",
+              "saw-blades",
+              "pipe-cutters"
+            ]
+          },
+          "queries": [
+            "cutting disc",
+            "hacksaw blade",
+            "pipe cutter"
+          ],
+          "quantity": 1,
+          "question": "எதை வெட்ட இந்த பிளேடு வேண்டும்? (மரம், உலோகம் அல்லது பைப்?)",
+          "rootQuery": "cutting blade",
+          "requestedUnit": "piece"
+        },
+        "operations": [],
+        "clarifyQuestion": "எதை வெட்ட இந்த பிளேடு வேண்டும்? (மரம், உலோகம் அல்லது பைப்?)"
+      },
+      "usage": {
+        "totalTokenCount": 9260,
+        "promptTokenCount": 9131,
+        "candidatesTokenCount": 129
+      },
+      "validation_issues": null,
+      "created_at": "2026-10-04T05:22:43.961Z",
+      "text": "ennaku oru cutting blade veeanum"
+    },
+    {
+      "conversation_id": "4a38bf5c-0cb8-48e5-951d-ede9ac14e98f",
+      "state": "succeeded",
+      "billing_state": "free_declared",
+      "quota_scope": "invisible-erp",
+      "response": {
+        "next": "assist",
+        "assistance": {
+          "search": {
+            "useCase": "general cutting",
+            "keywords": [
+              "pipe cutter",
+              "cutting wheel",
+              "hacksaw blade",
+              "garden shear"
+            ],
+            "familyIds": [
+              "pipe-cutters",
+              "cutting-discs",
+              "saw-blades",
+              "garden-cutters"
+            ]
+          },
+          "queries": [
+            "pipe cutter",
+            "cutting wheel",
+            "hacksaw blade"
+          ],
+          "question": "நீங்கள் எதை வெட்டப் போகிறீர்கள்? (PVC குழாய், மரமா அல்லது உலோகமா?)",
+          "rootQuery": "cutter"
+        },
+        "operations": []
+      },
+      "usage": {
+        "totalTokenCount": 8497,
+        "promptTokenCount": 8396,
+        "candidatesTokenCount": 101,
+        "cachedContentTokenCount": 4046
+      },
+      "validation_issues": null,
+      "created_at": "2026-10-04T05:33:09.801Z",
+      "text": "I need a cutter but I do not know the name. What options do you have?"
+    },
+    {
+      "conversation_id": "4a38bf5c-0cb8-48e5-951d-ede9ac14e98f",
+      "state": "succeeded",
+      "billing_state": "free_declared",
+      "quota_scope": "invisible-erp",
+      "response": {
+        "next": "review",
+        "operations": [
+          {
+            "kind": "add_item",
+            "query": "Ratchet PVC Pipe Cutter 42mm",
+            "quantity": 1,
+            "requestedUnit": "piece"
+          }
+        ]
+      },
+      "usage": {
+        "totalTokenCount": 9491,
+        "promptTokenCount": 9456,
+        "candidatesTokenCount": 35,
+        "cachedContentTokenCount": 4051
+      },
+      "validation_issues": null,
+      "created_at": "2026-10-04T05:34:57.524Z",
+      "text": "It is for cutting plastic water pipes, about 25 mm."
+    },
+    {
+      "conversation_id": "3379d67a-d75a-49da-b39a-0021e0c55fee",
+      "state": "succeeded",
+      "billing_state": "free_declared",
+      "quota_scope": "invisible-erp",
+      "response": {
+        "next": "assist",
+        "assistance": {
+          "search": {
+            "useCase": "cutting plastic water pipes 25 mm",
+            "familyId": "pipe-cutters",
+            "keywords": [
+              "Ratchet PVC Pipe Cutter 42mm",
+              "plastic pipe cutter"
+            ],
+            "preferredSkus": [
+              "H19"
+            ]
+          },
+          "queries": [
+            "Ratchet PVC Pipe Cutter 42mm"
+          ],
+          "question": "இந்த பைப் கட்டர் உங்களுக்குப் பொருத்தமாக இருக்கிறதா?",
+          "rootQuery": "pipe cutter"
+        },
+        "operations": []
+      },
+      "usage": {
+        "totalTokenCount": 9467,
+        "promptTokenCount": 9376,
+        "candidatesTokenCount": 91
+      },
+      "validation_issues": null,
+      "created_at": "2026-10-04T05:44:02.562Z",
+      "text": "It is for cutting plastic water pipes, about 25 mm."
+    }
+  ],
+  "conversations": [
+    {
+      "id": "50cca6da-afce-4094-b696-5b760834a178",
+      "reply_language": "ta",
+      "version": 0,
+      "draft": [],
+      "pending": null
+    },
+    {
+      "id": "dc465c90-b810-4e43-ad8c-f3041d3c1737",
+      "reply_language": "ta",
+      "version": 2,
+      "draft": [
+        {
+          "id": "5ce15063-198c-4200-ace3-e91fd1139ed0",
+          "sku": "H14",
+          "name": "Pro-Cut Cutting Wheel 4 inch",
+          "unit": "piece",
+          "query": "H14",
+          "quantity": 1,
+          "discovery": {
+            "plan": {
+              "familyId": "cutting-discs",
+              "keywords": [
+                "Pro-Cut Cutting Wheel 4 inch",
+                "H14"
+              ],
+              "specifications": {
+                "size": "4 inch"
+              }
+            },
+            "query": "H14",
+            "facets": [],
+            "products": [
+              {
+                "sku": "H14",
+                "name": "Pro-Cut Cutting Wheel 4 inch",
+                "unit": "piece",
+                "brand": "Pro-Cut",
+                "stock": 250,
+                "aliases": [
+                  "Pro-Cut cutting wheel 4 inch",
+                  "Pro-Cut Cutting Wheel 4 inch",
+                  "Pro-Cut · கட்டிங் வீல் 4 இன்ச்",
+                  "கட்டிங் வீல் 4 இன்ச்"
+                ],
+                "version": 1,
+                "category": "Cutting Tools",
+                "familyId": "cutting-discs",
+                "imageUrl": "/demo-images/H14.jpg",
+                "keywords": [
+                  "grinding disc",
+                  "metal cutting disc"
+                ],
+                "localNames": {
+                  "ta": "Pro-Cut · கட்டிங் வீல் 4 இன்ச்",
+                  "ta-Latn": "Pro-Cut cutting wheel 4 inch"
+                },
+                "pricePaise": 3500,
+                "quantityStep": 1,
+                "specifications": {
+                  "size": "4 inch"
+                }
+              },
+              {
+                "sku": "H15",
+                "name": "Premium Cutting Wheel 4 inch",
+                "unit": "piece",
+                "brand": "Premium Industrial",
+                "stock": 150,
+                "aliases": [
+                  "Premium cutting wheel 4 inch",
+                  "Premium Cutting Wheel 4 inch",
+                  "Premium · கட்டிங் வீல் 4 இன்ச்",
+                  "கட்டிங் வீல் 4 இன்ச்"
+                ],
+                "version": 1,
+                "category": "Cutting Tools",
+                "familyId": "cutting-discs",
+                "imageUrl": "/demo-images/H15.jpg",
+                "keywords": [
+                  "grinding disc",
+                  "metal cutting disc"
+                ],
+                "localNames": {
+                  "ta": "Premium · கட்டிங் வீல் 4 இன்ச்",
+                  "ta-Latn": "Premium cutting wheel 4 inch"
+                },
+                "pricePaise": 5500,
+                "quantityStep": 1,
+                "specifications": {
+                  "size": "4 inch"
+                }
+              }
+            ],
+            "rankings": [
+              {
+                "sku": "H14",
+                "match": "keyword_match",
+                "score": 1000,
+                "reason": "This catalog item matches the requested identity; check its photo"
+              },
+              {
+                "sku": "H15",
+                "match": "keyword_match",
+                "score": 32,
+                "reason": "Matches the chosen product family and filters; check the photo and name"
+              }
+            ],
+            "totalCount": 2,
+            "noExactMatch": false,
+            "retrievedCount": 2
+          },
+          "candidates": [
+            {
+              "sku": "H14",
+              "name": "Pro-Cut Cutting Wheel 4 inch",
+              "unit": "piece",
+              "brand": "Pro-Cut",
+              "stock": 250,
+              "aliases": [
+                "Pro-Cut cutting wheel 4 inch",
+                "Pro-Cut Cutting Wheel 4 inch",
+                "Pro-Cut · கட்டிங் வீல் 4 இன்ச்",
+                "கட்டிங் வீல் 4 இன்ச்"
+              ],
+              "version": 1,
+              "category": "Cutting Tools",
+              "familyId": "cutting-discs",
+              "imageUrl": "/demo-images/H14.jpg",
+              "keywords": [
+                "grinding disc",
+                "metal cutting disc"
+              ],
+              "localNames": {
+                "ta": "Pro-Cut · கட்டிங் வீல் 4 இன்ச்",
+                "ta-Latn": "Pro-Cut cutting wheel 4 inch"
+              },
+              "pricePaise": 3500,
+              "quantityStep": 1,
+              "specifications": {
+                "size": "4 inch"
+              }
+            }
+          ],
+          "pricePaise": 3500,
+          "resolution": "matched",
+          "requestedUnit": "piece",
+          "productVersion": 1,
+          "productConfirmation": {
+            "sku": "H14",
+            "version": 1,
+            "identityHash": "28b6eec967eaefc84875620225aa0607276a41e2d7a7783b6b10b34280bce2e6"
+          }
+        }
+      ],
+      "pending": {
+        "id": "2c9ef3f8-482d-442e-9a77-ada63877f720",
+        "hash": "a57d9779421e7028b4f36e1b9b2be3203728f0c8e87e1303896577c0491d946b",
+        "kind": "review",
+        "lines": [
+          {
+            "id": "5ce15063-198c-4200-ace3-e91fd1139ed0",
+            "sku": "H14",
+            "name": "Pro-Cut Cutting Wheel 4 inch",
+            "unit": "piece",
+            "query": "H14",
+            "quantity": 1,
+            "discovery": {
+              "plan": {
+                "familyId": "cutting-discs",
+                "keywords": [
+                  "Pro-Cut Cutting Wheel 4 inch",
+                  "H14"
+                ],
+                "specifications": {
+                  "size": "4 inch"
+                }
+              },
+              "query": "H14",
+              "facets": [],
+              "products": [
+                {
+                  "sku": "H14",
+                  "name": "Pro-Cut Cutting Wheel 4 inch",
+                  "unit": "piece",
+                  "brand": "Pro-Cut",
+                  "stock": 250,
+                  "aliases": [
+                    "Pro-Cut cutting wheel 4 inch",
+                    "Pro-Cut Cutting Wheel 4 inch",
+                    "Pro-Cut · கட்டிங் வீல் 4 இன்ச்",
+                    "கட்டிங் வீல் 4 இன்ச்"
+                  ],
+                  "version": 1,
+                  "category": "Cutting Tools",
+                  "familyId": "cutting-discs",
+                  "imageUrl": "/demo-images/H14.jpg",
+                  "keywords": [
+                    "grinding disc",
+                    "metal cutting disc"
+                  ],
+                  "localNames": {
+                    "ta": "Pro-Cut · கட்டிங் வீல் 4 இன்ச்",
+                    "ta-Latn": "Pro-Cut cutting wheel 4 inch"
+                  },
+                  "pricePaise": 3500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "4 inch"
+                  }
+                },
+                {
+                  "sku": "H15",
+                  "name": "Premium Cutting Wheel 4 inch",
+                  "unit": "piece",
+                  "brand": "Premium Industrial",
+                  "stock": 150,
+                  "aliases": [
+                    "Premium cutting wheel 4 inch",
+                    "Premium Cutting Wheel 4 inch",
+                    "Premium · கட்டிங் வீல் 4 இன்ச்",
+                    "கட்டிங் வீல் 4 இன்ச்"
+                  ],
+                  "version": 1,
+                  "category": "Cutting Tools",
+                  "familyId": "cutting-discs",
+                  "imageUrl": "/demo-images/H15.jpg",
+                  "keywords": [
+                    "grinding disc",
+                    "metal cutting disc"
+                  ],
+                  "localNames": {
+                    "ta": "Premium · கட்டிங் வீல் 4 இன்ச்",
+                    "ta-Latn": "Premium cutting wheel 4 inch"
+                  },
+                  "pricePaise": 5500,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "4 inch"
+                  }
+                }
+              ],
+              "rankings": [
+                {
+                  "sku": "H14",
+                  "match": "keyword_match",
+                  "score": 1000,
+                  "reason": "This catalog item matches the requested identity; check its photo"
+                },
+                {
+                  "sku": "H15",
+                  "match": "keyword_match",
+                  "score": 32,
+                  "reason": "Matches the chosen product family and filters; check the photo and name"
+                }
+              ],
+              "totalCount": 2,
+              "noExactMatch": false,
+              "retrievedCount": 2
+            },
+            "candidates": [
+              {
+                "sku": "H14",
+                "name": "Pro-Cut Cutting Wheel 4 inch",
+                "unit": "piece",
+                "brand": "Pro-Cut",
+                "stock": 250,
+                "aliases": [
+                  "Pro-Cut cutting wheel 4 inch",
+                  "Pro-Cut Cutting Wheel 4 inch",
+                  "Pro-Cut · கட்டிங் வீல் 4 இன்ச்",
+                  "கட்டிங் வீல் 4 இன்ச்"
+                ],
+                "version": 1,
+                "category": "Cutting Tools",
+                "familyId": "cutting-discs",
+                "imageUrl": "/demo-images/H14.jpg",
+                "keywords": [
+                  "grinding disc",
+                  "metal cutting disc"
+                ],
+                "localNames": {
+                  "ta": "Pro-Cut · கட்டிங் வீல் 4 இன்ச்",
+                  "ta-Latn": "Pro-Cut cutting wheel 4 inch"
+                },
+                "pricePaise": 3500,
+                "quantityStep": 1,
+                "specifications": {
+                  "size": "4 inch"
+                }
+              }
+            ],
+            "pricePaise": 3500,
+            "resolution": "matched",
+            "requestedUnit": "piece",
+            "productVersion": 1,
+            "productConfirmation": {
+              "sku": "H14",
+              "version": 1,
+              "identityHash": "28b6eec967eaefc84875620225aa0607276a41e2d7a7783b6b10b34280bce2e6"
+            }
+          }
+        ],
+        "version": 2,
+        "expiresAt": "2026-10-04T05:39:10.798Z",
+        "totalPaise": 3500,
+        "fulfillment": "pickup"
+      }
+    },
+    {
+      "id": "4a38bf5c-0cb8-48e5-951d-ede9ac14e98f",
+      "reply_language": "ta",
+      "version": 1,
+      "draft": [
+        {
+          "id": "08f177c0-01ae-42f8-94d5-a6c166ae0bee",
+          "sku": "H19",
+          "name": "Ratchet PVC Pipe Cutter 42mm",
+          "unit": "piece",
+          "query": "Ratchet PVC Pipe Cutter 42mm",
+          "quantity": 1,
+          "discovery": {
+            "plan": {
+              "familyId": "pipe-cutters",
+              "keywords": [
+                "Ratchet PVC Pipe Cutter 42mm"
+              ],
+              "specifications": {
+                "size": "0-42mm"
+              }
+            },
+            "query": "Ratchet PVC Pipe Cutter 42mm",
+            "facets": [],
+            "products": [
+              {
+                "sku": "H19",
+                "name": "Ratchet PVC Pipe Cutter 42mm",
+                "unit": "piece",
+                "brand": "Generic",
+                "stock": 35,
+                "aliases": [
+                  "Ratchet PVC pipe cutter 42mm",
+                  "Ratchet PVC Pipe Cutter 42mm",
+                  "பைப் கட்டர்",
+                  "ராட்செட் PVC பைப் கட்டர் 42mm"
+                ],
+                "version": 1,
+                "category": "Cutting Tools",
+                "familyId": "pipe-cutters",
+                "imageUrl": "/demo-images/H19.jpg",
+                "keywords": [
+                  "plastic pipe cutting"
+                ],
+                "localNames": {
+                  "ta": "ராட்செட் PVC பைப் கட்டர் 42mm",
+                  "ta-Latn": "Ratchet PVC pipe cutter 42mm"
+                },
+                "pricePaise": 35000,
+                "quantityStep": 1,
+                "specifications": {
+                  "size": "0-42mm"
+                }
+              }
+            ],
+            "rankings": [
+              {
+                "sku": "H19",
+                "match": "keyword_match",
+                "score": 1000,
+                "reason": "This catalog item matches the requested identity; check its photo"
+              }
+            ],
+            "totalCount": 1,
+            "noExactMatch": false,
+            "retrievedCount": 1
+          },
+          "candidates": [
+            {
+              "sku": "H19",
+              "name": "Ratchet PVC Pipe Cutter 42mm",
+              "unit": "piece",
+              "brand": "Generic",
+              "stock": 35,
+              "aliases": [
+                "Ratchet PVC pipe cutter 42mm",
+                "Ratchet PVC Pipe Cutter 42mm",
+                "பைப் கட்டர்",
+                "ராட்செட் PVC பைப் கட்டர் 42mm"
+              ],
+              "version": 1,
+              "category": "Cutting Tools",
+              "familyId": "pipe-cutters",
+              "imageUrl": "/demo-images/H19.jpg",
+              "keywords": [
+                "plastic pipe cutting"
+              ],
+              "localNames": {
+                "ta": "ராட்செட் PVC பைப் கட்டர் 42mm",
+                "ta-Latn": "Ratchet PVC pipe cutter 42mm"
+              },
+              "pricePaise": 35000,
+              "quantityStep": 1,
+              "specifications": {
+                "size": "0-42mm"
+              }
+            }
+          ],
+          "pricePaise": 35000,
+          "resolution": "matched",
+          "requestedUnit": "piece",
+          "productVersion": 1
+        }
+      ],
+      "pending": {
+        "id": "d7c867a4-1da4-4410-b075-1b750268908a",
+        "kind": "products",
+        "groups": [
+          {
+            "lineId": "08f177c0-01ae-42f8-94d5-a6c166ae0bee",
+            "products": [
+              {
+                "sku": "H19",
+                "name": "Ratchet PVC Pipe Cutter 42mm",
+                "unit": "piece",
+                "brand": "Generic",
+                "stock": 35,
+                "aliases": [
+                  "Ratchet PVC pipe cutter 42mm",
+                  "Ratchet PVC Pipe Cutter 42mm",
+                  "பைப் கட்டர்",
+                  "ராட்செட் PVC பைப் கட்டர் 42mm"
+                ],
+                "version": 1,
+                "category": "Cutting Tools",
+                "familyId": "pipe-cutters",
+                "imageUrl": "/demo-images/H19.jpg",
+                "keywords": [
+                  "plastic pipe cutting"
+                ],
+                "localNames": {
+                  "ta": "ராட்செட் PVC பைப் கட்டர் 42mm",
+                  "ta-Latn": "Ratchet PVC pipe cutter 42mm"
+                },
+                "pricePaise": 35000,
+                "quantityStep": 1,
+                "specifications": {
+                  "size": "0-42mm"
+                }
+              }
+            ],
+            "discovery": {
+              "plan": {
+                "familyId": "pipe-cutters",
+                "keywords": [
+                  "Ratchet PVC Pipe Cutter 42mm"
+                ],
+                "specifications": {
+                  "size": "0-42mm"
+                }
+              },
+              "query": "Ratchet PVC Pipe Cutter 42mm",
+              "facets": [],
+              "products": [
+                {
+                  "sku": "H19",
+                  "name": "Ratchet PVC Pipe Cutter 42mm",
+                  "unit": "piece",
+                  "brand": "Generic",
+                  "stock": 35,
+                  "aliases": [
+                    "Ratchet PVC pipe cutter 42mm",
+                    "Ratchet PVC Pipe Cutter 42mm",
+                    "பைப் கட்டர்",
+                    "ராட்செட் PVC பைப் கட்டர் 42mm"
+                  ],
+                  "version": 1,
+                  "category": "Cutting Tools",
+                  "familyId": "pipe-cutters",
+                  "imageUrl": "/demo-images/H19.jpg",
+                  "keywords": [
+                    "plastic pipe cutting"
+                  ],
+                  "localNames": {
+                    "ta": "ராட்செட் PVC பைப் கட்டர் 42mm",
+                    "ta-Latn": "Ratchet PVC pipe cutter 42mm"
+                  },
+                  "pricePaise": 35000,
+                  "quantityStep": 1,
+                  "specifications": {
+                    "size": "0-42mm"
+                  }
+                }
+              ],
+              "rankings": [
+                {
+                  "sku": "H19",
+                  "match": "keyword_match",
+                  "score": 1000,
+                  "reason": "This catalog item matches the requested identity; check its photo"
+                }
+              ],
+              "totalCount": 1,
+              "noExactMatch": false,
+              "retrievedCount": 1
+            }
+          }
+        ],
+        "version": 1,
+        "expiresAt": "2026-10-04T05:49:59.213Z",
+        "remaining": 0
+      }
+    },
+    {
+      "id": "3379d67a-d75a-49da-b39a-0021e0c55fee",
+      "reply_language": "ta",
+      "version": 0,
+      "draft": [],
+      "pending": null
+    }
+  ]
+}
