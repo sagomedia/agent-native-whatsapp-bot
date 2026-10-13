@@ -1,0 +1,16 @@
+import type {ConversationState,OrderRequest} from '../../../../packages/contracts/index.js';
+import {say} from '../../../../packages/contracts/language.js';
+import {formatMoney} from '../../../../packages/contracts/money.js';
+function statusBody(request:OrderRequest,language:ConversationState['replyLanguage']='en'){
+ const state={replyLanguage:language},amount=formatMoney(request.totalPaise);
+ if(request.acceptance==='rejected'||request.fulfillment==='cancelled')return say(state,'The shop could not fulfill this request. Your submitted list is kept. Talk to the shop about alternatives.','கடை இந்தக் கோரிக்கையை நிறைவேற்ற முடியவில்லை. உங்கள் பட்டியல் உள்ளது. மாற்றுப் பொருட்கள் பற்றி கடையிடம் பேசலாம்.','Kadai intha request-ai niraivetra mudiyala. Unga list irukku. Vera porutkal paththi kadaiyila pesalaam.');
+ if(request.fulfillment==='collected')return say(state,`The shop marked your ${amount} request as collected. This does not record a payment.`,`உங்கள் ${amount} கோரிக்கை பெற்றுக்கொள்ளப்பட்டதாக கடை பதிவு செய்துள்ளது. இது பணம் செலுத்தியதற்கான பதிவு அல்ல.`,`Unga ${amount} request vaangikkittatha kadai record panniyirukku. Ithu payment record illa.`);
+ if(request.fulfillment==='ready_for_pickup')return say(state,`The shop says your ${amount} request is ready for pickup. Check pickup arrangements and payment with the shop.`,`உங்கள் ${amount} கோரிக்கை பெற்றுக்கொள்ளத் தயாராக இருப்பதாக கடை தெரிவித்துள்ளது. வருகை நேரத்தையும் பணம் செலுத்துவதையும் கடையிடம் பேசிக்கொள்ளுங்கள்.`,`Unga ${amount} request kadaiyila vaangikka ready-nu kadai solliyirukku. Neraththaiyum payment-aiyum kadaiyila pesikkonga.`);
+ if(request.acceptance==='accepted'&&request.fulfillment==='awaiting_approval')return say(state,`The shop has accepted your ${amount} request. Payment and pickup readiness still need separate confirmation.`,`கடை உங்கள் ${amount} கோரிக்கையை ஏற்றுள்ளது. பணம் மற்றும் பெற்றுக்கொள்ளத் தயாராக இருப்பதைத் தனியாக உறுதி செய்ய வேண்டும்.`,`Kadai unga ${amount} request-ai accept panniyirukku. Payment-um pickup ready status-um thaniyaa confirm pannanum.`);
+ if(request.acceptance==='accepted')return say(state,`The shop has accepted your ${amount} request and is preparing it. It is not marked ready yet. Payment needs separate confirmation.`,`உங்கள் ${amount} கோரிக்கையை கடை ஏற்றுள்ளது. பொருட்கள் தயாராகும்போது கடை தெரிவிக்கும். பணம் செலுத்துவது பற்றி தனியாக உறுதி செய்யுங்கள்.`,`Unga ${amount} request-ai kadai accept panniyirukku. Porutkal ready aagumpothu kadai sollum. Payment-ai thaniyaa confirm pannunga.`);
+ return say(state,`Your ${amount} request is waiting for the shop’s approval. Availability and pickup readiness still need shop confirmation. No payment is requested here.`,`உங்கள் ${amount} கோரிக்கை கடையின் ஒப்புதலுக்காகக் காத்திருக்கிறது. இருப்பையும் தயாராகும் நேரத்தையும் கடை உறுதி செய்ய வேண்டும். இங்கே பணம் செலுத்த வேண்டியதில்லை.`,`Unga ${amount} request kadai approval-kaaga kaaththirukku. Stock-um ready neramum kadai confirm pannanum. Inga payment thevai illa.`);
+}
+
+export function requestStatusText(request:OrderRequest,language:ConversationState['replyLanguage']='en'){
+ return 'Order #'+request.id.replaceAll('-','').slice(0,8).toUpperCase()+'\n'+statusBody(request,language);
+}

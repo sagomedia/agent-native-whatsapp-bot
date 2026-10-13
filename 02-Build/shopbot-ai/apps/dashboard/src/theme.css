@@ -1,0 +1,10 @@
+@font-face{font-family:ShopTamil;src:url('./assets/NotoSansTamil-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap;unicode-range:U+0B80-0BFF;}
+:root{--ui-page:#f6f7f5;--ui-surface:#fff;--ui-text:#25312e;--ui-muted:#59665f;--ui-accent:#176b63;--ui-accent-hover:#11554f;--ui-selected:#e8f2ee;--ui-border:#d8e0dc;--ui-input-border:#82908a;--ui-danger:#a52a2a;--ui-danger-bg:#fff2f2;--ui-success:#246345;--ui-success-bg:#edf6ef;--ui-warning:#805018;--ui-warning-bg:#fff5e4;--ui-radius:6px;color-scheme:light;font-family:Arial,ShopTamil,sans-serif;}
+:where(button,input,select,textarea){font:inherit;}
+:where(button,a,input,select,textarea,summary,[tabindex]):focus-visible{outline:3px solid var(--ui-accent);outline-offset:3px;}
+:where(button,input,select,textarea){touch-action:manipulation;}
+:where(a){text-underline-offset:3px;}
+:where(input,select,textarea){color:var(--ui-text);background:var(--ui-surface);}
+:where(button):disabled{cursor:not-allowed;}
+:where(input,textarea)[aria-invalid=true]{border-color:var(--ui-danger);}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;}}

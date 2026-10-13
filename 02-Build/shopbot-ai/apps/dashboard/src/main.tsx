@@ -1,3 +1,4 @@
+import './theme.css';
 import {NativeChat} from './NativeChat.js';
 import {OwnerDashboard} from './OwnerDashboard.js';
 import { useEffect, useRef, useState, type FormEvent } from 'react';

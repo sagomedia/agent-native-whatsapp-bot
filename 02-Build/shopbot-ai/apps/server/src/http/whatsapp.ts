@@ -19,6 +19,12 @@ export async function registerWhatsApp(app:FastifyInstance,channel:WhatsAppChann
     try{return reply.header('Cache-Control','public, max-age=300').header('X-Content-Type-Options','nosniff').type('image/jpeg').send(await readFile(resolve('resources/catalog/ksmc-demo/images',file)));}
     catch{return reply.code(404).send({error:'Not found'});}
   });
+  app.get<{Params:{id:string}}>('/catalog-images/custom/:id',async(req,reply)=>{
+    const match=/^([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\.jpg$/.exec(req.params.id);
+    if(req.headers.host!==channel.config.hostname||!match)return reply.code(404).send({error:'Not found'});
+    const bytes=await channel.catalogPhoto(match[1]);
+    return bytes?reply.header('Cache-Control','no-store').header('X-Content-Type-Options','nosniff').type('image/jpeg').send(bytes):reply.code(404).send({error:'Not found'});
+  });
   await app.register(async scope=>{
     scope.removeContentTypeParser('application/json');
     scope.addContentTypeParser('application/json',{parseAs:'buffer',bodyLimit:262144},(_req,body,done)=>done(null,body));

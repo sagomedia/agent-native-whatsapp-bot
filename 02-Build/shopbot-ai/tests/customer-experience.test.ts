@@ -8,7 +8,7 @@ import {WhatsAppChannel,webhookSchema} from '../apps/server/src/services/whatsap
 import {createApp} from '../apps/server/src/http/app.js';
 import {ConversationRuntime} from '../apps/server/src/runtime/conversation.js';
 import {SimulatorService,simulatorContext} from '../apps/server/src/services/simulator.js';
-import {geminiTextRate} from '../apps/server/src/services/inference-budget.js';
+import {geminiTextRate,geminiSpeechRate} from '../apps/server/src/services/inference-budget.js';
 import {GoogleInterpreter} from '../apps/server/src/adapters/google-interpreter.js';
 import {fixtureStore} from '../profiles/hardware.js';
 import type {Interpreter,InterpretationInput} from '../apps/server/src/adapters/interpreter.js';
@@ -51,7 +51,7 @@ test('targeted quantity edits retain every other item, and keeping the list inva
 }));
 test('handoff pauses AI, cancels assistant work, and authenticated owner replies are idempotent and window-bound',async()=>fixture(async(pool,channel,sent)=>{
  await turn(channel,{type:'text',text:{body:'hello'}});await turn(channel,tap(await action(pool,'shopping_action','handoff')));
- const c=(await pool.query('SELECT * FROM conversations WHERE id IN (SELECT conversation_id FROM whatsapp_conversations)')).rows[0];assert.equal(c.operator_mode,'owner');assert.equal(c.handoff_requested,true);assert.match(sent.at(-1).text.body,/asked the shop/);
+ const c=(await pool.query('SELECT * FROM conversations WHERE id IN (SELECT conversation_id FROM whatsapp_conversations)')).rows[0];assert.equal(c.operator_mode,'owner');assert.equal(c.handoff_requested,true);assert.match(sent.at(-1).text.body,/Shop assistance requested/);
  await channel.receive(inbound({type:'text',text:{body:'Could you check this size?'}}));assert.equal(await channel.processNext(),false);
  const owner={hostname:'owner.example.test',issuer:'https://test.cloudflareaccess.com',audience:'offline-audience',email:'owner@example.test',storeId:fixtureStore};
  const app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,port:3017,host:'127.0.0.1',mediaDir:'/tmp/offline-media',owner,whatsapp:cfg},pool,undefined,undefined,async()=>({email:owner.email,subject:'offline-owner'}),channel);
@@ -87,23 +87,23 @@ test('media recommendation enablement requires the channel, media and AI gates',
  assert.throws(()=>readWhatsAppConfig({WHATSAPP_ENABLED:'true',WHATSAPP_MEDIA_RECOMMENDATION_ENABLED:'true'}),/media and AI/);
 });
 test('opt-in voice recommendations use fresh facts, ask above photos, preserve quantity and stop inference on a product tap',async()=>fixture(async(pool)=>{
- const pcm=Buffer.alloc(32000);for(let i=0;i<16000;i++)pcm.writeInt16LE(Math.round(1000*Math.sin(i/10)),i*2);const wav=pcmWav(pcm);let calls=0;
+ const pcm=Buffer.alloc(384000);for(let i=0;i<192000;i++)pcm.writeInt16LE(Math.round(1000*Math.sin(i/10)),i*2);const wav=pcmWav(pcm);let calls=0;
  const provider=new GoogleInterpreter({apiKey:'offline',model:geminiTextRate.model,allowPaidInference:true,allowMultimodal:true,budgetMicrousd:1000000},{generateContent:async params=>{
-  calls++;const recommendation=!!params.config?.responseJsonSchema;
+  calls++;const recognition=!!(params.config?.responseJsonSchema as any)?.properties?.transcript&&!(params.config?.responseJsonSchema as any)?.properties?.operations;const recommendation=!!(params.config?.responseJsonSchema as any)?.properties?.skus;
   if(recommendation){
    const context=JSON.parse(params.contents as string);assert.ok(!JSON.stringify(context).includes('inlineData'));assert.match(JSON.stringify(context),/H19/);assert.match(JSON.stringify(context),/பைப் கட்டர்/);
    assert.match(String(params.config?.systemInstruction),/Do not re-ask/);
-  }else {assert.match(JSON.stringify(params.contents),/audio\/wav/);assert.equal(params.config?.httpOptions?.timeout,19000);}
-  return {modelVersion:geminiTextRate.model,candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(recommendation?{skus:['H19','INVENTED'],question:'எந்த அளவு பைப் வெட்ட வேண்டும்?'}:{transcript:'எனக்கு இரண்டு பைப் கட்டர் வேண்டும்',operations:[{kind:'add_item',query:'PVC pipe cutter',quantity:2}],next:'review'})}]}}],usageMetadata:{promptTokenCount:1000,candidatesTokenCount:100,totalTokenCount:1100}} as GenerateContentResponse;
+  }else if(recognition){assert.match(JSON.stringify(params.contents),/audio\/wav/);assert.equal(params.config?.httpOptions?.timeout,19000);assert.equal(params.config?.audioTranscriptionConfig,undefined);assert.equal(params.model,geminiTextRate.model);assert.ok(!JSON.stringify(params.contents).includes('currentDraft'));}else assert.ok(!JSON.stringify(params.contents).includes('audio/wav'));
+  return {modelVersion:recognition?geminiSpeechRate.model:geminiTextRate.model,candidates:[{finishReason:'STOP',content:{parts:[{text:recognition?JSON.stringify({transcript:'எனக்கு இரண்டு பைப் கட்டர் வேண்டும்'}):JSON.stringify(recommendation?{skus:['H19','INVENTED'],question:'எந்த அளவு பைப் வெட்ட வேண்டும்?'}:{operations:[{kind:'add_item',query:'PVC pipe cutter',quantity:2}],next:'review'})}]}}],usageMetadata:{promptTokenCount:1000,candidatesTokenCount:100,totalTokenCount:1100}} as GenerateContentResponse;
  }});
  const channel=new WhatsAppChannel(pool,{...cfg,defaultReplyLanguage:'ta',aiEnabled:true,paidEnabled:true,budgetMicrousd:1000000,mediaEnabled:true,mediaRecommendations:true,discoveryStages:false},async url=>String(url).includes('graph.facebook.com')?new Response(JSON.stringify({url:'https://lookaside.fbsbx.com/voice',mime_type:'audio/wav',file_size:wav.length})):new Response(JSON.stringify({messages:[{id:'wamid.offline-media-recommendation'}]})),provider);
  await channel.setup();const id=randomUUID(),inbox=new SimulatorService(pool),runtime=new ConversationRuntime(pool,provider,{allowPaidInference:true,mediaRecommendations:true,discoveryStages:false});
- await inbox.ingest({id,type:'voice',mediaId:id},{audio:wav,durationSeconds:1,sourceHash:'offline-voice-recommendation'});await pool.query("UPDATE conversations SET reply_language='ta' WHERE id=$1",[simulatorContext.conversationId]);await runtime.processNext(simulatorContext);
+ await inbox.ingest({id,type:'voice',mediaId:id},{audio:wav,durationSeconds:12,sourceHash:'offline-voice-recommendation'});await pool.query("UPDATE conversations SET reply_language='ta' WHERE id=$1",[simulatorContext.conversationId]);await runtime.processNext(simulatorContext);
  const snapshot=await inbox.snapshot(),rich=snapshot.messages.at(-1)!.rich!;
- assert.equal(calls,2);assert.equal(snapshot.conversation.draft.length,0);assert.equal(snapshot.requests.length,0);assert.ok(rich.text.startsWith('எந்த அளவு பைப் வெட்ட வேண்டும்?\n'));assert.deepEqual(rich.cards?.map(c=>c.product.sku),['H19']);assert.match(rich.cards![0].quantityLabel!,/2/);
+ assert.equal(calls,3);assert.equal(snapshot.conversation.draft.length,0);assert.equal(snapshot.requests.length,0);assert.ok(rich.text.startsWith('எந்த அளவு பைப் வெட்ட வேண்டும்?\n'));assert.deepEqual(rich.cards?.map(c=>c.product.sku),['H19']);assert.match(rich.cards![0].quantityLabel!,/2/);
  await inbox.ingest(rich.cards![0].action!);await runtime.processNext(simulatorContext);
- assert.equal(calls,2);assert.equal((await inbox.snapshot()).conversation.draft[0].quantity,2);
- assert.deepEqual((await pool.query('SELECT stage FROM provider_attempts ORDER BY attempt')).rows.map(r=>r.stage),['identify','recommend']);
+ assert.equal(calls,3);assert.equal((await inbox.snapshot()).conversation.draft[0].quantity,2);
+ assert.deepEqual((await pool.query('SELECT stage FROM provider_attempts ORDER BY attempt')).rows.map(r=>r.stage),['recognize','identify','recommend']);
 }));
 test('a failed voice attachment offers bound browse and handoff buttons without claiming recognition or spending',async()=>fixture(async(pool)=>{
  const provider:Interpreter={name:'offline-unreadable-voice',mode:'live',billing:geminiTextRate,supportsAudio:true,interpret:async()=>{throw new Error('Must not call AI for undecoded media');}};
@@ -154,33 +154,31 @@ test('media retries transient downloads once without retrying permission errors 
  await assert.rejects(downloadWhatsAppMedia(cfg,async()=>{calls++;throw new TypeError('private connection detail');},'123456','voice',randomUUID()),error=>{assert.equal(mediaFailureCode(error),'media_network_failed');return true;});
  assert.equal(calls,2);
 });
-test('voice requests require an audible transcript in the explicit contract and retain strict operations',async()=>{
+test('voice recognition has a transcript-only contract and planning receives text',async()=>{
  let calls=0;
  const provider=new GoogleInterpreter({apiKey:'offline-key',model:geminiTextRate.model,allowPaidInference:true,budgetMicrousd:100000,allowMultimodal:true},{generateContent:async params=>{
-  calls++;
-  assert.equal(params.config!.responseJsonSchema,undefined);
-  assert.match(String(params.config!.systemInstruction),/actual audible customer speech/);
-  assert.match(String(params.config!.systemInstruction),/REQUIRED top-level transcript/);
-  assert.match(String(params.config!.systemInstruction),/wood saw, not hacksaw blade/);
-  const context=JSON.parse((params.contents as any)[0].parts[0].text);
-  assert.equal(context.storeCatalogMap,null);assert.deepEqual(context.publicCatalog,[]);assert.deepEqual(context.toolObservations,[]);
-  return {modelVersion:geminiTextRate.model,candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({transcript:'ரெண்டு பைப் கட்டர் வேணும்',operations:[{kind:'add_item',query:'PVC pipe cutter',quantity:2}],next:'review'})}]}}]} as GenerateContentResponse;
+  calls++;const recognition=!!(params.config!.responseJsonSchema as any)?.properties?.transcript;
+  if(recognition){assert.deepEqual(Object.keys((params.config!.responseJsonSchema as any).properties),['transcript']);assert.match(String(params.config!.systemInstruction),/newly attached recording/);assert.equal((params.contents as any)[0].parts[0].text,'Transcribe this new recording.');assert.ok(!JSON.stringify(params.contents).includes('currentDraft'));}
+  else {assert.ok((params.config!.responseJsonSchema as any)?.properties?.operations);assert.ok(!JSON.stringify(params.contents).includes('audio/wav'));assert.match(String(params.contents),/ரெண்டு பைப் கட்டர் வேணும்/);}
+  return {modelVersion:geminiTextRate.model,candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(recognition?{transcript:'ரெண்டு பைப் கட்டர் வேணும்'}:{operations:[{kind:'add_item',query:'PVC pipe cutter',quantity:2}],next:'review'})}]}}]} as GenerateContentResponse;
  }});
- const output=await provider.interpret({text:'Recorded customer voice note',audio:{mimeType:'audio/wav',data:'AAAA',durationSeconds:1},catalogMap:{store:{name:'Offline catalog',type:'hardware'},productCount:1,departments:[{id:'tools',label:'Tools',count:1,families:[{id:'saw-blades',label:'Hacksaw blades',aliases:['hacksaw'],count:1}]}],truncated:false},state:{version:0,draft:[],pending:null,fulfillment:'pickup',lastRequestId:null}},new AbortController().signal);
- assert.equal(calls,1);assert.equal((output.output as any).transcript,'ரெண்டு பைப் கட்டர் வேணும்');
- assert.deepEqual((output.output as any).operations,[{kind:'add_item',query:'PVC pipe cutter',quantity:2}]);
+ const state={version:0,draft:[],pending:null,fulfillment:'pickup' as const,lastRequestId:null};
+ const recognized=await provider.interpret({stage:'recognize',text:'Transcribe the new recording',audio:{mimeType:'audio/wav',data:'AAAA',durationSeconds:1},state},new AbortController().signal);
+ assert.deepEqual(recognized.output,{transcript:'ரெண்டு பைப் கட்டர் வேணும்',operations:[],next:'continue'});
+ const planned=await provider.interpret({stage:'identify',text:'ரெண்டு பைப் கட்டர் வேணும்',state},new AbortController().signal);
+ assert.deepEqual((planned.output as any).operations,[{kind:'add_item',query:'PVC pipe cutter',quantity:2}]);assert.equal(calls,2);
 });
 test('submitted orders are hidden from new intent while current discovery memory is retained',async()=>{
  const lineId=randomUUID();
- const input:InterpretationInput={text:'Recorded customer voice note',audio:{mimeType:'audio/wav',data:'AAAA',durationSeconds:1},state:{version:9,draft:[{id:lineId,query:'old blade',quantity:77,name:'Old blade',resolution:'matched'}],pending:{kind:'question',id:randomUUID(),lineId,version:9},editingLineId:lineId,fulfillment:'pickup',lastRequestId:randomUUID()},assistantMemory:{id:randomUUID(),purpose:'pending',queries:['old blade'],lineId,sourceVersion:9,requestedQuantity:77,observations:[]}};
+ const input:InterpretationInput={stage:'identify',text:'எனக்கு ஒரு பிளேடு வேணும்',state:{version:9,draft:[{id:lineId,query:'old blade',quantity:77,name:'Old blade',resolution:'matched'}],pending:{kind:'question',id:randomUUID(),lineId,version:9},editingLineId:lineId,fulfillment:'pickup',lastRequestId:randomUUID()},assistantMemory:{id:randomUUID(),purpose:'pending',queries:['old blade'],lineId,sourceVersion:9,requestedQuantity:77,observations:[]}};
  const original=structuredClone(input);let calls=0;
  const provider=new GoogleInterpreter({apiKey:'offline',model:geminiTextRate.model,allowPaidInference:true,allowMultimodal:true,budgetMicrousd:100000},{generateContent:async params=>{
-  calls++;const context=JSON.parse((params.contents as any)[0].parts[0].text);
+  calls++;const context=JSON.parse(params.contents as string);
   assert.equal(context.submittedRequest,true);assert.deepEqual(context.currentDraft,[]);assert.equal(context.pendingQuestion,null);assert.equal(context.pendingProductCheck,null);assert.equal(context.editingLineId,null);assert.ok(!JSON.stringify(context).includes(lineId));
   assert.match(String(params.config!.systemInstruction),/previous request is immutable/);
   if(calls===1)assert.equal(context.assistantMemory,null);
   else{assert.equal(context.assistantMemory.purpose,'discovery');assert.equal(context.assistantMemory.requestedQuantity,1);assert.deepEqual(context.assistantMemory.queries,['metal cutting blade']);}
-  return {modelVersion:geminiTextRate.model,candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({transcript:'எனக்கு ஒரு பிளேடு வேணும்',operations:[],next:'assist',assistance:{queries:['metal cutting blade'],quantity:1}})}]}}]} as GenerateContentResponse;
+  return {modelVersion:geminiTextRate.model,candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({operations:[],next:'assist',assistance:{queries:['metal cutting blade'],quantity:1}})}]}}]} as GenerateContentResponse;
  }});
  await provider.interpret(input,new AbortController().signal);assert.deepEqual(input,original);
  await provider.interpret({...input,assistantMemory:{...input.assistantMemory!,purpose:'discovery',queries:['metal cutting blade'],lineId:null,requestedQuantity:1}},new AbortController().signal);
@@ -273,11 +271,11 @@ test('a submitted multi-item follow-up retains all quantities until its bound st
 
 test('a multi-item voice follow-up shows native recommendations and a product tap starts every requested line without losing quantities',async()=>fixture(async(pool,channel)=>{
  await turn(channel,{type:'text',text:{body:'2 H05'}});await turn(channel,tap(await action(pool,'confirm_products')));await turn(channel,tap(await action(pool,'confirm')));
- const old=(await pool.query('SELECT * FROM order_requests')).rows[0],pcm=Buffer.alloc(32000);for(let i=0;i<16000;i++)pcm.writeInt16LE(Math.round(1000*Math.sin(i/10)),i*2);const wav=pcmWav(pcm);let calls=0;
+ const old=(await pool.query('SELECT * FROM order_requests')).rows[0],pcm=Buffer.alloc(384000);for(let i=0;i<192000;i++)pcm.writeInt16LE(Math.round(1000*Math.sin(i/10)),i*2);const wav=pcmWav(pcm);let calls=0;
  const provider=new GoogleInterpreter({apiKey:'offline',model:geminiTextRate.model,allowPaidInference:true,allowMultimodal:true,budgetMicrousd:1000000},{generateContent:async params=>{
-  calls++;const recommend=!!params.config?.responseJsonSchema;
+  calls++;const recognition=!!(params.config?.responseJsonSchema as any)?.properties?.transcript&&!(params.config?.responseJsonSchema as any)?.properties?.operations;const recommend=!!(params.config?.responseJsonSchema as any)?.properties?.skus;
   if(recommend){const context=JSON.parse(params.contents as string);assert.deepEqual(context.publicCatalog,[]);assert.equal(context.storeCatalogMap,null);assert.match(JSON.stringify(context.toolObservations),/H01/);assert.match(JSON.stringify(context.toolObservations),/H16/);}
-  return {modelVersion:geminiTextRate.model,candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(recommend?{skus:['H01','H02','H16'],question:'பிளேடு எந்த வேலைக்குத் தேவை?'}:{transcript:'ஒரு இன்ச் பைப்பும் ஒரு பிளேடும் வேண்டும்',operations:[{kind:'add_item',query:'one inch PVC pipe',quantity:null},{kind:'add_item',query:'blade',quantity:1}],next:'review'})}]}}],usageMetadata:{promptTokenCount:1000,candidatesTokenCount:100,totalTokenCount:1100}} as GenerateContentResponse;
+  return {modelVersion:recognition?geminiSpeechRate.model:geminiTextRate.model,candidates:[{finishReason:'STOP',content:{parts:[{text:recognition?JSON.stringify({transcript:'ஒரு இன்ச் பைப்பும் ஒரு பிளேடும் வேண்டும்'}):JSON.stringify(recommend?{skus:['H01','H02','H16'],question:'பிளேடு எந்த வேலைக்குத் தேவை?'}:{operations:[{kind:'add_item',query:'one inch PVC pipe',quantity:null},{kind:'add_item',query:'blade',quantity:1}],next:'review'})}]}}],usageMetadata:{promptTokenCount:1000,candidatesTokenCount:100,totalTokenCount:1100}} as GenerateContentResponse;
  }});
  const sent:any[]=[],paid=new WhatsAppChannel(pool,{...cfg,defaultReplyLanguage:'ta',aiEnabled:true,paidEnabled:true,budgetMicrousd:1000000,mediaEnabled:true,mediaRecommendations:true},async(url,init)=>{
   if(String(url).includes('graph.facebook.com')&&!init?.body)return new Response(JSON.stringify({url:'https://lookaside.fbsbx.com/voice',mime_type:'audio/wav',file_size:wav.length}));
@@ -285,12 +283,12 @@ test('a multi-item voice follow-up shows native recommendations and a product ta
   sent.push(JSON.parse(String(init?.body)));return new Response(JSON.stringify({messages:[{id:'wamid.multi-voice.'+randomUUID()}]}));
  },provider);await paid.setup();await pool.query("UPDATE conversations SET reply_language='ta' WHERE id=$1",[old.conversation_id]);
  await turn(paid,{type:'audio',audio:{id:'123456'}});
- const before=(await pool.query('SELECT draft,last_request_id,assistant_memory FROM conversations WHERE id=$1',[old.conversation_id])).rows[0];assert.deepEqual(before.draft,old.lines);assert.equal(before.last_request_id,old.id);assert.equal(calls,2);
+ const before=(await pool.query('SELECT draft,last_request_id,assistant_memory FROM conversations WHERE id=$1',[old.conversation_id])).rows[0];assert.deepEqual(before.draft,old.lines);assert.equal(before.last_request_id,old.id);assert.equal(calls,3);
  assert.equal(sent.at(-1).interactive.type,'carousel');assert.ok(sent.at(-1).interactive.body.text.startsWith('பிளேடு எந்த வேலைக்குத் தேவை?\n'));assert.ok(sent.at(-1).interactive.action.cards.length<=4);assert.ok(await action(pool,'shopping_action','new_list'));
  const selected=(await pool.query("SELECT a.*,o.provider_id FROM whatsapp_actions a JOIN whatsapp_outbox o ON o.message_id=a.message_id WHERE a.event->>'type'='choose_product' AND a.event->>'sku'='H16' ORDER BY o.created_at DESC LIMIT 1")).rows[0];assert.ok(selected);await turn(paid,tap(selected));
  const after=(await pool.query('SELECT draft,last_request_id FROM conversations WHERE id=$1',[old.conversation_id])).rows[0];assert.equal(after.last_request_id,null);assert.equal(after.draft.length,2);assert.deepEqual(after.draft.map((item:any)=>item.quantity),[null,1]);assert.equal(after.draft[1].sku,'H16');assert.ok(after.draft[1].productConfirmation);
- assert.ok(after.draft[0].candidates.every((p:any)=>p.specifications.size==='1 inch'));assert.deepEqual((await pool.query('SELECT lines FROM order_requests WHERE id=$1',[old.id])).rows[0].lines,old.lines);assert.equal((await pool.query('SELECT * FROM order_requests')).rowCount,1);assert.equal(calls,2);
- await turn(paid,tap(selected));assert.deepEqual((await pool.query('SELECT draft FROM conversations WHERE id=$1',[old.conversation_id])).rows[0].draft,after.draft);assert.equal(calls,2);
+ assert.ok(after.draft[0].candidates.every((p:any)=>p.specifications.size==='1 inch'));assert.deepEqual((await pool.query('SELECT lines FROM order_requests WHERE id=$1',[old.id])).rows[0].lines,old.lines);assert.equal((await pool.query('SELECT * FROM order_requests')).rowCount,1);assert.equal(calls,3);
+ await turn(paid,tap(selected));assert.deepEqual((await pool.query('SELECT draft FROM conversations WHERE id=$1',[old.conversation_id])).rows[0].draft,after.draft);assert.equal(calls,3);
 }));
 test('WhatsApp sequential proposals preview only the first category and automatically advance after its quantity',async()=>fixture(async(pool,channel)=>{
  await turn(channel,{type:'text',text:{body:'2 H05'}});await turn(channel,tap(await action(pool,'confirm_products')));await turn(channel,tap(await action(pool,'confirm')));
@@ -316,14 +314,14 @@ test('typing indicators claim only one eligible message and never repeat after f
  await channel.receive(inbound({type:'text',text:{body:'hello'}}));await pool.query("UPDATE whatsapp_conversations SET last_inbound_at=now()-interval '25 hours'");await channel.processNext();assert.equal(indicated.length,1);
 }));
 
-test('paid multimodal voice uses one compact intent call and durable estimated budget settlement',async()=>fixture(async(pool)=>{
- const pcm=Buffer.alloc(32000);for(let i=0;i<16000;i++)pcm.writeInt16LE(Math.round(1000*Math.sin(i/10)),i*2);const wav=pcmWav(pcm);let calls=0;
+test('paid multimodal voice bills recognition and planning separately and durable estimated budget settlement',async()=>fixture(async(pool)=>{
+ const pcm=Buffer.alloc(384000);for(let i=0;i<192000;i++)pcm.writeInt16LE(Math.round(1000*Math.sin(i/10)),i*2);const wav=pcmWav(pcm);let calls=0;
  const provider=new GoogleInterpreter({apiKey:'offline',model:geminiTextRate.model,allowPaidInference:true,allowMultimodal:true,budgetMicrousd:500000},{generateContent:async params=>{
-  calls++;const prompt=JSON.parse((params.contents as any)[0].parts[0].text);assert.deepEqual(prompt.publicCatalog,[]);assert.equal(prompt.storeCatalogMap,null);assert.ok(!JSON.stringify(prompt).includes('pricePaise'));assert.ok(JSON.stringify(prompt).length<16000);assert.ok(String(params.config!.systemInstruction).length<6000);
-  assert.match(JSON.stringify(params.contents),/audio\/wav/);return {modelVersion:geminiTextRate.model,candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({transcript:'எனக்கு ஒரு பைப் கட்டர் வேண்டும்',operations:[{kind:'add_item',query:'pipe cutter',quantity:1}],next:'review'})}]}}],usageMetadata:{promptTokenCount:1400,candidatesTokenCount:100,totalTokenCount:1500}} as GenerateContentResponse;
+  calls++;const recognition=!!(params.config?.responseJsonSchema as any)?.properties?.transcript&&!(params.config?.responseJsonSchema as any)?.properties?.operations;if(recognition){assert.match(JSON.stringify(params.contents),/audio\/wav/);assert.ok(!JSON.stringify(params.contents).includes('currentDraft'));}else{const prompt=JSON.parse(params.contents as string);assert.ok(!JSON.stringify(prompt).includes('pricePaise'));assert.ok(JSON.stringify(prompt).length<16000);assert.ok(String(params.config!.systemInstruction).length<6000);}
+  return {modelVersion:recognition?geminiSpeechRate.model:geminiTextRate.model,candidates:[{finishReason:'STOP',content:{parts:[recognition?{text:JSON.stringify({transcript:'எனக்கு ஒரு பைப் கட்டர் வேண்டும்'})}:{text:JSON.stringify({operations:[{kind:'add_item',query:'pipe cutter',quantity:1}],next:'review'})}]}}],usageMetadata:{promptTokenCount:1400,candidatesTokenCount:100,totalTokenCount:1500}} as GenerateContentResponse;
  }});
  const channel=new WhatsAppChannel(pool,{...cfg,defaultReplyLanguage:'ta',aiEnabled:true,paidEnabled:true,budgetMicrousd:500000,mediaEnabled:true},async url=>String(url).includes('graph.facebook.com')?new Response(JSON.stringify({url:'https://lookaside.fbsbx.com/voice',mime_type:'audio/wav',file_size:wav.length})):new Response(new Uint8Array(wav)),provider);await channel.setup();
- const input=inbound({type:'audio',audio:{id:'123456'}});await channel.receive(input);await channel.processNext();await channel.receive(input);await channel.processNext();assert.equal(calls,1);
- const budget=(await pool.query('SELECT * FROM inference_budgets WHERE store_id=$1',[cfg.storeId])).rows[0];assert.equal(Number(budget.held_microusd),0);assert.equal(Number(budget.committed_microusd),670);assert.equal(Number(budget.limit_microusd),500000);
+ const input=inbound({type:'audio',audio:{id:'123456'}});await channel.receive(input);await channel.processNext();await channel.receive(input);await channel.processNext();assert.equal(calls,2);
+ const budget=(await pool.query('SELECT * FROM inference_budgets WHERE store_id=$1',[cfg.storeId])).rows[0];assert.equal(Number(budget.held_microusd),0);assert.equal(Number(budget.committed_microusd),1340);assert.equal(Number(budget.limit_microusd),500000);
  const reply=(await pool.query("SELECT payload FROM messages WHERE direction='outbound' ORDER BY sequence DESC LIMIT 1")).rows[0].payload;assert.equal(reply.replyLanguage,'ta');assert.ok(reply.cards.length>=1);assert.equal((await pool.query('SELECT * FROM voice_media')).rowCount,1);assert.equal((await pool.query('SELECT * FROM order_requests')).rowCount,0);
 }));

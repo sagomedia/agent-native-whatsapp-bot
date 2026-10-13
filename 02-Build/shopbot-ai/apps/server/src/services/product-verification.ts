@@ -15,10 +15,19 @@ export function preserveConfirmation(old:DraftLine,next:DraftLine) {
 export function markProductConfirmed(line:DraftLine,product:Product) {
   line.productConfirmation={sku:product.sku,version:product.version,identityHash:productIdentity(product)};
 }
+import {productListHash} from './visual-ordering.js';
 export function makeProductCheck(state:ConversationState,sequential=false):ProductCheck|null {
+  if(state.visualOrdering){
+    const hash=productListHash(state);
+    if(state.productReview?.hash===hash)return null;
+    const uncertain=state.draft.find(l=>!l.shopCheckDeferred&&(l.productIntent?.kind==='ambiguous'||!l.sku&&l.candidates?.length));
+    if(!uncertain&&state.draft.some(l=>!l.shopCheckDeferred&&l.sku&&productConfirmed(l)&&['needs_quantity','needs_unit'].includes(l.resolution)))return null;
+    const groups=state.draft.flatMap(line=>{const products=line.sku?line.candidates?.filter(p=>p.sku===line.sku)??[]:line.id===uncertain?.id?line.candidates?.slice(0,3)??[]:[];return products.length||line.productIntent?.kind==='ambiguous'?[{lineId:line.id,products,discovery:line.discovery}]:[];});
+    return {kind:'products',id:randomUUID(),version:state.version,expiresAt:new Date(Date.now()+15*60*1000).toISOString(),groups,remaining:state.draft.filter(l=>!l.sku).length,completeReview:groups.length===state.draft.length&&groups.every(g=>g.products.length===1)&&state.draft.every(l=>l.sku&&l.resolution!=='unavailable')?true:undefined,listHash:hash};
+  }
   const unfinished=state.draft.filter(l=>l.resolution!=='matched'||!productConfirmed(l));
   const bulk=!state.draft.some(l=>productConfirmed(l))&&unfinished.every(l=>l.resolution==='matched'&&!!l.sku&&!!l.quantity&&!l.discovery?.noExactMatch);
-  const scope=sequential&&!bulk?unfinished.slice(0,1):state.draft;
+  const scope=sequential&&!bulk?unfinished.filter(l=>!l.shopCheckDeferred).slice(0,1):state.draft;
   const waiting=scope.filter(l=>!productConfirmed(l)&&!!l.candidates?.length);
   const groups:ProductCheck['groups']=[];let count=0;
   for(const line of waiting) {
@@ -39,9 +48,10 @@ export function productCheckReply(state:ConversationState,question?:string):Rich
     const label=say(state,`Item ${number}: ${request}`,`பொருள் ${number}: ${request}`,`Porul ${number}: ${request}`);
     const quantityLabel=amount===null||amount===undefined?say(state,'Quantity to confirm','எண்ணிக்கையை உறுதி செய்ய வேண்டும்','Quantity confirm pannanum'):say(state,`Requested: ${amount} ${line.requestedUnit??line.unit??'units'}`,`கேட்டது: ${amount} ${unitName(line.requestedUnit??line.unit??'unit',state,amount)}`,`Kettathu: ${amount} ${unitName(line.requestedUnit??line.unit??'unit',state,amount)}`);
     cards.push(...group.products.map(product=>({product,requestLabel:label,quantityLabel,matchLabel:group.discovery?.rankings.find(r=>r.sku===product.sku)?.match==='related'?say(state,'Related option · please check','தொடர்புடைய பொருள் · சரிபார்க்கவும்','Thodarbudaiya porul · check pannunga'):line.sku===product.sku?say(state,'Suggested product','பரிந்துரைக்கப்பட்ட பொருள்','Parinthuraiththa porul'):undefined,label:group.products.length===1?say(state,'Add this item','இந்தப் பொருளைச் சேர்','Intha porulai seru'):say(state,'Choose this option','இதைத் தேர்வு செய்','Ithai choose pannu'),action:{id:randomUUID(),type:'select_product' as const,batchId:check.id,lineId:line.id,sku:product.sku}})));
+    if(/^(?:cutter|கட்டர்)$/i.test(request.trim()))return say(state,'What do you need to cut? Check each product name and photo; choose only the type you need.','எதை வெட்ட கட்டர் வேண்டும்? பெயரையும் படத்தையும் பார்த்து, தேவையான வகையை மட்டும் தேர்வு செய்யுங்கள்.','Ethai vetta cutter venum? Peyaraiyum photo-vaiyum paathu thevaiyana type mattum choose pannunga.');
     const facet=group.discovery?.facets[0];
-    if(facet)return say(state,`${number}. ${amount??'?'} × ${request}: which ${facet.label} did you mean—${facet.values.map(v=>v.label).join(', ')}?`,`${number}. ${amount??'?'} × ${request}: எந்த ${facetLabel(facet.key,facet.label,state)} வேண்டும் — ${facet.values.map(v=>localName(v.label,v.localNames,state)).join(', ')}?`,`${number}. ${amount??'?'} × ${request}: entha ${facetLabel(facet.key,facet.label,state)} venum — ${facet.values.map(v=>localName(v.label,v.localNames,state)).join(', ')}?`);
-    return say(state,`${number}. ${amount??'?'} × ${request}: ${group.products.length===1?'is this the product you meant?':'which option did you mean?'}`,`${number}. ${amount??'?'} × ${request}: ${group.products.length===1?'நீங்கள் கேட்டது இதுதானா?':'எந்தப் பொருள் வேண்டும்?'}`,`${number}. ${amount??'?'} × ${request}: ${group.products.length===1?'Neenga kettathu ithuthaana?':'Entha porul venum?'}`);
+    if(facet)return say(state,`${number}. ${amount===null||amount===undefined?'':amount+' × '}${request}: which ${facet.label} did you mean—${facet.values.map(v=>v.label).join(', ')}?`,`${number}. ${amount===null||amount===undefined?'':amount+' × '}${request}: எந்த ${facetLabel(facet.key,facet.label,state)} வேண்டும் — ${facet.values.map(v=>localName(v.label,v.localNames,state)).join(', ')}?`,`${number}. ${amount===null||amount===undefined?'':amount+' × '}${request}: entha ${facetLabel(facet.key,facet.label,state)} venum — ${facet.values.map(v=>localName(v.label,v.localNames,state)).join(', ')}?`);
+    return say(state,`${number}. ${amount===null||amount===undefined?'':amount+' × '}${request}: ${group.products.length===1?'is this the product you meant?':'which option did you mean?'}`,`${number}. ${amount===null||amount===undefined?'':amount+' × '}${request}: ${group.products.length===1?'நீங்கள் கேட்டது இதுதானா?':'எந்தப் பொருள் வேண்டும்?'}`,`${number}. ${amount===null||amount===undefined?'':amount+' × '}${request}: ${group.products.length===1?'Neenga kettathu ithuthaana?':'Entha porul venum?'}`);
   });
   const englishText=`Please check what I understood:\n${questions.join('\n')}\n\n${check.groups.some(g=>g.discovery?.noExactMatch)?'These are related suggestions, not an exact match. Tell me the job you need it for, or choose one if you want it instead. ':''}Check the photos and names, then add the right items. If anything is wrong, send the correct name, size or type. ${check.remaining?`${check.remaining} more item${check.remaining===1?'':'s'} to check after these. `:''}Nothing is sent to the shop yet.`;
   let text=say(state,englishText,`நான் புரிந்துகொண்டதைச் சரிபாருங்கள்:
@@ -51,11 +61,14 @@ ${check.groups.some(g=>g.discovery?.noExactMatch)?'இவை சரியான 
 ${questions.join('\n')}
 
 ${check.groups.some(g=>g.discovery?.noExactMatch)?'Ivai exact match-nu confirm pannaatha suggestions. Enna velaikku venum-nu sollunga. ':''}Photo-vum peyarum paathu sariyana porutkalai serunga. Thappaa irunthaa peyar, size illa type-ai marubadi sollunga. ${check.remaining?`Ivatrukku piragu melum ${check.remaining} porutkalai check pannalaam. `:''}Innum kadaikku anuppala.`);
-  const focusedQuestion=safeQuestion(question,state);if(focusedQuestion)text=focusedQuestion+'\n\n'+text;
+  const vagueCutter=check.groups.some(group=>/^(?:cutter|கட்டர்)$/i.test((state.draft.find(l=>l.id===group.lineId)?.query??'').trim()));
+  const focusedQuestion=vagueCutter?undefined:safeQuestion(question,state);if(focusedQuestion)text=focusedQuestion+'\n\n'+text;
   if(check.groups.length===1&&state.draft.length>1){
     const number=state.draft.findIndex(l=>l.id===check.groups[0].lineId)+1;
-    const list=state.draft.map((line,index)=>`${index+1}. ${line.requestedQuantity??line.quantity??'?'} × ${line.query&&line.query!==line.sku?line.query:lineName(line,state)}`).join('\n');
-    text=say(state,`Item ${number} of ${state.draft.length}\n${focusedQuestion??questions[0]}\n\nYour list:\n${list}\n\nChoose this item first; the other items are kept. Nothing has been sent to the shop.`,`பொருள் ${number} / ${state.draft.length}\n${focusedQuestion??questions[0]}\n\nஉங்கள் பட்டியல்:\n${list}\n\nமுதலில் இந்தப் பொருளைத் தேர்வு செய்யுங்கள்; மற்ற பொருட்கள் பட்டியலில் உள்ளன. இன்னும் கடைக்கு அனுப்பவில்லை.`,`Porul ${number} / ${state.draft.length}\n${focusedQuestion??questions[0]}\n\nUnga list:\n${list}\n\nMudhalil intha porulai choose pannunga; matra porutkal list-la irukku. Innum kadaikku anuppala.`);
+    const list=state.draft.map((line,index)=>`${index+1}. ${line.requestedQuantity??line.quantity??''}${line.requestedQuantity!=null||line.quantity!=null?' × ':''}${line.query&&line.query!==line.sku?line.query:lineName(line,state)}`).join('\n');
+    const related=check.groups.some(g=>g.discovery?.noExactMatch);
+    const warning=related?say(state,'These photos are related options, not a confirmed match. Choose one only if you want it instead; otherwise describe the item you need.','இந்தப் படங்கள் தொடர்புடைய பொருட்கள்; நீங்கள் கேட்ட பொருள் என்று உறுதி இல்லை. மாற்றாக வேண்டுமென்றால் மட்டும் தேர்வு செய்யுங்கள்; இல்லையெனில் வேண்டிய பொருளை விவரிக்கவும்.','Intha photos related options; neenga ketta porul-nu confirm aagala. Vera porul venumna mattum choose pannunga; illana thevaiyana porulai vivarunga.'):'';
+    text=say(state,`Item ${number} of ${state.draft.length}\n${focusedQuestion??questions[0]}${warning?'\n'+warning:''}\n\nYour list:\n${list}\n\nCheck this item first; the other items are kept. Nothing has been sent to the shop.`,`பொருள் ${number} / ${state.draft.length}\n${focusedQuestion??questions[0]}${warning?'\n'+warning:''}\n\nஉங்கள் பட்டியல்:\n${list}\n\nமுதலில் இந்தப் பொருளைச் சரிபார்க்கவும்; மற்ற பொருட்கள் பட்டியலில் உள்ளன. இன்னும் கடைக்கு அனுப்பவில்லை.`,`Porul ${number} / ${state.draft.length}\n${focusedQuestion??questions[0]}${warning?'\n'+warning:''}\n\nUnga list:\n${list}\n\nMudhalil intha porulai check pannunga; matra porutkal list-la irukku. Innum kadaikku anuppala.`);
   }
   const narrowing=check.groups.find(g=>g.discovery?.facets.length);
   const facet=narrowing?.discovery?.facets[0];

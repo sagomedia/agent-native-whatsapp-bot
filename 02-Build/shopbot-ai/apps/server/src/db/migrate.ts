@@ -124,6 +124,18 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
     `);}
     const v19=await client.query('SELECT version FROM schema_migrations WHERE version=19');
     if(!v19.rowCount){await client.query('ALTER TABLE messages ADD COLUMN typing_indicated_at timestamptz');await client.query('INSERT INTO schema_migrations(version) VALUES(19)');}
+    const v20=await client.query('SELECT version FROM schema_migrations WHERE version=20');
+    if(!v20.rowCount){await client.query("ALTER TABLE provider_attempts DROP CONSTRAINT provider_attempts_stage_check; ALTER TABLE provider_attempts ADD CONSTRAINT provider_attempts_stage_check CHECK(stage IN ('recognize','identify','recommend')); ALTER TABLE provider_attempts DROP CONSTRAINT provider_attempts_attempt_check; ALTER TABLE provider_attempts ADD CONSTRAINT provider_attempts_attempt_check CHECK(attempt BETWEEN 1 AND 3); INSERT INTO schema_migrations(version) VALUES(20)");}
+    const v21=await client.query('SELECT version FROM schema_migrations WHERE version=21');
+    if(!v21.rowCount){await client.query(`
+      ALTER TABLE products ADD COLUMN catalog_origin text NOT NULL DEFAULT 'legacy' CHECK(catalog_origin IN ('legacy','demo','owner')),ADD COLUMN inventory_updated_at timestamptz;
+      UPDATE products SET catalog_origin='demo' WHERE image_path LIKE '/demo-images/%';
+      CREATE TABLE catalog_photos(id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),image bytea NOT NULL CHECK(octet_length(image)<=2097152),width integer NOT NULL,height integer NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+      CREATE TABLE request_notifications(request_id uuid NOT NULL REFERENCES order_requests(id),status_key text NOT NULL,message_id uuid NOT NULL UNIQUE REFERENCES messages(id),PRIMARY KEY(request_id,status_key));
+      INSERT INTO schema_migrations(version) VALUES(21);
+    `);}
+    const v22=await client.query('SELECT version FROM schema_migrations WHERE version=22');
+    if(!v22.rowCount){await client.query(`CREATE TABLE catalog_suggestions(id uuid NOT NULL,store_id uuid NOT NULL REFERENCES stores(id),input_hash text NOT NULL,state text NOT NULL CHECK(state IN ('started','succeeded','failed','unknown')),provider_mode text NOT NULL CHECK(provider_mode IN ('mock','live')),rate_snapshot jsonb NOT NULL,reserved_microusd bigint NOT NULL DEFAULT 0,estimated_cost_microusd bigint,usage jsonb,response_model text,suggestion jsonb,billing_state text NOT NULL DEFAULT 'held' CHECK(billing_state IN ('held','estimated','unknown')),created_at timestamptz NOT NULL DEFAULT now(),settled_at timestamptz,PRIMARY KEY(store_id,id)); INSERT INTO schema_migrations(version) VALUES(22)`);}
     if (mode === 'mock') {
       assertMock(mode);
       await client.query('INSERT INTO stores(id,name,synthetic) VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [fixtureStore, 'Workshop supply demo', 'true']);
@@ -132,8 +144,44 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
     }
     if (mode === 'mock') {
       const aliases: Record<string,string[]> = { 'PTFE-TAPE': ['PTFE tape','Teflon tape','tape rolls'], 'PVC-ELBOW-050': ['half inch elbow','0.5 inch PVC elbow'], 'PVC-ELBOW-075':['0.75 inch PVC elbow'], 'WRENCH-10':['ten inch wrench','adjustable wrench'], 'SCREW-M4-25':['M4 screws'], 'HAMMER-500':['claw hammer'] };
-      for (const [sku,values] of Object.entries(aliases)) await client.query("UPDATE products SET aliases=$1::jsonb WHERE store_id=$2 AND sku=$3 AND aliases='[]'::jsonb",[JSON.stringify(values),fixtureStore,sku]);
+      for (const [sku,values] of Object.entries(aliases)) await client.query("UPDATE products SET aliases=$1::jsonb WHERE store_id=$2 AND sku=$3 AND aliases='[]'::jsonb AND catalog_origin<>'owner'",[JSON.stringify(values),fixtureStore,sku]);
     }
+    const v23=await client.query('SELECT version FROM schema_migrations WHERE version=23');
+    if(!v23.rowCount){await client.query(`
+      ALTER TABLE conversations ADD COLUMN visual_ordering boolean NOT NULL DEFAULT false, ADD COLUMN product_review jsonb;
+      ALTER TABLE messages DROP CONSTRAINT messages_response_to_key;
+      ALTER TABLE messages ADD COLUMN reply_group_id uuid, ADD COLUMN part_index integer NOT NULL DEFAULT 0 CHECK(part_index>=0), ADD COLUMN part_count integer NOT NULL DEFAULT 1 CHECK(part_count>0), ADD COLUMN stage text, ADD COLUMN clarification_reason text;
+      ALTER TABLE messages ADD CONSTRAINT messages_response_part_unique UNIQUE(response_to,part_index);
+      CREATE INDEX messages_reply_group ON messages(reply_group_id,part_index);
+      INSERT INTO schema_migrations(version) VALUES(23);
+    `);}
+    const v24=await client.query('SELECT version FROM schema_migrations WHERE version=24');
+    if(!v24.rowCount){await client.query("ALTER TABLE provider_attempts DROP CONSTRAINT provider_attempts_attempt_check; ALTER TABLE provider_attempts ADD CONSTRAINT provider_attempts_attempt_check CHECK(attempt BETWEEN 1 AND 4); INSERT INTO schema_migrations(version) VALUES(24)");}
+    const v25=await client.query('SELECT version FROM schema_migrations WHERE version=25');
+    if(!v25.rowCount){await client.query(`
+      ALTER TABLE stores ADD COLUMN catalog_revision integer NOT NULL DEFAULT 1;
+      ALTER TABLE conversations ADD COLUMN reply_language_explicit boolean NOT NULL DEFAULT false;
+      ALTER TABLE provider_attempts DROP CONSTRAINT provider_attempts_stage_check;
+      ALTER TABLE provider_attempts ADD CONSTRAINT provider_attempts_stage_check CHECK(stage IN ('recognize','identify','repair','recommend')); 
+      ALTER TABLE products ADD COLUMN price_status text NOT NULL DEFAULT 'priced' CHECK(price_status IN ('priced','confirm','free')), ADD COLUMN selling_unit_verified boolean NOT NULL DEFAULT false;
+      UPDATE products SET price_status='confirm' WHERE price_paise=0;
+      CREATE FUNCTION bump_shop_catalog_revision() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        UPDATE stores SET catalog_revision=catalog_revision+1 WHERE id=COALESCE(NEW.store_id,OLD.store_id);
+        RETURN NULL;
+      END $$;
+      CREATE TRIGGER products_catalog_revision AFTER INSERT OR UPDATE OR DELETE ON products FOR EACH ROW EXECUTE FUNCTION bump_shop_catalog_revision();
+      CREATE TRIGGER nodes_catalog_revision AFTER INSERT OR UPDATE OR DELETE ON catalog_nodes FOR EACH ROW EXECUTE FUNCTION bump_shop_catalog_revision();
+      INSERT INTO schema_migrations(version) VALUES(25);
+    `);}
+    const v26=await client.query('SELECT version FROM schema_migrations WHERE version=26');
+    if(!v26.rowCount){await client.query(`
+      ALTER TABLE image_media DROP CONSTRAINT image_media_width_check;
+      ALTER TABLE image_media DROP CONSTRAINT image_media_height_check;
+      ALTER TABLE image_media ADD CONSTRAINT image_media_width_check CHECK(width>0 AND width<=2048);
+      ALTER TABLE image_media ADD CONSTRAINT image_media_height_check CHECK(height>0 AND height<=2048);
+      INSERT INTO schema_migrations(version) VALUES(26);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

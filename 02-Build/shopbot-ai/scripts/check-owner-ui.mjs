@@ -1,0 +1,97 @@
+// Isolated visual/interaction check. Requires Playwright; uses fixtures and sends no real messages.
+// PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs node scripts/check-owner-ui.mjs
+import assert from 'node:assert/strict';
+import {mkdir} from 'node:fs/promises';
+import {resolve} from 'node:path';
+const {chromium}=await import(process.env.PLAYWRIGHT_MODULE??'playwright');
+const output=resolve('artifacts/owner-ui');await mkdir(output,{recursive:true});
+const browser=await chromium.launch({headless:true,...(process.env.CHROME_BIN?{executablePath:process.env.CHROME_BIN}:{})});
+const page=await browser.newPage({viewport:{width:1440,height:1000}});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+const now=new Date().toISOString(),old='2026-10-04T08:00:00Z';
+const line={id:'line-1',quantity:2,unit:'piece',name:'1 inch PVC pipe',resolution:'matched'};
+const products=Array.from({length:39},(_,i)=>({sku:'P-'+i,name:i===0?'Adjustable wrench · 10 inch':i===1?'Claw hammer · 500 g':'PVC pipe · '+String(i).padStart(2,'0'),localNames:{ta:i===0?'அட்ஜஸ்டபிள் ரெஞ்ச்':'பிவிசி குழாய்'},unit:'piece',pricePaise:18000+i*100,stock:i===0?null:i===1?0:40+i,quantityStep:1,version:1,active:i!==3,aliases:['pipe'],keywords:[],origin:'demo',inventoryUpdatedAt:now,imageUrl:'/fixture.jpg',brand:'',specifications:{},familyId:''}));
+const customerId=i=>'a'+String(i).padStart(7,'0')+'-0000-4000-8000-000000000000';
+const conversations=Array.from({length:14},(_,i)=>({id:customerId(i),actor:i===13?'local-simulator':'whatsapp',operator_mode:'assistant',operator_revision:1,reply_language:'ta',draft:i===0?[{...line,quantity:null,resolution:'needs_quantity'}]:[line],handoff_requested:i===1,last_inbound_at:now,pending:0,last_text:i===0?'I need a hammer. Which size do you have?':'Can I pick this up today?',updated_at:now}));
+const requests=[{id:'request-new',conversation_id:customerId(1),acceptance:'awaiting_approval',fulfillment:'awaiting_approval',payment:'not_requested',total_paise:'36000',lines:[line],created_at:now},{id:'request-ready',conversation_id:customerId(2),acceptance:'accepted',fulfillment:'ready_for_pickup',payment:'not_requested',total_paise:'71000',lines:[line],created_at:now},{id:'request-collected',conversation_id:customerId(3),acceptance:'accepted',fulfillment:'collected',payment:'not_requested',total_paise:'19000',lines:[line],created_at:old}];
+const snapshot={store:{name:'Workshop supply demo',synthetic:'true',operator_paused:false,operator_revision:1},conversations,requests,budget:{limit_microusd:'4500000',committed_microusd:'28658',held_microusd:'57344',blocked:false},usage:{attempts:47,failures:3,unknown:0,estimated_microusd:'28658'},audit:Array.from({length:12},(_,i)=>({action:i%2?'request_fulfillment':'catalog_product',created_at:now})),mode:'mock',ownerEmail:'owner@example.test',channel:{whatsapp:'receiving',liveSending:true,processing:true,lastReceivedAt:now,error:null,testOnly:true},inference:{enabled:true,paidEnabled:true},generatedAt:now};
+let messages=Array.from({length:35},(_,i)=>({id:'message-'+i,direction:i%2?'outbound':'inbound',text:i%2?'I found Claw hammer · 500 g. How many pieces would you like?':'I need a hammer.',status:i%2?'preview':'processed',created_at:now,whatsapp:false}));
+const visualReply={version:1,replyLanguage:'en',kind:'product_choices',text:'Check these products',presentation:'carousel_preview',outboundMessages:1,stage:'products',parts:[{id:'part-ui',text:'Check these products',cards:[{kind:'product',product:products[0],caption:'Verified visual product',buttons:[{label:'Choose visual product',event:{id:'visual-pick',type:'choose_product',sku:products[0].sku,expectedVersion:1}}]},{kind:'instruction',title:'Check the list',lines:['Check size before approving'],caption:'Check size before approving'}]}]};
+messages[1].payload=visualReply;
+let lastSave,lastAction,lastSuggest,failSave=false,nativeSnapshot=null,catalogDelay=0;
+await page.route('**/api/**',async route=>{
+ const req=route.request(),url=new URL(req.url()),path=url.pathname;
+ const json=body=>route.fulfill({json:body});
+ if(path.endsWith('/snapshot'))return json(snapshot);
+ if(path==='/api/owner/catalog'){if(catalogDelay)await new Promise(resolve=>setTimeout(resolve,catalogDelay));return json({products,nodes:[],aiAvailable:true});}
+ if(path.endsWith('/image'))return route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect x="12" y="12" width="76" height="76" rx="4" fill="#d8e0dc"/><path d="M20 70L60 30" stroke="#82908a" stroke-width="12"/></svg>'});
+ if(path==='/api/owner/catalog/suggest'){
+  lastSuggest=req.postDataJSON();return json({suggestion:{name:'Verified pipe name',localNames:{ta:'பிவிசி குழாய்','ta-Latn':'pvc kulai'},aliases:['pipe'],keywords:['pipe'],unit:'metre',brand:'Blueguard',specifications:[],familyId:null,newType:null,questions:[]}});
+ }
+ if(path==='/api/owner/catalog/products'){
+  lastSave=req.postDataJSON();if(failSave)return route.fulfill({status:409,json:{error:'Product changed. Reload before saving.'}});
+  const row=products.find(p=>p.sku===lastSave.sku),version=(row?.version??0)+1;Object.assign(row??{},lastSave,{version});return json({...lastSave,sku:lastSave.sku||'NEW-1',version,familyId:''});
+ }
+ if(req.method()==='POST'){
+  lastAction={path,body:req.postDataJSON()};
+  if(path.endsWith('/control')){const c=conversations.find(c=>path.includes(c.id));c.operator_mode=lastAction.body.mode;c.operator_revision++;}
+  if(path.endsWith('/decision')){const r=requests.find(r=>path.includes(r.id));r.acceptance=lastAction.body.decision;r.fulfillment='preparing';}
+  if(path.endsWith('/fulfillment')){const r=requests.find(r=>path.includes(r.id));r.fulfillment=lastAction.body.status;}
+  if(path.endsWith('/reply'))messages.push({id:'sent-'+lastAction.body.id,direction:'outbound',text:lastAction.body.text,status:'queued',sender_kind:'owner',created_at:now,whatsapp:true});
+  return json(path.includes('/requests/')?{customerNotification:lastAction.body.notify===false?'not_requested':'queued'}:{});
+ }
+ if(path.includes('/api/owner/conversations/'))return json({messages});
+ if(path==='/api/native-test')return nativeSnapshot?json(nativeSnapshot):route.fulfill({status:401,json:{error:'Start a test'}});
+ if(path==='/api/simulator')return json({mode:'mock',provider:'Fixture',catalog:products,conversation:{version:1,draft:[],pending:null,fulfillment:'pickup',lastRequestId:null},messages:[],pending:0,requests:[],interpretationAttempts:0});
+ return route.fulfill({status:404,json:{error:'Unknown fixture endpoint: '+path}});
+});
+const base=process.env.OWNER_UI_URL??'http://127.0.0.1:5179';
+async function screenshot(name){await page.screenshot({path:resolve(output,name+'.png'),fullPage:!['inventory-mobile','products-mobile'].includes(name)});}
+await page.goto(base+'/owner');await page.getByRole('button',{name:'Take over & reply',exact:true}).waitFor();
+assert.equal(await page.getByLabel('Reply to customer',{exact:true}).count(),0);
+await page.locator('.owner-draft summary').click();await page.getByText('Quantity needed · 1 inch PVC pipe').waitFor();
+await page.getByText('Verified visual product',{exact:true}).waitFor();assert.equal(await page.locator('.owner-message-list .visual-card').count(),2);assert.equal(await page.getByRole('button',{name:'Choose visual product',exact:true}).isDisabled(),true);
+await screenshot('conversations-desktop');
+await page.locator('.owner-message-list').evaluate(el=>{el.scrollTop=0;el.dispatchEvent(new Event('scroll'));});messages.push({id:'incoming-new',direction:'inbound',text:'Can I collect it this afternoon?',status:'processed',created_at:now,whatsapp:true});await page.getByRole('button',{name:'New messages ↓',exact:true}).waitFor();assert.equal(await page.locator('.owner-message-list').evaluate(el=>el.scrollTop),0);await page.getByRole('button',{name:'New messages ↓',exact:true}).click();
+
+await page.getByRole('button',{name:'Take over & reply',exact:true}).click();await page.getByLabel('Reply to customer',{exact:true}).fill('Yes, we have it.');
+await page.locator('.owner-thread-rows button').nth(1).click();await page.getByRole('dialog').waitFor();await page.getByRole('button',{name:'Keep working',exact:true}).click();assert.equal(await page.getByLabel('Reply to customer',{exact:true}).inputValue(),'Yes, we have it.');
+await page.getByRole('button',{name:'Send reply',exact:true}).click();await page.getByText('Reply queued. Delivery status will appear in the conversation.').waitFor();assert.equal(lastAction.body.revision,2);assert.equal(lastAction.body.text,'Yes, we have it.');
+await page.locator('.owner-thread-rows button').nth(1).click();await page.getByRole('button',{name:'Take over & reply',exact:true}).click();await page.getByLabel('Reply to customer',{exact:true}).fill('Second customer draft');await page.goBack();assert.equal(await page.getByLabel('Reply to customer',{exact:true}).inputValue(),'');await page.goForward();assert.equal(await page.getByLabel('Reply to customer',{exact:true}).inputValue(),'Second customer draft');await page.getByLabel('Reply to customer',{exact:true}).fill('');await page.goBack();
+
+await page.getByRole('link',{name:'Products',exact:true}).click();await screenshot('products-desktop');await page.getByRole('link',{name:'View full inventory',exact:true}).click();await page.locator('tbody tr').first().waitFor();assert.equal(await page.locator('tbody tr').count(),25);
+await page.getByRole('button',{name:'Next',exact:true}).click();assert.equal(await page.locator('tbody tr').count(),14);
+await page.getByRole('button',{name:'Filters',exact:true}).click();await page.getByLabel('Stock',{exact:true}).selectOption('unknown');assert.equal(await page.locator('tbody tr').count(),1);await page.getByRole('cell',{name:'Stock not entered',exact:true}).waitFor();
+await page.getByLabel('Stock',{exact:true}).selectOption('out');assert.equal(await page.locator('tbody tr').count(),1);await page.getByRole('cell',{name:'Out of stock',exact:true}).waitFor();
+await page.getByRole('button',{name:'Clear filters',exact:true}).click();await screenshot('inventory-desktop');
+await page.getByLabel('Find a product',{exact:true}).fill('PVC');assert.equal(await page.locator('tbody tr').count(),25);
+await page.getByRole('button',{name:'Next',exact:true}).click();await page.locator('.owner-inventory-product').nth(8).scrollIntoViewIfNeeded();const inventoryPosition=await page.evaluate(()=>window.scrollY);await page.locator('.owner-inventory-product').nth(8).click();await page.getByRole('heading',{name:'Edit product',exact:true}).waitFor();assert.equal(new URL(page.url()).searchParams.get('page'),'2');
+await page.getByLabel('Shop price (₹)').fill('299.00');await page.getByRole('button',{name:'Suggest details from photo & name',exact:true}).click();await page.getByText('Details filled.',{exact:false}).waitFor();assert.equal(await page.getByLabel('Shop price (₹)').inputValue(),'299.00');assert.equal(await page.getByLabel('Selling unit',{exact:true}).inputValue(),'piece');assert.ok(lastSuggest.existingProduct);
+await page.getByRole('button',{name:'New product',exact:true}).click();await page.getByRole('dialog').waitFor();await page.getByRole('button',{name:'Keep working',exact:true}).click();assert.equal(await page.getByLabel('Shop price (₹)').inputValue(),'299.00');
+await page.getByLabel('I checked the product, photo, price and selling unit').check();await page.getByRole('button',{name:'Save changes',exact:true}).click();await page.getByText('Changes saved. Customers can find this product.').waitFor();assert.equal(lastSave.pricePaise,29900);assert.equal(lastSave.unit,'piece');assert.equal(lastSave.verified,true);
+await screenshot('product-editor-desktop');
+catalogDelay=600;await page.locator('.owner-editor-options summary').click();await page.getByRole('button',{name:'Reload saved product',exact:true}).click();await page.getByLabel('Shop price (₹)').fill('329.00');await page.getByRole('dialog').waitFor();await page.getByRole('button',{name:'Keep working',exact:true}).click();assert.equal(await page.getByLabel('Shop price (₹)').inputValue(),'329.00');catalogDelay=0;
+
+await page.getByLabel('Shop price (₹)').fill('319.00');await page.getByLabel('I checked the product, photo, price and selling unit').check();failSave=true;await page.getByRole('button',{name:'Save changes',exact:true}).click();await page.getByRole('alert').getByText('Product changed. Reload before saving.',{exact:true}).waitFor();assert.equal(await page.getByLabel('Shop price (₹)').inputValue(),'319.00');failSave=false;await page.getByRole('button',{name:'Save changes',exact:true}).click();await page.getByText('Changes saved. Customers can find this product.').waitFor();
+
+await page.getByRole('link',{name:'View full inventory',exact:true}).click();assert.equal(new URL(page.url()).searchParams.get('q'),'PVC');assert.equal(new URL(page.url()).searchParams.get('page'),'2');await page.waitForTimeout(100);assert.ok(Math.abs(await page.evaluate(()=>window.scrollY)-inventoryPosition)<5,'Inventory scroll restored');
+await page.getByRole('link',{name:'Requests',exact:false}).first().click();assert.equal(await page.locator('.owner-request').count(),2);
+await screenshot('requests-desktop');
+await page.locator('.owner-request').first().getByLabel('Notify customer if WhatsApp permits').uncheck();await page.getByRole('button',{name:'Accept request',exact:true}).click();await page.getByText('Request accepted.').waitFor();assert.equal(lastAction.body.notify,false);
+await page.getByRole('button',{name:'History',exact:false}).click();assert.equal(await page.locator('.owner-request').count(),1);await page.getByText('Collected',{exact:true}).waitFor();await page.getByText('View details',{exact:true}).click();await page.getByText('Payment: not requested',{exact:false}).waitFor();
+await page.getByRole('link',{name:'Connections & usage',exact:true}).click();assert.equal(await page.locator('.owner-activity li').count(),5);await page.getByRole('button',{name:'View all loaded activity'}).click();assert.equal(await page.locator('.owner-activity li').count(),12);await screenshot('connections-desktop');
+for(const [view,name] of [['conversations','conversations'],['catalog','products'],['requests','requests'],['connections','connections']]){
+ await page.setViewportSize({width:390,height:844});await page.goto(base+'/owner?view='+view);await page.getByRole('heading',{name:view==='catalog'?'Products':view==='connections'?'Connections & usage':view==='requests'?'Requests':'Conversations',exact:true}).waitFor();await page.waitForTimeout(150);
+ if(view==='conversations'){await page.locator('.owner-thread-rows button').first().click();await page.getByRole('button',{name:'← Back',exact:true}).waitFor();}
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'Overflow in '+view);await screenshot(name+'-mobile');if(view==='catalog'){await page.getByRole('button',{name:'New product',exact:true}).click();assert.equal(await page.getByLabel('Product name',{exact:true}).isVisible(),true);await screenshot('product-editor-mobile');await page.getByRole('button',{name:'← Products',exact:true}).click();assert.equal(await page.locator('.owner-product-list').isVisible(),true);}
+ if(view==='conversations'){await page.getByRole('button',{name:'← Back',exact:true}).click();assert.equal(await page.locator('.owner-thread-list').isVisible(),true);assert.equal(await page.locator('.owner-thread').isVisible(),false);}
+}
+await page.goto(base+'/owner?view=catalog&inventory=1');await page.locator('tbody tr').first().waitFor();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));await screenshot('inventory-mobile');
+await page.goto(base+'/native-test');await page.locator('.chat-preview').waitFor();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));await screenshot('customer-mobile');
+await page.goto(base+'/');await page.locator('.workspace').waitFor();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));await screenshot('simulator-mobile');
+nativeSnapshot={mode:'mock',provider:'offline-preview',catalog:products,conversation:{version:1,replyLanguage:'en',draft:[],pending:null,fulfillment:'pickup',lastRequestId:null},messages:messages.map(m=>({...m,createdAt:m.created_at,rich:m.payload})),pending:0,requests:[],interpretationAttempts:0,lastFailure:null,deliveryPreview:{outboundMessages:0,planningPaisePerMessage:50,estimateOnly:true},capabilities:{voice:true,image:true,quota:{requestsPerMinute:10,requestsPerDay:100,minIntervalSeconds:6}}};
+await page.goto(base+'/native-test');await page.getByLabel('Message ShopBot',{exact:true}).waitFor();await page.getByText('Verified visual product',{exact:true}).waitFor();assert.equal(await page.locator('.chat-log .visual-card').count(),2);assert.equal(await page.getByRole('button',{name:'Choose visual product',exact:true}).isDisabled(),false);await page.getByRole('button',{name:'Choose visual product',exact:true}).click();assert.equal(lastAction.body.type,'choose_product');assert.equal(lastAction.body.sku,products[0].sku);assert.equal(await page.locator('.product-strip').count(),0);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'Visual cards overflow');await page.locator('.chat-log').evaluate(el=>{el.scrollTop=0;el.dispatchEvent(new Event('scroll'));});const documentScroll=await page.evaluate(()=>window.scrollY);nativeSnapshot.messages.push({id:'native-new',direction:'outbound',text:'Please confirm the size.',createdAt:now,status:'processed'});await page.getByRole('button',{name:'New messages ↓',exact:true}).waitFor();assert.equal(await page.locator('.chat-log').evaluate(el=>el.scrollTop),0);assert.equal(await page.evaluate(()=>window.scrollY),documentScroll);await page.getByRole('button',{name:'New messages ↓',exact:true}).click();
+await page.getByLabel('Choose product photo',{exact:true}).setInputFiles({name:'fixture.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1cAAAAASUVORK5CYII=','base64')});await page.getByLabel('What are you looking for? (optional)',{exact:true}).fill('1 inch pipe');assert.equal(await page.getByRole('img',{name:'Product photo to send',exact:true}).count(),1);await page.getByRole('button',{name:'Cancel photo',exact:true}).click();assert.equal(await page.getByRole('img',{name:'Product photo to send',exact:true}).count(),0);
+
+await page.goto(base+'/owner?conversation=unlisted-customer');await page.getByRole('heading',{name:'Conversation unavailable',exact:true}).waitFor();assert.equal(await page.getByLabel('Reply to customer',{exact:true}).count(),0);
+assert.deepEqual(errors,[]);await browser.close();console.log('Owner UI checks passed: inventory, pagination, stock states, AI preservation, unsaved changes, save, requests, notifications, composer, mobile layouts.');

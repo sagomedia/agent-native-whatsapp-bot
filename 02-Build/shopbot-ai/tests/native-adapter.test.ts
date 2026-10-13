@@ -7,7 +7,10 @@ import {setupDatabase,resetMock} from '../apps/server/src/db/migrate.js';
 import {SimulatorService,simulatorContext} from '../apps/server/src/services/simulator.js';
 import {ConversationRuntime} from '../apps/server/src/runtime/conversation.js';
 import {GoogleInterpreter,readNativeSettings,type GoogleTransport} from '../apps/server/src/adapters/google-interpreter.js';
-import {geminiTextRate,initializeBudget,worstCaseReservation,usageEstimate,validateRateCard,settleAttempt} from '../apps/server/src/services/inference-budget.js';
+import {geminiTextRate,geminiSpeechRate,initializeBudget,worstCaseReservation,usageEstimate,validateRateCard,settleAttempt,reserveAttempt} from '../apps/server/src/services/inference-budget.js';
+import {GoogleSpeechRecognizer} from '../apps/server/src/adapters/google-speech-recognizer.js';
+import type {ProviderResult} from '../apps/server/src/adapters/interpreter.js';
+import {withConversation} from '../apps/server/src/services/context.js';
 import {readConfig} from '../apps/server/src/config.js';
 import type {ActorContext} from '../apps/server/src/services/context.js';
 
@@ -16,6 +19,53 @@ const operations=[{kind:'add_item',query:'PVC-ELBOW-050',quantity:3},{kind:'add_
 function response(output:unknown={operations,next:'review'},finish=FinishReason.STOP,usage=true):GenerateContentResponse {
   return {modelVersion:geminiTextRate.model,candidates:[{finishReason:finish,content:{parts:[{text:typeof output==='string'?output:JSON.stringify(output)}]}}],...(usage?{usageMetadata:{promptTokenCount:1000,candidatesTokenCount:100,thoughtsTokenCount:20,totalTokenCount:1120}}:{})} as GenerateContentResponse;
 }
+
+test('empty optional search values and invented read-only taxonomy IDs retain the named request without widening known constraints',async()=>{
+ const state={version:0,draft:[],pending:null,fulfillment:'pickup' as const,lastRequestId:null};
+ const catalogMap={store:{name:'Fixture',type:'hardware'},productCount:1,truncated:false,departments:[{id:'tools',label:'Tools',count:1,families:[{id:'pipe-cutters',label:'Pipe cutters',aliases:['pipe cutter'],count:1}]}]};
+ for(const [familyId,expected] of [['hand-tools',undefined],['pipe-cutters','pipe-cutters']] as const){
+  const provider=new GoogleInterpreter(settings,{generateContent:async()=>response({operations:[],next:'assist',assistance:{queries:['cutting plier'],rootQuery:'cutting plier',quantity:1},assistanceSearch:{keywords:['cutting plier'],familyId,brand:''}})});
+  const result=await provider.interpret({text:'enakku oru cutting plier venum',state,catalogMap},AbortSignal.timeout(1000));
+  assert.equal(result.validationIssues,undefined);assert.deepEqual((result.output as any).operations,[]);
+  assert.equal((result.output as any).assistance.rootQuery,'cutting plier');assert.equal((result.output as any).assistance.quantity,1);
+  assert.equal((result.output as any).assistance.search.familyId,expected);assert.equal((result.output as any).assistance.search.brand,undefined);
+ }
+});
+
+test('all paid audio durations keep the Flash Lite model',()=>{
+ const provider=new GoogleInterpreter({...settings,allowMultimodal:true},{generateContent:async()=>{throw new Error('offline routing only');}});
+ const input={text:'ignored',state:{version:0,draft:[],pending:null,fulfillment:'pickup' as const,lastRequestId:null},stage:'recognize' as const,audio:{mimeType:'audio/wav' as const,data:'AAAA',durationSeconds:4}};
+ assert.equal(provider.recognitionProviderFor(input),provider);
+ assert.equal(provider.recognitionProviderFor({...input,audio:{...input.audio,durationSeconds:14}}),provider);
+});
+
+test('consistent current-line corrections normalize a mixed next label only for explicit corrections',async()=>{
+ const lineId=randomUUID(),line={id:lineId,query:'Asian Paints',name:'Asian Paints',quantity:1,resolution:'unavailable' as const,candidates:[]};
+ const state={version:4,draft:[line],pending:{kind:'question' as const,lineId,id:randomUUID(),version:4},fulfillment:'pickup' as const,lastRequestId:null};
+ const output={operations:[{kind:'resolve_line',lineId,query:'Asian Paints wall paint'}],next:'assist',assistance:{rootQuery:'Asian Paints wall paint',queries:['Asian Paints wall paint'],lineId,quantity:1},assistanceSearch:{keywords:['wall paint'],brand:'Asian Paints'}};
+ const provider=new GoogleInterpreter(settings,{generateContent:async()=>response(output)});
+ const result=await provider.interpret({text:'The second item is Asian Paints wall paint.',state},AbortSignal.timeout(1000));
+ assert.equal(result.validationIssues,undefined);assert.equal((result.output as any).next,'review');assert.equal((result.output as any).assistance,undefined);
+ assert.equal((result.output as any).operations[0].lineId,lineId);assert.equal((result.output as any).operations[0].query,'Asian Paints wall paint');assert.equal((result.output as any).operations[0].search.brand,'Asian Paints');
+ assert.ok((await provider.interpret({text:'Show paint options.',state},AbortSignal.timeout(1000))).validationIssues?.length);
+});
+
+test('observed misplaced read-only fields translate without allowing conflicting aliases or shopping writes',async()=>{
+ const state={version:0,draft:[],pending:null,fulfillment:'pickup' as const,lastRequestId:null};
+ const search={keywords:['wall stencil'],familyId:'wall-stencils'};
+ const outputs=[
+  {operations:[],next:'assist',assistance:{queries:['wall stencil'],question:'Which design?',clarifyQuestion:'Which design?',assistanceSearch:search}},
+  {operations:[],next:'assist',assistance:{queries:['paint'],question:'Which paint?',clarifyQuestion:'Which plier?'}},
+  {operations:[],next:'assist',assistance:{queries:['wall stencil'],assistanceSearch:search},assistanceSearch:{keywords:['paint'],familyId:'paint'}},
+  {operations:[{kind:'add_item',query:'H22',quantity:1}],next:'assist',assistance:{queries:['paint'],assistanceSearch:search}},
+ ];
+ for(const [index,output] of outputs.entries()){
+  const provider=new GoogleInterpreter(settings,{generateContent:async()=>response(output)});
+  const r=await provider.interpret({text:'wall stencil',state},new AbortController().signal);
+  if(index===0){assert.equal(r.validationIssues,undefined);assert.deepEqual((r.output as any).operations,[]);assert.deepEqual((r.output as any).assistance.search,{keywords:['wall stencil'],familyId:'wall-stencils'});assert.equal((r.output as any).assistance.question,'Which design?');}
+  else assert.ok(r.validationIssues?.length,`unsafe output ${index} must be rejected`);
+ }
+});
 async function fixture(run:(pool:pg.Pool,inbox:SimulatorService)=>Promise<void>) {
   const config=readConfig(),admin=new pg.Pool({connectionString:config.databaseUrl});
   assert.equal(config.mode,'mock');const schema='native_test_'+randomUUID().replaceAll('-','');
@@ -25,6 +75,38 @@ async function fixture(run:(pool:pg.Pool,inbox:SimulatorService)=>Promise<void>)
   finally{await pool.end();await admin.query(`DROP SCHEMA "${schema}" CASCADE`);await admin.end();}
 }
 async function turn(inbox:SimulatorService,runtime:ConversationRuntime,text:string) {await inbox.ingest({id:randomUUID(),type:'text',text});await runtime.processNext(inbox.context);return inbox.snapshot();}
+
+test('speech reservations hold missing, incomplete and mismatched usage; over-cap usage blocks the budget',async()=>{
+ for(const scenario of ['missing','incomplete','mismatched','over-cap'] as const) await fixture(async(pool,inbox)=>{
+  await initializeBudget(pool,simulatorContext,1000000);
+  const id=randomUUID();await inbox.ingest({id,type:'text',text:'ledger fixture'});
+  const provider=new GoogleSpeechRecognizer({apiKey:'offline-only',budgetMicrousd:1000000},{generateContent:async()=>{throw new Error('no provider call');}});
+  const reserved=await withConversation(pool,simulatorContext,client=>reserveAttempt(client,simulatorContext,id,0,provider,'recognize'));
+  assert.ok(reserved.id);assert.equal(worstCaseReservation(geminiSpeechRate),324813);
+  assert.equal(Number((await pool.query('SELECT held_microusd FROM inference_budgets')).rows[0].held_microusd),324813);
+  const usage:Record<string,number>=scenario==='over-cap'?{promptTokenCount:1048577,candidatesTokenCount:30,totalTokenCount:1048607}:scenario==='incomplete'?{promptTokenCount:357,totalTokenCount:357}:{promptTokenCount:357,candidatesTokenCount:30,totalTokenCount:387};
+  const result:ProviderResult|undefined=scenario==='missing'?undefined:{output:{operations:[],next:'continue',transcript:'heard'},truncated:false,responseModel:scenario==='mismatched'?'wrong-model':geminiSpeechRate.model,usage};
+  const accepted=await settleAttempt(pool,simulatorContext,reserved.id!,result);
+  assert.equal(accepted,scenario!=='over-cap');
+  const attempt=(await pool.query('SELECT provider,stage,billing_state,rate_snapshot FROM provider_attempts')).rows[0];
+  assert.equal(attempt.provider,provider.name);assert.equal(attempt.stage,'recognize');assert.equal(attempt.billing_state,'unknown');assert.equal(attempt.rate_snapshot.model,geminiSpeechRate.model);
+  const budget=(await pool.query('SELECT held_microusd,committed_microusd,blocked FROM inference_budgets')).rows[0];
+  assert.equal(Number(budget.held_microusd),324813);assert.equal(Number(budget.committed_microusd),0);assert.equal(budget.blocked,scenario==='over-cap');
+ });
+});
+
+test('redundant unchanged-line rechecks stay read-only; mixed changes remain invalid',async()=>{
+ const lineId=randomUUID(),query='Asian Paints wall paint';
+ const state={version:4,draft:[{id:lineId,query,name:query,quantity:1,resolution:'unavailable' as const}],pending:null,fulfillment:'pickup' as const,lastRequestId:null};
+ const noOp={kind:'resolve_line',lineId,query};
+ for(const [index,op] of [noOp,{...noOp,query:'cutting plier'},{...noOp,quantity:2},{...noOp,pricePaise:1}].entries()){
+  const output={operations:[op],next:'assist',assistance:{queries:[query],rootQuery:query,lineId,quantity:1},assistanceSearch:{keywords:[query],familyId:'paint'}};
+  const provider=new GoogleInterpreter(settings,{generateContent:async()=>response(output)});
+  const result=await provider.interpret({text:'The second item is Asian Paints wall paint, not a stencil or scraper.',state},new AbortController().signal);
+  if(index===0){assert.equal(result.validationIssues,undefined);assert.deepEqual((result.output as any).operations,[]);assert.equal((result.output as any).next,'assist');}
+  else assert.ok(result.validationIssues?.length);
+ }
+});
 
 test('native configuration fails closed; dated USD rates include thinking and never imply paise conversion',()=>{
   assert.throws(()=>readNativeSettings({}),/disabled/);
@@ -47,7 +129,7 @@ test('official SDK wire contract: one request, JSON mode and strict backend cont
     const native=new GoogleInterpreter(settings);
     const result=await native.interpret({text:'five items',state:{draft:[],version:0,pending:null,fulfillment:'pickup',lastRequestId:null}},AbortSignal.timeout(1000));
     assert.equal(calls,1);assert.deepEqual(result.output,{operations,next:'review'});
-    assert.equal(body.generationConfig.maxOutputTokens,4096);assert.equal(body.generationConfig.candidateCount,1);assert.equal(body.generationConfig.responseMimeType,'application/json');assert.equal(body.generationConfig.responseJsonSchema,undefined);assert.match(JSON.stringify(body.systemInstruction),/Planning contract/);assert.equal(body.generationConfig.thinkingConfig.thinkingLevel,'MINIMAL');assert.equal(body.serviceTier,'standard');assert.equal(body.tools,undefined);
+    assert.equal(body.generationConfig.maxOutputTokens,4096);assert.equal(body.generationConfig.candidateCount,undefined);assert.equal(body.generationConfig.responseMimeType,'application/json');assert.ok(body.generationConfig.responseJsonSchema?.properties?.operations);assert.ok(JSON.stringify(body.generationConfig.responseJsonSchema).length<8000);assert.ok(!JSON.stringify(body.generationConfig.responseJsonSchema).includes('propertyNames'));assert.match(JSON.stringify(body.systemInstruction),/Planning contract/);assert.equal(body.generationConfig.thinkingConfig.thinkingLevel,'MINIMAL');assert.equal(body.serviceTier,'standard');assert.equal(body.tools,undefined);
     globalThis.fetch=async()=>{calls++;return new Response(JSON.stringify({error:{message:'offline transient',code:503}}),{status:503,headers:{'Content-Type':'application/json'}});};
     calls=0;await assert.rejects(native.interpret({text:'test',state:{draft:[],version:0,pending:null,fulfillment:'pickup',lastRequestId:null}},AbortSignal.timeout(1000)));assert.equal(calls,1);
   }finally{globalThis.fetch=savedFetch;}

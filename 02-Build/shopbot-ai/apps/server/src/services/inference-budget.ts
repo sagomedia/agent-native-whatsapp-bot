@@ -1,3 +1,4 @@
+import {GEMINI_MODEL_ID} from '../../../../packages/contracts/model-policy.js';
 import {randomUUID} from 'node:crypto';
 import type {Pool,PoolClient} from 'pg';
 import type {Interpreter,ProviderResult} from '../adapters/interpreter.js';
@@ -5,7 +6,9 @@ import {ToolError,withConversation,type ActorContext} from './context.js';
 
 export type RateCard={model:string;currency:'USD';verifiedOn:string;validUntil:string;source:string;inputMicrousdPerMillion:number;outputMicrousdPerMillion:number;inputTokenLimit:number;maxOutputTokens:number};
 // Standard text/image/audio inputs share this verified price. No audio output.
-export const geminiTextRate:Readonly<RateCard>=Object.freeze({model:'gemini-3.5-flash-lite',currency:'USD',verifiedOn:'2026-10-02',validUntil:'2026-11-01',source:'https://ai.google.dev/gemini-api/docs/pricing',inputMicrousdPerMillion:300000,outputMicrousdPerMillion:2500000,inputTokenLimit:1048576,maxOutputTokens:4096});
+export const geminiTextRate:Readonly<RateCard>=Object.freeze({model:GEMINI_MODEL_ID,currency:'USD',verifiedOn:'2026-10-02',validUntil:'2026-11-01',source:'https://ai.google.dev/gemini-api/docs/pricing',inputMicrousdPerMillion:300000,outputMicrousdPerMillion:2500000,inputTokenLimit:1048576,maxOutputTokens:4096});
+// Compatibility export: speech now uses the same Flash Lite rate and model.
+export const geminiSpeechRate = geminiTextRate;
 export const freeQuotaLimits=Object.freeze({requestsPerMinute:10,inputTokensPerMinute:200000,requestsPerDay:100,minIntervalSeconds:6,reservedInputTokens:64000});
 const integer=(n:unknown):n is number=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0;
 export function validateRateCard(rate:RateCard,now=Date.now()) {
@@ -38,12 +41,14 @@ export async function initializeBudget(pool:Pool,ctx:ActorContext,limitMicrousd:
     if(Number(b.rows[0].limit_microusd)!==limitMicrousd) throw new ToolError('Stored inference budget differs. Budget increases require an explicit administrative change; this run cannot reset it.');
   });
 }
-export async function reserveAttempt(client:PoolClient,ctx:ActorContext,messageId:string,sourceVersion:number,provider:Interpreter,stage:'identify'|'recommend'='identify') {
+export async function reserveAttempt(client:PoolClient,ctx:ActorContext,messageId:string,sourceVersion:number,provider:Interpreter,stage:'recognize'|'identify'|'repair'|'recommend'='identify') {
   const previous=await client.query('SELECT * FROM provider_attempts WHERE message_id=$1 ORDER BY attempt DESC',[messageId]);
   const cached=previous.rows.find(p=>p.stage===stage&&p.state==='succeeded'&&p.source_version===sourceVersion&&p.provider===provider.name&&p.provider_mode===provider.mode);
   if(cached) return {cached:cached.response,id:null,exhausted:false};
   await client.query("UPDATE provider_attempts SET state='unknown',billing_state=CASE WHEN billing_state='held' THEN 'unknown' ELSE billing_state END WHERE message_id=$1 AND stage=$2 AND state='started'",[messageId,stage]);
-  if((previous.rowCount??0)>=2||provider.freeQuota&&previous.rows.some(p=>p.stage===stage)) return {cached:null,id:null,exhausted:true};
+  const stageAttempts=previous.rows.filter(p=>p.stage===stage);
+  const transientRetry=stage==='recognize'&&stageAttempts.length===1&&stageAttempts[0].state==='failed'&&['provider_http_502','provider_http_503','provider_http_504'].includes(stageAttempts[0].failure_code)&&stageAttempts[0].source_version===sourceVersion&&stageAttempts[0].provider===provider.name&&stageAttempts[0].provider_mode===provider.mode;
+  if((previous.rowCount??0)>=4||stageAttempts.length&&!transientRetry) return {cached:null,id:null,exhausted:true};
   let reserved=0,rate:RateCard|null=null;
   if(provider.freeQuota) {
     const {scope,model}=provider.freeQuota;
@@ -59,7 +64,7 @@ export async function reserveAttempt(client:PoolClient,ctx:ActorContext,messageI
         FILTER(WHERE created_at>now()-interval '1 minute'),0) AS input_tokens,
       count(*) FILTER(WHERE created_at>=date_trunc('day',now() AT TIME ZONE 'America/Los_Angeles') AT TIME ZONE 'America/Los_Angeles') AS daily
       FROM provider_attempts WHERE quota_scope=$1 AND provider=$2`,[scope,provider.name,freeQuotaLimits.minIntervalSeconds,model,freeQuotaLimits.reservedInputTokens])).rows[0];
-    if(q.cooling||Number(counts.minute)>=freeQuotaLimits.requestsPerMinute||Number(counts.recent)>0||Number(counts.daily)>=freeQuotaLimits.requestsPerDay||Number(counts.input_tokens)+freeQuotaLimits.reservedInputTokens>freeQuotaLimits.inputTokensPerMinute) return {cached:null,id:null,exhausted:false,denied:true,defer:stage==='recommend'&&!q.cooling&&Number(counts.daily)<freeQuotaLimits.requestsPerDay&&Number(counts.minute)<freeQuotaLimits.requestsPerMinute&&Number(counts.input_tokens)+freeQuotaLimits.reservedInputTokens<=freeQuotaLimits.inputTokensPerMinute};
+    if(q.cooling||Number(counts.minute)>=freeQuotaLimits.requestsPerMinute||Number(counts.recent)>0||Number(counts.daily)>=freeQuotaLimits.requestsPerDay||Number(counts.input_tokens)+freeQuotaLimits.reservedInputTokens>freeQuotaLimits.inputTokensPerMinute) return {cached:null,id:null,exhausted:false,denied:true,defer:(stage==='recommend'||stage==='repair'||stage==='identify'&&previous.rows.some(p=>p.stage==='recognize'&&p.state==='succeeded'&&p.source_version===sourceVersion&&p.provider===provider.name&&p.provider_mode===provider.mode))&&!q.cooling&&Number(counts.daily)<freeQuotaLimits.requestsPerDay&&Number(counts.minute)<freeQuotaLimits.requestsPerMinute&&Number(counts.input_tokens)+freeQuotaLimits.reservedInputTokens<=freeQuotaLimits.inputTokensPerMinute};
   } else if(provider.mode==='live') {
     rate=provider.billing!;validateRateCard(rate);reserved=worstCaseReservation(rate);
     const b=(await client.query('SELECT * FROM inference_budgets WHERE store_id=$1 FOR UPDATE',[ctx.storeId])).rows[0];

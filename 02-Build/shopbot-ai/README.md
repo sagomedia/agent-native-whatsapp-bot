@@ -78,3 +78,7 @@ The native test page now uses a WhatsApp-style conversation and a separate 30-pr
 Open http://localhost:3017/native-test and choose **New chat**. Try “I need a blade,” then narrow the product type and brand using the displayed buttons. Use **Record voice**, stop, listen, and send a short shopping list. Check each product photo and quantity; submitting the final request is a separate action. The local page sends no WhatsApp messages.
 
 See [CATALOG-DISCOVERY.md](CATALOG-DISCOVERY.md) for the hierarchy, indexed tools, recorded-audio contract and generic-store configuration. Local history and rollback/export instructions are in the workspace’s `GIT-WORKFLOW.md`.
+
+## Unified Flash Lite ordering
+
+See [UNIFIED-ORDERING.md](UNIFIED-ORDERING.md) for the new multimodal extraction, handwritten lists, opt-in flags and metered real-media evaluation. All inference uses Gemini 3.5 Flash Lite.

@@ -1,11 +1,12 @@
 import {productMediaUrl} from './whatsapp-reply.js';
 import type {RichReply} from '../../../../packages/contracts/index.js';
 export type WhatsAppCapabilities={serviceWindowOpen:boolean;mediaCarouselEnabled?:boolean;catalogConnected:boolean;serviceRatePaise:number;allowMarketingCarousel:boolean;marketingOptIn?:boolean;approvedCarousels:{name:string;cardCount:number;ratePaise:number}[];maxPaisePerTurn:number};
-export type WhatsAppPlan={format:'blocked'|'text'|'reply_buttons'|'list'|'single_product'|'multi_product'|'media_carousel'|'image_buttons'|'carousel_template';category:'service'|'marketing'|null;messageCount:0|1;estimatedPaise:number;reason:string;templateName?:string;cardCount?:number};
+export type WhatsAppPlan={format:'blocked'|'text'|'reply_buttons'|'list'|'single_product'|'multi_product'|'media_carousel'|'image_buttons'|'carousel_template';category:'service'|'marketing'|null;messageCount:number;estimatedPaise:number;reason:string;templateName?:string;cardCount?:number};
 // Capability/budget planning; the channel renderer owns native session payloads.
 // Never fan out a product list into one message per image or auto-page.
 export function planWhatsAppReply(reply:RichReply,c:WhatsAppCapabilities):WhatsAppPlan {
   for(const n of [c.serviceRatePaise,c.maxPaisePerTurn,...c.approvedCarousels.map(t=>t.ratePaise)])if(!Number.isSafeInteger(n)||n<0)throw new Error('Verified nonnegative paise rates are required.');
+  if(reply.parts){const count=reply.parts.length,cards=reply.parts.reduce((s,p)=>s+p.cards.length,0);const estimatedPaise=count*c.serviceRatePaise;if(!c.serviceWindowOpen||estimatedPaise>c.maxPaisePerTurn||reply.parts.some(p=>!p.cards.length||p.cards.length>10))return {format:'blocked',category:null,messageCount:0,estimatedPaise:0,reason:'Ordered review exceeds the configured window, card limit or delivery budget.'};return {format:cards>count?'media_carousel':'image_buttons',category:'service',messageCount:count,estimatedPaise,cardCount:cards,reason:'Complete ordered image groups, charged at the configured channel/category rate.'};}
   const cards=reply.cards??[],count=cards.length;
   if(count>10)return {format:'blocked',category:null,messageCount:0,estimatedPaise:0,reason:'More than ten cards require narrowing; never silently drop or fan out choices.'};
   const visual=cards.every(card=>productMediaUrl(card.product.imageUrl,'catalog.example.test')&&(card.action||reply.buttons?.length));

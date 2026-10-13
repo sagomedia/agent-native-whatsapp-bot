@@ -1,6 +1,6 @@
 import {readWhatsAppConfig,type WhatsAppConfig} from './services/whatsapp-config.js';
 export type OwnerConfig = { hostname:string; issuer:string; audience:string; email:string; storeId:string };
-export type Config = { mode: 'mock' | 'live'; databaseUrl: string; port: number; host: string; mediaDir: string; whatsAppPlanningPaise?:number; owner?:OwnerConfig;whatsapp?:WhatsAppConfig };
+export type Config = { mode: 'mock' | 'live'; databaseUrl: string; port: number; host: string; mediaDir: string; whatsAppPlanningPaise?:number; owner?:OwnerConfig;whatsapp?:WhatsAppConfig;catalogAi?:{apiKey:string} };
 export function readConfig(env = process.env): Config {
   const mode = env.APP_MODE ?? 'mock';
   if (mode !== 'mock' && mode !== 'live') throw new Error('APP_MODE must be mock or live');
@@ -19,7 +19,7 @@ export function readConfig(env = process.env): Config {
   }
   const whatsapp=readWhatsAppConfig(env);
   if(whatsapp&&(whatsapp.hostname===owner?.hostname||owner&&whatsapp.storeId!==owner.storeId))throw new Error('WhatsApp needs a separate hostname and the configured owner store');
-  return { owner,whatsapp,whatsAppPlanningPaise,mode, databaseUrl: env.DATABASE_URL, port, host: env.HOST ?? '127.0.0.1', mediaDir: env.MEDIA_DIR ?? './data/media' };
+  return { catalogAi:owner&&whatsapp?.paidEnabled&&whatsapp.aiEnabled&&env.GEMINI_API_KEY?{apiKey:env.GEMINI_API_KEY}:undefined,owner,whatsapp,whatsAppPlanningPaise,mode, databaseUrl: env.DATABASE_URL, port, host: env.HOST ?? '127.0.0.1', mediaDir: env.MEDIA_DIR ?? './data/media' };
 }
 export function assertMock(mode: Config['mode']) {
   if (mode !== 'mock') throw new Error('Demo seed/reset/simulator is forbidden in live mode');
