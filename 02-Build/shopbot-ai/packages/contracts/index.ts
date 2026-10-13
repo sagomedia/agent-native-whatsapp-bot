@@ -56,7 +56,7 @@ export const eventSchema = z.discriminatedUnion('type', [
   z.object({id:z.uuid(),type:z.literal('quote_product'),sku:query,quantity:quantity.optional(),requestedUnit:query.optional(),expectedVersion:z.number().int().min(0)}).strict(),
   z.object({ id: z.uuid(), type: z.literal('add_item'), sku: z.string().min(1).max(80), quantity: z.number().int().min(1).max(100), expectedVersion: z.number().int().min(0) }).strict(),
   z.object({ id: z.uuid(), type: z.literal('set_quantity'), lineId: z.uuid(), quantity: z.union([z.literal(0),quantity]), expectedVersion: z.number().int().min(0) }).strict(),
-  z.object({id:z.uuid(),type:z.literal('shopping_action'),action:z.enum(['browse','help','handoff','edit_list','keep_list','status','new_list','options','next_item','continue_list','finish_order']),expectedVersion:z.number().int().min(0)}).strict(),
+  z.object({id:z.uuid(),type:z.literal('shopping_action'),action:z.enum(['browse','help','handoff','edit_list','keep_list','confirm_clear','status','new_list','options','next_item','continue_list','finish_order']),expectedVersion:z.number().int().min(0)}).strict(),
   z.object({id:z.uuid(),type:z.literal('edit_item'),lineId:z.uuid(),expectedVersion:z.number().int().min(0)}).strict(),
   z.object({ id: z.uuid(), type: z.literal('review'), expectedVersion: z.number().int().min(0) }).strict(),
   z.object({ id: z.uuid(), type: z.literal('confirm'), reviewId: z.uuid() }).strict(),

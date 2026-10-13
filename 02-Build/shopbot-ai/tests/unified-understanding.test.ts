@@ -142,8 +142,10 @@ test('the recorded voice updates the prior three-line cart into four unique prod
  assert.equal(counter.calls,1);assert.equal(s.conversation.draft.length,4);assert.deepEqual(s.conversation.draft.slice(0,3).map(l=>l.id),old.draft.map(l=>l.id));
  assert.deepEqual(s.conversation.draft.slice(0,3).map(l=>[l.sku,l.quantity]),[['H02',2],['H22',1],['H13',1]]);assert.equal(s.conversation.draft[3].query,'sandpaper');assert.equal(s.conversation.draft[3].resolution,'unavailable');assert.equal(s.requests.length,0);
 }));
-test('a fresh recorded list keeps four products and asks only the scraper count after selections',async()=>fixture(async(pool,inbox)=>{
- const r=runtime(pool,recordedUnderstanding);let s=await recordedVoice(inbox,r);assert.equal(s.conversation.draft.length,4);
+test('a fresh recorded list asks pipe type before product and quantity choices',async()=>fixture(async(pool,inbox)=>{
+ let output:any=recordedUnderstanding();const r=runtime(pool,()=>output);let s=await recordedVoice(inbox,r);assert.equal(s.conversation.draft.length,4);
+ assert.equal(s.conversation.pending?.kind,'question');assert.match(s.messages.at(-1)!.text,/kind|type|வகை|vagai/);assert.equal(s.conversation.draft[0].sku,undefined);
+ const pipe=s.conversation.draft[0];output={...base(),intents:['edit'],requestedItems:[{...item('PVC pipe','1 inch PVC pipe',2),targetLineId:pipe.id}]};s=await text(inbox,r,'PVC pipe');
  for(const sku of ['H01','H13','H22']){
   const pending=s.conversation.pending;assert.equal(pending?.kind,'products');if(pending?.kind!=='products')throw new Error('No product check');
   const g=pending.groups.find(g=>g.products.some(p=>p.sku===sku)&&!s.conversation.draft.find(l=>l.id===g.lineId)?.productConfirmation);assert.ok(g,sku);

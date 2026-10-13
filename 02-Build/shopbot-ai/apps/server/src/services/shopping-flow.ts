@@ -50,6 +50,11 @@ export async function handleShoppingAction(client:PoolClient,ctx:ActorContext,st
     await client.query('UPDATE conversations SET pending=NULL,editing_line_id=NULL,assistant_memory=NULL,version=version+1 WHERE id=$1',[ctx.conversationId]);
     return reply(say(state,'Your list is saved. Nothing new has been sent to the shop.','உங்கள் பட்டியல் அப்படியே இருக்கிறது. பிறகு தொடரலாம். புதிதாக எதையும் கடைக்கு அனுப்பவில்லை.','Unga list appadiye irukku. Appuram thodaralaam. Pudhusaa edhuvum kadaikku anuppala.'));
   }
+  if(event.action==='confirm_clear'){
+    if(state.lastRequestId)throw new ToolError('A sent request cannot be cleared. Ask the shop about it.','stale_confirmation');
+    await client.query("UPDATE conversations SET draft='[]',pending=NULL,product_review=NULL,assistant_memory=NULL,editing_line_id=NULL,version=version+1,session_started_at=now() WHERE id=$1 AND store_id=$2 AND actor=$3",[ctx.conversationId,ctx.storeId,ctx.actor]);
+    return reply(say(state,'Your list is cleared. No order was sent. What do you need now?','பட்டியல் காலி செய்யப்பட்டது. ஆர்டர் அனுப்பவில்லை. இப்போது என்ன வேண்டும்?','List clear panniyachu. Order anuppala. Ippo enna venum?'));
+  }
   if(event.action==='continue_list'){return presentReply({state,message:''},state);}
   if(event.action==='new_list'){
     if(!state.lastRequestId&&!state.visualOrdering)throw new ToolError('Your current list is still in progress. Edit it or review it first.');

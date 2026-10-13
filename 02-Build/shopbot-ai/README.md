@@ -1,6 +1,10 @@
 # ShopBot reusable agent tool core
 
-Local tool core and mock conversation runtime for the agent-native WhatsApp bot. See workspace `VISION.md` for direction and original references in `01-Input/starter-vision/`.
+Reusable retail runtime with a local mock simulator and a connected WhatsApp VPS channel. See workspace `VISION.md` for direction and original references in `01-Input/starter-vision/`.
+
+## Current connected deployment
+
+WhatsApp runs on Google VPS `sago-counter-ksmc`; the owner dashboard is at `https://shopbot-preview.sagoautomation.tech/owner` and public webhook/media use `https://demo.sagoautomation.tech`. All inference uses Gemini 3.5 Flash Lite. The mock setup below is for development; its messages do not prove WhatsApp delivery. See [voice repair plan](VOICE-ORDER-REPAIR.md) and the repository’s visual operating guide.
 
 ## Run
 

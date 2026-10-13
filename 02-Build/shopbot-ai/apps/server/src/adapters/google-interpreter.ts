@@ -1,3 +1,4 @@
+import {turnUnderstandingSchema} from '../../../../packages/contracts/understanding.js';
 import {UNDERSTANDING_PROMPT_VERSION} from '../../../../packages/contracts/model-policy.js';
 import {understandingInstruction,understandingResponseSchema,understandingPrompt,understandingToInterpretation} from './turn-understanding.js';
 import {languageOf,say} from '../../../../packages/contracts/language.js';
@@ -169,7 +170,18 @@ export class GoogleInterpreter implements Interpreter {
     const u=r.usageMetadata,usage=u?Object.fromEntries(['promptTokenCount','candidatesTokenCount','thoughtsTokenCount','totalTokenCount','cachedContentTokenCount','toolUsePromptTokenCount'].filter(k=>u[k as keyof typeof u]!==undefined).map(k=>[k,u[k as keyof typeof u] as number])):null;
     const text=(r.candidates?.[0]?.content?.parts??[]).filter(p=>!p.thought&&typeof p.text==='string').map(p=>p.text).join('');
     let output:unknown=null,validationIssues:ProviderResult['validationIssues'];
-    try{output=understandingToInterpretation(JSON.parse(text),input,this.supportsImageLists);}catch(error){validationIssues=[{path:'understanding',code:error instanceof z.ZodError?'invalid_contract':'invalid_evidence'}];}
+    try{output=understandingToInterpretation(JSON.parse(text),input,this.supportsImageLists);}catch(error){
+      validationIssues=[{path:'understanding',code:error instanceof z.ZodError?'invalid_contract':'invalid_evidence'}];
+      // A valid faithful transcript is still useful when a reference/evidence
+      // contract fails. Retain it for a focused correction or deterministic
+      // clear command, but execute none of the rejected shopping proposals.
+      try{const parsed=turnUnderstandingSchema.safeParse(JSON.parse(text));
+        if(parsed.success&&!input.image&&(input.audio?parsed.data.inputKind==='audio'&&!!parsed.data.transcript:parsed.data.inputKind==='text')){
+          const understood=parsed.data;
+          output=interpretationSchema.parse({operations:[],next:'continue',...(input.audio?{transcript:understood.transcript}:{}),clarifyQuestion:say(input.state,'Your list is kept. Which item should I change, and what type and quantity do you want?','பட்டியல் அப்படியே இருக்கு. எந்தப் பொருளை மாற்றணும், அதன் வகையும் எண்ணிக்கையும் என்ன?','List appadiye irukku. Entha porulai maathanum, athan type-um count-um enna?'),understanding:{...understood,requestedItems:[],proposedEdits:[],shopQuestions:[],unresolved:['validation_recovery']}});
+        }
+      }catch{/* Invalid structure has no usable customer evidence. */}
+    }
     return {output,validationIssues,usage,responseModel:r.modelVersion,truncated:r.candidates?.length!==1||r.candidates[0].finishReason!=='STOP'||r.modelVersion!==this.billing.model};
   }
 

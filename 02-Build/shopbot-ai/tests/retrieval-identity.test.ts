@@ -5,8 +5,7 @@ import pg from 'pg';
 import {setupDatabase} from '../apps/server/src/db/migrate.js';
 import {setupImageDemo,demoCatalogStore} from '../apps/server/src/services/demo-catalog.js';
 import {discoverProducts} from '../apps/server/src/services/catalog-discovery.js';
-import {makeProductCheck,productCheckReply} from '../apps/server/src/services/product-verification.js';
-import type {ConversationState,DiscoveryPlan} from '../packages/contracts/index.js';
+import type {DiscoveryPlan} from '../packages/contracts/index.js';
 
 test('customer named product type survives broad and adversarial search plans',async()=>{
  const schema='identity_'+randomUUID().replaceAll('-','');
@@ -68,13 +67,8 @@ test('customer named product type survives broad and adversarial search plans',a
    assert.deepEqual(cuttingJob.products.map(p=>p.sku),['H19','H16','H14','H15','H17','H18']);
    for(const plan of [undefined,{keywords:['pipe','pipe glue','pipe clamp','pipe cutter'],departmentId:'plumbing'}]){
     const pipe=await discoverProducts(client,ctx,'pipe',plan);
-    assert.ok(pipe.products.length>0);
-    assert.ok(pipe.products.every(p=>p.familyId==='pvc-pipes'));
-    const state={catalogDiscovery:true,requireProductConfirmation:true,version:1,pending:null,fulfillment:'pickup',lastRequestId:null,replyLanguage:'en',draft:[{id:randomUUID(),query:'pipe',name:'pipe',quantity:null,resolution:'needs_choice',candidates:pipe.products,discovery:pipe}]} as ConversationState;
-    state.pending=makeProductCheck(state,true);
-    assert.ok(state.pending?.kind==='products');
-    const shown=productCheckReply(state).cards??[];
-    assert.ok(shown.length>0&&shown.every(c=>c.product.familyId==='pvc-pipes'));
+    assert.deepEqual(pipe.products,[]);
+    assert.equal(pipe.noExactMatch,true);
    }
    for(const [query,family] of [['PVC pipe','pvc-pipes'],['pipe fitting','pipe-fittings'],['garden hose','hose']] as const){
     const result=await discoverProducts(client,ctx,query);

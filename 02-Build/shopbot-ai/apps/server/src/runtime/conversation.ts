@@ -112,6 +112,7 @@ export class ConversationRuntime {
     let failure:string|undefined;let failureReason:string|undefined;
     let voiceFailureKind:'unreadable'|'processing'|undefined;
     let deterministic:ToolCall|undefined;
+    let clearConfirmation=false;
     if(claimed.event.type==='retry_voice'){
       const retry=claimed.event;
       if(retry.expectedVersion!==claimed.state.version||!claimed.displayedActions.some(a=>digest(a)===digest(retry)))failure='That retry belongs to an earlier question. Please send your current request again.';
@@ -122,6 +123,7 @@ export class ConversationRuntime {
     if(quoteRecheck)interpretation={operations:[],next:'price',priceQuery:claimed.memory!.queries[0],priceQuantity:claimed.memory!.quoteQuantity,priceUnit:claimed.memory!.quoteUnit};
     if(!deterministic&&claimed.event.type==='text'&&submissionIntent(claimed.event.text))deterministic=this.knownAction({...claimed,event:{...claimed.event,text:'send it'}});
     let social=claimed.event.type==='text'?socialIntent(claimed.event.text):undefined;
+    if(claimed.event.type==='text'&&negatedSpokenClear(claimed.event.text))social='pause';
     if(social==='handoff')deterministic={name:'request_store_assistance',args:{expectedVersion:claimed.state.version}};
     const inquiry=claimed.event.type==='text'?shopInquiry(claimed.event.text):undefined;
     if(inquiry&&!deterministic)interpretation=inquiry;
@@ -141,11 +143,18 @@ export class ConversationRuntime {
     // A current recording is a customer channel: recognized whole commands
     // share text routing and its version, delivery and review-consent checks.
     if(!failure&&claimed.event.type==='voice'&&interpretation?.transcript){
-      const transcript=interpretation.transcript,command=spokenClearCommand(transcript)??canonicalShortcut(transcript);
+      const transcript=interpretation.transcript,spokenClear=spokenClearCommand(transcript),command=spokenClear??canonicalShortcut(transcript);
       if(negatedSpokenClear(transcript))interpretation={operations:[],next:'continue',transcript,conversation:'pause'};
       social=socialIntent(transcript);
       if(social==='handoff')deterministic={name:'request_store_assistance',args:{expectedVersion:claimed.state.version}};
-      if(['yes','confirm','place order','send it','review','checkout','enough','bill','estimated bill','estimate','show bill','bill evvalavu','பில் எவ்வளவு','பில் காட்டு','clear my list','clear the list','empty my list','edit my list','my orders','order status','status'].includes(command)||submissionIntent(transcript)||quantityReply(command)||/^(?:remove|drop|delete) (?:it|this|that)(?: item)?$/.test(command)){
+      if(spokenClear&&claimed.state.visualOrdering){
+        // Speech can mishear "everything" or a negative lead-in. A clear
+        // proposal always waits for a displayed, version-bound button.
+        interpretation={operations:[],next:'continue',transcript,...(claimed.state.lastRequestId?{conversation:'pause' as const}:{})};
+        clearConfirmation=!claimed.state.lastRequestId&&claimed.state.draft.length>0;
+        social=undefined;deterministic=undefined;
+        if(!clearConfirmation&&!claimed.state.lastRequestId)deterministic={name:'get_draft',args:{}};
+      } else if(['yes','confirm','place order','send it','review','checkout','enough','bill','estimated bill','estimate','show bill','bill evvalavu','பில் எவ்வளவு','பில் காட்டு','clear my list','clear the list','empty my list','edit my list','my orders','order status','status'].includes(command)||submissionIntent(transcript)||quantityReply(command)||/^(?:remove|drop|delete) (?:it|this|that)(?: item)?$/.test(command)){
         try{
           deterministic=this.knownAction({...claimed,event:{id:claimed.id,type:'text',text:submissionIntent(transcript)?'send it':command}});
           if(deterministic)interpretation={operations:[],next:'continue',transcript};
@@ -197,6 +206,10 @@ export class ConversationRuntime {
           await client.query('UPDATE conversations SET reply_language=$1,reply_language_explicit=true WHERE id=$2 AND store_id=$3 AND actor=$4',[requestedLanguage,ctx.conversationId,ctx.storeId,ctx.actor]);
           rich=presentReply({state:current,message:''},current);
           rich={...rich,text:languageAcknowledgement(requestedLanguage)+'\n\n'+rich.text};message=rich.text;
+        } else if(!failure&&clearConfirmation){
+          await client.query('UPDATE conversations SET pending=NULL,product_review=NULL,assistant_memory=NULL,editing_line_id=NULL,version=version+1 WHERE id=$1',[ctx.conversationId]);
+          current.pending=null;current.productReview=null;current.editingLineId=null;current.version++;
+          rich={...plainReply(say(current,`I heard “clear the whole list.” Remove all ${current.draft.length} items? Nothing has been sent.`,`“முழு பட்டியலையும் காலி செய்” என்று கேட்டேன். ${current.draft.length} பொருட்களையும் நீக்கவா? ஆர்டர் அனுப்பவில்லை.`,`“Muzhu list-ai clear pannu” nu ketten. ${current.draft.length} porutkalaiyum neekkava? Order anuppala.`)),stage:'identify',clarificationReason:'intent_clarification',buttons:[shoppingButton(current,'confirm_clear',say(current,'Clear all items','எல்லாம் நீக்கு','Ellam neekku')),shoppingButton(current,'keep_list',say(current,'Keep my list','பட்டியல் வை','List vaikkavum'))]};message=rich.text;
         } else if(!failure&&current.visualOrdering&&current.draft.length&&!current.lastRequestId&&!deterministic&&interpretation?.operations.length===0&&interpretation?.conversation==='greeting'){
           rich=returningReply(current);message=rich.text;
         } else if(!failure&&newListProposal){
@@ -221,6 +234,7 @@ export class ConversationRuntime {
           const proposed=event.type==='shopping_action'&&event.action==='new_list'&&current.lastRequestId&&claimed.memory?.sourceVersion===current.version?claimed.memory.newList:undefined;
           if(proposed&&(!claimed.memory||claimed.bindingId!==claimed.memory.id||!claimed.displayedActions.some(action=>digest(action)===digest(event))))throw new ToolError('Use the latest new-list button.','stale_question');
           if(event.type==='shopping_action'&&event.action==='next_item'&&!claimed.displayedActions.some(action=>digest(action)===digest(event)))throw new ToolError('Use the displayed next-item button.','stale_question');
+          if(event.type==='shopping_action'&&event.action==='confirm_clear'&&!claimed.displayedActions.some(action=>digest(action)===digest(event)))throw new ToolError('Use the current clear-list confirmation. Your list is unchanged.','stale_confirmation');
           rich=await handleShoppingAction(client,ctx,current,event,claimed.catalogMap);
           if(event.type==='shopping_action'&&event.action==='continue_list'){const next=await this.tools.invokeInTransaction(client,ctx,{name:'preview_order',args:{expectedVersion:current.version}},claimed.id+':continue');rich=presentReply(next,next.state!);}
           if(proposed){
@@ -366,14 +380,27 @@ export class ConversationRuntime {
       if(!failure&&!deterministic&&interpretation?.clarifyQuestion&&!interpretation.operations.length&&rich.stage!=='identify'&&rich.kind!=='product_choices'){const q=safeQuestion(interpretation.clarifyQuestion,finalState);if(q)rich={...plainReply(q),stage:'identify',clarificationReason:'intent_clarification'};}
       if(interpretation?.understanding?.inputKind==='handwritten_list'){rich={...rich,contextLines:[say(finalState,'I read your list. Please check every item, including lines marked for shop checking.','உங்கள் பட்டியலைப் படித்தேன். கடை சரிபார்க்க வேண்டிய வரிகள் உட்பட எல்லாப் பொருட்களையும் சரிபாருங்கள்.','Unga list-ai padithen. Kadai check panna vendiya varigal utpada ella porutkalaiyum check pannunga.'),...rich.contextLines??[]]};}
       if(finalState.visualOrdering&&interpretation?.shopQuestions?.length)rich.contextLines=[shopAnswers(finalState,interpretation.shopQuestions),...rich.contextLines??[]];
-      if(finalState.visualOrdering&&!failure&&!rich.handoffRequested&&!finalState.lastRequestId){
+      const unclearTarget=!failure&&interpretation?.understanding?.unresolved.includes('cart_target')&&!finalState.lastRequestId;
+      if(finalState.visualOrdering&&!failure&&!rich.handoffRequested&&!finalState.lastRequestId&&!clearConfirmation){
         const selected=claimed.event.type==='select_product'?finalState.draft.find(l=>l.id===(claimed.event as Extract<SimulatorEvent,{type:'select_product'}>).lineId):undefined;
         if(selected)rich.contextLines=[say(finalState,`Selected: ${lineName(selected,finalState)}${selected.quantity!==null?` · ${selected.quantity} ${unitName(selected.unit??'unit',finalState,selected.quantity)}`:''}.`,`${lineName(selected,finalState)} தேர்வு செய்யப்பட்டது${selected.quantity!==null?` · ${selected.quantity} ${unitName(selected.unit??'unit',finalState,selected.quantity)}`:''}.`,`${lineName(selected,finalState)} choose panniyachu${selected.quantity!==null?` · ${selected.quantity} ${unitName(selected.unit??'unit',finalState,selected.quantity)}`:''}.`),...rich.contextLines??[]];
         if(!interpretation?.estimateRequested)rich.contextLines=[...rich.contextLines??[],...cartProgress(finalState)];
-        if(interpretation?.understanding?.unresolved.includes('cart_target')&&interpretation.clarifyQuestion)rich.contextLines=[interpretation.clarifyQuestion,...rich.contextLines??[]];
       }
-      rich=shoppingActions({...rich,replyLanguage:finalState.replyLanguage??'en'},finalState,claimed.catalogMap);
+      if(unclearTarget){
+        // The current turn's identity question supersedes an unrelated old
+        // quantity question. A bare number must not answer that stale prompt.
+        await client.query('UPDATE conversations SET pending=NULL,product_review=NULL,editing_line_id=NULL,assistant_memory=NULL,version=version+1 WHERE id=$1',[ctx.conversationId]);
+        finalState.pending=null;finalState.productReview=null;finalState.editingLineId=null;finalState.version++;
+        const requested=interpretation!.understanding!.requestedItems.find(item=>item.query)?.query??'';
+        const words=tokens(requested).filter(word=>!/^(?:one|two|three|1|2)$/.test(word));
+        const matching=finalState.draft.filter(line=>words.length&&words.every(word=>tokens([line.query,line.name].filter(Boolean).join(' ')).includes(word)));
+        const choices=matching.length>0&&matching.length<=2?matching.map(line=>({label:lineName(line,finalState),event:{id:randomUUID(),type:'edit_item' as const,lineId:line.id,expectedVersion:finalState.version}})):[shoppingButton(finalState,'edit_list',say(finalState,'Choose list item','பொருளைத் தேர்வு செய்','Porul choose pannu')),shoppingButton(finalState,'new_list',say(finalState,'Start new list','புதிய பட்டியல்','Pudhu list'))];
+        const question=safeQuestion(interpretation?.clarifyQuestion,finalState)??say(finalState,'Which item on your list did you mean?','பட்டியலில் எந்தப் பொருளைச் சொன்னீர்கள்?','List-la entha porulai sonneenga?');
+        rich={...plainReply((interpretation!.operations.length?say(finalState,'Other clear changes are saved. ','மற்ற தெளிவான மாற்றங்கள் சேமிக்கப்பட்டன. ','Maththa thelivaana maaththangal save aachu. '):'')+question+' '+say(finalState,'Choose the item below or describe its type. Your list is kept.','கீழே தேர்வு செய்யுங்கள் அல்லது பொருளின் வகையைச் சொல்லுங்கள். பட்டியல் அப்படியே உள்ளது.','Keezhe choose pannunga illa type sollunga. List appadiye irukku.')),stage:'identify',clarificationReason:'intent_clarification',buttons:choices};
+      }
+      rich=unclearTarget||clearConfirmation?{...rich,replyLanguage:finalState.replyLanguage??'en'}:shoppingActions({...rich,replyLanguage:finalState.replyLanguage??'en'},finalState,claimed.catalogMap);
       if(claimed.catalogMap)rich={...rich,storeName:claimed.catalogMap.store.name};
+      if(interpretation?.understanding?.unresolved.includes('validation_recovery')&&interpretation.transcript)rich.contextLines=[say(finalState,`Heard: ${interpretation.transcript.slice(0,250)}`,`கேட்டது: ${interpretation.transcript.slice(0,250)}`,`Kettathu: ${interpretation.transcript.slice(0,250)}`),...rich.contextLines??[]];
       rich=materializeVisualReply({...visualReply(rich,finalState,replyRequest),storeName:claimed.catalogMap?.store.name});
       message=rich.text;
       if(finalState.visualOrdering){const binding=conversationBinding(finalState,await loadAssistantMemory(client,ctx));const cancelled=await client.query("UPDATE whatsapp_outbox o SET state='cancelled',last_error='review_superseded' WHERE o.conversation_id=$1 AND o.state='queued' AND o.sender_kind='assistant' AND EXISTS(SELECT 1 FROM whatsapp_actions a WHERE a.message_id=o.message_id AND (a.source_version<>$2 OR a.binding_id IS DISTINCT FROM $3::uuid)) RETURNING o.message_id",[ctx.conversationId,finalState.version,binding]);if(cancelled.rowCount)await client.query("UPDATE messages SET status='cancelled' WHERE id=ANY($1::uuid[])",[cancelled.rows.map(r=>r.message_id)]);}

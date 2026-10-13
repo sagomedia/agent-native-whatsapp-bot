@@ -6,6 +6,7 @@ import {productIdentity} from './product-verification.js';
 import {fitText} from './whatsapp-reply.js';
 import {requestStatusText} from './request-status.js';
 import {catalogPack,catalogContent} from './quantity-evidence.js';
+import {needsPipeType} from './catalog-discovery.js';
 
 type Button=NonNullable<RichReply['buttons']>[number];
 export const orderReference=(id:string)=>'Order #'+id.replaceAll('-','').slice(0,8).toUpperCase();
@@ -89,7 +90,7 @@ export function visualBill(state:ConversationState,request?:OrderRequest):RichRe
 }
 export function visualReply(base:RichReply,state:ConversationState,request?:OrderRequest|null):RichReply {
  if(!state.visualOrdering)return base;
- if(base.stage==='error'||base.clarificationReason==='intent_clarification')return {...base,...reply(base.stage==='error'?'error':'identify',[part([instruction(base.stage==='error'?say(state,'Try again','மீண்டும் முயலுங்க','Marubadi try pannunga'):say(state,'One detail','ஒரு விவரம்','Oru vivaram'),base.text.split('\n').filter(Boolean),say(state,'Your list is kept','பட்டியல் அப்படியே இருக்கு','List appadiye irukku'),base.buttons?.slice(0,3))],base.stage==='error'?say(state,'Try again or send text.','மீண்டும் முயலுங்க அல்லது text அனுப்புங்க.','Marubadi try pannunga illa text anuppunga.'):say(state,'Reply by text or voice.','Text / voice-ல சொல்லுங்க.','Text / voice-la sollunga.'))],base.clarificationReason),replyLanguage:state.replyLanguage};
+ if(base.stage==='error'||base.clarificationReason==='intent_clarification')return withContext({...base,...reply(base.stage==='error'?'error':'identify',[part([instruction(base.stage==='error'?say(state,'Try again','மீண்டும் முயலுங்க','Marubadi try pannunga'):say(state,'One detail','ஒரு விவரம்','Oru vivaram'),base.text.split('\n').filter(Boolean),say(state,'Your list is kept','பட்டியல் அப்படியே இருக்கு','List appadiye irukku'),base.buttons?.slice(0,3))],base.text)],base.clarificationReason),replyLanguage:state.replyLanguage},base.contextLines);
  if(base.handoffRequested){return {...base,...reply('status',[part([instruction(say(state,'Shop assistance','கடையின் உதவி','Kadai help'),base.text.split('\n').filter(Boolean),say(state,'Waiting for the shop reply','கடை பதிலுக்குக் காத்திருக்கிறது','Kadai bathilukku kaathirukku'))],say(state,'Shop assistance requested. Your list is kept.','கடை உதவி கேட்டிருக்கோம். பட்டியல் அப்படியே இருக்கு.','Kadai help kettirukkom. List appadiye irukku.'))]),handoffRequested:true,replyLanguage:state.replyLanguage};}
  if(request){return {...(base.stage==='submitted'?visualBill(state,request):visualStatus(state,request)),replyLanguage:state.replyLanguage};}
  if(base.stage==='returning')return base;
@@ -108,6 +109,13 @@ export function visualReply(base:RichReply,state:ConversationState,request?:Orde
  }
  const questionId=state.pending?.kind==='question'?state.pending.lineId:undefined;
  const line=state.draft.find(l=>l.id===questionId);
+ if(line&&!line.sku&&line.productIntent?.kind!=='ambiguous'&&needsPipeType(line.query??line.name)){
+  const prompt=say(state,'Which kind of pipe do you mean: rigid PVC, a flexible hose, or a pump delivery/suction pipe? Tell me the material or use, diameter and length if you know them.','எந்த வகை பைப் வேண்டும் — உறுதியான PVC பைப்பா, வளையும் ஹோஸா, அல்லது மோட்டார் தண்ணீர் பைப்பா? பொருள்/பயன், விட்டம், நீளம் தெரிந்தால் சொல்லுங்கள்.','Entha vagai pipe venum — rigid PVC pipe-aa, flexible hose-aa, illa motor thanni pipe-aa? Material/use, diameter, length therinja sollunga.');
+  const count=line.quantity===null?say(state,'Count still needed','எண்ணிக்கை தேவை','Count venum'):`${line.quantity} ${unitName(line.requestedUnit??line.unit??'unit',state,line.quantity)}`;
+  const size=line.productMeasures?.map(m=>`${m.value} ${m.unit}`).join(' × ');
+  const kept=say(state,'Your requested quantity and size are kept. No catalog product is selected yet.','நீங்கள் சொன்ன எண்ணிக்கையும் அளவும் பட்டியலில் உள்ளது. இன்னும் கடைப் பொருள் தேர்வு செய்யவில்லை.','Neenga sonna count-um size-um list-la irukku. Catalog product innum choose pannala.');
+  return withContext({...reply('identify',[part([instruction(line.query??line.name,[count,size??'',kept].filter(Boolean),prompt,[shop(state)])],prompt)],'product_or_specification'),replyLanguage:state.replyLanguage},base.contextLines);
+ }
  if(line&&!(base.stage==='identify'&&base.cards?.length)&&(line.resolution==='needs_quantity'||line.resolution==='needs_unit')){
   const product=line.candidates?.find(p=>p.sku===line.sku);
   const size=line.packSize??(product?catalogPack(product):undefined);

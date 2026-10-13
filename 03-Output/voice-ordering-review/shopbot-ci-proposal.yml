@@ -1,0 +1,46 @@
+name: ShopBot checks
+on:
+  pull_request:
+    paths: ['02-Build/shopbot-ai/**', '.github/workflows/shopbot.yml']
+  push:
+    branches: [main, 'codex/voice-order-correctness']
+    paths: ['02-Build/shopbot-ai/**', '.github/workflows/shopbot.yml']
+permissions:
+  contents: read
+concurrency:
+  group: shopbot-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: shopbot_test
+          POSTGRES_PASSWORD: shopbot_test_only
+          POSTGRES_DB: shopbot_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U shopbot_test -d shopbot_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    defaults:
+      run:
+        working-directory: 02-Build/shopbot-ai
+    env:
+      DATABASE_URL: postgres://shopbot_test:shopbot_test_only@127.0.0.1:5432/shopbot_ci
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '22.22.1'
+          package-manager-cache: false
+      - name: Install audio test dependencies
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - name: Offline regression tests (no Gemini or WhatsApp credentials)
+        run: node --import tsx --test --test-concurrency=2 tests/*.test.ts

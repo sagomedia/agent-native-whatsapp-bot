@@ -7,6 +7,10 @@ const numbers:Record<string,number>={one:1,two:2,three:3,four:4,five:5,six:6,sev
 // ASR may lengthen the list word's vowels or confuse its lateral consonant.
 // Keep the complete list-word + clear-verb grammar; unrelated nouns do not fit.
 const tamilClear=/(?:^|\s)(?:பா?ட்டியா?[லள]ை(?:க்|ய|யே)?|பட்டியலாய|பட்டியல்(?: எல்லாம்)?)\s+காலி\s+செய்(?=\s|$)/u;
+// "No more items, clear everything" is common spoken Tamil/Tanglish. ASR
+// sometimes hears எல்லாத்தையும் as எல்லாரும்; this route only offers a clear
+// confirmation, so it never erases the cart based on that uncertain wording.
+const allClear=/(?:^|\s)(?:எல்லாத்தையும்|எல்லாமே|எல்லாம்|எல்லாரும்|everything|all)\s+(?:கிளியர்|க்ளியர்|clear)\s+(?:பண்ணிடு|பண்ணிடுங்க|பண்ணு|பண்ணுங்க|pannidu|pannu)(?=\s|$)/u;
 const clearNegation=/\b(?:don't|dont|not|no|keep|cancel|stop|vendam|venam|illai)\b|do not|வேண்டாம்|வேணாம்|இல்லை|இல்ல|பண்ணாதே|பண்ணாதீங்க|செய்யாதே|செய்யாதீங்க|சொல்லல/u;
 const quotedOrQuestion=/[?"“”‘’]|\b(?:example|quote|quoted)\b|உதாரண|என்று|ன்னு|சொன்னா|சொல்லலாமா|செய்யலாமா|பண்ணலாமா|வேண்டுமா/u;
 const secondShoppingEdit=/\b(?:add|remove|delete|change|replace|order)\b|சேர்|சேர்க்க|நீக்கு|மாற்று|வாங்க/u;
@@ -15,6 +19,8 @@ const speechText=(text:string)=>text.toLowerCase().replace(/[.!?,;:"“”‘’
 // speech. Never extract clearing from a negated or compound shopping command.
 export function spokenClearCommand(text:string):string|undefined {
  const clean=speechText(text);
+ const all=allClear.exec(clean);
+ if(all){const rest=clean.slice(all.index+all[0].length).trim(),other=clean.slice(0,all.index)+' '+rest;return clearNegation.test(rest)||quotedOrQuestion.test(text.toLowerCase())||secondShoppingEdit.test(other)?undefined:'clear my list';}
  if(tamilClear.test(clean))return clearNegation.test(clean)||quotedOrQuestion.test(text.toLowerCase())||secondShoppingEdit.test(clean)?undefined:'clear my list';
  const found=/^(?:clear (?:my|the) list|empty my list|(?:பட்டியலை(?:க்|ய)?|பட்டியல்(?: எல்லாம்)?) காலி செய்|list clear pannu)(?:\s|$)/.exec(clean);
  if(!found)return;
@@ -27,6 +33,8 @@ export function spokenClearCommand(text:string):string|undefined {
 }
 export function negatedSpokenClear(text:string):boolean {
  const clean=speechText(text);
+ const all=allClear.exec(clean);
+ if(all)return clearNegation.test(clean.slice(all.index+all[0].length).trim())||quotedOrQuestion.test(text.toLowerCase());
  if(tamilClear.test(clean))return clearNegation.test(clean)||quotedOrQuestion.test(text.toLowerCase());
  return /^(?:(?:don't|dont|do not)\s+)?(?:clear (?:my|the) list|empty my list|(?:பட்டியலை(?:க்|ய)?|பட்டியல்(?: எல்லாம்)?) காலி செய்|list clear pannu)(?:\s|$)/.test(clean)&&clearNegation.test(clean);
 }

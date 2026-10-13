@@ -23,6 +23,21 @@ export async function getCatalogMap(client:PoolClient,ctx:ActorContext,departmen
 }
 function unique(a:string[]){return [...new Set(a.map(s=>s.trim()).filter(Boolean))];}
 function namedObjectPhrase(query:string){return query.split(/\s+(?:for|with|on)\s+/i,1)[0].trim();}
+// "Pipe" describes several physically different goods. A search hint or a
+// broad family alias such as "water pipe" cannot decide between rigid PVC,
+// flexible watering hose, and a pump delivery/suction pipe. Keep the request
+// unresolved until the customer supplies a product type or an exact catalog
+// identity. A stated diameter is useful evidence but does not identify type.
+export function needsPipeType(query:string):boolean {
+ const words=tokens(query);
+ const pipe=words.some(w=>w==='pipe'||w==='பைப்'||w==='பைப்புகள்');
+ const hose=words.some(w=>['hose','ஹோஸ்','ஓஸ்'].includes(w));
+ const pump=words.some(w=>['pump','pumping','motor','suction','delivery','மோட்டார்','பம்ப்'].includes(w));
+ if(pump&&(pipe||hose))return true;
+ if(!pipe)return false;
+ if(words.some(w=>['pvc','cpvc','upvc','பிவிசி','rigid','hose','ஹோஸ்','ஓஸ்','garden','watering','irrigation','irrigating','fitting','fittings','cutter','clamp','connector','elbow','coupler','கட்டர்','கட்டரு','பசை','க்ளாம்ப்'].includes(w)))return false;
+ return true;
+}
 function sameObjectHead(a:string,b:string):boolean {
  if(a===b)return true;
  if(!/^[a-z]+$/.test(a+b)||Math.min(a.length,b.length)<4)return false;
@@ -126,7 +141,6 @@ export async function discoverProducts(client:PoolClient,ctx:ActorContext,query:
  if(plan.selectedSkus?.length===0)return {query,plan,products:[],rankings:[],totalCount:0,retrievedCount:0,facets:[],noExactMatch:true};
  const nodes=(await client.query('SELECT id,parent_id,kind,label,local_names,aliases FROM catalog_nodes WHERE store_id=$1',[ctx.storeId])).rows;
  const objectPhrase=namedObjectPhrase(query);
- const requestedFamilies=namedFamilies(query,nodes,plan);
  if(plan.familyId&&!nodes.some(n=>n.id===plan.familyId&&n.kind==='family'))throw new ToolError('Choose a product family from this shop’s catalog.');
  if(plan.departmentId&&!nodes.some(n=>n.id===plan.departmentId&&n.kind==='department'))throw new ToolError('Choose a department from this shop’s catalog.');
  if(plan.familyIds?.some(id=>!nodes.some(n=>n.id===id&&n.kind==='family')))throw new ToolError('Choose product types from this shop’s catalog.');
@@ -134,6 +148,11 @@ export async function discoverProducts(client:PoolClient,ctx:ActorContext,query:
  if(plan.familyId&&plan.departmentId&&!nodes.some(n=>n.id===plan.familyId&&n.parent_id===plan.departmentId))throw new ToolError('That family does not belong to the selected department.');
  const identified=(await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND active=true AND (lower(sku)=lower($2) OR lower(name)=lower($2) OR EXISTS(SELECT 1 FROM jsonb_array_elements_text(aliases) a WHERE lower(a)=lower($2))) ORDER BY sku LIMIT 2`,[ctx.storeId,query.trim()])).rows.map(productFromRow);
  const candidate=identified.length===1?identified[0]:undefined;
+ const pumpName=/\b(?:pump|pumping|suction|delivery)\b|மோட்டார்|பம்ப்/iu;
+ const namedPumpAlias=!!candidate&&pumpName.test(query)&&[candidate.name,...candidate.aliases].some(name=>pumpName.test(name));
+ const namedCatalogProduct=!!candidate&&(normalize(candidate.sku)===normalize(query)||normalize(candidate.name)===normalize(query)||namedPumpAlias);
+ const requestedFamilies=namedCatalogProduct?[]:namedFamilies(query,nodes,plan);
+ if(needsPipeType(query)&&!namedCatalogProduct)return {query,plan,products:[],rankings:[],totalCount:0,retrievedCount:0,facets:[],noExactMatch:true};
  const root=candidate&&(!plan.selectedSkus||plan.selectedSkus.includes(candidate.sku))&&(!plan.familyId||candidate.familyId===plan.familyId)&&(!plan.familyIds||plan.familyIds.includes(candidate.familyId??''))&&(!plan.departmentId||nodes.some(n=>n.id===candidate.familyId&&n.parent_id===plan.departmentId))&&(!plan.brand||normalize(candidate.brand??'')===normalize(plan.brand))&&Object.entries(plan.specifications??{}).every(([key,value])=>specMatches(candidate,key,value))?candidate:undefined;
  if(requestedFamilies.length&&(plan.familyId&&!requestedFamilies.includes(plan.familyId)||plan.familyIds&&!plan.familyIds.some(id=>requestedFamilies.includes(id))))return {query,plan,products:[],rankings:[],totalCount:0,retrievedCount:0,facets:[],noExactMatch:true};
  if(!requestedFamilies.length&&!root&&unsupportedNamedObject(query,nodes)){
