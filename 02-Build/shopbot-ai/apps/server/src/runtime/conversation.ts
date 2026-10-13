@@ -14,7 +14,7 @@ import {say,canonicalShortcut,languageRequest,languageAcknowledgement,customerEr
 import {formatMoney,lineTotal} from '../../../../packages/contracts/money.js';
 import {loadImage} from '../services/image-media.js';
 import {loadVoice} from '../services/voice-media.js';
-import {priceInquiry,quantityReply,spokenClearCommand,negatedSpokenClear} from '../services/shopping-language.js';
+import {priceInquiry,quantityReply,spokenClearCommand,negatedSpokenClear,spokenWholeListChange} from '../services/shopping-language.js';
 import {socialIntent,shopInquiry,shopAnswers,presentReply,plainReply} from '../services/replies.js';
 import {FreeQuotaError} from '../adapters/google-interpreter.js';
 import { randomUUID } from 'node:crypto';
@@ -112,7 +112,7 @@ export class ConversationRuntime {
     let failure:string|undefined;let failureReason:string|undefined;
     let voiceFailureKind:'unreadable'|'processing'|undefined;
     let deterministic:ToolCall|undefined;
-    let clearConfirmation=false;
+    let clearConfirmation=false,changeWholeList=false;
     if(claimed.event.type==='retry_voice'){
       const retry=claimed.event;
       if(retry.expectedVersion!==claimed.state.version||!claimed.displayedActions.some(a=>digest(a)===digest(retry)))failure='That retry belongs to an earlier question. Please send your current request again.';
@@ -147,7 +147,8 @@ export class ConversationRuntime {
       if(negatedSpokenClear(transcript))interpretation={operations:[],next:'continue',transcript,conversation:'pause'};
       social=socialIntent(transcript);
       if(social==='handoff')deterministic={name:'request_store_assistance',args:{expectedVersion:claimed.state.version}};
-      if(spokenClear&&claimed.state.visualOrdering){
+      changeWholeList=spokenWholeListChange(transcript);
+      if((spokenClear||changeWholeList)&&claimed.state.visualOrdering){
         // Speech can mishear "everything" or a negative lead-in. A clear
         // proposal always waits for a displayed, version-bound button.
         interpretation={operations:[],next:'continue',transcript,...(claimed.state.lastRequestId?{conversation:'pause' as const}:{})};
@@ -209,7 +210,7 @@ export class ConversationRuntime {
         } else if(!failure&&clearConfirmation){
           await client.query('UPDATE conversations SET pending=NULL,product_review=NULL,assistant_memory=NULL,editing_line_id=NULL,version=version+1 WHERE id=$1',[ctx.conversationId]);
           current.pending=null;current.productReview=null;current.editingLineId=null;current.version++;
-          rich={...plainReply(say(current,`I heard “clear the whole list.” Remove all ${current.draft.length} items? Nothing has been sent.`,`“முழு பட்டியலையும் காலி செய்” என்று கேட்டேன். ${current.draft.length} பொருட்களையும் நீக்கவா? ஆர்டர் அனுப்பவில்லை.`,`“Muzhu list-ai clear pannu” nu ketten. ${current.draft.length} porutkalaiyum neekkava? Order anuppala.`)),stage:'identify',clarificationReason:'intent_clarification',buttons:[shoppingButton(current,'confirm_clear',say(current,'Clear all items','எல்லாம் நீக்கு','Ellam neekku')),shoppingButton(current,'keep_list',say(current,'Keep my list','பட்டியல் வை','List vaikkavum'))]};message=rich.text;
+          rich={...plainReply(changeWholeList?say(current,'Do you want to edit items or clear the whole saved list? Your list stays until you choose.','பொருட்களை மாற்றவா, முழு பட்டியலை காலி செய்யவா? நீங்கள் தேர்வு செய்யும் வரை பட்டியல் அப்படியே இருக்கும்.','Porutkalai maaththava, muzhu list-ai clear pannava? Neenga choose pannum varai list appadiye irukkum.'):say(current,`I heard “clear the whole list.” Remove all ${current.draft.length} items? Nothing has been sent.`,`“முழு பட்டியலையும் காலி செய்” என்று கேட்டேன். ${current.draft.length} பொருட்களையும் நீக்கவா? ஆர்டர் அனுப்பவில்லை.`,`“Muzhu list-ai clear pannu” nu ketten. ${current.draft.length} porutkalaiyum neekkava? Order anuppala.`)),stage:'identify',clarificationReason:'intent_clarification',buttons:[...(changeWholeList?[shoppingButton(current,'edit_list',say(current,'Edit items','பொருட்களை மாற்று','Porutkalai maathu'))]:[]),shoppingButton(current,'confirm_clear',say(current,'Clear all items','எல்லாம் நீக்கு','Ellam neekku')),shoppingButton(current,'keep_list',say(current,'Keep my list','பட்டியல் வை','List vaikkavum'))]};message=rich.text;
         } else if(!failure&&current.visualOrdering&&current.draft.length&&!current.lastRequestId&&!deterministic&&interpretation?.operations.length===0&&interpretation?.conversation==='greeting'){
           rich=returningReply(current);message=rich.text;
         } else if(!failure&&newListProposal){
@@ -396,7 +397,7 @@ export class ConversationRuntime {
         const matching=finalState.draft.filter(line=>words.length&&words.every(word=>tokens([line.query,line.name].filter(Boolean).join(' ')).includes(word)));
         const choices=matching.length>0&&matching.length<=2?matching.map(line=>({label:lineName(line,finalState),event:{id:randomUUID(),type:'edit_item' as const,lineId:line.id,expectedVersion:finalState.version}})):[shoppingButton(finalState,'edit_list',say(finalState,'Choose list item','பொருளைத் தேர்வு செய்','Porul choose pannu')),shoppingButton(finalState,'new_list',say(finalState,'Start new list','புதிய பட்டியல்','Pudhu list'))];
         const question=safeQuestion(interpretation?.clarifyQuestion,finalState)??say(finalState,'Which item on your list did you mean?','பட்டியலில் எந்தப் பொருளைச் சொன்னீர்கள்?','List-la entha porulai sonneenga?');
-        rich={...plainReply((interpretation!.operations.length?say(finalState,'Other clear changes are saved. ','மற்ற தெளிவான மாற்றங்கள் சேமிக்கப்பட்டன. ','Maththa thelivaana maaththangal save aachu. '):'')+question+' '+say(finalState,'Choose the item below or describe its type. Your list is kept.','கீழே தேர்வு செய்யுங்கள் அல்லது பொருளின் வகையைச் சொல்லுங்கள். பட்டியல் அப்படியே உள்ளது.','Keezhe choose pannunga illa type sollunga. List appadiye irukku.')),stage:'identify',clarificationReason:'intent_clarification',buttons:choices};
+        rich={...plainReply((digest(finalState.draft)!==digest(claimed.state.draft)?say(finalState,'Other clear changes are saved. ','மற்ற தெளிவான மாற்றங்கள் சேமிக்கப்பட்டன. ','Maththa thelivaana maaththangal save aachu. '):'')+question+' '+say(finalState,'Choose the item below or describe its type. Your list is kept.','கீழே தேர்வு செய்யுங்கள் அல்லது பொருளின் வகையைச் சொல்லுங்கள். பட்டியல் அப்படியே உள்ளது.','Keezhe choose pannunga illa type sollunga. List appadiye irukku.')),stage:'identify',clarificationReason:'intent_clarification',buttons:choices};
       }
       rich=unclearTarget||clearConfirmation?{...rich,replyLanguage:finalState.replyLanguage??'en'}:shoppingActions({...rich,replyLanguage:finalState.replyLanguage??'en'},finalState,claimed.catalogMap);
       if(claimed.catalogMap)rich={...rich,storeName:claimed.catalogMap.store.name};

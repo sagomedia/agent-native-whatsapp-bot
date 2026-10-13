@@ -59,7 +59,7 @@ export function consolidateMentions(items:Item[],source:string,image:boolean):It
 }
 export function compatibleLine(item:Item,line:DraftLine){
  const product=line.candidates?.find(p=>p.sku===line.sku);
- if(!item.query||![line.query??line.name,product?.name,...(product?.aliases??[]),...Object.values(product?.localNames??{})].some(name=>name&&sameMention(item.query!,name)))return false;
+ if(!item.query||![line.query??line.name,product?.name,product?.familyId?.replaceAll('-',' '),...(product?.aliases??[]),...Object.values(product?.localNames??{})].some(name=>name&&sameMention(item.query!,name)))return false;
  // A shared head noun is insufficient when the new request contains a brand,
  // material or use qualifier. Those words can be in query even when the model
  // leaves the structured fields empty. Keep the old SKU only if its catalog

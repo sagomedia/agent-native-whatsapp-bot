@@ -81,6 +81,12 @@ export function understandingToInterpretation(value:unknown,input:Interpretation
  const operations:Operation[]=writing?items.map(sourceItem).filter((op):op is Operation=>!!op):[];
  if(writing)for(const e of u.proposedEdits){
   if(!input.state.draft.some(l=>l.id===e.targetLineId)||!sourceIncludes(source,e.sourceText))throw new Error('Edit target or evidence is not current');
+  const broadcast=u.proposedEdits.some(other=>other.targetLineId!==e.targetLineId&&other.sourceText===e.sourceText);
+  if(broadcast&&!/\b(?:each|both|all)\b|ஒவ்வொரு|இரண்டுக்கும்|எல்லா/iu.test(e.sourceText)){
+   reconciliationQuestion=say(input.state,'Which one of the existing items should receive this change?','ஏற்கனவே உள்ள எந்த ஒரு பொருளுக்கு இந்த மாற்றம் வேண்டும்?','Irukkura entha oru porulukku intha maaththam venum?');continue;
+  }
+  if(e.kind==='increment_quantity'&&!additionalMention.test(e.sourceText))throw new Error('Additional quantity needs explicit current evidence');
+
   const previous=operations.find(op=>'lineId' in op&&op.lineId===e.targetLineId||'reference' in op&&op.reference===e.targetLineId);
   if(previous){
    // Some providers repeat the same total through both contract fields. Keep
@@ -102,7 +108,8 @@ export function understandingToInterpretation(value:unknown,input:Interpretation
   const items=u.requestedItems.filter(i=>i.query&&!i.crossedOut);
   if(u.intents.includes('price')&&items.length===1)result={...result,next:'price',priceQuery:items[0].query!,priceQuantity:items[0].purchaseCount??undefined,priceUnit:items[0].requestedContainer};
   else if((imageReadOnly||u.intents.includes('lookup'))&&items.length){const first=items[0];result={...result,next:'assist',assistance:{rootQuery:first.query!,queries:items.slice(0,3).map(i=>i.query!),question:u.clarifyQuestion,search:{keywords:[first.query!],...(first.brand?{brand:first.brand}: {})}}};}
-  else if(u.intents.includes('help')||u.intents.includes('cancel'))result.conversation='handoff';
+  else if(u.intents.includes('help')||u.intents.includes('cancel')&&input.state.lastRequestId)result.conversation='handoff';
+  else if(u.intents.includes('cancel')){result.conversation='pause';result.clarifyQuestion??=say(input.state,'Should I remove one item or clear the whole list?','ஒரு பொருளை நீக்கவா அல்லது முழு பட்டியலையும் காலி செய்யவா?','Oru porulai neekkava illa muzhu list-ai clear pannava?');}
   else if(u.shopQuestions.length)result.conversation='shop_question';
   else if(u.intents.includes('pause'))result.conversation='pause';
   else if(u.intents.includes('greeting'))result.conversation='greeting';

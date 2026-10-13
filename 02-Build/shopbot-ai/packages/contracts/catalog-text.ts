@@ -4,7 +4,7 @@ export function normalize(text: string): string {
     .replace(/தண்ணீர்\s+(?:ஊற்ற|ஊத்துற|ஊற்றும்)\s+(?:ஓஸ்|ஹோஸ்)/gu,'garden hose')
     .replace(/பெயிண்ட்\s+(?:எடுக்கிற\s+|சுரண்டும்\s+)?கத்தி/gu,'scraper')
     .replace(/உப்பு(?:த்)?\s+(?:தாள்|தாளு)(?=\s|$)/gu,'sandpaper')
-    .replace(/\b(?:water|watering) hose\b/g,'garden hose').replace(/\bpaint scraper\b/g,'scraper');
+    .replace(/\b(?:water|watering) hose\b/g,'garden hose').replace(/\bpaint scraper\b/g,'scraper').replace(/\b(?:teflon|teplon) tape\b/g,'ptfe tape');
 }
 export function tokens(text: string) { return normalize(text).split(/\s+/).filter(t => t && !['the','a','an','of','inch','inches','some'].includes(t)).map(t => t==='boxes'?'box':/^[a-z]+s$/.test(t) ? t.slice(0,-1) : t); }
 export function oneEdit(a:string,b:string) {
