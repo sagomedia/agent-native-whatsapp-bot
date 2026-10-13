@@ -35,12 +35,24 @@ with tarfile.open(a.archive,'r:gz') as archive:
     old_manifest=json.loads((previous/'manifest.json').read_text())
     assert old_manifest['node_version']==manifest['node_version']=='22.22.1'
     assert subprocess.check_output([str(previous/'node/bin/node'),'--version'],text=True).strip()=='v22.22.1'
-    assert (previous/'app/package-lock.json').read_bytes()==archive.extractfile(name+'/app/package-lock.json').read(), 'Runtime dependency change requires a complete bundle'
-    old_package=json.loads((previous/'app/package.json').read_text())
-    new_package=json.load(archive.extractfile(name+'/app/package.json'))
-    old_scripts=old_package.pop('scripts',{})
-    new_scripts=new_package.pop('scripts',{})
-    assert old_package==new_package and old_scripts.get('start')==new_scripts.get('start'), 'Runtime package change requires a complete bundle'
+    new_lock_bytes=archive.extractfile(name+'/app/package-lock.json').read()
+    old_lock_bytes=(previous/'app/package-lock.json').read_bytes()
+    additions=manifest.get('dependency_additions',[])
+    if additions:
+        assert hashlib.sha256(old_lock_bytes).hexdigest()==manifest['base_lock_sha256'], 'Installed dependency base differs'
+        old_lock=json.loads(old_lock_bytes)['packages']; new_lock=json.loads(new_lock_bytes)['packages']
+        assert all(key in new_lock and new_lock[key]==value for key,value in old_lock.items() if key), 'Existing dependencies cannot change in an additive bundle'
+        assert len(set(additions))==len(additions) and all(key.startswith('node_modules/') and '..' not in PurePosixPath(key).parts and key not in old_lock and key in new_lock for key in additions)
+        for member in members:
+            relative=PurePosixPath(member.name).relative_to(name)
+            if member.isfile() and relative.parts[:2]==('app','node_modules'):
+                dep=str(relative)[4:]
+                assert any(dep.startswith(key+'/') for key in additions), 'Only new dependency files may be bundled'
+    else:
+        assert old_lock_bytes==new_lock_bytes, 'Runtime dependency change requires a complete bundle'
+        old_package=json.loads((previous/'app/package.json').read_text());new_package=json.load(archive.extractfile(name+'/app/package.json'))
+        old_scripts=old_package.pop('scripts',{});new_scripts=new_package.pop('scripts',{})
+        assert old_package==new_package and old_scripts.get('start')==new_scripts.get('start'), 'Runtime package change requires a complete bundle'
     unpacked=sum(m.size for m in members)
     assert shutil.disk_usage(base).free-unpacked>1024**3, 'Keep at least 1 GiB free'
     stage=base/name
@@ -48,7 +60,7 @@ with tarfile.open(a.archive,'r:gz') as archive:
     archive.extractall(base,filter='data')
     try:
         shutil.copytree(previous/'node',stage/'node',copy_function=os.link,symlinks=True)
-        shutil.copytree(previous/'app/node_modules',stage/'app/node_modules',copy_function=os.link,symlinks=True)
+        shutil.copytree(previous/'app/node_modules',stage/'app/node_modules',copy_function=os.link,symlinks=True,dirs_exist_ok=True)
         print(json.dumps({'staged_release':name,'runtime_reused_from':old,'bundle_sha256':a.sha256,'new_content_bytes':unpacked,'disk_free_bytes':shutil.disk_usage(base).free}))
     except Exception:
         shutil.rmtree(stage)

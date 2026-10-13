@@ -29,7 +29,7 @@ export class MockInterpreter implements Interpreter {
     const shopping=/^(?:i need|i want|can i get|could i get|can you add|please add|add)\s+/.test(value);
     value=value.replace(/^(?:i need|i want|can i get|could i get|can you add|please add|add)\s+/,'');
     const clauses=value.split(/,\s*|;\s*|\.\s+|\s+(?:and|plus|also)\s+/).filter(Boolean);
-    if(clauses.length>20) throw new Error('Split the request into smaller batches. No partial interpretation.');
+    if(clauses.length>(state.visualOrdering?100:20)) throw new Error('Split the request into smaller batches. No partial interpretation.');
     for(let clause of clauses) {
       clause=clause.trim().replace(/^yes but /,'');
       const inquiry=shopInquiry(clause);if(inquiry){result.shopQuestions=[...new Set([...(result.shopQuestions??[]),...(inquiry.shopQuestions??[])])];continue;}

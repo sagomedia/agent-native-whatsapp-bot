@@ -13,6 +13,8 @@ parser = argparse.ArgumentParser()
 runtime = parser.add_mutually_exclusive_group(required=True)
 runtime.add_argument('--node-archive', type=Path)
 runtime.add_argument('--reuse-release', help='Installed immutable release whose runtime and identical production dependencies will be hard-linked on the VPS')
+parser.add_argument('--dependency-additions-from',type=Path,help='Base lockfile for a verified additive dependency bundle; shared package entries must remain identical')
+parser.add_argument('--source-base-commit',help='Verified base commit when packaging a recovered source copy')
 parser.add_argument('--node-shasums', type=Path)
 parser.add_argument('--output-dir', type=Path, required=True)
 args = parser.parse_args()
@@ -30,7 +32,7 @@ else:
     assert re.fullmatch(r'preview-[a-f0-9]{12}', args.reuse_release), 'Invalid installed runtime release'
 
 source_hash = hashlib.sha256()
-excluded = {'node_modules', 'dist', 'data', 'owner-only', '__pycache__', '.git'}
+excluded = {'node_modules', 'dist', 'data', 'owner-only', '__pycache__', '.git', 'preview', 'artifacts'}
 source_files = []
 for path in sorted(app.rglob('*')):
     relative = path.relative_to(app)
@@ -56,6 +58,21 @@ catalog.mkdir(parents=True)
 for name in ['catalog.json', 'catalog-map.json']:
     shutil.copy2(app / 'resources/catalog/ksmc-demo' / name, catalog / name)
 shutil.copytree(app / 'resources/catalog/ksmc-demo/images', catalog / 'images')
+shutil.copytree(app / 'resources/fonts',stage / 'app/resources/fonts')
+dependency_additions=[]
+base_lock_sha256=None
+if args.dependency_additions_from:
+    assert args.reuse_release, 'Dependency additions require the installed immutable base release'
+    base_lock=args.dependency_additions_from.read_bytes()
+    old=json.loads(base_lock)['packages']
+    new=json.loads((app/'package-lock.json').read_bytes())['packages']
+    assert all(key in new and new[key]==value for key,value in old.items() if key), 'Existing dependency changes require a complete new bundle'
+    base_lock_sha256=hashlib.sha256(base_lock).hexdigest()
+    for key in sorted(new):
+        if key and key not in old and (app/key).is_dir():
+            dependency_additions.append(key)
+            shutil.copytree(app/key,stage/'app'/key,symlinks=False)
+    assert dependency_additions, 'No new dependencies to bundle'
 
 if args.node_archive:
     subprocess.run(['npm', 'ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'],
@@ -74,15 +91,20 @@ for name in ['install.sh', 'rollback.sh', 'upgrade.sh']:
     (stage / 'deploy' / name).chmod(0o755)
 
 repository = next((path for path in [app, *app.parents] if (path / '.git').exists()), None)
-assert repository is not None, 'The release source must belong to a Git checkout'
+assert repository is not None or args.source_base_commit, 'Supply a verified base commit for a recovered source copy'
 # Managed worktrees may inherit core.worktree from a different/shared checkout.
 # Override it for this metadata read without changing the user's Git config.
-git = subprocess.run(['git', '-c', 'core.worktree=' + str(repository),
-                      '--work-tree=' + str(repository), 'rev-parse', 'HEAD'],
-                     cwd=app, text=True, capture_output=True, check=True)
+if args.source_base_commit:
+    import re
+    assert re.fullmatch('[a-f0-9]{40}',args.source_base_commit), 'Invalid source base commit'
+    base_commit=args.source_base_commit
+else:
+    base_commit=subprocess.check_output(['git','-c','core.worktree='+str(repository),'--work-tree='+str(repository),'rev-parse','HEAD'],cwd=app,text=True).strip()
 manifest = {
     'release_id': release_id,
-    'source_base_commit': git.stdout.strip(),
+    'source_base_commit': base_commit,
+    'dependency_additions':dependency_additions,
+    'base_lock_sha256':base_lock_sha256,
     'source_tree_sha256': source_hash.hexdigest(),
     'source_files': source_files,
     'node_version': '22.22.1',

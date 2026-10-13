@@ -9,16 +9,17 @@ import {discoveryPresentation} from './discovery-replies.js';
 import type {RetailTools} from './tools.js';
 
 export type CatalogObservation={tool:'search_products'|'discover_products';query:string;products:Product[];totalCount:number;discovery?:DiscoveryResult};
-const memorySchema=z.object({id:z.uuid(),purpose:z.enum(['discovery','quote','pending']),queries:z.array(z.string().min(1).max(200)).min(1).max(3),lineId:z.uuid().nullable(),sourceVersion:z.number().int().min(0),quoteQuantity:z.number().min(0.001).max(100).optional(),quoteUnit:z.string().max(200).optional(),requestedQuantity:z.number().min(0.001).max(100).optional(),requestedUnit:z.string().max(200).optional(),newList:z.array(operationSchema.options[0]).min(2).max(20).optional(),observations:z.array(z.object({tool:z.enum(['search_products','discover_products']),query:z.string().max(200),products:z.array(z.any()).max(10),totalCount:z.number().int().min(0),discovery:z.any().optional()})).max(3)});
-export type AssistantMemory={id:string;purpose:'discovery'|'quote'|'pending';queries:string[];lineId:string|null;sourceVersion:number;quoteQuantity?:number;quoteUnit?:string;requestedQuantity?:number;requestedUnit?:string;newList?:Extract<Interpretation['operations'][number],{kind:'add_item'}>[];observations:CatalogObservation[]};
+const memorySchema=z.object({id:z.uuid(),purpose:z.enum(['discovery','quote','pending']),queries:z.array(z.string().min(1).max(200)).min(1).max(3),lineId:z.uuid().nullable(),sourceVersion:z.number().int().min(0),catalogRevision:z.number().int().min(0).optional(),quoteQuantity:z.number().min(0.001).max(100).optional(),quoteUnit:z.string().max(200).optional(),requestedQuantity:z.number().min(0.001).max(100).optional(),requestedUnit:z.string().max(200).optional(),newList:z.array(operationSchema.options[0]).min(2).max(50).optional(),observations:z.array(z.object({tool:z.enum(['search_products','discover_products']),query:z.string().max(200),products:z.array(z.any()).max(10),totalCount:z.number().int().min(0),discovery:z.any().optional()})).max(3)});
+export type AssistantMemory={id:string;purpose:'discovery'|'quote'|'pending';queries:string[];lineId:string|null;sourceVersion:number;catalogRevision?:number;quoteQuantity?:number;quoteUnit?:string;requestedQuantity?:number;requestedUnit?:string;newList?:Extract<Interpretation['operations'][number],{kind:'add_item'}>[];observations:CatalogObservation[]};
 export async function loadAssistantMemory(client:PoolClient,ctx:ActorContext):Promise<AssistantMemory|null> {
-  const row=(await client.query('SELECT assistant_memory FROM conversations WHERE id=$1 AND store_id=$2 AND actor=$3',[ctx.conversationId,ctx.storeId,ctx.actor])).rows[0];
+  const row=(await client.query('SELECT c.assistant_memory,s.catalog_revision FROM conversations c JOIN stores s ON s.id=c.store_id WHERE c.id=$1 AND c.store_id=$2 AND c.actor=$3',[ctx.conversationId,ctx.storeId,ctx.actor])).rows[0];
   const parsed=memorySchema.safeParse(row?.assistant_memory);
-  return parsed.success?parsed.data:null;
+  return parsed.success&&parsed.data.catalogRevision===row.catalog_revision?parsed.data:null;
 }
 export async function saveAssistantMemory(client:PoolClient,ctx:ActorContext,memory:Omit<AssistantMemory,'id'>|null) {
   const id=randomUUID();
-  await client.query('UPDATE conversations SET assistant_memory=$1::jsonb WHERE id=$2 AND store_id=$3 AND actor=$4',[JSON.stringify(memory?{...memory,id}:null),ctx.conversationId,ctx.storeId,ctx.actor]);
+  const revision=memory?(await client.query('SELECT catalog_revision FROM stores WHERE id=$1',[ctx.storeId])).rows[0].catalog_revision:undefined;
+  await client.query('UPDATE conversations SET assistant_memory=$1::jsonb WHERE id=$2 AND store_id=$3 AND actor=$4',[JSON.stringify(memory?{...memory,id,catalogRevision:revision}:null),ctx.conversationId,ctx.storeId,ctx.actor]);
   return memory?id:undefined;
 }
 export function pendingItem(state:ConversationState) {

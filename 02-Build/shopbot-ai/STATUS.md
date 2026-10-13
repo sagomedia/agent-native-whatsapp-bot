@@ -1,3 +1,11 @@
+# Current runtime — 13 October 2026
+
+The connected WhatsApp application runs on the Google VPS with Node 22, Fastify, React/Vite and PostgreSQL 17. All application inference uses Gemini 3.5 Flash Lite. WhatsApp ingress/sending, media understanding, visual ordering and the protected owner UI are implemented; deployment and readiness are recorded in the task's release report. A GitHub push/merge and a VPS deployment are separate operations.
+
+The latest source repair prevents an unspecified or pumping pipe from inheriting PVC/hose identity, keeps a current target question ahead of old quantities, retains valid transcript evidence when actions need correction, and requires confirmation for spoken clear-all. See [voice repair plan](VOICE-ORDER-REPAIR.md). The dated notes below describe historical stages, not current connection status.
+
+---
+
 # Current Tamil Multimodal Deployment - 6 October 2026
 
 Sequential list update: `preview-d385c6bec164`, activated approximately 02:08 India time, supersedes `preview-64e2a28156e0`. All 163 isolated regressions and build/typecheck passed. `WHATSAPP_SEQUENTIAL_ITEMS_ENABLED=true` uses the first unfinished requested line as the active product/quantity question, retaining all other lines. Unknown quantities and unit conversions are resolved before the next product. Initially exact complete requests retain grouped All correct confirmation; once step-by-step selection begins, subsequent items remain sequential. Submitted-order proposals preview only the first category and preserve the full list on start or selection. Final review shows quantity, catalog unit price and line total with separate final consent. Old requests, budgets and histories were not reset; no old recording/request was automatically replayed. Native channel progression is regression-tested; a fresh customer phone round trip with this version remains to be checked.

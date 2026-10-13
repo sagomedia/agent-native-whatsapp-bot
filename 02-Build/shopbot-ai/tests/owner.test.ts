@@ -8,6 +8,7 @@ import {createApp} from '../apps/server/src/http/app.js';
 import {setupDatabase} from '../apps/server/src/db/migrate.js';
 import {fixtureStore,fixtureConversation} from '../profiles/hardware.js';
 import {SimulatorService} from '../apps/server/src/services/simulator.js';
+import {pcmWav} from '../apps/server/src/services/voice-media.js';
 
 const owner={hostname:'shopbot-preview.example.test',issuer:'https://shopbot-test.cloudflareaccess.com',audience:'test_application_audience_123',email:'owner@example.test',storeId:fixtureStore};
 const pair=generateKeyPairSync('rsa',{modulusLength:2048}),jwk={...pair.publicKey.export({format:'jwk'}),kid:'owner-test-key',alg:'RS256',use:'sig'};
@@ -16,6 +17,23 @@ function jwt(changes:Record<string,unknown>={},headerChanges:Record<string,unkno
  const content=encode({alg:'RS256',kid:jwk.kid,...headerChanges})+'.'+encode({iss:owner.issuer,aud:[owner.audience],email:owner.email,sub:'owner',iat:now,exp:now+600,...changes});
  return content+'.'+sign('RSA-SHA256',Buffer.from(content),pair.privateKey).toString('base64url');
 }
+
+test('owner history binds audio to its conversation and labels missing recordings without broken playback URLs',async()=>{
+ const schema='owner_media_'+randomUUID().replaceAll('-',''),admin=new pg.Pool({connectionString:process.env.DATABASE_URL});await admin.query(`CREATE SCHEMA "${schema}"`);const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:`-c search_path=${schema}`});let app:Awaited<ReturnType<typeof createApp>>|undefined;
+ try{
+  await setupDatabase(pool,'mock');const present=randomUUID(),missing=randomUUID(),foreign=randomUUID();
+  await pool.query("INSERT INTO conversations(id,store_id,actor) VALUES($1,$2,'other-audio')",[foreign,fixtureStore]);
+  for(const [id,conversation] of [[present,fixtureConversation],[missing,fixtureConversation],[randomUUID(),foreign]])await pool.query("INSERT INTO messages(id,conversation_id,direction,text,status,payload) VALUES($1,$2,'inbound','Saved voice','processed',$3)",[id,conversation,JSON.stringify({id,type:'voice',mediaId:present===id?id:conversation===foreign?present:id})]);
+  await pool.query("INSERT INTO voice_media(id,store_id,conversation_id,actor,source_hash,audio,duration_seconds) VALUES($1,$2,$3,'local-simulator','test',$4,1)",[present,fixtureStore,fixtureConversation,pcmWav(Buffer.alloc(32000))]);
+  app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,port:3017,host:'127.0.0.1',mediaDir:'/tmp/owner-media-test',owner},pool,undefined,undefined,createAccessVerifier(owner,async()=>[jwk]));
+  const headers={host:owner.hostname,'cf-access-jwt-assertion':jwt()};
+  const messages=(await app.inject({url:'/api/owner/conversations/'+fixtureConversation,headers})).json().messages;
+  assert.equal(messages.find((m:any)=>m.id===present).media_available,true);assert.equal(messages.find((m:any)=>m.id===missing).media_available,false);assert.ok(messages.every((m:any)=>m.conversation_id===fixtureConversation));
+  assert.equal((await app.inject({url:`/api/owner/conversations/${fixtureConversation}/media/voice/${present}`,headers})).statusCode,200);
+  const other=(await app.inject({url:'/api/owner/conversations/'+foreign,headers})).json();assert.equal(other.messages[0].media_available,false);
+  assert.equal((await app.inject({url:`/api/owner/conversations/${foreign}/media/voice/${present}`,headers})).statusCode,404);
+ }finally{await app?.close();await pool.end();await admin.query(`DROP SCHEMA "${schema}" CASCADE`);await admin.end();}
+});
 test('Access validates signatures, exact merchant owner, issuer, audience, expiry and algorithm',async()=>{
  const verify=createAccessVerifier(owner,async()=>[jwk]);
  assert.equal((await verify(jwt())).email,owner.email);

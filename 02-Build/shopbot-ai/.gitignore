@@ -1,0 +1,13 @@
+node_modules/
+dist/
+artifacts/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+data/
+preview/
+
+# Also ignore a local dependency symlink.
+/node_modules

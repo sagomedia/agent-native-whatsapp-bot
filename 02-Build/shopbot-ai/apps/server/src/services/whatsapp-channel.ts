@@ -1,3 +1,5 @@
+import {reviewDeliveryReady} from './review-delivery.js';
+import {catalogPhoto} from './catalog-photos.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {eventSchema,type SimulatorEvent} from '../../../../packages/contracts/index.js';
 import {say} from '../../../../packages/contracts/language.js';
@@ -27,14 +29,15 @@ export class WhatsAppChannel {
   constructor(private pool:Pool,readonly config:WhatsAppConfig,private request:WhatsAppFetch=fetch,private provider?:Interpreter){
     if(config.aiEnabled&&(!provider||provider.mode!=='live'||!provider.freeQuota&&(!config.paidEnabled||!config.budgetMicrousd||config.budgetMicrousd>5000000)))throw new Error('WhatsApp AI requires the configured free-tier or explicitly budgeted interpreter');
     if(!config.aiEnabled&&provider)throw new Error('WhatsApp AI has not been enabled');
-    this.runtime=new ConversationRuntime(pool,provider??new MockInterpreter(),{allowFreeInference:!!config.aiEnabled,allowPaidInference:!!config.aiEnabled&&!!config.paidEnabled,discoveryStages:!!config.discoveryStages,mediaRecommendations:!!config.mediaRecommendations,sequentialItems:!!config.sequentialItems,queueReply:async(client,ctx,messageId,rich)=>{
+    this.runtime=new ConversationRuntime(pool,provider??new MockInterpreter(),{allowFreeInference:!!config.aiEnabled,allowPaidInference:!!config.aiEnabled&&!!config.paidEnabled,discoveryStages:!!config.discoveryStages,mediaRecommendations:!!config.mediaRecommendations,sequentialItems:!!config.sequentialItems,visualOrdering:!!config.visualOrdering,maxDraftLines:config.maxDraftLines,queueReply:async(client,ctx,messageId,rich)=>{
+      if(rich.parts){rich.deliveryEstimate={category:'service',ratePaise:config.serviceRatePaise??0,totalPaise:(config.serviceRatePaise??0)*rich.outboundMessages};await client.query('UPDATE messages SET payload=$1::jsonb WHERE id=$2',[JSON.stringify(rich),messageId]);}
       const revision=(await client.query('SELECT operator_revision FROM conversations WHERE id=$1',[ctx.conversationId])).rows[0].operator_revision;
       const state=await loadState(client,ctx),memory=await loadAssistantMemory(client,ctx);
       let rendered;
       try{rendered=renderWhatsAppReply(rich,messageId,config.hostname);}
       catch{
         // Do not leave consent live for a review which was never displayed.
-        if(rich.kind==='order_review')await client.query('UPDATE conversations SET pending=NULL WHERE id=$1',[ctx.conversationId]);
+        if(rich.kind==='order_review'||rich.parts)await client.query('UPDATE conversations SET pending=NULL WHERE id=$1',[ctx.conversationId]);
         const fallback=plainReply(say(state,'Your list is kept, but this reply has too many details to show safely in one message. Tell me which item to edit or remove, then review the list again.','உங்கள் பட்டியல் உள்ளது. ஒரே செய்தியில் காட்ட விவரங்கள் அதிகமாக உள்ளன. மாற்ற அல்லது நீக்க வேண்டிய பொருளைச் சொல்லுங்கள்; பிறகு பட்டியலை மீண்டும் பார்க்கலாம்.','Unga list irukku. Ore message-la kaatta details adhigam. Edit illa remove panna porulai sollunga; piragu list-ai marubadi paarunga.'));
         fallback.replyLanguage=state.replyLanguage;
         await client.query('UPDATE messages SET text=$1,payload=$2::jsonb WHERE id=$3',[fallback.text,JSON.stringify(fallback),messageId]);
@@ -44,6 +47,7 @@ export class WhatsAppChannel {
       for(const action of rendered.actions)await client.query('INSERT INTO whatsapp_actions(id,message_id,conversation_id,event,label,source_version,operator_revision,binding_id) VALUES($1,$2,$3,$4::jsonb,$5,$6,$7,$8)',[action.id,messageId,ctx.conversationId,JSON.stringify(action.event),action.label,state.version,revision,conversationBinding(state,memory)]);
     }});
   }
+  async catalogPhoto(id:string){return catalogPhoto(this.pool,this.config.storeId,id);}
   async hasCatalogImage(filename:string){return !!(await this.pool.query('SELECT 1 FROM products WHERE store_id=$1 AND active=true AND image_path=$2',[this.config.storeId,'/demo-images/'+filename])).rowCount;}
   async setup(){
     const c=this.config;
@@ -85,6 +89,7 @@ export class WhatsAppChannel {
               await client.query('UPDATE whatsapp_conversations SET last_inbound_at=greatest(last_inbound_at,to_timestamp($1)) WHERE conversation_id=$2',[seconds,mapped.conversation_id]);
             }
             const ctx:ActorContext={storeId:c.storeId,conversationId:mapped.conversation_id,actor,role:'customer'},messageId=randomUUID();
+            if(c.visualOrdering)await client.query('UPDATE conversations SET visual_ordering=true WHERE id=$1',[ctx.conversationId]);
             const state=await loadState(client,ctx),memory=await loadAssistantMemory(client,ctx);
             let event:SimulatorEvent|undefined=m.type==='text'&&m.text?{id:messageId,type:'text',text:m.text.body}:undefined;
             const media=this.config.mediaEnabled?(m.type==='image'&&m.image&&this.provider?.supportsImages?{id:m.image.id,kind:'image' as const}:m.type==='audio'&&m.audio&&this.provider?.supportsAudio?{id:m.audio.id,kind:'voice' as const}:undefined):undefined;
@@ -105,13 +110,23 @@ export class WhatsAppChannel {
                 FROM whatsapp_actions a JOIN whatsapp_outbox o ON o.message_id=a.message_id JOIN conversations c ON c.id=a.conversation_id
                 WHERE a.id=$1 AND a.conversation_id=$2 AND a.expires_at>now()`,[tapped.id,ctx.conversationId])).rows[0];
               const parsed=eventSchema.safeParse(action?.event);
-              if(action&&parsed.success&&action.source_version===state.version&&action.operator_revision===action.current_revision&&action.binding_id===binding&&['accepted','delivered','read'].includes(action.delivery_state)&&(!m.context||m.context.id===action.provider_id)){
+              const complete=parsed.success&&(parsed.data.type==='confirm'||parsed.data.type==='confirm_products')?await reviewDeliveryReady(client,ctx.conversationId,action?.binding_id??binding):true;
+              if(complete&&action&&parsed.success&&action.source_version===state.version&&action.operator_revision===action.current_revision&&action.binding_id===binding&&['accepted','delivered','read'].includes(action.delivery_state)&&(!m.context||m.context.id===action.provider_id)){
                 event=parsed.data;text=action.label;binding=action.binding_id;
               }
             }
             await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,payload,binding_id,created_at) VALUES($1,$2,'inbound',$3,$4,$5::jsonb,$6,to_timestamp($7))",[messageId,ctx.conversationId,text,event?'pending':'processed',JSON.stringify(event??{id:messageId,type:'text',text}),binding,seconds]);
             await client.query('INSERT INTO whatsapp_inbound(phone_id,provider_id,message_id) VALUES($1,$2,$3)',[c.phoneId,m.id,messageId]);
             if(media)await client.query('INSERT INTO whatsapp_media(message_id,media_id,kind,source_version) VALUES($1,$2,$3,$4)',[messageId,media.id,media.kind,state.version]);
+            if(event&&c.sendEnabled){
+              const control=(await client.query('SELECT operator_mode,operator_revision FROM conversations WHERE id=$1',[ctx.conversationId])).rows[0];
+              const already=(await client.query("SELECT 1 FROM messages m JOIN whatsapp_outbox o ON o.message_id=m.id WHERE m.conversation_id=$1 AND o.operator_revision=$2 AND m.payload->>'clarificationReason'='owner_handling' LIMIT 1",[ctx.conversationId,control.operator_revision])).rowCount;
+              if(control.operator_mode==='owner'&&!already){
+                const rid=randomUUID(),waiting={...plainReply(say(state,'Your message is saved. The shop is handling this chat and will reply here. The assistant will continue when the shop returns control.','உங்கள் தகவல் சேமிக்கப்பட்டது. இந்த உரையாடலை இப்போது கடை கவனிக்கிறது; இங்கே பதில் தரும். கடை மீண்டும் ஒப்படைத்ததும் உதவியாளர் தொடரும்.','Unga message save panniyachu. Ippo kadai intha chat-ai paarkkirathu; inge reply pannum. Kadai control thiruppi koduththathum assistant thodarum.')),stage:'status' as const,clarificationReason:'owner_handling'};
+                await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,payload,stage) VALUES($1,$2,'outbound',$3,'queued',$4::jsonb,'status')",[rid,ctx.conversationId,waiting.text,JSON.stringify(waiting)]);
+                await client.query("INSERT INTO whatsapp_outbox(message_id,conversation_id,operator_revision,sender_kind,reply_payload) VALUES($1,$2,$3,'system',$4::jsonb)",[rid,ctx.conversationId,control.operator_revision,JSON.stringify({type:'text',text:{preview_url:false,body:waiting.text}})]);
+              }
+            }
             if(!event){
               const replyId=randomUUID(),reply=plainReply(tapped||staleContext?say(state,'That choice has expired. Please use the latest product choices or review your list. Your list is unchanged.','இந்தத் தேர்வு காலாவதியானது. தற்போதைய படங்களில் தேர்வு செய்யுங்கள் அல்லது பட்டியலைப் பாருங்கள். பட்டியல் மாறவில்லை.','Intha choice expired. Latest photos-la choose pannunga illa list-ai paarunga. List maarala.'):say(state,'Please type your request or use the product buttons.','உங்கள் கோரிக்கையை எழுதுங்கள் அல்லது பொருள் பொத்தான்களைப் பயன்படுத்துங்கள்.','Unga request-ai type pannunga illa product buttons use pannunga.'));
               if(tapped||staleContext)reply.buttons=[state.lastRequestId?{label:say(state,'Request status','கோரிக்கை நிலை','Request status'),event:{id:randomUUID(),type:'shopping_action',action:'status',expectedVersion:state.version}}:{label:say(state,'Review list','பட்டியலைப் பார்','List paaru'),event:{id:randomUUID(),type:'review',expectedVersion:state.version}}];
@@ -208,8 +223,8 @@ export class WhatsAppChannel {
       await client.query("UPDATE whatsapp_outbox o SET state='unknown',last_error='interrupted_send' FROM whatsapp_conversations w WHERE w.conversation_id=o.conversation_id AND w.phone_id=$1 AND o.state='sending' AND o.started_at<now()-interval '1 minute'",[c.phoneId]);
       const row=(await client.query(`SELECT o.*,m.text,w.recipient,w.last_inbound_at,c.operator_mode,c.operator_revision AS current_revision,s.operator_paused
         FROM whatsapp_outbox o JOIN whatsapp_conversations w ON w.conversation_id=o.conversation_id JOIN conversations c ON c.id=w.conversation_id JOIN stores s ON s.id=c.store_id JOIN messages m ON m.id=o.message_id
-        WHERE w.phone_id=$1 AND c.store_id=$2 AND o.state='queued' AND o.next_attempt_at<=now() AND
-        (o.sender_kind='owner' AND c.operator_mode='owner' OR o.sender_kind='system' OR o.sender_kind='assistant' AND NOT s.operator_paused AND c.operator_mode='assistant') ORDER BY o.created_at LIMIT 1 FOR UPDATE OF o,c SKIP LOCKED`,[c.phoneId,c.storeId])).rows[0];
+        WHERE w.phone_id=$1 AND c.store_id=$2 AND o.state='queued' AND o.next_attempt_at<=now() AND NOT EXISTS(SELECT 1 FROM messages prior JOIN whatsapp_outbox po ON po.message_id=prior.id WHERE prior.reply_group_id=m.reply_group_id AND prior.part_index<m.part_index AND po.state NOT IN ('accepted','delivered','read')) AND
+        (o.sender_kind='owner' AND c.operator_mode='owner' OR o.sender_kind='system' OR o.sender_kind='assistant' AND NOT s.operator_paused AND c.operator_mode='assistant') ORDER BY m.sequence LIMIT 1 FOR UPDATE OF o,c SKIP LOCKED`,[c.phoneId,c.storeId])).rows[0];
       if(!row){await client.query('COMMIT');return false;}
       if(row.sender_kind==='assistant'&&(row.operator_paused||row.operator_mode==='owner')){await client.query('COMMIT');return false;}
       if(row.operator_revision!==row.current_revision||!c.recipients.includes(row.recipient)||Date.now()-new Date(row.last_inbound_at).getTime()>=24*3600000){

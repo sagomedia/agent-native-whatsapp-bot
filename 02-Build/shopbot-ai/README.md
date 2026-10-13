@@ -1,6 +1,10 @@
 # ShopBot reusable agent tool core
 
-Local tool core and mock conversation runtime for the agent-native WhatsApp bot. See workspace `VISION.md` for direction and original references in `01-Input/starter-vision/`.
+Reusable retail runtime with a local mock simulator and a connected WhatsApp VPS channel. See workspace `VISION.md` for direction and original references in `01-Input/starter-vision/`.
+
+## Current connected deployment
+
+WhatsApp runs on Google VPS `sago-counter-ksmc`; the owner dashboard is at `https://shopbot-preview.sagoautomation.tech/owner` and public webhook/media use `https://demo.sagoautomation.tech`. All inference uses Gemini 3.5 Flash Lite. The mock setup below is for development; its messages do not prove WhatsApp delivery. See [voice repair plan](VOICE-ORDER-REPAIR.md) and the repository’s visual operating guide.
 
 ## Run
 
@@ -78,3 +82,7 @@ The native test page now uses a WhatsApp-style conversation and a separate 30-pr
 Open http://localhost:3017/native-test and choose **New chat**. Try “I need a blade,” then narrow the product type and brand using the displayed buttons. Use **Record voice**, stop, listen, and send a short shopping list. Check each product photo and quantity; submitting the final request is a separate action. The local page sends no WhatsApp messages.
 
 See [CATALOG-DISCOVERY.md](CATALOG-DISCOVERY.md) for the hierarchy, indexed tools, recorded-audio contract and generic-store configuration. Local history and rollback/export instructions are in the workspace’s `GIT-WORKFLOW.md`.
+
+## Unified Flash Lite ordering
+
+See [UNIFIED-ORDERING.md](UNIFIED-ORDERING.md) for the new multimodal extraction, handwritten lists, opt-in flags and metered real-media evaluation. All inference uses Gemini 3.5 Flash Lite.

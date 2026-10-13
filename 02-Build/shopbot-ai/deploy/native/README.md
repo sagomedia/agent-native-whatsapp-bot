@@ -1,3 +1,13 @@
+# Existing connected VPS: upgrade workflow
+
+The running WhatsApp deployment uses `shopbot-vps.service`, private `/etc/shopbot-vps.env`, PostgreSQL 17 and the `/opt/shopbot-vps/current` symlink. Public webhook/media are on `demo.sagoautomation.tech`; owner access is on `shopbot-preview.sagoautomation.tech/owner`. Do not rerun the first-install script against this existing service.
+
+Build and test off-server. Package with `package-release.py --reuse-release <active-release>` when dependencies are identical. Checksum-stage using `stage-reused.py`, run an authorized isolated replay, then use the staged `upgrade.sh`. Upgrade backs up database/configuration, switches the immutable release and checks readiness. Readiness failure restores the previous symlink, not the database. Schema-changing rollback needs separate compatibility/restore validation. Preserve the existing AI allowance, WhatsApp flags and secrets. A GitHub merge does not automatically deploy.
+
+The sections below are historical installation guidance. Statements about channels/media or owner replies being unavailable describe those earlier stages and do not apply to the current runtime.
+
+---
+
 # Native e2-micro preview
 
 This deployment uses an off-server build, the checksum-verified Node 22.22.1 Linux x64 runtime, production dependencies, PostgreSQL 17 from Debian and a bounded systemd service. It avoids loading the existing development Docker image onto the 10 GB VM. The app and database bind to loopback. No public route or WhatsApp sender is created by the installer.

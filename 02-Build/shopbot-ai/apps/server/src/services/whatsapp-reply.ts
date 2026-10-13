@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import type {RichReply,SimulatorEvent,ProductCard} from '../../../../packages/contracts/index.js';
+import type {RichReply,SimulatorEvent,ProductCard,VisualCard} from '../../../../packages/contracts/index.js';
 import {productName,unitName,say} from '../../../../packages/contracts/language.js';
 import {formatMoney} from '../../../../packages/contracts/money.js';
 
@@ -18,17 +18,22 @@ export function fitText(text:string,limit:number):string {
 export function productMediaUrl(image:string|undefined,hostname:string):string|undefined {
   if(!image)return;
   if(/^\/demo-images\/H\d{2}\.jpg$/.test(image))return `https://${hostname}/catalog-images/${image.split('/').at(-1)}`;
+  if(/^\/catalog-images\/messages\/[a-f0-9]{64}\.png$/.test(image))return `https://${hostname}${image}`;
+  if(/^\/catalog-images\/custom\/[a-f0-9-]{36}\.jpg$/.test(image))return `https://${hostname}${image}`;
   try{const url=new URL(image);if(url.protocol==='https:'&&!url.username&&!url.password)return url.href;}catch{}
 }
 export function cardText(card:ProductCard,reply:RichReply):string {
   const language=reply.replyLanguage??'en';
   const price=`${formatMoney(card.product.pricePaise)} / ${unitName(card.product.unit,language)}`;
-  const detail=[card.quantityLabel,card.matchLabel??card.detailLabel].filter(Boolean).join(' · ').replace(/\s+/g,' ');
+  const detail=[card.matchLabel,card.quantityLabel??card.detailLabel].filter(Boolean).join(' · ').replace(/\s+/g,' ');
   const last=fitText(detail,45),reserved=Array.from(price).length+(last?Array.from(last).length+1:0)+1;
-  const name=fitText([card.requestLabel,productName(card.product,language)].filter(Boolean).join(' · ').replace(/\s+/g,' '),Math.max(20,160-reserved));
+  // The photograph's catalog identity must survive caption truncation. Request
+  // context follows it and can be shortened; it never replaces the product name.
+  const name=fitText([productName(card.product,language),card.requestLabel].filter(Boolean).join(' · ').replace(/\s+/g,' '),Math.max(20,160-reserved));
   return fitText([name,price,last||undefined].filter(Boolean).join('\n'),160);
 }
 export function renderWhatsAppReply(reply:RichReply,messageId:string,hostname:string):WhatsAppReply {
+  if(reply.parts)return renderVisualPart(reply,messageId,hostname);
   if((reply.cards?.length??0)>10)throw new Error('A WhatsApp reply may contain at most ten product cards');
   const actions:WhatsAppAction[]=[];
   const bind=(label:string,event:SimulatorEvent):WhatsAppAction=>{
@@ -73,4 +78,22 @@ export function renderWhatsAppReply(reply:RichReply,messageId:string,hostname:st
   }
   if(options.length)return {format:'buttons',actions,payload:{type:'interactive',interactive:{type:'button',body:{text:body},action:{buttons:options.map(b=>({type:'reply',reply:{id:b.id,title:b.label}}))}}}};
   return {format:'text',actions,payload:{type:'text',text:{preview_url:false,body:fitText(reply.text,4096)}}};
+}
+
+function renderVisualPart(reply:RichReply,messageId:string,hostname:string):WhatsAppReply {
+ if(reply.parts?.length!==1)throw new Error('Render and track one ordered part at a time');
+ const part=reply.parts[0];if(!part.cards.length||part.cards.length>10)throw new Error('Visual parts require 1–10 cards');
+ const actions:WhatsAppAction[]=[];
+ const bind=(button:NonNullable<RichReply['buttons']>[number])=>{const id='w'+createHash('sha256').update(messageId+':'+actions.length+':'+button.event.id).digest('base64url').slice(0,19);const action={id,label:fitText(button.label,20),event:button.event};actions.push(action);return action;};
+ const media=part.cards.map(c=>productMediaUrl(c.kind==='product'?c.product.imageUrl:c.imageUrl,hostname));
+ if(!media.every(Boolean))throw new Error('Every visual card must have a usable image');
+ const cardButtons=(c:VisualCard)=>c.buttons??part.buttons??[];
+ if(part.cards.length===1){const c=part.cards[0],buttons=cardButtons(c).slice(0,3).map(bind),body=fitText(c.caption.includes(part.text)?c.caption:part.text.includes(c.caption)?part.text:[part.text,c.caption].filter(Boolean).join('\n'),1024);
+  if(!buttons.length)return {format:'image',actions,payload:{type:'image',image:{link:media[0],caption:body}}};
+  return {format:'buttons',actions,payload:{type:'interactive',interactive:{type:'button',header:{type:'image',image:{link:media[0]}},body:{text:body},action:{buttons:buttons.map(b=>({type:'reply',reply:{id:b.id,title:b.label}}))}}}};
+ }
+ const counts=part.cards.map(c=>cardButtons(c).length);
+ if(counts.some(n=>n<1||n>2)||new Set(counts).size!==1)throw new Error('Carousel cards require the same one or two native buttons');
+ const cards=part.cards.map((c,index)=>({card_index:index,type:'cta_url',header:{type:'image',image:{link:media[index]}},body:{text:fitText(c.caption,160)},action:{buttons:cardButtons(c).map(bind).map(b=>({type:'quick_reply',quick_reply:{id:b.id,title:b.label}}))}}));
+ return {format:'carousel',actions,payload:{type:'interactive',interactive:{type:'carousel',body:{text:fitText(part.text,1024)},action:{cards}}}};
 }

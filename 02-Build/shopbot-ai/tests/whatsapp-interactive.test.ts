@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import pg from 'pg';
-import {renderWhatsAppReply,fitText,productMediaUrl} from '../apps/server/src/services/whatsapp-reply.js';
+import {renderWhatsAppReply,fitText,productMediaUrl,cardText} from '../apps/server/src/services/whatsapp-reply.js';
 import {planWhatsAppReply} from '../apps/server/src/services/whatsapp-plan.js';
 import {setupDatabase} from '../apps/server/src/db/migrate.js';
 import {setupImageDemo} from '../apps/server/src/services/demo-catalog.js';
@@ -14,6 +14,18 @@ import type {WhatsAppConfig} from '../apps/server/src/services/whatsapp-config.j
 const cfg:WhatsAppConfig={hostname:'shopbot-api.example.test',storeId:fixtureStore,appId:'123456789',wabaId:'987654321',phoneId:'123987654',appSecret:'offline-test-secret',verifyToken:'offline-test-verification',accessToken:'offline-test-api-token-not-a-real-credential',graphVersion:'v25.0',recipients:['919000000001','919000000002'],defaultReplyLanguage:'en',processEnabled:true,sendEnabled:true};
 const product=(n:number):Product=>({sku:'H'+String(n).padStart(2,'0'),name:'Pipe '+n,unit:'piece',pricePaise:12500,stock:null,version:1,aliases:[],quantityStep:1,imageUrl:`/demo-images/H${String(n).padStart(2,'0')}.jpg`});
 const reply=(count:number):RichReply=>({version:1,kind:'product_choices',text:'Choose the pipe you need.',presentation:'carousel_preview',outboundMessages:1,cards:Array.from({length:count},(_,i)=>({product:product(i+1),label:'Choose this',action:{id:randomUUID(),type:'choose_product',sku:product(i+1).sku,expectedVersion:0}}))});
+test('long customer requests cannot hide the photo identity or relevance warning',()=>{
+ const rich=reply(2),card=rich.cards![0];
+ card.product.name='Premium 4 inch cutting wheel';
+ card.requestLabel='Requested: cutting plier '.repeat(20);
+ card.matchLabel='Related item; check suitability';
+ card.quantityLabel='Requested: 100 pieces '.repeat(10);
+ const caption=cardText(card,rich);
+ assert.ok(caption.startsWith(card.product.name));
+ assert.ok(caption.includes(card.matchLabel));
+ assert.ok(caption.includes('₹125.00'));
+ assert.ok(Array.from(caption).length<=160);
+});
 test('two through ten choices use one native carousel with bounded consistent quick replies',()=>{
  for(const count of [2,3,10]){
   const result=renderWhatsAppReply(reply(count),randomUUID(),cfg.hostname),payload=result.payload as any;

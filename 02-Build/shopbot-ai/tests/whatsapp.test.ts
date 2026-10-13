@@ -11,11 +11,38 @@ import {validSignature} from '../apps/server/src/http/whatsapp.js';
 import {setupImageDemo} from '../apps/server/src/services/demo-catalog.js';
 import {GoogleInterpreter} from '../apps/server/src/adapters/google-interpreter.js';
 import {geminiTextRate} from '../apps/server/src/services/inference-budget.js';
+import {RetailTools} from '../apps/server/src/services/tools.js';
+import {markProductConfirmed} from '../apps/server/src/services/product-verification.js';
 
 const cfg:WhatsAppConfig={hostname:'shopbot-api.example.test',storeId:fixtureStore,appId:'123456789',wabaId:'987654321',phoneId:'123987654',appSecret:'test-app-secret-not-real',verifyToken:'test-verification-token',accessToken:'test-api-token-not-a-real-credential',graphVersion:'v25.0',recipients:['919000000001','919000000002'],defaultReplyLanguage:'en',processEnabled:true,sendEnabled:true};
 const owner={hostname:'shopbot-preview.example.test',issuer:'https://shopbot-test.cloudflareaccess.com',audience:'test_application_audience_123',email:'owner@example.test',storeId:fixtureStore};
 const event=(providerId:string,from=cfg.recipients[0],text='hello',seconds=Math.floor(Date.now()/1000))=>({object:'whatsapp_business_account',entry:[{id:cfg.wabaId,changes:[{field:'messages',value:{metadata:{phone_number_id:cfg.phoneId},messages:[{id:providerId,from,timestamp:String(seconds),type:'text',text:{body:text}}]}}]}]});
 const status=(providerId:string,state:string,recipient=cfg.recipients[0],callback?:string)=>({object:'whatsapp_business_account',entry:[{id:cfg.wabaId,changes:[{field:'messages',value:{metadata:{phone_number_id:cfg.phoneId},statuses:[{id:providerId,recipient_id:recipient,timestamp:String(Math.floor(Date.now()/1000)),status:state,...(callback?{biz_opaque_callback_data:callback}:{})}]}}]}]});
+test('owner waiting is acknowledged once and assistant resume sends fresh bound quantity choices',async()=>{
+ const admin=new pg.Pool({connectionString:process.env.DATABASE_URL}),schema='wa_resume_'+randomUUID().replaceAll('-','');await admin.query(`CREATE SCHEMA "${schema}"`);
+ const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:`-c search_path=${schema}`});let app:Awaited<ReturnType<typeof createApp>>|undefined;
+ try{
+  await setupDatabase(pool,'mock');await setupImageDemo(pool,fixtureStore);
+  const config={...cfg,visualOrdering:true},sent:any[]=[];
+  const channel=new WhatsAppChannel(pool,config,async(_url,init)=>{sent.push(JSON.parse(String(init!.body)));return new Response(JSON.stringify({messages:[{id:'wamid.resume.'+sent.length}]}),{status:200});});await channel.setup();
+  await channel.receive(webhookSchema.parse(event('wamid.resume-start')));await channel.processNext();await channel.sendNext();
+  const c=(await pool.query('SELECT id,actor FROM conversations WHERE id IN (SELECT conversation_id FROM whatsapp_conversations)')).rows[0],ctx={storeId:fixtureStore,conversationId:c.id,actor:c.actor,role:'customer' as const};
+  const state=(await new RetailTools(pool).invoke(ctx,{name:'apply_draft_changes',args:{expectedVersion:0,operations:[{kind:'add_item',query:'H02',quantity:2},{kind:'add_item',query:'H22',quantity:null}]}},'resume-seed')).state!;
+  for(const l of state.draft)markProductConfirmed(l,l.candidates![0]);
+  const expired={kind:'products',id:randomUUID(),groups:[],version:state.version,expiresAt:new Date(0).toISOString(),remaining:0};
+  await pool.query("UPDATE conversations SET draft=$1::jsonb,pending=$2::jsonb,operator_mode='owner',operator_revision=1 WHERE id=$3",[JSON.stringify(state.draft),JSON.stringify(expired),c.id]);
+  await channel.receive(webhookSchema.parse(event('wamid.waiting-1',undefined,'two H22')));await channel.receive(webhookSchema.parse(event('wamid.waiting-2',undefined,'two H22')));
+  assert.equal(await channel.processNext(),false);assert.equal((await pool.query("SELECT count(*)::int AS n FROM messages WHERE payload->>'clarificationReason'='owner_handling'")).rows[0].n,1);
+  assert.equal(await channel.sendNext(),true);assert.match(sent.at(-1).text.body,/shop is handling/);
+  // The owner resolves these pending notes before returning control.
+  await pool.query("UPDATE messages SET status='processed' WHERE conversation_id=$1 AND direction='inbound'",[c.id]);
+  app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,port:3017,host:'127.0.0.1',mediaDir:'/tmp/wa-resume-test',owner,whatsapp:config},pool,undefined,undefined,async()=>({email:owner.email,subject:'offline-owner'}),channel);
+  const res=await app.inject({method:'POST',url:'/api/owner/conversations/'+c.id+'/control',headers:{host:owner.hostname,'cf-access-jwt-assertion':'offline-owner',origin:'https://'+owner.hostname,'x-shopbot-owner':'1','content-type':'application/json'},payload:{mode:'assistant',revision:1,notify:true}});assert.equal(res.statusCode,200,res.body);
+  const current=(await pool.query('SELECT pending,draft,version FROM conversations WHERE id=$1',[c.id])).rows[0];assert.equal(current.pending.kind,'question');assert.equal(current.pending.lineId,state.draft[1].id);assert.deepEqual(current.draft.map((l:any)=>l.id),state.draft.map(l=>l.id));
+  const actions=(await pool.query("SELECT a.* FROM whatsapp_actions a JOIN whatsapp_outbox o ON o.message_id=a.message_id WHERE o.operator_revision=2 AND o.state='queued'")).rows;assert.ok(actions.length);assert.ok(actions.every(a=>a.source_version===current.version&&a.binding_id===current.pending.id));
+  const reply=(await pool.query("SELECT text FROM messages WHERE conversation_id=$1 AND direction='outbound' ORDER BY sequence DESC LIMIT 1",[c.id])).rows[0].text;assert.match(reply,/assistant is back/);assert.match(reply,/How many/);assert.equal((await pool.query('SELECT * FROM order_requests')).rowCount,0);
+ }finally{await app?.close();await pool.end();await admin.query(`DROP SCHEMA "${schema}" CASCADE`);await admin.end();}
+});
 test('WhatsApp signature covers exact bytes and channel flags require complete configuration',()=>{
  const bytes=Buffer.from('{"value":1}'),signature='sha256='+createHmac('sha256',cfg.appSecret).update(bytes).digest('hex');
  assert.equal(validSignature(bytes,signature,cfg.appSecret),true);

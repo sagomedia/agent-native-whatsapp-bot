@@ -1,3 +1,11 @@
+# Current runtime — 13 October 2026
+
+The connected WhatsApp application runs on the Google VPS with Node 22, Fastify, React/Vite and PostgreSQL 17. All application inference uses Gemini 3.5 Flash Lite. WhatsApp ingress/sending, media understanding, visual ordering and the protected owner UI are implemented; deployment and readiness are recorded in the task's release report. A GitHub push/merge and a VPS deployment are separate operations.
+
+The latest source repair prevents an unspecified or pumping pipe from inheriting PVC/hose identity, keeps a current target question ahead of old quantities, retains valid transcript evidence when actions need correction, and requires confirmation for spoken clear-all. See [voice repair plan](VOICE-ORDER-REPAIR.md). The dated notes below describe historical stages, not current connection status.
+
+---
+
 # ShopBot architecture — 3 October 2026
 
 The running app is a local test channel over reusable retail services. `/native-test` uses a guarded free-only Gemini planning adapter; the original mock simulator remains separate. Actual WhatsApp delivery is not connected.
