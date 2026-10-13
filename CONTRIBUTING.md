@@ -30,7 +30,7 @@ The integration suite also needs PostgreSQL and FFmpeg. With the local Compose d
 docker compose run --rm app npm run test:integration
 ```
 
-Tests create temporary schemas and remove them when done. The prepared GitHub Actions workflow supplies its own disposable PostgreSQL service once workflow permission is granted. Until then, run the checks locally before merging. AI tests use mocked providers; live evaluation is a separate explicitly enabled activity described in `NATIVE-AI.md`.
+Tests create temporary schemas and remove them when done. The proposed workflow at `03-Output/ci-proposal/project-checks.yml` supplies a disposable PostgreSQL service when activated; it is currently saved as a proposal because the publishing login lacks workflow permission. AI tests use mocked providers; live evaluation is a separate explicitly enabled activity described in `NATIVE-AI.md`.
 
 ## Local configuration and data
 
