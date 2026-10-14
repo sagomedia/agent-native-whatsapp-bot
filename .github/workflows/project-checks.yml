@@ -1,0 +1,66 @@
+name: Project checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: 02-Build/shopbot-ai
+    services:
+      postgres:
+        image: postgres:17.6-bookworm
+        env:
+          POSTGRES_USER: shopbot
+          POSTGRES_PASSWORD: ci-test-only
+          POSTGRES_DB: shopbot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U shopbot -d shopbot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      APP_MODE: mock
+      DATABASE_URL: postgres://shopbot:ci-test-only@127.0.0.1:5432/shopbot
+      MEDIA_DIR: /tmp/shopbot-ci-media
+      ALLOW_LOCAL_AI_TEST: 'false'
+      ALLOW_FREE_INFERENCE: 'false'
+      ALLOW_PAID_INFERENCE: 'false'
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.1'
+          cache: npm
+          cache-dependency-path: 02-Build/shopbot-ai/package-lock.json
+      - name: Install audio tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Typecheck and build
+        run: npm run build
+      - name: Run PostgreSQL integration tests
+        run: npm run test:integration
+      - name: Validate catalog preparation
+        run: python3 -m unittest discover -s scripts -p 'test_catalog_cleanup.py'

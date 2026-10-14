@@ -1,4 +1,8 @@
-# Current runtime — 13 October 2026
+# Local counter-flow reconciliation — 14 October 2026
+
+The local `codex/reconciled-counter-flow` branch separates product approval from missing-count/unit checks and final bill consent, keeps independent price answers clear, preserves named pipe sizes and all list lines, and aligns audio deadlines with the processing lease. See [implementation and verification](../../03-Output/031-counter-flow-implementation.md) for exact scope, test evidence and remaining plan packages. These source changes have not been deployed; the deployment notes below are historical reports.
+
+# Reported runtime — 13 October 2026
 
 The connected WhatsApp application runs on the Google VPS with Node 22, Fastify, React/Vite and PostgreSQL 17. All application inference uses Gemini 3.5 Flash Lite. WhatsApp ingress/sending, media understanding, visual ordering and the protected owner UI are implemented; deployment and readiness are recorded in the task's release report. A GitHub push/merge and a VPS deployment are separate operations.
 

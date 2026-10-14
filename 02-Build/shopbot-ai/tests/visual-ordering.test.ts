@@ -82,7 +82,7 @@ test('one remaining candidate progresses through product approval and bill inste
  await setupImageDemo(pool);const id=randomUUID();await pool.query("INSERT INTO conversations(id,store_id,actor) VALUES($1,$2,'candidate-test')",[id,demoCatalogStore]);
  const inbox=new SimulatorService(pool,{storeId:demoCatalogStore,conversationId:id,actor:'candidate-test',role:'customer'});
  const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:'blade',quantity:1,search:{keywords:['hacksaw'],familyId:'saw-blades'}}]),{visualOrdering:true});
- let s=await text(inbox,runtime,'one blade');const select=buttons(last(s)).find(b=>b.event.type==='select_product');assert.ok(select);s=await event(inbox,runtime,select.event);s=await event(inbox,runtime,approve(s));assert.equal(last(s).stage,'bill');assert.equal(s.requests.length,0);s=await event(inbox,runtime,submit(s));assert.equal(s.requests.length,1);
+ let s=await text(inbox,runtime,'one blade');const select=buttons(last(s)).find(b=>b.event.type==='select_product');assert.ok(select);s=await event(inbox,runtime,select.event);assert.equal(last(s).stage,'bill');assert.equal(s.requests.length,0);s=await event(inbox,runtime,submit(s));assert.equal(s.requests.length,1);
 }));
 for(const mode of ['text','voice'])test(`${mode}: observed one 10-litre box remains one can, while a size alone asks its count`,()=>fixture(async(pool,inbox)=>{
  const phrase='one 10 liter box';const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:'TEST0',quantity:10,requestedUnit:'litre'}],phrase),{visualOrdering:true,mediaRecommendations:true});

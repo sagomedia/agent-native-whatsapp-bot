@@ -1,0 +1,299 @@
+[
+  {
+    "stage": "identify",
+    "text": "Noted all 5 requested items:\n1 inch pipe — 1\n0.75 inch pipe — 1\nWall scraper 4 inch — 1\nRatchet PVC Pipe Cutter 42 mm — 1\nWhite paint 10 litre — 1\n1 inch pipe: Which kind of pipe do you mean: rigid PVC, a flexible hose, or a pump delivery/suction pipe?",
+    "cards": [
+      {
+        "kind": "instruction",
+        "caption": "1 inch pipe: Which kind of pipe do you mean: rigid PVC, a flexible hose, or a pump delivery/suction pipe?",
+        "title": "1 inch pipe",
+        "lines": [
+          "1 piece",
+          "1 inch",
+          "Your requested quantity and size are kept. No catalog product is selected yet."
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "label": "Rigid PVC",
+        "type": "choose_pipe_type",
+        "pipeType": "pvc"
+      },
+      {
+        "label": "Flexible hose",
+        "type": "choose_pipe_type",
+        "pipeType": "hose"
+      },
+      {
+        "label": "Pump pipe",
+        "type": "choose_pipe_type",
+        "pipeType": "pump"
+      }
+    ]
+  },
+  {
+    "stage": "identify",
+    "text": "Which 1 inch PVC pipe do you need?",
+    "cards": [
+      {
+        "kind": "product",
+        "caption": "1 inch PVC Heavy Pipe Local\nLocal Heavy\n₹245.00 / 1 piece\nAvailable: 120 pieces recorded",
+        "sku": "H01",
+        "name": "1 inch PVC Heavy Pipe Local"
+      },
+      {
+        "kind": "product",
+        "caption": "1 inch PVC Pipe Blueguard ISI\n₹380.00 / 1 piece\nAvailable: 60 pieces recorded",
+        "sku": "H02",
+        "name": "1 inch PVC Pipe Blueguard ISI"
+      }
+    ],
+    "actions": [
+      {
+        "label": "Choose this",
+        "type": "select_product",
+        "sku": "H01"
+      },
+      {
+        "label": "Talk to shop",
+        "type": "shopping_action",
+        "action": "handoff"
+      },
+      {
+        "label": "Choose this",
+        "type": "select_product",
+        "sku": "H02"
+      },
+      {
+        "label": "Talk to shop",
+        "type": "shopping_action",
+        "action": "handoff"
+      }
+    ]
+  },
+  {
+    "text": "Ratchet PVC Pipe Cutter 42 mm — ₹350.00 / 1 piece | Available: 35 pieces recorded",
+    "cards": [],
+    "actions": []
+  },
+  {
+    "stage": "identify",
+    "text": "Selected: 1 inch PVC Heavy Pipe Local · 1 piece.\n0.75 inch pipe: Which kind of pipe do you mean: rigid PVC, a flexible hose, or a pump delivery/suction pipe?",
+    "cards": [
+      {
+        "kind": "instruction",
+        "caption": "0.75 inch pipe: Which kind of pipe do you mean: rigid PVC, a flexible hose, or a pump delivery/suction pipe?",
+        "title": "0.75 inch pipe",
+        "lines": [
+          "1 piece",
+          "0.75 inch",
+          "Your requested quantity and size are kept. No catalog product is selected yet."
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "label": "Rigid PVC",
+        "type": "choose_pipe_type",
+        "pipeType": "pvc"
+      },
+      {
+        "label": "Flexible hose",
+        "type": "choose_pipe_type",
+        "pipeType": "hose"
+      },
+      {
+        "label": "Pump pipe",
+        "type": "choose_pipe_type",
+        "pipeType": "pump"
+      }
+    ]
+  },
+  {
+    "stage": "products",
+    "text": "Products 1–5 / 5\nSwipe to check every photo.\nConfirm these products to review the bill. Nothing is sent yet.",
+    "cards": [
+      {
+        "kind": "product",
+        "caption": "1. 1 inch PVC Heavy Pipe Local\nLocal Heavy\n1 piece\n₹245.00 / 1 piece\nAvailable: 120 pieces recorded",
+        "sku": "H01",
+        "name": "1 inch PVC Heavy Pipe Local"
+      },
+      {
+        "kind": "product",
+        "caption": "2. 0.75 inch PVC Pipe Local\n1 piece\n₹180.00 / 1 piece\nAvailable: 90 pieces recorded",
+        "sku": "H03",
+        "name": "0.75 inch PVC Pipe Local"
+      },
+      {
+        "kind": "product",
+        "caption": "3. Wall scraper 4 inch\n1 piece\n₹65.00 / 1 piece\nAvailable: 8 pieces recorded",
+        "sku": "COUNTER-SCRAPER-4",
+        "name": "Wall scraper 4 inch"
+      },
+      {
+        "kind": "product",
+        "caption": "4. Ratchet PVC Pipe Cutter 42 mm\nGeneric\n0-42 mm\n1 piece\n₹350.00 / 1 piece\nAvailable: 35 pieces recorded",
+        "sku": "H19",
+        "name": "Ratchet PVC Pipe Cutter 42mm"
+      },
+      {
+        "kind": "product",
+        "caption": "5. White paint 10 litre\n1 can\n₹1,200.00 / 1 can\nAvailable: 4 cans recorded",
+        "sku": "PAINT10",
+        "name": "White paint 10 litre"
+      },
+      {
+        "kind": "instruction",
+        "caption": "Check all photos",
+        "title": "Check the products",
+        "lines": [
+          "Check each item. Tell me any changes by text or voice.",
+          "Review the estimated bill before sending your order."
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "label": "Change this",
+        "type": "edit_item"
+      },
+      {
+        "label": "Talk to shop",
+        "type": "shopping_action",
+        "action": "handoff"
+      },
+      {
+        "label": "Change this",
+        "type": "edit_item"
+      },
+      {
+        "label": "Talk to shop",
+        "type": "shopping_action",
+        "action": "handoff"
+      },
+      {
+        "label": "Change this",
+        "type": "edit_item"
+      },
+      {
+        "label": "Talk to shop",
+        "type": "shopping_action",
+        "action": "handoff"
+      },
+      {
+        "label": "Change this",
+        "type": "edit_item"
+      },
+      {
+        "label": "Talk to shop",
+        "type": "shopping_action",
+        "action": "handoff"
+      },
+      {
+        "label": "Change this",
+        "type": "edit_item"
+      },
+      {
+        "label": "Talk to shop",
+        "type": "shopping_action",
+        "action": "handoff"
+      },
+      {
+        "label": "Review bill",
+        "type": "confirm_products"
+      },
+      {
+        "label": "Talk to shop",
+        "type": "shopping_action",
+        "action": "handoff"
+      }
+    ]
+  },
+  {
+    "stage": "bill",
+    "text": "Check sizes and counts. Say “send it to the store” by text or voice, or use the button.",
+    "cards": [
+      {
+        "kind": "bill",
+        "caption": "Bill 1 / 2",
+        "title": "Estimated bill",
+        "lines": [
+          "Page 1 / 2",
+          "Shop price may change"
+        ],
+        "billRows": [
+          {
+            "name": "1 inch PVC Heavy Pipe Local",
+            "count": "1 piece",
+            "total": "₹245.00",
+            "packSize": "1 inch",
+            "unitPrice": "₹245.00"
+          },
+          {
+            "name": "0.75 inch PVC Pipe Local",
+            "count": "1 piece",
+            "total": "₹180.00",
+            "packSize": "0.75 inch",
+            "unitPrice": "₹180.00"
+          },
+          {
+            "name": "Wall scraper 4 inch",
+            "count": "1 piece",
+            "total": "₹65.00",
+            "packSize": "4 inch",
+            "unitPrice": "₹65.00"
+          }
+        ]
+      },
+      {
+        "kind": "bill",
+        "caption": "Bill 2 / 2",
+        "title": "Estimated bill",
+        "lines": [
+          "Page 2 / 2",
+          "Shop price may change"
+        ],
+        "billRows": [
+          {
+            "name": "Ratchet PVC Pipe Cutter 42 mm",
+            "count": "1 piece",
+            "total": "₹350.00",
+            "packSize": "0-42 mm",
+            "unitPrice": "₹350.00"
+          },
+          {
+            "name": "White paint 10 litre",
+            "count": "1 can",
+            "total": "₹1,200.00",
+            "packSize": "10 litre",
+            "unitPrice": "₹1,200.00"
+          }
+        ],
+        "total": "Estimated total: ₹2,040.00"
+      }
+    ],
+    "actions": [
+      {
+        "label": "Change items",
+        "type": "shopping_action",
+        "action": "edit_list"
+      },
+      {
+        "label": "Talk to shop",
+        "type": "shopping_action",
+        "action": "handoff"
+      },
+      {
+        "label": "Send to shop",
+        "type": "confirm"
+      },
+      {
+        "label": "Change items",
+        "type": "shopping_action",
+        "action": "edit_list"
+      }
+    ]
+  }
+]

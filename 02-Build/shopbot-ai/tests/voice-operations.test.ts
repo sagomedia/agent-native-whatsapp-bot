@@ -25,8 +25,8 @@ async function send(i:SimulatorService,r:ConversationRuntime,e:SimulatorEvent){a
 const text=(i:SimulatorService,r:ConversationRuntime,value:string)=>send(i,r,{id:randomUUID(),type:'text',text:value});
 async function audio(i:SimulatorService,r:ConversationRuntime){const id=randomUUID(),pcm=Buffer.alloc(32000);for(let n=0;n<16000;n++)pcm.writeInt16LE(Math.round(Math.sin(n*.17)*1500),n*2);await i.ingest({id,type:'voice',mediaId:id},await normalizeVoice({id,mimeType:'audio/wav',data:pcmWav(pcm).toString('base64')}));await r.processNext(i.context);return i.snapshot();}
 const last=(s:Snapshot)=>s.messages.at(-1)!.rich!;
-const cards=(s:Snapshot)=>last(s).parts!.flatMap(p=>p.cards);
-const actions=(s:Snapshot)=>cards(s).flatMap(c=>c.buttons??[]);
+const cards=(s:Snapshot)=>last(s).parts?.flatMap(p=>p.cards)??[];
+const actions=(s:Snapshot)=>[...(last(s).buttons??[]),...cards(s).flatMap(c=>c.buttons??[])];
 
 test('the actual pipe diameter filter retrieves size-stored pipes and excludes other diameters',()=>fixture(async(pool,i)=>{
  const c=await pool.connect();try{const d=await discoverProducts(c,i.context,'1 inch PVC pipe',{familyId:'pvc-pipes',keywords:['pvc pipe','water pipe'],specifications:{diameter:'1 inch'}});assert.ok(d.products.some(p=>p.sku==='H01'));assert.ok(d.products.some(p=>p.sku==='H02'));assert.ok(!d.products.some(p=>p.sku==='H03'));assert.equal(d.noExactMatch,false);}finally{c.release();}
@@ -46,12 +46,12 @@ for(const language of ['ta','en'] as const)test(`${language} uses one instructio
 
 test('price lookup during product review answers from stock and price without changing the list',()=>fixture(async(pool,i)=>{
  const r=new ConversationRuntime(pool,provider(input=>input.text==='இதன் விலை என்ன?'?{operations:[],next:'price',priceQuery:'H13',priceQuantity:1,clarifyQuestion:'எந்தப் பொருள் வேணும்?'}:hosePlan()),{visualOrdering:true});
- let s=await text(i,r,'one hose');const before=structuredClone(s.conversation);s=await text(i,r,'இதன் விலை என்ன?');assert.deepEqual(s.conversation,before);assert.match(last(s).text,/450/);assert.match(cards(s)[0].caption,/30/);assert.ok(!last(s).text.includes('எந்தப் பொருள் வேணும்'));
+ let s=await text(i,r,'one hose');const before=structuredClone(s.conversation);s=await text(i,r,'இதன் விலை என்ன?');assert.deepEqual(s.conversation,before);assert.match(last(s).text,/450/);assert.match(last(s).text,/30/);assert.equal(last(s).readOnly,true);assert.equal(cards(s).length,0);assert.ok(!last(s).text.includes('எந்தப் பொருள் வேணும்'));
 }));
 
 for(const phrase of ['send my list to the store','send it to the shop','ஓகே ஆர்டரை பிளேஸ் பண்ணிடலாம்'])test(`spoken finish command: ${phrase}`,()=>fixture(async(pool,i)=>{
  const r=new ConversationRuntime(pool,provider(input=>{if(input.state.draft.length)throw Error('finish must use recognized command, not a generated plan');return hosePlan();},()=>phrase),{visualOrdering:true});
- let s=await text(i,r,'one hose');s=await audio(i,r);assert.equal(s.requests.length,1);assert.equal(last(s).stage,'submitted');assert.equal(s.requests[0].totalPaise,45000);
+ let s=await text(i,r,'one hose');s=await audio(i,r);assert.equal(s.requests.length,0);assert.equal(last(s).stage,'bill');s=await audio(i,r);assert.equal(s.requests.length,1);assert.equal(last(s).stage,'submitted');assert.equal(s.requests[0].totalPaise,45000);
  const receipts=(await pool.query('SELECT tool_name FROM tool_receipts WHERE conversation_id=$1',[i.context.conversationId])).rows.map(x=>x.tool_name);assert.ok(receipts.includes('confirm_product_choices'));assert.ok(receipts.includes('submit_order_request'));
  s=await audio(i,r);assert.equal(s.requests.length,1);
 }));
@@ -60,13 +60,13 @@ test('spoken product approval followed by spoken submission needs no button',()=
  let phrase='all correct';const r=new ConversationRuntime(pool,provider(hosePlan,()=>phrase),{visualOrdering:true});let s=await text(i,r,'one hose');s=await audio(i,r);assert.equal(last(s).stage,'bill');assert.equal(s.requests.length,0);phrase='send it to the store';s=await audio(i,r);assert.equal(s.requests.length,1);
 }));
 
-test('text finish directly submits the current fully identified review',()=>fixture(async(pool,i)=>{
- const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});await text(i,r,'one hose');const s=await text(i,r,'send my order to the store');assert.equal(s.requests.length,1);assert.equal(last(s).stage,'submitted');
+test('text finish opens the bill, then a second command submits the reviewed order',()=>fixture(async(pool,i)=>{
+ const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});await text(i,r,'one hose');let s=await text(i,r,'send my order to the store');assert.equal(s.requests.length,0);assert.equal(last(s).stage,'bill');s=await text(i,r,'send my order to the store');assert.equal(s.requests.length,1);assert.equal(last(s).stage,'submitted');
 }));
 
-test('unknown price can send the list for store checking while positive stock stays visible',()=>fixture(async(pool,i)=>{
+test('unknown price blocks sending; explicit shop help retains the list and known stock',()=>fixture(async(pool,i)=>{
  await pool.query("UPDATE products SET price_status='confirm',price_paise=0 WHERE store_id=$1 AND sku='H13'",[demoCatalogStore]);const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});let s=await text(i,r,'one hose');const draft=structuredClone(s.conversation.draft);assert.match(cards(s)[0].caption,/30/);assert.ok(!cards(s)[0].caption.includes('₹0'));
- s=await text(i,r,'send my list to the store');assert.deepEqual(s.conversation.draft,draft);assert.equal(s.requests.length,0);assert.equal(s.conversation.handoffRequested,true);assert.equal(last(s).handoffRequested,true);
+ s=await text(i,r,'send my list to the store');assert.deepEqual(s.conversation.draft,draft);assert.equal(s.requests.length,0);assert.equal(s.conversation.handoffRequested,false);assert.equal((await pool.query('SELECT operator_mode FROM conversations WHERE id=$1',[i.context.conversationId])).rows[0].operator_mode,'assistant');s=await text(i,r,'talk to shop');assert.deepEqual(s.conversation.draft,draft);assert.equal(s.requests.length,0);assert.equal(s.conversation.handoffRequested,true);assert.equal(last(s).handoffRequested,true);
  const c=(await pool.query('SELECT operator_mode,handoff_requested FROM conversations WHERE id=$1',[i.context.conversationId])).rows[0];assert.equal(c.operator_mode,'owner');assert.equal(c.handoff_requested,true);assert.ok((await pool.query("SELECT 1 FROM tool_receipts WHERE conversation_id=$1 AND tool_name='request_store_assistance'",[i.context.conversationId])).rowCount);
 }));
 
@@ -94,9 +94,9 @@ test('estimates read the current owner price, rather than the old product snapsh
  const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});let s=await text(i,r,'one hose');const before=structuredClone(s.conversation);await pool.query("UPDATE products SET price_paise=50000,version=version+1 WHERE store_id=$1 AND sku='H13'",[demoCatalogStore]);s=await text(i,r,'bill');assert.deepEqual(s.conversation,before);assert.match(last(s).text,/500/);assert.equal(s.requests.length,0);
 }));
 
-test('the finish button submits the current list and a quote does not block an explicit spoken send',()=>fixture(async(pool,i)=>{
- const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});let s=await text(i,r,'one hose');const button=actions(s).find(b=>b.event.type==='shopping_action'&&b.event.action==='finish_order');assert.ok(button);s=await send(i,r,button.event);assert.equal(s.requests.length,1);
+test('product approval opens the bill and only its confirm button submits',()=>fixture(async(pool,i)=>{
+ const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});let s=await text(i,r,'one hose');assert.ok(!actions(s).some(b=>b.event.type==='shopping_action'&&b.event.action==='finish_order'));const approve=actions(s).find(b=>b.event.type==='confirm_products');assert.ok(approve);s=await send(i,r,approve.event);assert.equal(s.requests.length,0);assert.equal(last(s).stage,'bill');const confirm=actions(s).find(b=>b.event.type==='confirm');assert.ok(confirm);s=await send(i,r,confirm.event);assert.equal(s.requests.length,1);
 }));
-test('a read-only quote followed by explicit speech sends the unchanged list',()=>fixture(async(pool,i)=>{
- const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});await text(i,r,'one hose');let s=await text(i,r,'H13 விலை என்ன');assert.equal(s.requests.length,0);s=await audio(i,r);assert.equal(s.requests.length,1);
+test('a read-only quote preserves product review; spoken consent first opens the bill',()=>fixture(async(pool,i)=>{
+ const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});const before=(await text(i,r,'one hose')).conversation;let s=await text(i,r,'H13 விலை என்ன');assert.equal(s.requests.length,0);assert.deepEqual(s.conversation,before);s=await audio(i,r);assert.equal(s.requests.length,0);assert.equal(last(s).stage,'bill');s=await audio(i,r);assert.equal(s.requests.length,1);
 }));

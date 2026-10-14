@@ -1,0 +1,32 @@
+Excerpt from integration.log; original test numbers are preserved.
+
+# Subtest: a 25-second audio reply succeeds with a 45-second call and a 135-second lease
+ok 164 - a 25-second audio reply succeeds with a 45-second call and a 135-second lease
+  ---
+  duration_ms: 910.844319
+  type: 'test'
+  ...
+# Subtest: an audio timeout keeps its unknown paid reservation and makes no shopping changes
+ok 165 - an audio timeout keeps its unknown paid reservation and makes no shopping changes
+  ---
+  duration_ms: 698.788179
+  type: 'test'
+  ...
+# Subtest: three inference stages share one deadline and cannot apply a late result
+ok 166 - three inference stages share one deadline and cannot apply a late result
+  ---
+  duration_ms: 893.497169
+  type: 'test'
+  ...
+# Subtest: a worker with an expired lease cannot save shopping effects or a reply
+ok 167 - a worker with an expired lease cannot save shopping effects or a reply
+  ---
+  duration_ms: 633.955296
+  type: 'test'
+  ...
+# Subtest: Google audio requests use a 44-second SDK timeout and one transport attempt
+ok 168 - Google audio requests use a 44-second SDK timeout and one transport attempt
+  ---
+  duration_ms: 682.639056
+  type: 'test'
+  ...

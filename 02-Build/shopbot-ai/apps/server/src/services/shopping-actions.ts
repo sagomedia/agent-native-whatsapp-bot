@@ -8,7 +8,7 @@ import {productConfirmed} from './product-verification.js';
 export function shoppingActions(reply:RichReply,state:ConversationState,map?:CatalogMap):RichReply {
   const id=()=>randomUUID();
   const flow=(action:Parameters<typeof shoppingButton>[1],en:string,ta:string,latin:string)=>shoppingButton(state,action,say(state,en,ta,latin));
-  if(reply.handoffRequested||state.handoffRequested)return reply;
+  if(reply.readOnly||reply.handoffRequested||state.handoffRequested)return reply;
   if(state.lastRequestId&&!reply.cards?.length)return reply.buttons?.length?reply:{...reply,buttons:[flow('status','Request status','கோரிக்கை நிலை','Request status'),flow('new_list','New list','புதிய பட்டியல்','Pudhu list'),flow('handoff','Talk to shop','கடையிடம் பேசு','Kadaiyila pesu')]};
   if(reply.kind==='order_review')return {...reply,presentation:'text',buttons:[...(reply.buttons??[]).slice(0,1),flow('edit_list','Edit list','பட்டியலை மாற்று','List maathu'),flow('keep_list','Keep for later','பிறகு தொடரலாம்','Piragu thodarlaam')]};
   if(state.editingLineId)return reply;

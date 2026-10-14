@@ -1,29 +1,23 @@
 import {say,lineName,unitName,facetLabel,localName,safeQuestion} from '../../../../packages/contracts/language.js';
-import {createHash,randomUUID} from 'node:crypto';
+import {randomUUID} from 'node:crypto';
 import type {ConversationState,DraftLine,Product,ProductCheck,ProductCard,RichReply} from '../../../../packages/contracts/index.js';
-export function productIdentity(product:Product) {
-  return createHash('sha256').update(JSON.stringify([product.sku,product.version,product.name,product.unit,product.localNames??null,product.imageUrl??null,product.brand??null,product.familyId??null,product.specifications??null])).digest('hex');
-}
-export function productConfirmed(line:DraftLine,product=line.candidates?.find(p=>p.sku===line.sku)) {
-  return !!product&&line.productConfirmation?.sku===product.sku&&line.productConfirmation.version===product.version&&line.productConfirmation.identityHash===productIdentity(product);
-}
-export function preserveConfirmation(old:DraftLine,next:DraftLine) {
-  const product=next.candidates?.find(p=>p.sku===next.sku);
-  if(product&&productConfirmed(old,product))next.productConfirmation=old.productConfirmation;
-  return next;
-}
-export function markProductConfirmed(line:DraftLine,product:Product) {
-  line.productConfirmation={sku:product.sku,version:product.version,identityHash:productIdentity(product)};
-}
+import {productConfirmed} from './product-confirmation.js';
+export {productIdentity,productConfirmed,preserveConfirmation,markProductConfirmed} from './product-confirmation.js';
+import {canQuoteDraft,nextCounterLine,productCheckCoversDraft} from './counter-state.js';
 import {productListHash} from './visual-ordering.js';
 export function makeProductCheck(state:ConversationState,sequential=false):ProductCheck|null {
   if(state.visualOrdering){
     const hash=productListHash(state);
     if(state.productReview?.hash===hash)return null;
-    const uncertain=state.draft.find(l=>!l.shopCheckDeferred&&(l.productIntent?.kind==='ambiguous'||!l.sku&&l.candidates?.length));
-    if(!uncertain&&state.draft.some(l=>!l.shopCheckDeferred&&l.sku&&productConfirmed(l)&&['needs_quantity','needs_unit'].includes(l.resolution)))return null;
+    const active=nextCounterLine(state);
+    if(active?.sku&&productConfirmed(active)&&['needs_quantity','needs_unit'].includes(active.resolution))return null;
+    // Exact matches can be approved together after variant choices. A line
+    // already awaiting a quantity above must still keep its focused question.
+    const uncertain=state.draft.find(line=>!line.shopCheckDeferred&&(line.productIntent?.kind==='ambiguous'||!line.sku&&line.candidates?.length));
     const groups=state.draft.flatMap(line=>{const products=line.sku?line.candidates?.filter(p=>p.sku===line.sku)??[]:line.id===uncertain?.id?line.candidates?.slice(0,3)??[]:[];return products.length||line.productIntent?.kind==='ambiguous'?[{lineId:line.id,products,discovery:line.discovery}]:[];});
-    return {kind:'products',id:randomUUID(),version:state.version,expiresAt:new Date(Date.now()+15*60*1000).toISOString(),groups,remaining:state.draft.filter(l=>!l.sku).length,completeReview:groups.length===state.draft.length&&groups.every(g=>g.products.length===1)&&state.draft.every(l=>l.sku&&l.resolution!=='unavailable')?true:undefined,listHash:hash};
+    const check:ProductCheck={kind:'products',id:randomUUID(),version:state.version,expiresAt:new Date(Date.now()+15*60*1000).toISOString(),groups,remaining:state.draft.filter(l=>!l.sku).length,listHash:hash};
+    if(productCheckCoversDraft(state,check)&&canQuoteDraft(state))check.completeReview=true;
+    return check;
   }
   const unfinished=state.draft.filter(l=>l.resolution!=='matched'||!productConfirmed(l));
   const bulk=!state.draft.some(l=>productConfirmed(l))&&unfinished.every(l=>l.resolution==='matched'&&!!l.sku&&!!l.quantity&&!l.discovery?.noExactMatch);

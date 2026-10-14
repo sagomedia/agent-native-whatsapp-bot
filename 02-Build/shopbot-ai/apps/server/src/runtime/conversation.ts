@@ -3,6 +3,8 @@ import {validateCurrentTurn,submissionIntent,namedRemovalsExplicit} from '../ser
 import {bindExplicitCorrection} from '../services/shopping-corrections.js';
 import {validateProductMeaningEvidence} from '../services/product-meaning.js';
 import {reviewDeliveryReady} from '../services/review-delivery.js';
+import {inferenceTiming,providerCallTimeout,processingLeaseSeconds} from '../services/inference-timing.js';
+import {productCheckCoversDraft} from '../services/counter-state.js';
 import {visualReply,returningReply,cartProgress} from '../services/visual-ordering.js';
 import {materializeVisualReply} from '../services/visual-images.js';
 import {protectQuantityEvidence,explicitPurchaseCount} from '../services/quantity-evidence.js';
@@ -12,7 +14,7 @@ import {phrasingLanguage} from '../../../../packages/contracts/language.js';
 import {normalizeAmountEdits} from '../services/amount-edits.js';
 import {shoppingActions} from '../services/shopping-actions.js';
 import {handleShoppingAction,shoppingButton} from '../services/shopping-flow.js';
-import {say,canonicalShortcut,languageRequest,languageAcknowledgement,customerError,safeQuestion,unitName,draftIssueText,requestedAmountText,lineName} from '../../../../packages/contracts/language.js';
+import {say,canonicalShortcut,languageRequest,languageAcknowledgement,customerError,safeQuestion,unitName,draftIssueText,requestedAmountText,lineName,productName,productPriceText,productStockText} from '../../../../packages/contracts/language.js';
 import {formatMoney,lineTotal} from '../../../../packages/contracts/money.js';
 import {loadImage} from '../services/image-media.js';
 import {loadVoice} from '../services/voice-media.js';
@@ -36,7 +38,7 @@ function quantityAnswer(state:ConversationState,lineId:string,amount:{quantity:n
  if(line?.sku&&(!amount.unit||!line.unit||sameUnit(amount.unit,line.unit)))return line.resolution==='needs_unit'&&!line.requestedAmount?{kind:'resolve_line',lineId,quantity:amount.quantity,requestedUnit:amount.unit}:{kind:'set_quantity',reference:lineId,quantity:amount.quantity,supportingPhrase:text.slice(0,200)};
  return {kind:'resolve_line',lineId,quantity:amount.quantity,...(amount.unit?{requestedUnit:amount.unit}:{})};
 }
-type Claimed = { id:string; token:string; event:SimulatorEvent; bindingId:string|null; state:ConversationState; catalog:Product[];catalogMap?:import('../../../../packages/contracts/index.js').CatalogMap;memory:AssistantMemory|null;displayedActions:SimulatorEvent[];displayedProducts:{event:SimulatorEvent;product:Product}[] };
+type Claimed = { deadlineAt:number; id:string; token:string; event:SimulatorEvent; bindingId:string|null; state:ConversationState; catalog:Product[];catalogMap?:import('../../../../packages/contracts/index.js').CatalogMap;memory:AssistantMemory|null;displayedActions:SimulatorEvent[];displayedProducts:{event:SimulatorEvent;product:Product}[] };
 class DeferredRecommendation extends Error {}
 // A repeated generic noun is not evidence that a previous brand or size was
 // withdrawn. Keep the more specific request unless the customer changes it.
@@ -101,12 +103,12 @@ export class ConversationRuntime {
       if(row.rows[0]&&(await client.query("SELECT not_before>now() OR EXISTS(SELECT 1 FROM whatsapp_media WHERE message_id=$1 AND state IN ('pending','fetching')) AS waiting FROM messages WHERE id=$1",[row.rows[0].id])).rows[0].waiting)return null;
       if(!row.rows[0]) return null;
       const token=randomUUID(),m=row.rows[0];
-      await client.query("UPDATE messages SET status='processing',claim_token=$1,lease_until=now()+$3*interval '1 second' WHERE id=$2",[token,m.id,this.options.visualOrdering?90:m.payload?.type==='voice'?45:30]);
+      await client.query("UPDATE messages SET status='processing',claim_token=$1,lease_until=now()+$3*interval '1 second' WHERE id=$2",[token,m.id,processingLeaseSeconds()]);
       if(this.options.visualOrdering!==undefined)await client.query('UPDATE conversations SET visual_ordering=$2 WHERE id=$1',[ctx.conversationId,this.options.visualOrdering]);
       const shown=(await client.query("SELECT payload FROM messages WHERE conversation_id=$1 AND direction='outbound' ORDER BY sequence DESC LIMIT 20",[ctx.conversationId])).rows;
       const displayedProducts=shown.flatMap(r=>[...(r.payload?.parts??[]).flatMap((p:any)=>p.cards.flatMap((c:any)=>c.kind==='product'?(c.buttons??[]).map((b:any)=>({event:b.event,product:c.product})):[])),...(r.payload?.cards??[]).flatMap((c:any)=>c.action&&c.product?[{event:c.action,product:c.product}]:[])]);
       const displayedActions=shown.flatMap(r=>[...(r.payload?.parts??[]).flatMap((p:any)=>[...(p.buttons??[]).map((b:any)=>b.event),...(p.cards??[]).flatMap((c:any)=>(c.buttons??[]).map((b:any)=>b.event))]),...(r.payload?.cards??[]).flatMap((c:any)=>c.action?[c.action]:[]),...(r.payload?.buttons??[]).map((b:any)=>b.event)]);
-      return {id:m.id,token,event:m.payload,bindingId:m.binding_id,state:await loadState(client,ctx),catalog:await catalogEnabled(client,ctx)?await catalogContext(client,ctx):await getProducts(client,ctx),catalogMap:await catalogEnabled(client,ctx)?await getCatalogMap(client,ctx):undefined,memory:await loadAssistantMemory(client,ctx),displayedActions,displayedProducts} as Claimed;
+      return {deadlineAt:Date.now()+inferenceTiming.turnMs,id:m.id,token,event:m.payload,bindingId:m.binding_id,state:await loadState(client,ctx),catalog:await catalogEnabled(client,ctx)?await catalogContext(client,ctx):await getProducts(client,ctx),catalogMap:await catalogEnabled(client,ctx)?await getCatalogMap(client,ctx):undefined,memory:await loadAssistantMemory(client,ctx),displayedActions,displayedProducts} as Claimed;
     });
     if(!claimed) return false;
     let requestedLanguage=claimed.event.type==='change_language'?claimed.event.language:claimed.event.type==='text'?languageRequest(claimed.event.text):undefined;
@@ -198,8 +200,9 @@ export class ConversationRuntime {
         await client.query("UPDATE messages SET status='pending',claim_token=NULL,lease_until=NULL WHERE id=$1 AND claim_token=$2",[claimed.id,claimed.token]);
         return;
       }
-      const held=await client.query("SELECT id FROM messages WHERE id=$1 AND conversation_id=$2 AND status='processing' AND claim_token=$3",[claimed.id,ctx.conversationId,claimed.token]);
+      const held=await client.query("SELECT id FROM messages WHERE id=$1 AND conversation_id=$2 AND status='processing' AND claim_token=$3 AND lease_until>now()",[claimed.id,ctx.conversationId,claimed.token]);
       if(!held.rowCount) return; // Another worker acquired the expired lease; old result is discarded.
+      if(Date.now()>=claimed.deadlineAt){failure='The turn deadline was reached. Your list is retained.';failureReason='turn_deadline';}
       const current=await loadState(client,ctx);
       const inferred=claimed.state.visualOrdering&&claimed.event.type==='text'?phrasingLanguage(claimed.event.text):undefined;
       if(inferred&&!requestedLanguage&&!current.languageExplicit){current.replyLanguage=inferred;await client.query('UPDATE conversations SET reply_language=$1 WHERE id=$2',[inferred,ctx.conversationId]);}
@@ -309,11 +312,9 @@ export class ConversationRuntime {
           } else if(deterministic) {
             result=await invoke(deterministic);
             if(deterministic.name==='confirm_product_choices'||deterministic.name==='apply_draft_changes'&&(current.requireProductConfirmation||claimed.event.type==='select_candidate'||claimed.event.type==='choose_product'||(claimed.event.type==='text'&&claimed.state.pending?.kind==='question'))) result=await invoke({name:'preview_order',args:{expectedVersion:result.state!.version}});
-            if(explicitSend&&deterministic.name==='confirm_product_choices'){
-              const reviewed=result.state!;
-              if(reviewed.pending?.kind==='review')result=await invoke({name:'submit_order_request',args:{reviewId:reviewed.pending.id}});
-              else if(reviewed.pending?.kind==='question')result=await invoke({name:'request_store_assistance',args:{expectedVersion:reviewed.version}});
-            }
+            // Product identity approval presents the bill. Submission requires
+            // another explicit consent bound to that current bill.
+
           }
           else if(interpretation) {
             if(interpretation.next==='price') result=await invoke({name:'search_products',args:{query:interpretation.priceQuery!,quantity:interpretation.priceQuantity,requestedUnit:interpretation.priceUnit}});
@@ -366,8 +367,13 @@ export class ConversationRuntime {
           }
           if((interpretation?.next==='price'||deterministic?.name==='search_products')&&result.products?.length===1){
             const p=result.products[0],q=result.quote;
-            rich.contextLines=[q?say(current,`Estimate: ${q.quantity} ${q.unit} = ${formatMoney(q.totalPaise)}.`,`${q.quantity} ${unitName(q.unit,current,q.quantity)}: ${formatMoney(q.totalPaise)}.`,`${q.quantity} ${q.unit}: ${formatMoney(q.totalPaise)}.`):say(current,`${p.name}: ${formatMoney(p.pricePaise)} per ${p.unit}. The shop must confirm the requested amount and price.`,`${formatMoney(p.pricePaise)} / ${unitName(p.unit,current)}. கேட்ட அளவுக்கான விலையை கடை உறுதி செய்யணும்.`,`${formatMoney(p.pricePaise)} / ${p.unit}. Ketta alavukkaana vilayai kadai confirm pannanum.`)];
-            if(p.priceStatus==='confirm')rich.contextLines=[say(current,'The shop must confirm this product price.','இந்தப் பொருளின் விலையை கடை உறுதி செய்யணும்.','Intha porulin vilayai kadai confirm pannanum.')];
+            const price=q?rich.text:`${productName(p,current)} — ${productPriceText(p,current)} | ${productStockText(p,current)}`;
+            const requested=deterministic?.name==='search_products'?deterministic.args.quantity:interpretation?.priceQuantity;
+            // Keep a conversion warning only for a requested amount that
+            // cannot be quoted. A plain unit-price inquiry is independent of
+            // the draft's pending product or quantity question.
+            const text=!q&&requested!==undefined?rich.text:price;
+            rich=current.visualOrdering?{...plainReply(text),readOnly:true}:{...rich,readOnly:true};
           }
           if(result.state&&interpretation?.operations.some(op=>op.kind==='set_amount'||op.kind==='increment_amount')){
             const edited=interpretation.operations.filter(op=>op.kind==='set_amount'||op.kind==='increment_amount').map(op=>result.state!.draft.find(l=>l.id===op.reference)).filter((l):l is import('../../../../packages/contracts/index.js').DraftLine=>!!l);
@@ -398,15 +404,16 @@ export class ConversationRuntime {
       if(!failure&&!deterministic&&interpretation?.clarifyQuestion&&!interpretation.operations.length&&rich.stage!=='identify'&&rich.kind!=='product_choices'){const q=safeQuestion(interpretation.clarifyQuestion,finalState,interpretation.transcript??(claimed.event.type==='text'?claimed.event.text:''));if(q)rich={...plainReply(q),stage:'identify',clarificationReason:'intent_clarification'};}
       if(interpretation?.understanding?.inputKind==='handwritten_list'){rich={...rich,contextLines:[say(finalState,'I read your list. Please check every item, including lines marked for shop checking.','உங்கள் பட்டியலைப் படித்தேன். கடை சரிபார்க்க வேண்டிய வரிகள் உட்பட எல்லாப் பொருட்களையும் சரிபாருங்கள்.','Unga list-ai padithen. Kadai check panna vendiya varigal utpada ella porutkalaiyum check pannunga.'),...rich.contextLines??[]]};}
       if(finalState.visualOrdering&&interpretation?.shopQuestions?.length)rich.contextLines=[shopAnswers(finalState,interpretation.shopQuestions),...rich.contextLines??[]];
+      if(!failure&&!interpretation?.operations.length&&(interpretation?.next==='price'||deterministic?.name==='search_products'||deterministic?.name==='discover_products'))rich.readOnly=true;
       const unclearTarget=!failure&&interpretation?.understanding?.unresolved.includes('cart_target')&&!finalState.lastRequestId;
-      if(finalState.visualOrdering&&!failure&&!rich.handoffRequested&&!finalState.lastRequestId&&!clearConfirmation){
+      if(finalState.visualOrdering&&!failure&&!rich.readOnly&&!rich.handoffRequested&&!finalState.lastRequestId&&!clearConfirmation){
         const selected=claimed.event.type==='select_product'?finalState.draft.find(l=>l.id===(claimed.event as Extract<SimulatorEvent,{type:'select_product'}>).lineId):undefined;
         if(selected)rich.contextLines=[say(finalState,`Selected: ${lineName(selected,finalState)}${selected.quantity!==null?` · ${selected.quantity} ${unitName(selected.unit??'unit',finalState,selected.quantity)}`:''}.`,`${lineName(selected,finalState)} தேர்வு செய்யப்பட்டது${selected.quantity!==null?` · ${selected.quantity} ${unitName(selected.unit??'unit',finalState,selected.quantity)}`:''}.`,`${lineName(selected,finalState)} choose panniyachu${selected.quantity!==null?` · ${selected.quantity} ${unitName(selected.unit??'unit',finalState,selected.quantity)}`:''}.`),...rich.contextLines??[]];
         const newBulkList=!claimed.state.draft.length&&finalState.draft.length>1&&interpretation?.operations.some(op=>op.kind==='add_item');
         if(newBulkList){
-          const rows=finalState.draft.map(line=>`${lineName(line,finalState)}${!line.sku&&line.productMeasures?.length?' ('+line.productMeasures.map(m=>`${m.value} ${unitName(m.unit,finalState)}`).join(' × ')+')':''} — ${line.quantity===null?say(finalState,'count needed','எண்ணிக்கை தேவை','Count venum'):line.quantity}`);
+          const rows=finalState.draft.map(line=>`${lineName(line,finalState)} — ${line.quantity===null?say(finalState,'count needed','எண்ணிக்கை தேவை','Count venum'):line.quantity}`);
           rich.contextLines=[say(finalState,`Noted all ${finalState.draft.length} requested items:\n${rows.join('\n')}`,`நீங்கள் சொன்ன ${finalState.draft.length} பொருட்களையும் குறித்துக்கொண்டேன்:\n${rows.join('\n')}`,`Neenga sonna ${finalState.draft.length} porutkalaiyum kurichchukkitten:\n${rows.join('\n')}`),...rich.contextLines??[]];
-        }else if(!interpretation?.estimateRequested)rich.contextLines=[...rich.contextLines??[],...cartProgress(finalState)];
+        }
       }
       if(unclearTarget){
         // The current turn's identity question supersedes an unrelated old
@@ -456,7 +463,7 @@ export class ConversationRuntime {
     if(e.type==='select_product'||e.type==='confirm_products') {
       const pending=s.pending;
       if(pending?.kind!=='products'||pending.id!==e.batchId||pending.version!==s.version)throw new ToolError('That product check is no longer current. Review your list again.','stale_confirmation');
-      if(s.visualOrdering&&e.type==='confirm_products'&&!pending.completeReview)throw new ToolError('Some requested items still need checking.');
+      if(s.visualOrdering&&e.type==='confirm_products'&&!productCheckCoversDraft(s,pending))throw new ToolError('Some requested items still need checking.');
       if(e.type==='confirm_products'&&pending.groups.some(g=>g.products.length!==1&&!(s.catalogDiscovery&&s.draft.some(l=>l.id===g.lineId&&g.products.some(p=>p.sku===l.sku)))))throw new ToolError('Choose the correct option for each requested item first.');
       return {name:'confirm_product_choices',args:{batchId:e.batchId,choices:e.type==='select_product'?[{lineId:e.lineId,sku:e.sku}]:pending.groups.map(g=>({lineId:g.lineId,sku:s.catalogDiscovery?s.draft.find(l=>l.id===g.lineId)?.sku??g.products[0].sku:g.products[0].sku}))}};
     }
@@ -486,10 +493,10 @@ export class ConversationRuntime {
     if(text==='send it'&&s.visualOrdering&&!s.lastRequestId){
       if(s.pending?.kind==='products'){
         if(claim.bindingId!==s.pending.id&&!(claim.memory?.purpose==='quote'&&claim.memory.sourceVersion===s.version&&claim.bindingId===claim.memory.id)||s.pending.version!==s.version||Date.parse(s.pending.expiresAt)<=Date.now())throw new ToolError('Use the current product review before sending.','stale_confirmation');
-        if(!s.pending.completeReview)return {name:'request_store_assistance',args:{expectedVersion:s.version}};
+        if(!productCheckCoversDraft(s,s.pending))return {name:'preview_order',args:{expectedVersion:s.version}};
         return {name:'confirm_product_choices',args:{batchId:s.pending.id,choices:s.pending.groups.map(g=>({lineId:g.lineId,sku:s.draft.find(l=>l.id===g.lineId)?.sku??g.products[0].sku}))}};
       }
-      if(s.pending?.kind==='question'&&s.draft.length)return {name:'request_store_assistance',args:{expectedVersion:s.version}};
+      if(s.pending?.kind==='question'&&s.draft.length)return {name:'preview_order',args:{expectedVersion:s.version}};
       if(!s.pending&&s.draft.length)return {name:'preview_order',args:{expectedVersion:s.version}};
     }
     if(['bill','estimated bill','estimate','show bill','bill evvalavu','பில் எவ்வளவு','பில் காட்டு','உத்தேச பில்'].includes(text))return {name:'estimate_order',args:{expectedVersion:s.version}};
@@ -533,7 +540,7 @@ export class ConversationRuntime {
       const check=s.pending;
       const matching=check.groups.flatMap(g=>(g.discovery?.facets[0]?.values??[]).filter(v=>v.value.toLowerCase()===text||v.label.toLowerCase()===text||Object.values(v.localNames??{}).some(n=>n?.toLowerCase()===text)).map(v=>({group:g,value:v})));
       if(matching.length===1){if(claim.bindingId!==check.id)throw new ToolError('That answer was for an earlier category question.','stale_question');const m=matching[0],line=s.draft.find(l=>l.id===m.group.lineId)!;return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[{kind:'resolve_line',lineId:line.id,query:line.query??line.name,search:refinementPlan(m.group.discovery!,m.group.discovery!.facets[0].key,m.value.value)}]}};}
-      if(s.visualOrdering&&['yes','confirm','add these items','add these','add to my list'].includes(text)&&!check.completeReview)throw new ToolError('Some requested items still need checking.');
+      if(s.visualOrdering&&['yes','confirm','add these items','add these','add to my list'].includes(text)&&!productCheckCoversDraft(s,check))throw new ToolError('Some requested items still need checking.');
       if(['yes','confirm','add these','add these items','add this','add this item','add to my list','add to list','add to catalog','add these to my list','yes add these','yes add these items','yes add to my list','add into catalog','add into the catalog','add to the catalog'].includes(text)) {
         if(claim.bindingId!==check.id)throw new ToolError('That answer was for an earlier product check. Please use the current choices.','stale_question');
         if(check.groups.some(g=>g.products.length!==1&&!(s.catalogDiscovery&&s.draft.some(l=>l.id===g.lineId&&g.products.some(p=>p.sku===l.sku)))))throw new ToolError('Which option did you mean? Please choose the product for each item from the photos. Nothing has been sent to the shop.');
@@ -680,6 +687,7 @@ export class ConversationRuntime {
     input={...input,stage:stage==='repair'?'identify':stage};
     const provider=stage==='recognize'?(this.provider.recognitionProviderFor?.(input)??this.provider.recognitionProvider??this.provider):this.provider;
     if(provider.mode==='live'&&!(provider.freeQuota?this.options.allowFreeInference:this.options.allowPaidInference))throw new ToolError('This inference stage is not authorized.');
+    if(providerCallTimeout(input,claim.deadlineAt-Date.now())<=inferenceTiming.sdkMarginMs)throw new ToolError('The turn deadline was reached. Your list is retained.','turn_deadline');
     provider.validateInput?.(input);
     // A committed reservation precedes every potentially paid invocation.
     const reservation=await withConversation(this.pool,ctx,async client=>{
@@ -694,10 +702,13 @@ export class ConversationRuntime {
     if(reservation.cached) return interpretationSchema.parse(reservation.cached);
     let failureCode='provider_error';
     try {
-      const signal=AbortSignal.timeout(input.audio?20000:input.state.visualOrdering?45000:10000);
+      const timeoutMs=providerCallTimeout(input,claim.deadlineAt-Date.now());
+      if(timeoutMs<=inferenceTiming.sdkMarginMs){failureCode='turn_deadline';throw new ToolError('The turn deadline was reached. Your list is retained.','turn_deadline');}
+      const signal=AbortSignal.timeout(timeoutMs);
       const output=await Promise.race([provider.interpret(input,signal),new Promise<never>((_,reject)=>{signal.addEventListener('abort',()=>reject(new Error('Interpretation timed out; draft retained.')),{once:true});})]);
       failureCode='usage_validation';
       if(!await settleAttempt(this.pool,ctx,reservation.id!,output)) throw new ToolError('Provider usage exceeded the verified limits. No changes applied.');
+      if(Date.now()>=claim.deadlineAt){failureCode='turn_deadline';throw new ToolError('The turn deadline was reached. Your list is retained.','turn_deadline');}
       if(output.validationIssues?.length)await this.pool.query('UPDATE provider_attempts SET validation_issues=$1::jsonb WHERE id=$2 AND conversation_id=$3',[JSON.stringify(output.validationIssues.slice(0,6).map(i=>({path:i.path.slice(0,100),code:i.code.slice(0,40)}))),reservation.id,ctx.conversationId]);
       failureCode='truncated_or_model_mismatch';
       if(output.truncated) throw new ToolError('Interpretation was truncated. No partial list was applied.');

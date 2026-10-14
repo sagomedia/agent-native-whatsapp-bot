@@ -1,5 +1,5 @@
 import type {ConversationState,Product} from './index.js';
-import {normalizeFractionNumbers,spokenNumberValues} from './measurements.js';
+import {canonicalMeasurementUnit,measurementNumber,measurementNumberPattern,measurementUnitPattern,normalizeFractionNumbers,spokenNumberValues} from './measurements.js';
 import {formatMoney} from './money.js';
 
 export type ReplyLanguage='ta'|'ta-Latn'|'en';
@@ -11,7 +11,14 @@ export function languageOf(context:LanguageContext):ReplyLanguage {return typeof
 export function say(context:LanguageContext,en:string,ta:string,tanglish:string):string {const language=languageOf(context);return language==='ta'?ta:language==='ta-Latn'?tanglish:en;}
 export function localName(name:string,names:LocalNames|undefined,context:LanguageContext):string {return names?.[languageOf(context)]??name;}
 export function productName(product:Product,context:LanguageContext):string {return measurementText(localName(product.name,product.localNames,context),context);}
-export function lineName(line:ConversationState['draft'][number],context:LanguageContext):string {const product=line.candidates?.find(p=>p.sku===line.sku);return product?productName(product,context):line.query??line.name;}
+export function lineName(line:ConversationState['draft'][number],context:LanguageContext):string {
+ const product=line.candidates?.find(p=>p.sku===line.sku);
+ if(product)return productName(product,context);
+ const label=line.query??line.name;
+ const mentioned=[...normalizeFractionNumbers(label).matchAll(new RegExp('('+measurementNumberPattern+')\\s*('+measurementUnitPattern+')','giu'))];
+ const missing=(line.productMeasures??[]).filter(measure=>!mentioned.some(m=>measurementNumber(m[1])===measure.value&&canonicalMeasurementUnit(m[2])===canonicalMeasurementUnit(measure.unit)));
+ return measurementText([...missing.map(m=>`${m.value} ${m.unit}`),label].join(' '),context);
+}
 const units:Record<string,[string,string]>={inch:['இன்ச்','inch'],metre:['மீட்டர்','metre'],can:['டப்பா','dabba'],tin:['டப்பா','dabba'],bucket:['வாளி','vaali'],piece:['எண்ணம்','ennam'],box:['பெட்டி','petti'],bottle:['பாட்டில்','bottle'],roll:['ரோல்','roll'],pair:['ஜோடி','jodi'],pack:['பேக்','pack'],foot:['அடி','adi'],m:['மீட்டர்','metre'],mm:['மி.மீ.','mm'],cm:['செ.மீ.','cm'],kg:['கிலோ','kilo'],g:['கிராம்','gram'],litre:['லிட்டர்','litre'],unit:['எண்ணம்','ennam']};
 export function unitName(unit:string,context:LanguageContext,quantity=1):string {const translated=units[unit];if(languageOf(context)!=='en')return translated?say(context,unit,...translated):unit;return quantity===1?unit:({inch:'inches',metre:'metres',box:'boxes',foot:'feet',kg:'kg',g:'g',m:'m',mm:'mm',cm:'cm',litre:'litres'} as Record<string,string>)[unit]??unit+'s';}
 export function languageRequest(text:string):ReplyLanguage|undefined {

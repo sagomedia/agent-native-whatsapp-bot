@@ -54,7 +54,7 @@ Try a five-item request such as “I need three half-inch PVC elbows, two PTFE t
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for tool/runtime boundaries and [STATUS.md](STATUS.md) for actual progress. The KSMC pack remains optional fixture data, not a prerequisite or a hardcoded dependency.
 
-The simulator is unauthenticated and loopback-only. It supports one submitted request per demo conversation; reset intentionally with the documented mock-only command to start another test. Submitted requests cannot be edited. Approval, payment, stock reservation and readiness are future staff workflows. Real AI, WhatsApp, owner authentication and MCP are not connected. Cross-store scope tests are not a production isolation certification.
+The mock simulator is unauthenticated and loopback-only. It supports one submitted request per demo conversation; reset intentionally with the documented mock-only command to start another test. Submitted requests cannot be edited. Mock messages do not contact customers or invoke live AI. The server also contains the configured WhatsApp channel and owner authentication/fulfillment workflows described above; MCP and payment integration remain separate milestones. Cross-store scope tests are not a production isolation certification.
 
 ## Native development
 

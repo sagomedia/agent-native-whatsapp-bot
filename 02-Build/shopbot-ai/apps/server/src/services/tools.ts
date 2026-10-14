@@ -13,6 +13,7 @@ import { authorize, ToolError, withConversation, type ActorContext } from './con
 import {catalogEnabled} from './catalog.js';
 import {getCatalogMap,discoverProducts,needsPipeType} from './catalog-discovery.js';
 import {productIdentity,productConfirmed,preserveConfirmation,markProductConfirmed,makeProductCheck} from './product-verification.js';
+import {nextCounterLine,productCheckCoversDraft} from './counter-state.js';
 
 export type ToolResult = { estimate?:{knownSubtotalPaise:number;complete:boolean;missingLineIds:string[]}; handoffRequested?:true;state?: ConversationState; products?: Product[];discovery?:DiscoveryResult;catalogMap?:CatalogMap;discoveryBindingId?:string; request?: OrderRequest | null; totalCount?:number; quote?:{quantity:number;unit:string;totalPaise:number}; message: string };
 export const toolDefinitions = [
@@ -221,7 +222,7 @@ export class RetailTools {
         markProductConfirmed(line,product);state.draft[index]=line;
       }
       state.version++;
-      if(state.visualOrdering&&pending.completeReview&&call.args.choices.length===state.draft.length){state.productReview={version:state.version,hash:productListHash(state)};}
+      if(state.visualOrdering&&productCheckCoversDraft(state,pending)&&call.args.choices.length===state.draft.length){state.productReview={version:state.version,hash:productListHash(state)};}
       state.pending=null;await saveState(client,ctx,state);
       return {state,message:'Product choices accepted. Nothing has been sent to the shop.'};
     }
@@ -339,12 +340,15 @@ export class RetailTools {
       if(refreshed) state.version++;
       // A missing pipe type cannot be settled by approving the current PVC
       // photos. Ask for that type before showing any product-review batch.
-      const pipeTypeLine=state.draft.find(l=>!l.sku&&l.productIntent?.kind!=='ambiguous'&&needsPipeType(l.query??l.name));
+      const active=state.visualOrdering?nextCounterLine(state):undefined;
+      const pipeTypeLine=state.visualOrdering
+        ?active&&!active.sku&&active.productIntent?.kind!=='ambiguous'&&needsPipeType(active.query??active.name)?active:undefined
+        :state.draft.find(l=>!l.sku&&l.productIntent?.kind!=='ambiguous'&&needsPipeType(l.query??l.name));
       if(state.requireProductConfirmation&&!pipeTypeLine) {
         const check=makeProductCheck(state,!!this.options.sequentialItems);
         if(check){state.pending=check;await saveState(client,ctx,state);return {state,message:'Check the products before adding them to your list.'};}
       }
-      const unresolved=pipeTypeLine??(state.visualOrdering?state.draft.find(l=>!l.shopCheckDeferred&&l.sku&&['needs_quantity','needs_unit'].includes(l.resolution)):undefined)??state.draft.find(l=>l.resolution!=='matched'&&!l.shopCheckDeferred)??state.draft.find(l=>l.resolution!=='matched');
+      const unresolved=pipeTypeLine??(state.visualOrdering?active:undefined)??state.draft.find(l=>l.resolution!=='matched'&&!l.shopCheckDeferred)??state.draft.find(l=>l.resolution!=='matched');
       if(unresolved) {
         state.pending={kind:'question',id:randomUUID(),lineId:unresolved.id,version:state.version};
         await saveState(client,ctx,state);
