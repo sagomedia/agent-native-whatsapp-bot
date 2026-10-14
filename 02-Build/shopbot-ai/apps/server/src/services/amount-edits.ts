@@ -1,13 +1,13 @@
 import type {Interpretation,Operation,ConversationState,DraftLine} from '../../../../packages/contracts/index.js';
 import {normalize,sameUnit,tokens} from './catalog.js';
-import {spokenMeasures,convertAmount,matchesProductMeasures} from './quantity-evidence.js';
+import {spokenMeasures,convertAmount,matchesProductMeasures,packSearchQuery,explicitPurchaseCount} from './quantity-evidence.js';
 import {additionalMention as extra} from '../../../../packages/contracts/intent-language.js';
 const change=/(?:மட்டும்|வேணும்|வேண்டும்|மாற்ற|மாத்த|\b(?:only|instead|mattum|venum|maathu|change|make|set|need|want)\b)/i;
 const identityChange=/\b(?:brand|diameter|colour|color|replace|different|another type)\b|பிராண்ட்|விட்டம்|நிறம்|வேறு வகை/i;
-export const continuousAmount=(text:string)=>/\b(?:continuous|unbroken|single length)\b|ஒரே\s*(?:நீள|துண்டு)|ore\s+neelam/i.test(text);
+export const continuousAmount=(text:string)=>/\b(?:continuous|unbroken|single length)\b|ஒரே\s*(?:நீள|துண்ட[ுா])|ore\s+(?:neelam|thundu)/i.test(text);
 const totalUnits=new Set(['m','foot','litre','ml','kg','g']);
 function phraseAmount(text:string){return spokenMeasures(text).filter(m=>totalUnits.has(m.unit)).at(-1);}
-function sameTarget(line:DraftLine,query?:string){const product=line.candidates?.find(p=>p.sku===line.sku),names=[line.sku,line.query,line.name,...product?.aliases??[]].filter((n):n is string=>!!n);if(!query||names.some(n=>normalize(n)===normalize(query)))return true;const words=tokens(query);return !!product&&words.length>0&&words.every(w=>names.some(n=>tokens(n).includes(w)));}
+function sameTarget(line:DraftLine,query?:string){const product=line.candidates?.find(p=>p.sku===line.sku),names=[line.sku,line.query,line.name,...product?.aliases??[]].filter((n):n is string=>!!n);if(!query)return true;const original=query;if(names.some(n=>normalize(n)===normalize(original)))return true;for(const m of spokenMeasures(query))query=packSearchQuery(query,m);const words=tokens(query);return !!product&&words.length>0&&words.every(w=>names.some(n=>tokens(n).includes(w)));}
 function namedLine(state:ConversationState,query:string){const lines=state.draft.filter(l=>sameTarget(l,query));return lines.length===1?lines[0]:undefined;}
 // Recover the observed old plans without treating a pure price inquiry as an edit.
 // Catalog facts and conversion remain backend responsibilities after this step.
@@ -16,6 +16,13 @@ export function normalizeAmountEdits(plan:Interpretation,text:string,state:Conve
  const amount=phraseAmount(text),mode=continuousAmount(text)?'continuous' as const:'total' as const;
  let changed=false;
  let operations=plan.operations.map(op=>{
+  if((op.kind==='set_quantity'||op.kind==='increment_quantity')&&op.supportingPhrase&&text.includes(op.supportingPhrase)){
+   const measured=phraseAmount(op.supportingPhrase),count=op.kind==='set_quantity'?op.quantity:op.delta;
+   if(measured&&measured.value===count&&explicitPurchaseCount(op.supportingPhrase)===undefined&&state.draft.some(l=>l.id===op.reference)){
+    changed=true;
+    return op.kind==='increment_quantity'?{kind:'increment_amount' as const,reference:op.reference,delta:measured,supportingPhrase:op.supportingPhrase}:{kind:'set_amount' as const,reference:op.reference,amount:measured,mode:continuousAmount(op.supportingPhrase)?'continuous' as const:'total' as const,supportingPhrase:op.supportingPhrase};
+   }
+  }
   if(op.kind!=='resolve_line')return op;
   const line=state.draft.find(l=>l.id===op.lineId);if(!line||!sameTarget(line,op.query))return op;
   const product=line.candidates?.find(p=>p.sku===line.sku);

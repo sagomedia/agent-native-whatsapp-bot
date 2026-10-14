@@ -2,17 +2,17 @@ import type {ConversationState,DraftLine} from '../../../../packages/contracts/i
 import type {TurnUnderstanding} from '../../../../packages/contracts/understanding.js';
 import {normalize,tokens} from '../../../../packages/contracts/catalog-text.js';
 import {say,lineName} from '../../../../packages/contracts/language.js';
-import {matchesProductMeasures,spokenMeasures,convertAmount,catalogPack} from '../services/quantity-evidence.js';
+import {matchesProductMeasures,spokenMeasures,convertAmount,catalogPack,explicitPurchaseCount} from '../services/quantity-evidence.js';
 type Item=TurnUnderstanding['requestedItems'][number];
-import {additionalMention,repeatMention,correctionMention} from '../../../../packages/contracts/intent-language.js';
+import {additionalMention,repeatMention,correctionMention,currentItemMention} from '../../../../packages/contracts/intent-language.js';
 export {additionalMention} from '../../../../packages/contracts/intent-language.js';
-function identity(query:string){return tokens(normalize(query).replace(/\b\d+(?:\.\d+)?\s*(?:inch|inches|mm|cm|ml|litre|litres|kg|metre|metres|m)\b/g,' ')).join(' ');}
+function identity(query:string){return tokens(normalize(query).replace(/\bhose\s+pipe\b/g,'hose').replace(/\b\d+(?:\.\d+)?\s*(?:inch|inches|mm|cm|ml|litre|litres|kg|metre|metres|m)\b/g,' ')).join(' ');}
 // These nouns name several physically different shop products. A one-word
 // mention does not identify a previously selected type by itself.
 const ambiguousHeads=new Set(['pipe','tube','hose']);
 function ambiguousIdentity(query:string){const words=identity(query).split(' ');return words.length===1&&ambiguousHeads.has(words[0]);}
 function refersToCurrentItem(item:Item,state:ConversationState,line:DraftLine){
- return repeatMention.test(item.sourceText)||correctionMention.test(item.sourceText)||state.editingLineId===line.id||state.pending?.kind==='question'&&state.pending.lineId===line.id||state.pending?.kind==='products'&&state.pending.groups.length===1&&state.pending.groups[0].lineId===line.id;
+ return repeatMention.test(item.sourceText)||correctionMention.test(item.sourceText)||currentItemMention.test(item.sourceText)||state.editingLineId===line.id||state.pending?.kind==='question'&&state.pending.lineId===line.id||state.pending?.kind==='products'&&state.pending.groups.length===1&&state.pending.groups[0].lineId===line.id;
 }
 export function sameMention(a:string,b:string){
  const left=identity(a),right=identity(b);if(!left||!right)return false;
@@ -23,6 +23,7 @@ export function sameMention(a:string,b:string){
 // Include the spoken count and referential wording omitted by a terse sourceText.
 // The result is always one literal substring, never reconstructed evidence.
 export function mentionClause(source:string,phrase:string){
+ if(explicitPurchaseCount(phrase)!==undefined)return phrase;
  const pieces=source.split(/[,;\n]|[.!?](?:\s|$)|\b(?:and|plus|next|then|aduthu|appuram)\b|அடுத்து|அப்புறம்|அதுக்கப்புறம்|அண்ட்|நெக்ஸ்ட்/iu);
  const hits=pieces.filter(p=>p.includes(phrase)),clause=hits[0]?.trim();return clause&&clause.length<=500?clause:phrase;
 }
@@ -38,7 +39,15 @@ export function consolidateMentions(items:Item[],source:string,image:boolean):It
  if(image){if(items.some(i=>i.targetLineId!==undefined||i.sameItemOrdinal!==undefined||i.requestMode==='additional'))throw new Error('Images cannot edit existing lines or consolidate list rows');return items;}
  const result:Item[]=[],references=new Map<number,Item>();
  for(const raw of items){
-  const item={...raw,sourceText:mentionClause(source,raw.sourceText)};
+  let phrase=mentionClause(source,raw.sourceText);
+  const start=source.indexOf(raw.sourceText),others=items.filter(other=>other!==raw&&other.sourceText!==raw.sourceText).map(other=>({start:source.indexOf(other.sourceText),end:source.indexOf(other.sourceText)+other.sourceText.length})).filter(other=>other.start>=0);
+  // ASR often omits punctuation. Expanding one terse source span must not
+  // borrow a different item's count or pack contents from the same clause.
+  if(start>=0&&others.some(other=>phrase.includes(source.slice(other.start,other.end)))){
+   const next=Math.min(source.length,...others.filter(other=>other.start>=start+raw.sourceText.length).map(other=>other.start));
+   phrase=source.slice(start,next).trim();
+  }
+  const item={...raw,sourceText:phrase};
   // A self-reference says nothing about another row. Some providers include
   // it on an already consolidated item; discard it without changing evidence.
   if(item.sameItemOrdinal===item.ordinal)delete item.sameItemOrdinal;
@@ -73,6 +82,24 @@ export function compatibleLine(item:Item,line:DraftLine){
  if(pack&&item.packSize&&convertAmount(item.packSize,pack.unit)!==pack.value)return false;
  return true;
 }
+// Resolve an edit's spoken name against every old line. A model-chosen ID
+// cannot make the shared alias "pipe" identify one of two pipe entries.
+export function namedEditLines(source:string,state:ConversationState):DraftLine[]{
+ const ordinal=/\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|[1-9]|10)(?:st|nd|rd|th)?\s+(?:item|line|product)\b/i.exec(source);
+ if(ordinal){const index=({first:1,second:2,third:3,fourth:4,fifth:5,sixth:6,seventh:7,eighth:8,ninth:9,tenth:10} as Record<string,number>)[ordinal[1].toLowerCase()]??Number(ordinal[1]);return state.draft[index-1]?[state.draft[index-1]]:[];}
+ const text=normalize(source);
+ const editWords=(text:string)=>tokens(text.replace(/பிவிசி|பீவிசி|பி\s*வி\s*சி/gu,'PVC').replace(/பைப்(?:பு)?/gu,'pipe'));
+ const scored=state.draft.map(line=>{
+  const product=line.candidates?.find(p=>p.sku===line.sku);
+  const names=[line.query,line.name,line.sku,product?.name,...product?.aliases??[],...Object.values(product?.localNames??{})].filter((n):n is string=>!!n);
+  const known=new Set(names.flatMap(editWords));
+  const shared=[...new Set(editWords(source).filter(w=>w.length>2&&!/^\d/.test(w)&&known.has(w)))];
+  const score=Math.max(shared.length*10,...names.filter(n=>text.includes(normalize(n))).map(n=>tokens(n).length*100+normalize(n).length));
+  return {line,score};
+ });
+ const best=Math.max(0,...scored.map(s=>s.score));
+ return best?scored.filter(s=>s.score===best).map(s=>s.line):[];
+}
 export function existingMention(item:Item,state:ConversationState):{line?:DraftLine;clarify?:string}{
  if(item.targetLineId){
   const line=state.draft.find(l=>l.id===item.targetLineId);if(!line)throw new Error('Repeated item target is not current');
@@ -92,7 +119,10 @@ export function existingMention(item:Item,state:ConversationState):{line?:DraftL
   // A correction may change the type entirely. It can replace one clearly
   // referenced pipe line, but a new BSA/pump pipe without correction remains
   // a separate request even when another pipe is already on the list.
-  const related=state.draft.filter(line=>sameMention(item.query!,line.query??line.name)&&refersToCurrentItem(item,state,line));
+  const related=state.draft.filter(line=>{
+   const product=line.candidates?.find(p=>p.sku===line.sku);
+   return [line.query,line.name,product?.name,...product?.aliases??[]].some(name=>name&&sameMention(item.query!,name))&&refersToCurrentItem(item,state,line);
+  });
   if(related.length===1)return {line:related[0]};
   if(related.length>1)return {clarify:say(state,'Which existing item should I change?','ஏற்கனவே உள்ள எந்தப் பொருளை மாற்றணும்?','Irukkura entha porulai maathanum?')};
  }

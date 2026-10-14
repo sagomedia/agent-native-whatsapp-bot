@@ -32,7 +32,13 @@ export function normalizeUnderstandingAbsence(value:unknown):unknown {
  if(!value||typeof value!=='object'||Array.isArray(value))return value;
  const clean=(v:Record<string,unknown>,fields:string[])=>{const next={...v};for(const field of fields)if(next[field]===null||next[field]==='')delete next[field];return next;};
  const result=clean(value as Record<string,unknown>,['transcript','observedText','clarifyQuestion','explicitLanguageRequest']);
- if(Array.isArray(result.requestedItems))result.requestedItems=result.requestedItems.map(v=>v&&typeof v==='object'&&!Array.isArray(v)?clean(v,['targetLineId','sameItemOrdinal','requestMode','requestedContainer','brand','colour','material','packSize','dimensions','requestedAmount','amountMode','requestedBudgetPaise','crossedOut']):v);
+ if(Array.isArray(result.requestedItems))result.requestedItems=result.requestedItems.map(v=>{
+  if(!v||typeof v!=='object'||Array.isArray(v))return v;
+  const item=clean(v,['targetLineId','sameItemOrdinal','requestMode','requestedContainer','brand','colour','material','packSize','dimensions','requestedAmount','amountMode','requestedBudgetPaise','crossedOut']);
+  if(item.targetLineId==='00000000-0000-0000-0000-000000000000')delete item.targetLineId;
+  if(item.requestedBudgetPaise===0)delete item.requestedBudgetPaise;
+  return item;
+ });
  if(Array.isArray(result.proposedEdits))result.proposedEdits=result.proposedEdits.map(v=>v&&typeof v==='object'&&!Array.isArray(v)?clean(v,['quantity','query','amount','mode']):v);
  return result;
 }

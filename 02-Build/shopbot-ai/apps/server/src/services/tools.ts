@@ -84,6 +84,7 @@ function resolvedLine(product: Product, quantity: number | null, query: string, 
   const verifiedPack=catalogPack(product);
   if(evidence.packSize&&(!verifiedPack||!sameUnit(pack!.unit,verifiedPack.unit)))throw new ToolError('The shop must verify this pack size before it can be selected.');
   if(pack&&verifiedPack&&sameUnit(pack.unit,verifiedPack.unit)&&pack.value!==verifiedPack.value)throw new ToolError('That catalog pack has a different size. Tell me which pack size you need.');
+  if(requestedUnit&&normalizeUnit(requestedUnit)==='container'&&product.sellingUnitVerified&&verifiedPack&&pack&&sameUnit(pack.unit,verifiedPack.unit)&&pack.value===verifiedPack.value&&['can','tin','bucket','box','bottle','pack'].includes(product.unit))requestedUnit=product.unit;
   if(verifiedPack&&pack&&sameUnit(pack.unit,verifiedPack.unit)&&pack.value===verifiedPack.value&&['can','tin','bucket','box'].includes(requestedUnit??'')&&['can','tin','bucket','box'].includes(product.unit))requestedUnit=product.unit;
   if(requestedUnit&&!sameUnit(requestedUnit,product.unit)) return {...evidence,...(pack?{packSize:pack}:{}),id,query,sku:product.sku,name:product.name,quantity:null,unit:product.unit,pricePaise:product.pricePaise,productVersion:product.version,requestedUnit:normalizeUnit(requestedUnit),...(quantity!==null?{requestedQuantity:quantity}:{}),resolution:'needs_unit',candidates:[product]};
   validateQuantity(product,quantity);

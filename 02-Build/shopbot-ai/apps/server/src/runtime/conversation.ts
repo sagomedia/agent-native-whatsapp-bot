@@ -5,7 +5,9 @@ import {validateProductMeaningEvidence} from '../services/product-meaning.js';
 import {reviewDeliveryReady} from '../services/review-delivery.js';
 import {visualReply,returningReply,cartProgress} from '../services/visual-ordering.js';
 import {materializeVisualReply} from '../services/visual-images.js';
-import {protectQuantityEvidence} from '../services/quantity-evidence.js';
+import {protectQuantityEvidence,explicitPurchaseCount} from '../services/quantity-evidence.js';
+import {namedEditLines} from '../adapters/mention-reconciliation.js';
+import {additionalMention} from '../../../../packages/contracts/intent-language.js';
 import {phrasingLanguage} from '../../../../packages/contracts/language.js';
 import {normalizeAmountEdits} from '../services/amount-edits.js';
 import {shoppingActions} from '../services/shopping-actions.js';
@@ -151,6 +153,8 @@ export class ConversationRuntime {
     }
     if(!failure&&claimed.event.type==='voice'&&interpretation?.transcript){
       const transcript=interpretation.transcript,spokenClear=spokenClearCommand(transcript),command=spokenClear??canonicalShortcut(transcript);
+      const quote=priceInquiry(transcript);
+      if(quote&&!interpretation.operations.length){deterministic={name:'search_products',args:quote};interpretation={operations:[],next:'price',transcript,priceQuery:quote.query,priceQuantity:quote.quantity,priceUnit:quote.requestedUnit};}
       if(negatedSpokenClear(transcript))interpretation={operations:[],next:'continue',transcript,conversation:'pause'};
       social=socialIntent(transcript);
       if(social==='handoff')deterministic={name:'request_store_assistance',args:{expectedVersion:claimed.state.version}};
@@ -391,14 +395,18 @@ export class ConversationRuntime {
         if(added.length){const details=added.map(({line,quantity})=>`${quantity??''} ${line.query??line.name}`.trim()).join(', ');const retained=claimed.state.draft.every(old=>finalState.draft.some(line=>line.id===old.id));const kept=retained?say(finalState,' Your earlier items are kept.',' முந்தைய பொருட்களும் பட்டியலில் உள்ளன.',' Munthaya porutkalum list-la irukku.'):'';rich={...rich,text:say(finalState,`Added: ${details}.`,`சேர்த்திருக்கிறேன்: ${details}.`,`Serthirukken: ${details}.`)+kept+'\n\n'+rich.text};}
       }
       if(failure&&claimed.event.type==='voice'&&voiceFailureKind==='processing'){rich.buttons=[{label:say(finalState,'Try again','மீண்டும் முயல்','Marubadi try'),event:{id:randomUUID(),type:'retry_voice',mediaId:claimed.event.mediaId,expectedVersion:finalState.version}},shoppingButton(finalState,'handoff',say(finalState,'Talk to shop','கடையிடம் பேசு','Kadaiyila pesu'))];}
-      if(!failure&&!deterministic&&interpretation?.clarifyQuestion&&!interpretation.operations.length&&rich.stage!=='identify'&&rich.kind!=='product_choices'){const q=safeQuestion(interpretation.clarifyQuestion,finalState);if(q)rich={...plainReply(q),stage:'identify',clarificationReason:'intent_clarification'};}
+      if(!failure&&!deterministic&&interpretation?.clarifyQuestion&&!interpretation.operations.length&&rich.stage!=='identify'&&rich.kind!=='product_choices'){const q=safeQuestion(interpretation.clarifyQuestion,finalState,interpretation.transcript??(claimed.event.type==='text'?claimed.event.text:''));if(q)rich={...plainReply(q),stage:'identify',clarificationReason:'intent_clarification'};}
       if(interpretation?.understanding?.inputKind==='handwritten_list'){rich={...rich,contextLines:[say(finalState,'I read your list. Please check every item, including lines marked for shop checking.','உங்கள் பட்டியலைப் படித்தேன். கடை சரிபார்க்க வேண்டிய வரிகள் உட்பட எல்லாப் பொருட்களையும் சரிபாருங்கள்.','Unga list-ai padithen. Kadai check panna vendiya varigal utpada ella porutkalaiyum check pannunga.'),...rich.contextLines??[]]};}
       if(finalState.visualOrdering&&interpretation?.shopQuestions?.length)rich.contextLines=[shopAnswers(finalState,interpretation.shopQuestions),...rich.contextLines??[]];
       const unclearTarget=!failure&&interpretation?.understanding?.unresolved.includes('cart_target')&&!finalState.lastRequestId;
       if(finalState.visualOrdering&&!failure&&!rich.handoffRequested&&!finalState.lastRequestId&&!clearConfirmation){
         const selected=claimed.event.type==='select_product'?finalState.draft.find(l=>l.id===(claimed.event as Extract<SimulatorEvent,{type:'select_product'}>).lineId):undefined;
         if(selected)rich.contextLines=[say(finalState,`Selected: ${lineName(selected,finalState)}${selected.quantity!==null?` · ${selected.quantity} ${unitName(selected.unit??'unit',finalState,selected.quantity)}`:''}.`,`${lineName(selected,finalState)} தேர்வு செய்யப்பட்டது${selected.quantity!==null?` · ${selected.quantity} ${unitName(selected.unit??'unit',finalState,selected.quantity)}`:''}.`,`${lineName(selected,finalState)} choose panniyachu${selected.quantity!==null?` · ${selected.quantity} ${unitName(selected.unit??'unit',finalState,selected.quantity)}`:''}.`),...rich.contextLines??[]];
-        if(!interpretation?.estimateRequested)rich.contextLines=[...rich.contextLines??[],...cartProgress(finalState)];
+        const newBulkList=!claimed.state.draft.length&&finalState.draft.length>1&&interpretation?.operations.some(op=>op.kind==='add_item');
+        if(newBulkList){
+          const rows=finalState.draft.map(line=>`${lineName(line,finalState)}${!line.sku&&line.productMeasures?.length?' ('+line.productMeasures.map(m=>`${m.value} ${unitName(m.unit,finalState)}`).join(' × ')+')':''} — ${line.quantity===null?say(finalState,'count needed','எண்ணிக்கை தேவை','Count venum'):line.quantity}`);
+          rich.contextLines=[say(finalState,`Noted all ${finalState.draft.length} requested items:\n${rows.join('\n')}`,`நீங்கள் சொன்ன ${finalState.draft.length} பொருட்களையும் குறித்துக்கொண்டேன்:\n${rows.join('\n')}`,`Neenga sonna ${finalState.draft.length} porutkalaiyum kurichchukkitten:\n${rows.join('\n')}`),...rich.contextLines??[]];
+        }else if(!interpretation?.estimateRequested)rich.contextLines=[...rich.contextLines??[],...cartProgress(finalState)];
       }
       if(unclearTarget){
         // The current turn's identity question supersedes an unrelated old
@@ -407,9 +415,16 @@ export class ConversationRuntime {
         finalState.pending=null;finalState.productReview=null;finalState.editingLineId=null;finalState.version++;
         const requested=interpretation!.understanding!.requestedItems.find(item=>item.query)?.query??'';
         const words=tokens(requested).filter(word=>!/^(?:one|two|three|1|2)$/.test(word));
-        const matching=finalState.draft.filter(line=>words.length&&words.every(word=>tokens([line.query,line.name].filter(Boolean).join(' ')).includes(word)));
-        const choices=matching.length>0&&matching.length<=2?matching.map(line=>({label:lineName(line,finalState),event:{id:randomUUID(),type:'edit_item' as const,lineId:line.id,expectedVersion:finalState.version}})):[shoppingButton(finalState,'edit_list',say(finalState,'Choose list item','பொருளைத் தேர்வு செய்','Porul choose pannu')),shoppingButton(finalState,'new_list',say(finalState,'Start new list','புதிய பட்டியல்','Pudhu list'))];
-        const question=safeQuestion(interpretation?.clarifyQuestion,finalState)??say(finalState,'Which item on your list did you mean?','பட்டியலில் எந்தப் பொருளைச் சொன்னீர்கள்?','List-la entha porulai sonneenga?');
+        const currentText=interpretation?.transcript??(claimed.event.type==='text'?claimed.event.text:'');
+        const held=interpretation!.understanding!.proposedEdits.find(edit=>['set_quantity','increment_quantity'].includes(edit.kind)&&edit.quantity!==undefined&&currentText.includes(edit.sourceText)&&explicitPurchaseCount(edit.sourceText)===edit.quantity);
+        const named=namedEditLines(held?.sourceText??currentText,finalState);
+        const matching=named.length?named:finalState.draft.filter(line=>words.length&&words.every(word=>tokens([line.query,line.name].filter(Boolean).join(' ')).includes(word)));
+        const explicitTotal=!held&&/(?:மொத்தம்|\b(?:total|moththam|mottam)\b)/i.test(currentText)?explicitPurchaseCount(currentText):undefined;
+        const choices=matching.length>0&&matching.length<=2?matching.map(line=>{
+          const count=held?.kind==='set_quantity'?held.quantity:held?.kind==='increment_quantity'&&additionalMention.test(held.sourceText)&&line.quantity!==null?line.quantity+held.quantity!:explicitTotal;
+          return {label:lineName(line,finalState),event:count!==undefined&&count>0&&count<=100?{id:randomUUID(),type:'set_quantity' as const,lineId:line.id,quantity:count,expectedVersion:finalState.version}:{id:randomUUID(),type:'edit_item' as const,lineId:line.id,expectedVersion:finalState.version}};
+        }):[shoppingButton(finalState,'edit_list',say(finalState,'Choose list item','பொருளைத் தேர்வு செய்','Porul choose pannu')),shoppingButton(finalState,'new_list',say(finalState,'Start new list','புதிய பட்டியல்','Pudhu list'))];
+        const question=safeQuestion(interpretation?.clarifyQuestion,finalState,interpretation?.transcript??(claimed.event.type==='text'?claimed.event.text:''))??say(finalState,'Which item on your list did you mean?','பட்டியலில் எந்தப் பொருளைச் சொன்னீர்கள்?','List-la entha porulai sonneenga?');
         rich={...plainReply((digest(finalState.draft)!==digest(claimed.state.draft)?say(finalState,'Other clear changes are saved. ','மற்ற தெளிவான மாற்றங்கள் சேமிக்கப்பட்டன. ','Maththa thelivaana maaththangal save aachu. '):'')+question+' '+say(finalState,'Choose the item below or describe its type. Your list is kept.','கீழே தேர்வு செய்யுங்கள் அல்லது பொருளின் வகையைச் சொல்லுங்கள். பட்டியல் அப்படியே உள்ளது.','Keezhe choose pannunga illa type sollunga. List appadiye irukku.')),stage:'identify',clarificationReason:'intent_clarification',buttons:choices};
       }
       rich=unclearTarget||clearConfirmation?{...rich,replyLanguage:finalState.replyLanguage??'en'}:shoppingActions({...rich,replyLanguage:finalState.replyLanguage??'en'},finalState,claimed.catalogMap);
@@ -454,6 +469,10 @@ export class ConversationRuntime {
     if(e.type==='add_item') return {name:'apply_draft_changes',args:{expectedVersion:e.expectedVersion,operations:[{kind:'add_item',query:e.sku,quantity:e.quantity}]}};
     if(e.type==='set_quantity') return {name:'apply_draft_changes',args:{expectedVersion:e.expectedVersion,operations:[e.quantity===0?{kind:'remove_item',reference:e.lineId}:{kind:'set_quantity',reference:e.lineId,quantity:e.quantity}]}};
     if(e.type==='review') return {name:'preview_order',args:{expectedVersion:e.expectedVersion}};
+    if(e.type==='choose_pipe_type'){
+      if(s.pending?.kind!=='question'||s.pending.id!==e.questionId||s.pending.lineId!==e.lineId||s.pending.version!==s.version||!claim.displayedActions.some(action=>digest(action)===digest(e)))throw new ToolError('Use the current pipe-type choices. Your list is kept.','stale_question');
+      return {name:'apply_draft_changes',args:{expectedVersion:e.expectedVersion,operations:[{kind:'resolve_line',lineId:e.lineId,query:{pvc:'PVC pipe',hose:'garden hose',pump:'water pumping pipe'}[e.pipeType]}]}};
+    }
     if(e.type==='confirm') return {name:'submit_order_request',args:{reviewId:e.reviewId}};
     if(e.type==='select_candidate') {
       const line=s.draft.find(l=>l.id===e.lineId),pending=s.pending;
@@ -521,7 +540,7 @@ export class ConversationRuntime {
         return {name:'confirm_product_choices',args:{batchId:check.id,choices:check.groups.map(g=>({lineId:g.lineId,sku:s.catalogDiscovery?s.draft.find(l=>l.id===g.lineId)?.sku??g.products[0].sku:g.products[0].sku}))}};
       }
       if(amount) {
-        const targets=check.groups.filter(g=>!amount.unit||g.products.every(p=>sameUnit(amount.unit!,p.unit)));
+        const targets=check.groups.filter(g=>!amount.unit||g.products.every(p=>sameUnit(amount.unit!,p.unit)||normalizeUnit(amount.unit!)==='container'&&p.sellingUnitVerified&&['can','tin','bucket','box','bottle','pack'].includes(p.unit)));
         if(targets.length!==1)throw new ToolError('Which item is that quantity for? Include the product name, or choose its photo first.');
         return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[quantityAnswer(s,targets[0].lineId,amount,e.text)]}};
       }

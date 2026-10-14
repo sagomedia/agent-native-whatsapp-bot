@@ -109,12 +109,14 @@ export function visualReply(base:RichReply,state:ConversationState,request?:Orde
  }
  const questionId=state.pending?.kind==='question'?state.pending.lineId:undefined;
  const line=state.draft.find(l=>l.id===questionId);
- if(line&&!line.sku&&line.productIntent?.kind!=='ambiguous'&&needsPipeType(line.query??line.name)){
-  const prompt=say(state,'Which kind of pipe do you mean: rigid PVC, a flexible hose, or a pump delivery/suction pipe? Tell me the material or use, diameter and length if you know them.','எந்த வகை பைப் வேண்டும் — உறுதியான PVC பைப்பா, வளையும் ஹோஸா, அல்லது மோட்டார் தண்ணீர் பைப்பா? பொருள்/பயன், விட்டம், நீளம் தெரிந்தால் சொல்லுங்கள்.','Entha vagai pipe venum — rigid PVC pipe-aa, flexible hose-aa, illa motor thanni pipe-aa? Material/use, diameter, length therinja sollunga.');
+ if(line&&!line.sku&&line.productIntent?.kind!=='ambiguous'&&needsPipeType(line.query??line.name)&&!(base.stage==='identify'&&base.cards?.length)){
+  const pump=/\bpump(?:ing)?\b|\bsuction\b|\bmotor\b|பம்ப்|மோட்டார்/i.test(line.query??line.name);
+  const prompt=pump?say(state,'Which kind of pipe for the pump do you need? A brand or photo will help the shop identify it.','பம்புக்கு எந்த வகை பைப் வேணும்? பிராண்ட் அல்லது படம் இருந்தா சொல்லுங்க.','Pump-ku entha vagai pipe venum? Brand illa photo iruntha sollunga.'):say(state,'Which kind of pipe do you mean: rigid PVC, a flexible hose, or a pump delivery/suction pipe?','எந்த வகை பைப் வேணும் — கெட்டியான PVC, வளையும் ஹோஸ், அல்லது மோட்டார் தண்ணீர் பைப்?','Entha vagai pipe venum — rigid PVC, flexible hose, illa motor thanni pipe?');
   const count=line.quantity===null?say(state,'Count still needed','எண்ணிக்கை தேவை','Count venum'):`${line.quantity} ${unitName(line.requestedUnit??line.unit??'unit',state,line.quantity)}`;
   const size=line.productMeasures?.map(m=>`${m.value} ${m.unit}`).join(' × ');
   const kept=say(state,'Your requested quantity and size are kept. No catalog product is selected yet.','நீங்கள் சொன்ன எண்ணிக்கையும் அளவும் பட்டியலில் உள்ளது. இன்னும் கடைப் பொருள் தேர்வு செய்யவில்லை.','Neenga sonna count-um size-um list-la irukku. Catalog product innum choose pannala.');
-  return withContext({...reply('identify',[part([instruction(line.query??line.name,[count,size??'',kept].filter(Boolean),prompt,[shop(state)])],prompt)],'product_or_specification'),replyLanguage:state.replyLanguage},base.contextLines);
+  const choices:Button[]=!pump&&state.pending?.kind==='question'?(['pvc','hose','pump'] as const).map(pipeType=>({label:{pvc:say(state,'Rigid PVC','கெட்டியான PVC','Rigid PVC'),hose:say(state,'Flexible hose','வளையும் ஹோஸ்','Flexible hose'),pump:say(state,'Pump pipe','மோட்டார் பைப்','Pump pipe')}[pipeType],event:{id:randomUUID(),type:'choose_pipe_type',lineId:line.id,questionId:state.pending!.id,pipeType,expectedVersion:state.version}})):[shop(state)];
+  return withContext({...reply('identify',[part([instruction(line.query??line.name,[count,size??'',kept].filter(Boolean),prompt,choices)],prompt)],'product_or_specification'),replyLanguage:state.replyLanguage},base.contextLines);
  }
  if(line&&!(base.stage==='identify'&&base.cards?.length)&&(line.resolution==='needs_quantity'||line.resolution==='needs_unit')){
   const product=line.candidates?.find(p=>p.sku===line.sku);

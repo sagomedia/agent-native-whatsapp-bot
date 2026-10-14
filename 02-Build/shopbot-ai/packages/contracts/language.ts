@@ -1,5 +1,5 @@
 import type {ConversationState,Product} from './index.js';
-import {normalizeFractionNumbers} from './measurements.js';
+import {normalizeFractionNumbers,spokenNumberValues} from './measurements.js';
 import {formatMoney} from './money.js';
 
 export type ReplyLanguage='ta'|'ta-Latn'|'en';
@@ -29,7 +29,7 @@ export function canonicalShortcut(text:string):string {
  const shortcuts:Record<string,string>={'கடையிடம் பேசு':'human please','kadaiyila pesu':'human please','clear all':'clear my list','எல்லாமே சரி':'yes','பொருட்கள் சரி':'yes','எல்லாம் சரி':'yes','everything is right':'yes','all correct':'yes','porutkal sari':'yes','ellame sari':'yes','வணக்கம்':'hello','vanakkam':'hello','நன்றி':'thanks','nandri':'thanks','உதவி':'help','udhavi':'help','வேண்டாம்':'no','vendam':'no','இப்போ வேண்டாம்':'not now','இப்போது வேண்டாம்':'not now','ippo vendam':'not now','கடைக்காரரிடம் பேச வேண்டும்':'human please','kadaikaarar kitta pesanum':'human please','பட்டியலை காட்டு':'review','பட்டியலைக் காட்டு':'review','என் பட்டியல்':'review','பட்டியலை பார்க்க வேண்டும்':'review','list kaatu':'review','list paaru':'review','pothum':'enough','போதும்':'enough','கோரிக்கை நிலை':'status','நிலை':'status','நிலையை காட்டு':'status','நிலையைப் பார்க்க':'status','status kaatu':'status','பட்டியலை காலி செய்':'clear my list','பட்டியலைக் காலி செய்':'clear my list','list clear pannu':'clear my list','ஆமாம்':'yes','ஆம்':'yes','சரி':'yes','aama':'yes','aamam':'yes','sari':'yes','இவற்றை சேர்':'add these items','இவற்றைச் சேர்':'add these items','இதனை சேர்':'add this item','இதை சேர்':'add this item','இதைச் சேர்':'add this item','ithai seru':'add this item','ivatrai seru':'add these items','பட்டியலில் சேர்':'add to my list','list la seru':'add to my list','கடைக்கு அனுப்பு':'send it','kadaikku anuppu':'send it','மீண்டும் பார்':'check again','மீண்டும் பார்க்கவும்':'check again','மறுபடியும் பார்':'check again','திரும்ப பார்':'check again','thirumba paaru':'check again','marubadi paaru':'check again','மீண்டும் தேடு':'check again','இதை நீக்கு':'remove it','ithai neekku':'remove it'};
  return shortcuts[s]??s;
 }
-export function safeQuestion(question:string|undefined,context:LanguageContext):string|undefined {
+export function safeQuestion(question:string|undefined,context:LanguageContext,currentText=''):string|undefined {
  if(!question||!/[?][)\]\"'”’]*$/.test(question.trim())||/[₹$]|price|cost|discount|payment|stock|ready|approved|guarantee|deliver|https?:|விலை|பணம்|தள்ளுபடி|இருப்பு|உறுதி|டெலிவரி/i.test(question))return;
  // Numeric clarification is grounded in current list facts, never model-invented
  // amounts. Commercial claims remain blocked above even when a number is known.
@@ -38,9 +38,10 @@ export function safeQuestion(question:string|undefined,context:LanguageContext):
   String(line.quantity??''),JSON.stringify(line.packSize??{}),JSON.stringify(line.productMeasures??[]),
   ...(line.candidates??[]).flatMap(p=>[p.name,...Object.values(p.localNames??{}),...Object.values(p.specifications??{})])]);
  const numbers=(text:string)=>normalizeFractionNumbers(text).match(/\d+(?:\.\d+)?/g)??[];
- const known=new Set(facts.flatMap(numbers));
+ const known=new Set([...facts.flatMap(numbers),...spokenNumberValues(currentText)]);
  if(numbers(question).some(n=>!known.has(n)))return;
  const tamil=/[\u0b80-\u0bff]/.test(question),language=languageOf(context);
+ if(/[\p{L}]/u.test(question.replace(/[\p{Script=Tamil}\p{Script=Latin}]/gu,'')))return;
  if(language==='ta'&&!tamil||language==='ta-Latn'&&(tamil||!/(venum|por|pann|enna|eth|neenga|unga|thaan|iruk|size-aa|brand-aa)/i.test(question))||language==='en'&&tamil)return;
  return question;
 }

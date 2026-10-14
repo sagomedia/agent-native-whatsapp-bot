@@ -24,3 +24,9 @@ export function normalizeFractionNumbers(text:string):string {
   if(!value.includes('/'))return value;const number=measurementNumber(value);return number===undefined?value:String(number);
  });
 }
+
+/** Literal current-input numbers for clarification, never catalog inference. */
+export function spokenNumberValues(text:string):string[] {
+ const words:Record<string,number>={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,twenty:20,fifty:50,hundred:100,oru:1,onnu:1,ondru:1,rendu:2,irandu:2,moonu:3,moondru:3,naalu:4,anju:5,pathu:10,paththu:10,'ஒரு':1,'ஒன்று':1,'ஒன்னு':1,'ஒண்ணு':1,'இரண்டு':2,'ரெண்டு':2,'மூன்று':3,'மூணு':3,'நான்கு':4,'நாலு':4,'ஐந்து':5,'அஞ்சு':5,'பத்து':10,'இருபது':20,'ஐம்பது':50,'நூறு':100};
+ return [...normalizeFractionNumbers(text).match(/\d+(?:\.\d+)?/g)??[],...[...text.toLowerCase().matchAll(/[\p{L}\p{M}]+/gu)].flatMap(m=>words[m[0]]===undefined?[]:[String(words[m[0]])])];
+}
