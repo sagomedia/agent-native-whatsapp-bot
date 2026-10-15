@@ -13,6 +13,7 @@ Group=shopbot-vps
 WorkingDirectory=/opt/shopbot-vps/current/app
 EnvironmentFile=/etc/shopbot-vps.env
 Environment=NODE_OPTIONS=--max-old-space-size=128
+Environment=SHOPBOT_REQUIRE_VERIFIED_RELEASE=true
 ExecStart=/opt/shopbot-vps/current/node/bin/node dist/apps/server/src/index.js
 Restart=on-failure
 RestartSec=5
