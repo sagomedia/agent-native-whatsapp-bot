@@ -32,8 +32,9 @@ export async function createApp(config: Config, pool: Pool, nativeTest?:Interpre
       if(req.url.split('?')[0]===hookPath&&req.headers.host!==config.whatsapp!.hostname)return reply.code(404).send({error:'Not found'});
     });
   }
-  await registerOwner(app,pool,config,ownerVerifier,catalogGenerator);
-  if(config.whatsapp)await registerWhatsApp(app,channel??new WhatsAppChannel(pool,config.whatsapp));
+  const whatsapp=config.whatsapp?(channel??new WhatsAppChannel(pool,config.whatsapp)):undefined;
+  await registerOwner(app,pool,config,ownerVerifier,catalogGenerator,whatsapp);
+  if(whatsapp)await registerWhatsApp(app,whatsapp);
   const privacyPolicy="default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
   if(config.whatsapp?.privacyPublished)app.get('/privacy',async(_req,reply)=>reply.header('Cache-Control','no-store').header('Content-Security-Policy',privacyPolicy).type('text/html').send(renderPrivacy(config.whatsapp?.aiEnabled,config.whatsapp?.mediaEnabled)));
   if(config.owner)app.get('/api/owner/privacy-draft',async(_req,reply)=>reply.header('Content-Security-Policy',privacyPolicy).type('text/html').send(renderPrivacy(config.whatsapp?.aiEnabled,config.whatsapp?.mediaEnabled)));

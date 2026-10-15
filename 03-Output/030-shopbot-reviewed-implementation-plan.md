@@ -2,6 +2,8 @@
 
 **Implementation update, 14 October:** the [first local implementation slice](031-counter-flow-implementation.md) repairs the reproduced ordering and price defects, adds customer transcript/timing regressions, and prepares CI. That report records completed work and the remaining packages. The source review below remains tied to its recorded baseline.
 
+**Implementation update, 15 October:** the [P2 local package](032-p2-cost-and-admission.md) adds actual-request admission, persistent deadlines, price-expiry handling and delivery-cost reconciliation. Its report records validation, configuration and the exact-count/live-account pilot limits. Neither local package has been deployed in this chat.
+
 **Review date:** 14 October 2026, Asia/Kolkata.
 
 **Chosen direction:** reconcile the reviewed `2403f76` version into the existing bot, as confirmed by the user in this chat.

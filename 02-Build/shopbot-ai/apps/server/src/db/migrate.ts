@@ -182,6 +182,39 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       ALTER TABLE image_media ADD CONSTRAINT image_media_height_check CHECK(height>0 AND height<=2048);
       INSERT INTO schema_migrations(version) VALUES(26);
     `);}
+    const v27=await client.query('SELECT version FROM schema_migrations WHERE version=27');
+    if(!v27.rowCount){await client.query(`
+      ALTER TABLE messages ADD COLUMN inference_deadline_at timestamptz;
+      ALTER TABLE provider_attempts ADD COLUMN input_admission jsonb;
+      ALTER TABLE catalog_suggestions ADD COLUMN input_admission jsonb;
+      ALTER TABLE whatsapp_statuses ADD COLUMN pricing jsonb;
+      CREATE TABLE whatsapp_pricing_events (
+        store_id uuid NOT NULL REFERENCES stores(id), phone_id text NOT NULL, provider_id text NOT NULL,
+        recipient text NOT NULL, state text NOT NULL, provider_timestamp bigint NOT NULL,
+        pricing jsonb, pricing_hash text NOT NULL, received_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY(phone_id,provider_id,recipient,state,provider_timestamp,pricing_hash)
+      );
+      CREATE TABLE whatsapp_delivery_costs (
+        store_id uuid NOT NULL REFERENCES stores(id),phone_id text NOT NULL,provider_id text NOT NULL,
+        recipient text NOT NULL,delivered_at timestamptz NOT NULL,account_timezone text,billing_month text,
+        category text,pricing_type text,billable boolean,pricing_model text,
+        currency text,market text,estimated_microunits bigint CHECK(estimated_microunits>=0),rate_snapshot jsonb,
+        state text NOT NULL CHECK(state IN ('free','estimated','unknown','conflicting')),source text NOT NULL DEFAULT 'signed_webhook',
+        PRIMARY KEY(phone_id,provider_id)
+      );
+      CREATE INDEX whatsapp_delivery_costs_month ON whatsapp_delivery_costs(store_id,phone_id,billing_month,category);
+      CREATE TABLE whatsapp_delivery_cost_history (
+        id bigserial PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),phone_id text NOT NULL,provider_id text NOT NULL,
+        prior_snapshot jsonb NOT NULL,recorded_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE TABLE whatsapp_pricing_analytics (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),phone_id text NOT NULL,
+        account_timezone text NOT NULL,currency text NOT NULL,range_start bigint NOT NULL,range_end bigint NOT NULL,
+        response_hash text NOT NULL,payload jsonb NOT NULL,received_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE(phone_id,range_start,range_end,response_hash)
+      );
+      INSERT INTO schema_migrations(version) VALUES(27);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

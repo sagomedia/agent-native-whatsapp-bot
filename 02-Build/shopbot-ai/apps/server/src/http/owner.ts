@@ -20,11 +20,14 @@ import {loadImage} from '../services/image-media.js';
 import {loadVoice} from '../services/voice-media.js';
 import type {Config} from '../config.js';
 import {createAccessVerifier,type AccessVerifier} from './access.js';
+import {geminiTextRate,rateHealth} from '../services/inference-budget.js';
+import {messagingCostSummary} from '../services/messaging-cost.js';
+import type {WhatsAppChannel} from '../services/whatsapp-channel.js';
 
 const uuid=z.uuid();
 const revision=z.number().int().nonnegative();
 import {GoogleCatalogGenerator,type CatalogGenerator} from '../services/catalog-assistant.js';
-export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,verify?:AccessVerifier,catalogGenerator?:CatalogGenerator){
+export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,verify?:AccessVerifier,catalogGenerator?:CatalogGenerator,whatsapp?:WhatsAppChannel){
   const owner=config.owner;
   if(!owner)return;
   verify??=createAccessVerifier(owner);
@@ -79,9 +82,19 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       const audit=(await client.query('SELECT action,target_id,details,created_at FROM owner_audit WHERE store_id=$1 ORDER BY sequence DESC LIMIT 20',[owner.storeId])).rows;
       const wa=config.whatsapp?(await client.query('SELECT verified_at,last_webhook_at,last_received_at,send_blocked,last_error FROM whatsapp_channels WHERE phone_id=$1 AND store_id=$2',[config.whatsapp.phoneId,owner.storeId])).rows[0]:undefined;
       const channel={whatsapp:!wa?'not_connected':wa.send_blocked?'attention_required':wa.last_received_at?'receiving':wa.verified_at||wa.last_webhook_at?'webhook_verified':'awaiting_verification',liveSending:Boolean(wa&&config.whatsapp?.sendEnabled&&!wa.send_blocked),processing:Boolean(config.whatsapp?.processEnabled),lastReceivedAt:wa?.last_webhook_at??null,error:wa?.last_error??null,testOnly:true};
+      const messaging=config.whatsapp&&config.whatsapp.storeId===owner.storeId?{...await messagingCostSummary(client,{storeId:owner.storeId,phoneId:config.whatsapp.phoneId,accountTimezone:config.whatsapp.accountTimezone,rateCard:config.whatsapp.pricingRateCard}),analyticsAvailable:Boolean(config.whatsapp.accountTimezone&&config.whatsapp.accountCurrency&&config.whatsapp.businessPhoneNumber)}:null;
       await client.query('COMMIT');
-      return {store,conversations,requests,usage,budget,audit,mode:config.mode,ownerEmail:owner.email,channel,inference:{enabled:!!(wa&&config.whatsapp?.aiEnabled&&config.whatsapp.processEnabled),paidEnabled:!!config.whatsapp?.paidEnabled},limits:{conversations:100,requests:100},generatedAt:new Date().toISOString()};
+      return {store,conversations,requests,usage,budget,audit,messaging,mode:config.mode,ownerEmail:owner.email,channel,inference:{enabled:!!(wa&&config.whatsapp?.aiEnabled&&config.whatsapp.processEnabled),paidEnabled:!!config.whatsapp?.paidEnabled,rateHealth:rateHealth(geminiTextRate)},limits:{conversations:100,requests:100},generatedAt:new Date().toISOString()};
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
+  });
+  app.post('/api/owner/pricing/refresh',async(request,reply)=>{
+    const input=z.object({month:z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)}).strict().safeParse(request.body);
+    if(!input.success)return reply.code(400).send({error:'Choose a billing month in YYYY-MM format.'});
+    if(!whatsapp||config.whatsapp?.storeId!==owner.storeId)return reply.code(409).send({error:'Messaging pricing is unavailable for this shop.'});
+    // Fetch before acquiring the owner's store write lock. The channel scopes
+    // and validates the response before its own short ledger transaction.
+    try{const result=await whatsapp.refreshPricingAnalytics(input.data.month);return await write('pricing_analytics_refresh',owner.storeId,async()=>({phoneId:whatsapp.config.phoneId,...result}));}
+    catch{return reply.code(502).send({error:'Could not refresh pricing analytics. Check the Messaging account timezone, currency, business phone and analytics permissions. Existing records are retained.'});}
   });
   app.get<{Params:{id:string}}>('/api/owner/conversations/:id',async(request,reply)=>{
     if(!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Invalid conversation'});

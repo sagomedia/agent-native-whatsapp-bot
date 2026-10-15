@@ -1,0 +1,180 @@
+TAP version 13
+# Subtest: fractional INR is summed before display and budgets compare exact micro-INR
+ok 1 - fractional INR is summed before display and budgets compare exact micro-INR
+  ---
+  duration_ms: 16.146543
+  type: 'test'
+  ...
+# Subtest: account months use the configured timezone including DST and the exact month boundary
+ok 2 - account months use the configured timezone including DST and the exact month boundary
+  ---
+  duration_ms: 6.353626
+  type: 'test'
+  ...
+# {"level":30,"time":1792043588661,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043588670,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":403},"responseTime":7.423278999999866,"msg":"request completed"}
+# {"level":30,"time":1792043588671,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043588699,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":200},"responseTime":27.602308999999877,"msg":"request completed"}
+# {"level":30,"time":1792043588699,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043588704,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":200},"responseTime":4.899018999999953,"msg":"request completed"}
+# {"level":30,"time":1792043588708,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043588708,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043588728,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":200},"responseTime":20.495304999999917,"msg":"request completed"}
+# {"level":30,"time":1792043588748,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":200},"responseTime":39.991277999999966,"msg":"request completed"}
+# Subtest: signed status ingress rejects forgery and wrong accounts, but counts other senders on the bound phone
+ok 3 - signed status ingress rejects forgery and wrong accounts, but counts other senders on the bound phone
+  ---
+  duration_ms: 1101.979532
+  type: 'test'
+  ...
+# Subtest: sent/failed callbacks have no charge; duplicate delivery/read records settle one cost with a frozen rate
+ok 4 - sent/failed callbacks have no charge; duplicate delivery/read records settle one cost with a frozen rate
+  ---
+  duration_ms: 440.958246
+  type: 'test'
+  ...
+# Subtest: conflicting provider facts remove the usable estimate and retain prior receipts and cost history
+ok 5 - conflicting provider facts remove the usable estimate and retain prior receipts and cost history
+  ---
+  duration_ms: 555.475464
+  type: 'test'
+  ...
+# Subtest: missing, unsupported and unpriced billable receipts remain unknown; signed free delivery is exactly zero
+ok 6 - missing, unsupported and unpriced billable receipts remain unknown; signed free delivery is exactly zero
+  ---
+  duration_ms: 517.742664
+  type: 'test'
+  ...
+# Subtest: read before delivered proves delivery without inventing its billing month or charging at read time
+ok 7 - read before delivered proves delivery without inventing its billing month or charging at read time
+  ---
+  duration_ms: 426.529415
+  type: 'test'
+  ...
+# Subtest: the thousandth signed free delivery and next billable delivery never imply a complete local allowance
+ok 8 - the thousandth signed free delivery and next billable delivery never imply a complete local allowance
+  ---
+  duration_ms: 456.698384
+  type: 'test'
+  ...
+# Subtest: pricing writes reject a different shop even when the provider message ID matches
+ok 9 - pricing writes reject a different shop even when the provider message ID matches
+  ---
+  duration_ms: 362.50485
+  type: 'test'
+  ...
+# Subtest: analytics reconciliation is idempotent, compares matching intervals and preserves unavailable costs
+ok 10 - analytics reconciliation is idempotent, compares matching intervals and preserves unavailable costs
+  ---
+  duration_ms: 388.521511
+  type: 'test'
+  ...
+# {"level":30,"time":1792043592270,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/owner/pricing/refresh"},"msg":"incoming request"}
+# {"level":30,"time":1792043592271,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":403},"responseTime":0.38617400000021007,"msg":"request completed"}
+# {"level":30,"time":1792043592271,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/owner/pricing/refresh"},"msg":"incoming request"}
+# {"level":30,"time":1792043592271,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":403},"responseTime":0.33704499999930704,"msg":"request completed"}
+# {"level":30,"time":1792043592272,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/api/owner/pricing/refresh"},"msg":"incoming request"}
+# {"level":30,"time":1792043592273,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":400},"responseTime":1.8521520000003875,"msg":"request completed"}
+# {"level":30,"time":1792043592274,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/api/owner/pricing/refresh"},"msg":"incoming request"}
+# {"level":30,"time":1792043592313,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":200},"responseTime":39.15776800000003,"msg":"request completed"}
+# {"level":30,"time":1792043592315,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"GET","url":"/api/owner/snapshot"},"msg":"incoming request"}
+# {"level":30,"time":1792043592331,"pid":62369,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":200},"responseTime":15.981300999999803,"msg":"request completed"}
+# Subtest: owner analytics refresh is scoped, authenticated, audited and read-only at the provider
+ok 11 - owner analytics refresh is scoped, authenticated, audited and read-only at the provider
+  ---
+  duration_ms: 412.208473
+  type: 'test'
+  ...
+# Subtest: oversized analytics streams are cancelled and never replace prior snapshots
+ok 12 - oversized analytics streams are cancelled and never replace prior snapshots
+  ---
+  duration_ms: 412.537887
+  type: 'test'
+  ...
+# Subtest: fractional rate configuration is explicit and cannot silently round or mix units
+ok 13 - fractional rate configuration is explicit and cannot silently round or mix units
+  ---
+  duration_ms: 1.549938
+  type: 'test'
+  ...
+# {"level":30,"time":1792043588894,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/owner/conversations/a3771d8b-99bc-4d07-b095-ee27236ba7d2/control"},"msg":"incoming request"}
+# {"level":30,"time":1792043588932,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":200},"responseTime":37.419626000000335,"msg":"request completed"}
+# Subtest: owner waiting is acknowledged once and assistant resume sends fresh bound quantity choices
+ok 14 - owner waiting is acknowledged once and assistant resume sends fresh bound quantity choices
+  ---
+  duration_ms: 1293.240125
+  type: 'test'
+  ...
+# Subtest: WhatsApp signature covers exact bytes and channel flags require complete configuration
+ok 15 - WhatsApp signature covers exact bytes and channel flags require complete configuration
+  ---
+  duration_ms: 2.536921
+  type: 'test'
+  ...
+# Subtest: WhatsApp free AI uses the scoped hardware catalog, delivered history and text product-code choices without repeating inference
+ok 16 - WhatsApp free AI uses the scoped hardware catalog, delivered history and text product-code choices without repeating inference
+  ---
+  duration_ms: 1132.626247
+  type: 'test'
+  ...
+# {"level":30,"time":1792043590488,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"GET","url":"/owner"},"msg":"incoming request"}
+# {"level":30,"time":1792043590489,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":404},"responseTime":0.5566059999996469,"msg":"request completed"}
+# {"level":30,"time":1792043590489,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"GET","url":"/api/simulator"},"msg":"incoming request"}
+# {"level":30,"time":1792043590490,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":404},"responseTime":0.26785300000028656,"msg":"request completed"}
+# {"level":30,"time":1792043590490,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043590490,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":404},"responseTime":0.14934200000016062,"msg":"request completed"}
+# {"level":30,"time":1792043590491,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043590492,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":403},"responseTime":1.0665530000001127,"msg":"request completed"}
+# {"level":30,"time":1792043590492,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"GET","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043590493,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":403},"responseTime":0.2804330000003574,"msg":"request completed"}
+# {"level":30,"time":1792043590493,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"GET","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043590497,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":200},"responseTime":3.7670549999998,"msg":"request completed"}
+# {"level":30,"time":1792043590498,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043590508,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":200},"responseTime":10.221411999999873,"msg":"request completed"}
+# {"level":30,"time":1792043590509,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043590515,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","res":{"statusCode":200},"responseTime":5.399904999999762,"msg":"request completed"}
+# {"level":30,"time":1792043590517,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043590517,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-a","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043590531,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","res":{"statusCode":200},"responseTime":14.19428999999991,"msg":"request completed"}
+# {"level":30,"time":1792043590541,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-a","res":{"statusCode":200},"responseTime":23.959096000000045,"msg":"request completed"}
+# {"level":30,"time":1792043590588,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-b","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043590598,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-b","res":{"statusCode":200},"responseTime":9.542954000000009,"msg":"request completed"}
+# {"level":30,"time":1792043590629,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-c","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043590639,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-c","res":{"statusCode":200},"responseTime":10.115539999999783,"msg":"request completed"}
+# {"level":30,"time":1792043590639,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-d","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043590647,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-d","res":{"statusCode":200},"responseTime":8.199937999999747,"msg":"request completed"}
+# {"level":30,"time":1792043590648,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-e","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043590661,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-e","res":{"statusCode":200},"responseTime":12.860524000000169,"msg":"request completed"}
+# {"level":30,"time":1792043590662,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-f","req":{"method":"GET","url":"/api/owner/snapshot"},"msg":"incoming request"}
+# {"level":30,"time":1792043590680,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-f","res":{"statusCode":200},"responseTime":17.995054999999866,"msg":"request completed"}
+# {"level":30,"time":1792043590689,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"GET","url":"/privacy"},"msg":"incoming request"}
+# {"level":30,"time":1792043590692,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-g","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043590690,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":404},"responseTime":0.31459399999994275,"msg":"request completed"}
+# {"level":30,"time":1792043590690,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"GET","url":"/api/owner/privacy-draft"},"msg":"incoming request"}
+# {"level":30,"time":1792043590690,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":403},"responseTime":0.30334399999992456,"msg":"request completed"}
+# {"level":30,"time":1792043590690,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"GET","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1792043590691,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":404},"responseTime":0.0821509999996124,"msg":"request completed"}
+# {"level":30,"time":1792043590691,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"GET","url":"/webhook"},"msg":"incoming request"}
+# {"level":30,"time":1792043590691,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":403},"responseTime":0.18729199999961565,"msg":"request completed"}
+# {"level":30,"time":1792043590702,"pid":62370,"hostname":"gk-pc-System-Product-Name","reqId":"req-g","res":{"statusCode":200},"responseTime":9.988268999999946,"msg":"request completed"}
+# Subtest: signed ingress isolates hosts/assets/recipients, commits before ACK, deduplicates batches and honors owner controls
+ok 17 - signed ingress isolates hosts/assets/recipients, commits before ACK, deduplicates batches and honors owner controls
+  ---
+  duration_ms: 641.33198
+  type: 'test'
+  ...
+# Subtest: closed service window, uncertain sends, early statuses and authentication failure do not cause repeated sends
+ok 18 - closed service window, uncertain sends, early statuses and authentication failure do not cause repeated sends
+  ---
+  duration_ms: 753.016244
+  type: 'test'
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6199.726296

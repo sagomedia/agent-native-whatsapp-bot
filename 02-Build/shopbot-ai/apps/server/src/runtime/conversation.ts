@@ -25,7 +25,7 @@ import { randomUUID } from 'node:crypto';
 import type { Pool,PoolClient } from 'pg';
 import { interpretationSchema, type ConversationState, type Interpretation, type SimulatorEvent, type ToolCall, type Product, type RichReply } from '../../../../packages/contracts/index.js';
 import type { Interpreter,InterpretationInput } from '../adapters/interpreter.js';
-import {reserveAttempt,settleAttempt,validateRateCard,coolDownFreeQuota} from '../services/inference-budget.js';
+import {reserveAttempt,settleAttempt,rateHealth,validateRateCard,coolDownFreeQuota} from '../services/inference-budget.js';
 import {getProducts,catalogEnabled,catalogContext,sameUnit,normalizeUnit,tokens,exactProductMatch} from '../services/catalog.js';
 import {getCatalogMap,refinementPlan,discoverProducts} from '../services/catalog-discovery.js';
 import { loadState, RetailTools,digest,referenceLine, type ToolResult } from '../services/tools.js';
@@ -89,7 +89,7 @@ export class ConversationRuntime {
   constructor(private pool:Pool,private provider:Interpreter,private options:{allowPaidInference?:boolean;allowFreeInference?:boolean;discoveryStages?:boolean;mediaRecommendations?:boolean;sequentialItems?:boolean;visualOrdering?:boolean;maxDraftLines?:number;queueReply?:(client:PoolClient,ctx:ActorContext,id:string,reply:RichReply)=>Promise<void>}={}) {
     if(provider.mode==='live') {
       if(!(provider.freeQuota?options.allowFreeInference:options.allowPaidInference)||!provider.billing) throw new ToolError('Live interpretation is disabled until explicitly authorized metered configuration is supplied');
-      validateRateCard(provider.billing);
+      if(rateHealth(provider.billing).status==='invalid')validateRateCard(provider.billing);
     }
     this.tools=new RetailTools(pool,{sequentialItems:provider.unifiedUnderstanding?false:options.sequentialItems,maxDraftLines:options.maxDraftLines});
   }
@@ -103,12 +103,12 @@ export class ConversationRuntime {
       if(row.rows[0]&&(await client.query("SELECT not_before>now() OR EXISTS(SELECT 1 FROM whatsapp_media WHERE message_id=$1 AND state IN ('pending','fetching')) AS waiting FROM messages WHERE id=$1",[row.rows[0].id])).rows[0].waiting)return null;
       if(!row.rows[0]) return null;
       const token=randomUUID(),m=row.rows[0];
-      await client.query("UPDATE messages SET status='processing',claim_token=$1,lease_until=now()+$3*interval '1 second' WHERE id=$2",[token,m.id,processingLeaseSeconds()]);
+      const claimedDeadline=await client.query("UPDATE messages SET status='processing',claim_token=$1,lease_until=clock_timestamp()+$3*interval '1 second',inference_deadline_at=coalesce(inference_deadline_at,to_timestamp($4/1000.0)) WHERE id=$2 RETURNING inference_deadline_at",[token,m.id,processingLeaseSeconds(),Date.now()+inferenceTiming.turnMs]);
       if(this.options.visualOrdering!==undefined)await client.query('UPDATE conversations SET visual_ordering=$2 WHERE id=$1',[ctx.conversationId,this.options.visualOrdering]);
       const shown=(await client.query("SELECT payload FROM messages WHERE conversation_id=$1 AND direction='outbound' ORDER BY sequence DESC LIMIT 20",[ctx.conversationId])).rows;
       const displayedProducts=shown.flatMap(r=>[...(r.payload?.parts??[]).flatMap((p:any)=>p.cards.flatMap((c:any)=>c.kind==='product'?(c.buttons??[]).map((b:any)=>({event:b.event,product:c.product})):[])),...(r.payload?.cards??[]).flatMap((c:any)=>c.action&&c.product?[{event:c.action,product:c.product}]:[])]);
       const displayedActions=shown.flatMap(r=>[...(r.payload?.parts??[]).flatMap((p:any)=>[...(p.buttons??[]).map((b:any)=>b.event),...(p.cards??[]).flatMap((c:any)=>(c.buttons??[]).map((b:any)=>b.event))]),...(r.payload?.cards??[]).flatMap((c:any)=>c.action?[c.action]:[]),...(r.payload?.buttons??[]).map((b:any)=>b.event)]);
-      return {deadlineAt:Date.now()+inferenceTiming.turnMs,id:m.id,token,event:m.payload,bindingId:m.binding_id,state:await loadState(client,ctx),catalog:await catalogEnabled(client,ctx)?await catalogContext(client,ctx):await getProducts(client,ctx),catalogMap:await catalogEnabled(client,ctx)?await getCatalogMap(client,ctx):undefined,memory:await loadAssistantMemory(client,ctx),displayedActions,displayedProducts} as Claimed;
+      return {deadlineAt:new Date(claimedDeadline.rows[0].inference_deadline_at).getTime(),id:m.id,token,event:m.payload,bindingId:m.binding_id,state:await loadState(client,ctx),catalog:await catalogEnabled(client,ctx)?await catalogContext(client,ctx):await getProducts(client,ctx),catalogMap:await catalogEnabled(client,ctx)?await getCatalogMap(client,ctx):undefined,memory:await loadAssistantMemory(client,ctx),displayedActions,displayedProducts} as Claimed;
     });
     if(!claimed) return false;
     let requestedLanguage=claimed.event.type==='change_language'?claimed.event.language:claimed.event.type==='text'?languageRequest(claimed.event.text):undefined;
@@ -200,8 +200,9 @@ export class ConversationRuntime {
         await client.query("UPDATE messages SET status='pending',claim_token=NULL,lease_until=NULL WHERE id=$1 AND claim_token=$2",[claimed.id,claimed.token]);
         return;
       }
-      const held=await client.query("SELECT id FROM messages WHERE id=$1 AND conversation_id=$2 AND status='processing' AND claim_token=$3 AND lease_until>now()",[claimed.id,ctx.conversationId,claimed.token]);
+      const held=await client.query("SELECT id FROM messages WHERE id=$1 AND conversation_id=$2 AND status='processing' AND claim_token=$3 AND lease_until>clock_timestamp()",[claimed.id,ctx.conversationId,claimed.token]);
       if(!held.rowCount) return; // Another worker acquired the expired lease; old result is discarded.
+      await client.query('SAVEPOINT turn_effects');
       if(Date.now()>=claimed.deadlineAt){failure='The turn deadline was reached. Your list is retained.';failureReason='turn_deadline';}
       const current=await loadState(client,ctx);
       const inferred=claimed.state.visualOrdering&&claimed.event.type==='text'?phrasingLanguage(claimed.event.text):undefined;
@@ -448,6 +449,17 @@ export class ConversationRuntime {
         await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,response_to,payload,reply_group_id,part_index,part_count,stage,clarification_reason) VALUES($1,$2,'outbound',$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11)",[id,ctx.conversationId,payload.text,this.options.queueReply?'queued':'sent',claimed.id,JSON.stringify(payload),replyId,index,parts.length,rich.stage??null,rich.clarificationReason??null]);
         await this.options.queueReply?.(client,ctx,id,payload);
       }
+      if(Date.now()>=claimed.deadlineAt){
+        // Rendering and outbox work also consume the turn budget. Undo their
+        // transaction's shopping effects; inference accounting was committed
+        // separately and must remain intact.
+        await client.query('ROLLBACK TO SAVEPOINT turn_effects');
+        if(!(await client.query("SELECT 1 FROM messages WHERE id=$1 AND claim_token=$2 AND status='processing' AND lease_until>clock_timestamp()",[claimed.id,claimed.token])).rowCount)return;
+        const retained={...plainReply(say(claimed.state,'The turn deadline was reached. Your list is retained. Please try again or ask the shop for help.','செயலாக்க நேரம் முடிந்தது. உங்கள் பட்டியல் அப்படியே உள்ளது. மீண்டும் முயலுங்கள் அல்லது கடையிடம் உதவி கேளுங்கள்.','Processing neram mudinjathu. Unga list appadiye irukku. Marubadi try pannunga illa kadaiyidam help kelunga.')),replyLanguage:claimed.state.replyLanguage??'en',stage:'error' as const,clarificationReason:'turn_deadline'};
+        const id=randomUUID();
+        await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,response_to,payload,stage,clarification_reason) VALUES($1,$2,'outbound',$3,$4,$5,$6::jsonb,'error','turn_deadline')",[id,ctx.conversationId,retained.text,this.options.queueReply?'queued':'sent',claimed.id,JSON.stringify(retained)]);
+        await this.options.queueReply?.(client,ctx,id,retained);
+      }
       await client.query("UPDATE messages SET status='processed',claim_token=NULL,lease_until=NULL WHERE id=$1",[claimed.id]);
     });
     return true;
@@ -688,14 +700,15 @@ export class ConversationRuntime {
     const provider=stage==='recognize'?(this.provider.recognitionProviderFor?.(input)??this.provider.recognitionProvider??this.provider):this.provider;
     if(provider.mode==='live'&&!(provider.freeQuota?this.options.allowFreeInference:this.options.allowPaidInference))throw new ToolError('This inference stage is not authorized.');
     if(providerCallTimeout(input,claim.deadlineAt-Date.now())<=inferenceTiming.sdkMarginMs)throw new ToolError('The turn deadline was reached. Your list is retained.','turn_deadline');
-    provider.validateInput?.(input);
+    const prepared=provider.prepareInput?.(input);
+    if(!prepared)provider.validateInput?.(input);
     // A committed reservation precedes every potentially paid invocation.
     const reservation=await withConversation(this.pool,ctx,async client=>{
-      const held=await client.query("SELECT 1 FROM messages WHERE id=$1 AND status='processing' AND claim_token=$2 AND lease_until>now()",[claim.id,claim.token]);
+      const held=await client.query("SELECT 1 FROM messages WHERE id=$1 AND status='processing' AND claim_token=$2 AND lease_until>clock_timestamp()",[claim.id,claim.token]);
       if(!held.rowCount) throw new ToolError('Work lease expired before interpretation.');
       const current=await loadState(client,ctx);
       if(current.version!==claim.state.version) throw new ToolError('Draft changed before interpretation.');
-      return reserveAttempt(client,ctx,claim.id,claim.state.version,provider,stage);
+      return reserveAttempt(client,ctx,claim.id,claim.state.version,provider,stage,prepared?.admission);
     });
     if(reservation.exhausted) throw new ToolError('Interpretation attempt limit reached. Please rephrase or ask the shop.');
     if('denied' in reservation&&reservation.denied){if('defer' in reservation&&reservation.defer)throw new DeferredRecommendation();throw new ToolError('Inference budget unavailable or exhausted. Your draft is retained.',provider.freeQuota?'quota_unavailable':'budget_unavailable');}
@@ -705,7 +718,7 @@ export class ConversationRuntime {
       const timeoutMs=providerCallTimeout(input,claim.deadlineAt-Date.now());
       if(timeoutMs<=inferenceTiming.sdkMarginMs){failureCode='turn_deadline';throw new ToolError('The turn deadline was reached. Your list is retained.','turn_deadline');}
       const signal=AbortSignal.timeout(timeoutMs);
-      const output=await Promise.race([provider.interpret(input,signal),new Promise<never>((_,reject)=>{signal.addEventListener('abort',()=>reject(new Error('Interpretation timed out; draft retained.')),{once:true});})]);
+      const output=await Promise.race([prepared?prepared.interpret(signal):provider.interpret(input,signal),new Promise<never>((_,reject)=>{signal.addEventListener('abort',()=>reject(new Error('Interpretation timed out; draft retained.')),{once:true});})]);
       failureCode='usage_validation';
       if(!await settleAttempt(this.pool,ctx,reservation.id!,output)) throw new ToolError('Provider usage exceeded the verified limits. No changes applied.');
       if(Date.now()>=claim.deadlineAt){failureCode='turn_deadline';throw new ToolError('The turn deadline was reached. Your list is retained.','turn_deadline');}

@@ -15,6 +15,7 @@ export interface Interpreter {
   readonly billing?: RateCard;
   readonly freeQuota?: {scope:string;model:string};
   validateInput?(input: InterpretationInput): void;
+  prepareInput?(input:InterpretationInput):{admission:import('../services/inference-admission.js').InputAdmission;interpret(signal:AbortSignal):Promise<ProviderResult>};
   interpret(input: InterpretationInput, signal: AbortSignal): Promise<ProviderResult>;
 }
 // The local simulator stays mock-only. Explicit native evaluation uses the

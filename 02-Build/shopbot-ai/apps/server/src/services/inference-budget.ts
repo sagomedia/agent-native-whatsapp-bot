@@ -6,14 +6,24 @@ import {ToolError,withConversation,type ActorContext} from './context.js';
 
 export type RateCard={model:string;currency:'USD';verifiedOn:string;validUntil:string;source:string;inputMicrousdPerMillion:number;outputMicrousdPerMillion:number;inputTokenLimit:number;maxOutputTokens:number};
 // Standard text/image/audio inputs share this verified price. No audio output.
-export const geminiTextRate:Readonly<RateCard>=Object.freeze({model:GEMINI_MODEL_ID,currency:'USD',verifiedOn:'2026-10-02',validUntil:'2026-11-01',source:'https://ai.google.dev/gemini-api/docs/pricing',inputMicrousdPerMillion:300000,outputMicrousdPerMillion:2500000,inputTokenLimit:1048576,maxOutputTokens:4096});
+export const geminiTextRate:Readonly<RateCard>=Object.freeze({model:GEMINI_MODEL_ID,currency:'USD',verifiedOn:'2026-10-14',validUntil:'2026-11-01',source:'https://ai.google.dev/gemini-api/docs/pricing',inputMicrousdPerMillion:300000,outputMicrousdPerMillion:2500000,inputTokenLimit:1048576,maxOutputTokens:4096});
 // Compatibility export: speech now uses the same Flash Lite rate and model.
 export const geminiSpeechRate = geminiTextRate;
 export const freeQuotaLimits=Object.freeze({requestsPerMinute:10,inputTokensPerMinute:200000,requestsPerDay:100,minIntervalSeconds:6,reservedInputTokens:64000});
 const integer=(n:unknown):n is number=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0;
+export const rateFreshnessPolicy=Object.freeze({maxVerificationDays:31,warningDays:7,graceDays:0});
+export function rateHealth(rate:RateCard|undefined,now=Date.now()) {
+  const date=(value:string)=>/^\d{4}-\d{2}-\d{2}$/.test(value)&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value?Date.parse(value+'T00:00:00Z'):NaN;
+  let verified=NaN,expires=NaN;
+  try{if(rate){verified=date(rate.verifiedOn);expires=date(rate.validUntil);}}catch{/* Invalid dates remain invalid. */}
+  const valid=!!rate&&rate.currency==='USD'&&rate.model===GEMINI_MODEL_ID&&integer(rate.inputMicrousdPerMillion)&&integer(rate.outputMicrousdPerMillion)&&integer(rate.inputTokenLimit)&&integer(rate.maxOutputTokens)&&rate.inputTokenLimit>0&&rate.inputTokenLimit<=1048576&&rate.maxOutputTokens>0&&rate.maxOutputTokens<=16384&&Number.isFinite(verified)&&Number.isFinite(expires)&&verified<=now&&expires>verified&&expires-verified<=rateFreshnessPolicy.maxVerificationDays*86400000&&rate.source==='https://ai.google.dev/gemini-api/docs/pricing';
+  const daysRemaining=valid?Math.max(0,Math.ceil((expires-now)/86400000)):null;
+  const status=!valid?'invalid':expires<=now?'expired':(daysRemaining??0)<=rateFreshnessPolicy.warningDays?'expiring':'fresh';
+  return {status:status as 'invalid'|'expired'|'expiring'|'fresh',verifiedOn:rate?.verifiedOn??null,validUntil:rate?.validUntil??null,daysRemaining};
+}
 export function validateRateCard(rate:RateCard,now=Date.now()) {
-  const verified=Date.parse(rate.verifiedOn+'T00:00:00Z'),expires=Date.parse(rate.validUntil+'T00:00:00Z');
-  if(rate.currency!=='USD'||!rate.model||!integer(rate.inputMicrousdPerMillion)||!integer(rate.outputMicrousdPerMillion)||!integer(rate.inputTokenLimit)||!integer(rate.maxOutputTokens)||!rate.inputTokenLimit||!rate.maxOutputTokens||!Number.isFinite(verified)||!Number.isFinite(expires)||verified>now||expires<=now||expires-verified>31*86400000) throw new ToolError('Native model rates are missing, expired or invalid. Live interpretation is disabled.');
+  const health=rateHealth(rate,now);
+  if(health.status==='invalid'||health.status==='expired')throw new ToolError(`Native model rates are ${health.status}; invalid or expired rates disable live interpretation.`,health.status==='invalid'?'rate_invalid':'rate_expired');
 }
 function cost(rate:RateCard,input:number,output:number) {
   const numerator=BigInt(input)*BigInt(rate.inputMicrousdPerMillion)+BigInt(output)*BigInt(rate.outputMicrousdPerMillion);
@@ -41,7 +51,7 @@ export async function initializeBudget(pool:Pool,ctx:ActorContext,limitMicrousd:
     if(Number(b.rows[0].limit_microusd)!==limitMicrousd) throw new ToolError('Stored inference budget differs. Budget increases require an explicit administrative change; this run cannot reset it.');
   });
 }
-export async function reserveAttempt(client:PoolClient,ctx:ActorContext,messageId:string,sourceVersion:number,provider:Interpreter,stage:'recognize'|'identify'|'repair'|'recommend'='identify') {
+export async function reserveAttempt(client:PoolClient,ctx:ActorContext,messageId:string,sourceVersion:number,provider:Interpreter,stage:'recognize'|'identify'|'repair'|'recommend'='identify',admission?:import('./inference-admission.js').InputAdmission) {
   const previous=await client.query('SELECT * FROM provider_attempts WHERE message_id=$1 ORDER BY attempt DESC',[messageId]);
   const cached=previous.rows.find(p=>p.stage===stage&&p.state==='succeeded'&&p.source_version===sourceVersion&&p.provider===provider.name&&p.provider_mode===provider.mode);
   if(cached) return {cached:cached.response,id:null,exhausted:false};
@@ -74,6 +84,7 @@ export async function reserveAttempt(client:PoolClient,ctx:ActorContext,messageI
   const id=randomUUID();
   await client.query("INSERT INTO provider_attempts(id,store_id,conversation_id,actor,message_id,attempt,provider,source_version,state,provider_cost_paise,provider_mode,billing_state,rate_snapshot,reserved_microusd,quota_scope) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'started',$9,$10,$11,$12::jsonb,$13,$14)",[id,ctx.storeId,ctx.conversationId,ctx.actor,messageId,(previous.rowCount??0)+1,provider.name,sourceVersion,provider.mode==='mock'?0:null,provider.mode,provider.freeQuota?'free_declared':rate?'held':'not_billable',JSON.stringify(rate),reserved,provider.freeQuota?.scope??null]);
   await client.query('UPDATE provider_attempts SET stage=$1 WHERE id=$2',[stage,id]);
+  if(admission)await client.query('UPDATE provider_attempts SET input_admission=$1::jsonb WHERE id=$2',[JSON.stringify(admission),id]);
   return {cached:null,id,exhausted:false};
 }
 export async function settleAttempt(pool:Pool,ctx:ActorContext,id:string,result?:ProviderResult) {

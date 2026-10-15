@@ -20,7 +20,7 @@ test('empty, invalid and truncated transcripts retain strict recognition boundar
  assert.throws(()=>new GoogleSpeechRecognizer({...settings,model:'gemini-3.5-transcribe'}),/pinned model/);
 });
 test('speech accounting shares Flash Lite rates and retains unknown usage holds',()=>{
- assert.equal(geminiSpeechRate,geminiTextRate);validateRateCard(geminiSpeechRate,Date.parse('2026-10-13T12:00:00Z'));assert.equal(worstCaseReservation(geminiSpeechRate),324813);
+ assert.equal(geminiSpeechRate,geminiTextRate);validateRateCard(geminiSpeechRate,Date.parse('2026-10-14T12:00:00Z'));assert.equal(worstCaseReservation(geminiSpeechRate),324813);
  const result={output:{},truncated:false,responseModel:geminiTextRate.model,usage:{promptTokenCount:1200,candidatesTokenCount:30,totalTokenCount:1230}};
  assert.deepEqual(usageEstimate(geminiSpeechRate,result),{microusd:435,violation:false});assert.deepEqual(usageEstimate(geminiSpeechRate,{...result,usage:null}),{microusd:null,violation:false});
  assert.equal(usageEstimate(geminiSpeechRate,{...result,usage:{promptTokenCount:1200,candidatesTokenCount:4097,totalTokenCount:5297}}).violation,true);

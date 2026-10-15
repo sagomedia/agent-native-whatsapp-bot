@@ -2,7 +2,7 @@
 
 Private repository: [sagomedia/agent-native-whatsapp-bot](https://github.com/sagomedia/agent-native-whatsapp-bot).
 
-Status: the source includes the retail runtime, catalog hierarchy, multimodal input, WhatsApp channel and protected owner dashboard. The 14 October local reconciliation separates product approval, missing-quantity checks and consent to the final bill. See [the reviewed implementation plan](03-Output/030-shopbot-reviewed-implementation-plan.md) and [local verification](03-Output/031-counter-flow-implementation.md). Started 2 October 2026.
+Status: the source includes the retail runtime, catalog hierarchy, multimodal input, WhatsApp channel and protected owner dashboard. Local reconciliation separates product approval, quantity checks and final bill consent. The 15 October P2 package adds actual-request admission, persistent turn deadlines, rate-expiry handling and delivery-cost reconciliation. See [the reviewed implementation plan](03-Output/030-shopbot-reviewed-implementation-plan.md), [counter-flow verification](03-Output/031-counter-flow-implementation.md) and [P2 verification](03-Output/032-p2-cost-and-admission.md). These local packages have not been deployed. Started 2 October 2026.
 
 Build a retail assistant that interprets whole customer requests and proposes typed business actions. Application services own identity, catalog facts, drafts, order confirmation, staff approval and payment truth.
 
@@ -37,6 +37,6 @@ Open http://localhost:3017. The optional AI test page is at http://localhost:301
 
 `main` is the current application baseline. Create a `codex/<change>` or `feature/<change>` branch for further work and open a pull request. Historical rollback points are retained as `checkpoint/*` tags. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and [GIT-WORKFLOW.md](GIT-WORKFLOW.md) for recovery.
 
-The current verification count and results are recorded in [local verification](03-Output/031-counter-flow-implementation.md). The [GitHub Actions workflow](.github/workflows/project-checks.yml) is now included in the working branch and supplies a disposable database with mocked AI providers. Its first hosted run is pending publication of the branch.
+The current verification count and results are recorded in [P2 verification](03-Output/032-p2-cost-and-admission.md). The [GitHub Actions workflow](.github/workflows/project-checks.yml) is included in the working branch and supplies a disposable database with mocked AI providers. Its first hosted run is pending publication of the branch.
 
 Source, reference documents, demo catalog fixtures and verification evidence are versioned. Credentials, local databases, customer uploads, dependencies and build outputs stay outside Git. This private source repository does not back up runtime database or media volumes.

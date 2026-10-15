@@ -53,6 +53,11 @@ export const clockTime = (value: string) => new Intl.DateTimeFormat('en-IN', {ti
 export const usd = (micros: string | number, exact = false) => new Intl.NumberFormat('en-US', {
   style: 'currency', currency: 'USD', minimumFractionDigits: exact ? 6 : 2, maximumFractionDigits: exact ? 6 : 2
 }).format(Number(micros) / 1000000);
+export function microCurrency(micros:string|null,currency:string|null) {
+  if(micros===null||currency===null||!/^\d+$/.test(micros)||!/^[A-Z]{3}$/.test(currency))return 'Amount unavailable';
+  const amount=BigInt(micros),whole=amount/1000000n,fraction=(amount%1000000n).toString().padStart(6,'0');
+  return new Intl.NumberFormat('en-IN',{style:'currency',currency,minimumFractionDigits:6,maximumFractionDigits:6}).formatToParts(whole).map(part=>part.type==='fraction'?fraction:part.value).join('');
+}
 export const channelLabels: Record<string, string> = {
   not_connected: 'Not connected', awaiting_verification: 'Awaiting verification',
   webhook_verified: 'Connected · awaiting first message', receiving: 'Receiving test events', attention_required: 'Needs attention'

@@ -2,6 +2,8 @@
 
 Reusable retail runtime with a local mock simulator and a connected WhatsApp VPS channel. See workspace `VISION.md` for direction and original references in `01-Input/starter-vision/`.
 
+The local 15 October package adds request admission, durable deadlines and delivery-cost accounting. See [P2 configuration and verification](../../03-Output/032-p2-cost-and-admission.md). Apply additive migration 27 before running this version against an existing database. These changes have not been deployed; the connected-deployment notes below describe the earlier runtime.
+
 ## Current connected deployment
 
 WhatsApp runs on Google VPS `sago-counter-ksmc`; the owner dashboard is at `https://shopbot-preview.sagoautomation.tech/owner` and public webhook/media use `https://demo.sagoautomation.tech`. All inference uses Gemini 3.5 Flash Lite. The mock setup below is for development; its messages do not prove WhatsApp delivery. See [voice repair plan](VOICE-ORDER-REPAIR.md) and the repository’s visual operating guide.

@@ -15,11 +15,12 @@ import {loadState} from './tools.js';
 import {loadAssistantMemory,conversationBinding} from './agent-assistance.js';
 import type {ActorContext} from './context.js';
 import type {WhatsAppConfig} from './whatsapp-config.js';
+import {recordDeliveryPricing,monthRange,savePricingAnalytics} from './messaging-cost.js';
 import {downloadWhatsAppMedia,mediaFailureCode} from './whatsapp-media.js';
 
 const id=z.string().min(1).max(512),digits=z.string().regex(/^\d{7,15}$/),timestamp=z.string().regex(/^\d{1,12}$/);
 const incoming=z.object({id,from:digits,timestamp,type:z.string().max(40),text:z.object({body:z.string().min(1).max(4096)}).optional(),image:z.object({id,caption:z.string().trim().max(1000).optional()}).optional(),audio:z.object({id}).optional(),context:z.object({id}).optional(),button:z.object({payload:id,text:z.string().max(200)}).optional(),interactive:z.object({type:z.string(),button_reply:z.object({id,title:z.string().max(200)}).optional(),list_reply:z.object({id,title:z.string().max(200)}).optional()}).optional()});
-const status=z.object({id,recipient_id:digits,timestamp,status:z.enum(['sent','delivered','read','failed']),biz_opaque_callback_data:z.uuid().optional(),errors:z.array(z.object({code:z.number().int()})).max(10).optional()});
+const status=z.object({id,recipient_id:digits,timestamp,status:z.enum(['sent','delivered','read','failed']),biz_opaque_callback_data:z.uuid().optional(),errors:z.array(z.object({code:z.number().int()})).max(10).optional(),pricing:z.unknown().optional()});
 export const webhookSchema=z.object({object:z.literal('whatsapp_business_account'),entry:z.array(z.object({id:z.string(),changes:z.array(z.object({field:z.string(),value:z.object({metadata:z.object({phone_number_id:z.string()}).optional(),messages:z.array(incoming).max(100).optional(),statuses:z.array(status).max(100).optional()})})).max(20)})).max(20)});
 type Webhook=z.infer<typeof webhookSchema>;
 export type WhatsAppFetch=typeof fetch;
@@ -30,7 +31,11 @@ export class WhatsAppChannel {
     if(config.aiEnabled&&(!provider||provider.mode!=='live'||!provider.freeQuota&&(!config.paidEnabled||!config.budgetMicrousd||config.budgetMicrousd>5000000)))throw new Error('WhatsApp AI requires the configured free-tier or explicitly budgeted interpreter');
     if(!config.aiEnabled&&provider)throw new Error('WhatsApp AI has not been enabled');
     this.runtime=new ConversationRuntime(pool,provider??new MockInterpreter(),{allowFreeInference:!!config.aiEnabled,allowPaidInference:!!config.aiEnabled&&!!config.paidEnabled,discoveryStages:!!config.discoveryStages,mediaRecommendations:!!config.mediaRecommendations,sequentialItems:!!config.sequentialItems,visualOrdering:!!config.visualOrdering,maxDraftLines:config.maxDraftLines,queueReply:async(client,ctx,messageId,rich)=>{
-      if(rich.parts){rich.deliveryEstimate={category:'service',ratePaise:config.serviceRatePaise??0,totalPaise:(config.serviceRatePaise??0)*rich.outboundMessages};await client.query('UPDATE messages SET payload=$1::jsonb WHERE id=$2',[JSON.stringify(rich),messageId]);}
+      const rateMicroInr=config.serviceRateMicroInr??(config.serviceRatePaise===undefined?undefined:config.serviceRatePaise*10000);
+      if(rateMicroInr!==undefined&&Number.isSafeInteger(rateMicroInr)&&rateMicroInr>=0&&Number.isSafeInteger(rateMicroInr*rich.outboundMessages)){
+        rich.deliveryEstimate={category:'service',ratePaise:rateMicroInr/10000,totalPaise:rateMicroInr*rich.outboundMessages/10000,rateMicroInr,totalMicroInr:rateMicroInr*rich.outboundMessages,estimateOnly:true};
+        await client.query('UPDATE messages SET payload=$1::jsonb WHERE id=$2',[JSON.stringify(rich),messageId]);
+      }
       const revision=(await client.query('SELECT operator_revision FROM conversations WHERE id=$1',[ctx.conversationId])).rows[0].operator_revision;
       const state=await loadState(client,ctx),memory=await loadAssistantMemory(client,ctx);
       let rendered;
@@ -138,8 +143,9 @@ export class WhatsAppChannel {
             accepted++;
           }
           for(const s of v.statuses??[]){
+            await recordDeliveryPricing(client,{storeId:c.storeId,phoneId:c.phoneId,accountTimezone:c.accountTimezone,accountCurrency:c.accountCurrency,rateCard:c.pricingRateCard},s);
             if(!c.recipients.includes(s.recipient_id))continue;
-            await client.query('INSERT INTO whatsapp_statuses(phone_id,provider_id,recipient,state,provider_timestamp,callback_id,error_code) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING',[c.phoneId,s.id,s.recipient_id,s.status,Number(s.timestamp),s.biz_opaque_callback_data??null,s.errors?.[0]?.code??null]);
+            await client.query('INSERT INTO whatsapp_statuses(phone_id,provider_id,recipient,state,provider_timestamp,callback_id,error_code,pricing) VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb) ON CONFLICT(phone_id,provider_id,state,provider_timestamp) DO UPDATE SET pricing=coalesce(whatsapp_statuses.pricing,excluded.pricing)',[c.phoneId,s.id,s.recipient_id,s.status,Number(s.timestamp),s.biz_opaque_callback_data??null,s.errors?.[0]?.code??null,JSON.stringify(s.pricing??null)]);
           }
           await client.query('UPDATE whatsapp_channels SET last_received_at=now() WHERE phone_id=$1',[c.phoneId]);
         }
@@ -196,6 +202,24 @@ export class WhatsAppChannel {
       UPDATE whatsapp_outbox o SET provider_id=l.provider_id,state=CASE l.state WHEN 'sent' THEN 'accepted' ELSE l.state END,last_error=CASE WHEN l.error_code IS NULL THEN NULL ELSE 'meta_'||l.error_code::text END
       FROM latest l WHERE o.message_id=l.message_id AND (o.state NOT IN ('read','delivered') OR l.state='read') RETURNING o.message_id,o.state
     ) UPDATE messages m SET status=u.state FROM updated u WHERE m.id=u.message_id`,[this.config.phoneId]);
+  }
+  async refreshPricingAnalytics(month:string){
+    const c=this.config;
+    if(!c.accountTimezone||!c.accountCurrency||!c.businessPhoneNumber)throw new Error('Configure the Messaging account timezone, billing currency and business phone number before requesting analytics.');
+    const range=monthRange(month,c.accountTimezone),end=Math.min(range.end,Math.floor(Date.now()/1000));
+    if(end<=range.start)throw new Error('Future messaging analytics cannot be requested.');
+    const url=new URL(`https://graph.facebook.com/${c.graphVersion}/${c.wabaId}`);
+    url.searchParams.set('fields',`pricing_analytics.start(${range.start}).end(${end}).granularity(DAILY).phone_numbers(${c.businessPhoneNumber}).dimensions(PHONE,COUNTRY,PRICING_CATEGORY,PRICING_TYPE).metric_types(COST,VOLUME)`);
+    const response=await this.request(url,{headers:{authorization:'Bearer '+c.accessToken},signal:AbortSignal.timeout(10000),redirect:'error'});
+    if(!response.ok)throw new Error('Messaging pricing analytics could not be retrieved. Existing estimates are retained.');
+    const reader=response.body?.getReader();
+    if(!reader)throw new Error('Messaging pricing analytics response is empty.');
+    const chunks:Uint8Array[]=[];let bytes=0;
+    try{while(true){const chunk=await reader.read();if(chunk.done)break;bytes+=chunk.value.byteLength;if(bytes>1048576){await reader.cancel();throw new Error('Messaging pricing analytics response is too large.');}chunks.push(chunk.value);}}finally{reader.releaseLock();}
+    const text=Buffer.concat(chunks).toString('utf8');
+    const client=await this.pool.connect();
+    try{await client.query('BEGIN');const result=await savePricingAnalytics(client,{storeId:c.storeId,phoneId:c.phoneId,accountTimezone:c.accountTimezone,rateCard:c.pricingRateCard},{wabaId:c.wabaId,businessPhone:c.businessPhoneNumber,currency:c.accountCurrency,start:range.start,end},JSON.parse(text));await client.query('COMMIT');return result;}
+    catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
   }
   async processNext(){
     if(!this.config.processEnabled)return false;

@@ -1,3 +1,7 @@
+# Local P2 safeguards — 15 October 2026
+
+The local branch now admits the actual multimodal generation request before reservation, persists deadlines across customer-message deferrals/reclaims, rolls back shopping effects when rendering/outbox work passes the deadline, exposes Gemini rate freshness, and records authenticated WhatsApp delivery pricing with exact micro-INR estimates and optional account analytics. Additive migration 27 preserves earlier budgets, holds, attempts and requests. All 483 integration/regression tests, build/typecheck and four catalog cleanup tests pass. See [P2 implementation and verification](../../03-Output/032-p2-cost-and-admission.md) for configuration, evidence and limits. Smaller token holds and live account-rate reconciliation require a controlled pilot; this package has not been deployed.
+
 # Local counter-flow reconciliation — 14 October 2026
 
 The local `codex/reconciled-counter-flow` branch separates product approval from missing-count/unit checks and final bill consent, keeps independent price answers clear, preserves named pipe sizes and all list lines, and aligns audio deadlines with the processing lease. See [implementation and verification](../../03-Output/031-counter-flow-implementation.md) for exact scope, test evidence and remaining plan packages. These source changes have not been deployed; the deployment notes below are historical reports.
