@@ -19,7 +19,15 @@ export async function bindRuntimeRelease(pool:Pool){
 export const artifactHash=(files:ReleaseManifest['files'])=>createHash('sha256').update(JSON.stringify(files)).digest('hex');
 export async function releaseFiles(root:string){
  const files:ReleaseManifest['files']=[];
- async function visit(path:string){const stat=await lstat(resolve(root,path));if(stat.isSymbolicLink())throw new Error('Release artifacts cannot contain symlinks.');if(stat.isDirectory()){for(const item of (await readdir(resolve(root,path))).sort())await visit(path+'/'+item);}else if(stat.isFile()&&path!=='dist/release-manifest.json')files.push({path,sha256:createHash('sha256').update(await readFile(resolve(root,path))).digest('hex')});}
+ async function visit(path:string){
+  if(path.split('/').includes('owner-only'))return;
+  const stat=await lstat(resolve(root,path));if(stat.isSymbolicLink())throw new Error('Release artifacts cannot contain symlinks.');
+  // These source review files are deliberately absent from deployment. Hash
+  // the runtime catalog/map/photos and fonts, not private onboarding evidence.
+  const catalogSource=/^resources\/catalog\/ksmc-demo\/([^/]+)$/.exec(path);
+  if(stat.isFile()&&catalogSource&&!['catalog.json','catalog-map.json'].includes(catalogSource[1]))return;
+  if(stat.isDirectory()){for(const item of (await readdir(resolve(root,path))).sort())await visit(path+'/'+item);}else if(stat.isFile()&&path!=='dist/release-manifest.json')files.push({path,sha256:createHash('sha256').update(await readFile(resolve(root,path))).digest('hex')});
+ }
  for(const p of ['dist','resources','package.json','package-lock.json'])await visit(p);
  return files.sort((a,b)=>a.path<b.path?-1:a.path>b.path?1:0);
 }

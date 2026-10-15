@@ -89,6 +89,7 @@ if args.node_archive:
             destination.write_bytes(source.read())
     (stage / 'node/bin/node').chmod(0o755)
 shutil.copytree(app / 'deploy/native', stage / 'deploy', ignore=shutil.ignore_patterns('__pycache__'))
+subprocess.run(['node','--input-type=module','-e',"import {verifyRelease} from './dist/apps/server/src/services/release-manifest.js'; await verifyRelease(process.cwd(),true);"],cwd=stage/'app',check=True)
 for name in ['install.sh', 'rollback.sh', 'upgrade.sh']:
     (stage / 'deploy' / name).chmod(0o755)
 
