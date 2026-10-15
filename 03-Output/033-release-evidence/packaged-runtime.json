@@ -1,0 +1,51 @@
+{
+  "packagedStartup": true,
+  "verifiedReleaseRequired": true,
+  "node": "22.22.1",
+  "heapLimitMb": 128,
+  "releaseFingerprint": "4716fbfd2f6a7586f495a2f6e1baaffb5110011e5da987e916bd8c34182f2b9a",
+  "durableMockConversation": true,
+  "stampedMessages": 2,
+  "restartRetained": true,
+  "tables": {
+    "conversations": {
+      "count": 1,
+      "sha256": "cf8b05d2836f108a967aa00be6c70adfc486cb8add5317b6249d6390d36362e8"
+    },
+    "messages": {
+      "count": 2,
+      "sha256": "562e1246226d0ba8b5cf34904d6dcf3b33e521654c344999e9d0d5b3e5377804"
+    },
+    "order_requests": {
+      "count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "provider_attempts": {
+      "count": 1,
+      "sha256": "f7048441651f329084d4576a46dbd811904239ff2d55d2015cf71d39ab435fe9"
+    },
+    "inference_budgets": {
+      "count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "runtime_releases": {
+      "count": 1,
+      "sha256": "13f808027c2ab3b12ae6c7fd9a790afd5cea54d4e8ebaf35a8e7def0c2a93aa8"
+    }
+  },
+  "packagedStdio": {
+    "handshake": true,
+    "search": true,
+    "productionDependenciesOnly": true,
+    "tools": [
+      "catalog_search",
+      "catalog_drafts",
+      "catalog_propose",
+      "catalog_edit_draft",
+      "catalog_stage_photo"
+    ]
+  },
+  "liveInference": false,
+  "whatsappConnected": false,
+  "paymentsEnabled": false
+}
