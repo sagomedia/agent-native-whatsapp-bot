@@ -3,16 +3,18 @@ import type {ConversationState,RichReply,CatalogMap} from '../../../../packages/
 import {say,localName,unitName} from '../../../../packages/contracts/language.js';
 import {shoppingButton} from './shopping-flow.js';
 import {productConfirmed} from './product-verification.js';
+import {planReply} from './reply-plan.js';
 
 // Backend-owned UI policy: choosing/ordering uses concrete, version-bound actions.
 export function shoppingActions(reply:RichReply,state:ConversationState,map?:CatalogMap):RichReply {
   const id=()=>randomUUID();
   const flow=(action:Parameters<typeof shoppingButton>[1],en:string,ta:string,latin:string)=>shoppingButton(state,action,say(state,en,ta,latin));
-  if(reply.readOnly||reply.handoffRequested||state.handoffRequested)return reply;
+  const plan=planReply(reply,state);
+  if(['read_only','shop_help','error'].includes(plan.purpose))return reply;
   if(state.lastRequestId&&!reply.cards?.length)return reply.buttons?.length?reply:{...reply,buttons:[flow('status','Request status','கோரிக்கை நிலை','Request status'),flow('new_list','New list','புதிய பட்டியல்','Pudhu list'),flow('handoff','Talk to shop','கடையிடம் பேசு','Kadaiyila pesu')]};
-  if(reply.kind==='order_review')return {...reply,presentation:'text',buttons:[...(reply.buttons??[]).slice(0,1),flow('edit_list','Edit list','பட்டியலை மாற்று','List maathu'),flow('keep_list','Keep for later','பிறகு தொடரலாம்','Piragu thodarlaam')]};
+  if(reply.kind==='order_review')return {...reply,presentation:'text',buttons:[...(plan.mayOfferSubmission?reply.buttons??[]:[]).slice(0,1),flow('edit_list','Edit list','பட்டியலை மாற்று','List maathu'),flow('keep_list','Keep for later','பிறகு தொடரலாம்','Piragu thodarlaam')]};
   if(state.editingLineId)return reply;
-  const line=state.pending?.kind==='question'?state.draft.find(l=>l.id===(state.pending as {lineId:string}).lineId):undefined;
+  const line=plan.purpose==='clarification'?plan.line:undefined;
   if(line?.resolution==='needs_quantity'){
     const product=line.candidates?.find(p=>p.sku===line.sku),step=product?.quantityStep??1;
     const amounts=[1,2].filter(q=>Math.abs(q/step-Math.round(q/step))<1e-7);

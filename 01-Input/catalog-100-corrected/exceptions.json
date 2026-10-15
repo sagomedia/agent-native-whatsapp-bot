@@ -1,0 +1,506 @@
+[
+  {
+    "sku": "ALL",
+    "kind": "owner_approval_required",
+    "issue": "All 100 records ship with pricePaise=0 (priceStatus 'confirm'), stock=null, active=false, verified=false, and ownerConfirmation all false. Nothing in this package represents a shop price, stock level, or confirmed identity.",
+    "needed": "Owner must approve a selling price, stock quantity, and selling unit per SKU before any import/staging."
+  },
+  {
+    "sku": "CAT100-001",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Retailer category photo of Supreme UPVC pipes/fittings; brand printing and 15mm size not visible in photo.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-002",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: new photo shows Finolex branding on white UPVC pipe, but no permitted source ties a Finolex-branded photo to the 20mm/6m/Sch-80 variant (Mahaboob Agencies documents the variant but exposes no product image); size not verifiable in photo. SIZE-MAPPING CONFLICT: supplier documents 20mm as 3/4 inch, but Finolex's own ASTM Sch-80 brochure lists 20mm as 1/2 inch (25mm = 3/4 inch).",
+    "needed": "Owner must verify actual stock: is the pipe 20mm or 25mm? Then source an exact photo of the verified variant."
+  },
+  {
+    "sku": "CAT100-003",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Supplier photo shows Ashirvad-branded UPVC pipes and fittings; 25mm size not legible in photo.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-004",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Dealer photo shows Prince EasyFit-branded UPVC pipes; 40mm size not verifiable in photo.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-005",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Official Ashirvad brand image shows FlowGuard Plus SDR-11 pipes in several sizes; 20mm size not identifiable in photo.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-006",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Retailer photo of Supreme Aqua Gold UPVC elbow; size marking not legible in photo.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-007",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Finolex-branded UPVC SCH-80 elbow photo; size not stated in image metadata.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-008",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Official Supreme Aqua Gold tee product photo; plain (non-brass) tee look not isolated from the range page.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-009",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Official Finolex SCH-80 coupler illustration; size not verifiable from the illustration.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-010",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Retailer photo of Ashirvad UPVC reducer coupler; exact size combination not legible.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-011",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Seller photo titled 'Prince 1 Inch End Cap UPVC'; size branding not legible in photo.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-012",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Retailer photo of Supreme PVC union; size marking not legible in photo.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-014",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Official Finolex solvent cement tin illustration; pack size not legible in illustration.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-015",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Official Supreme solvent cement product photo; pack size not legible in photo.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-016",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Weld-On 705 Industrial Grade PVC can photo; the can in the photo is the 1-pint size, not the 1/2-pint SKU.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-017",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Product-page photo of the F330011 bib cock; Moglix notes its images are for reference only.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-019",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Retailer photo of Jaquar AQT-CHR-3057 angle valve; model not legible in the photo itself.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-021",
+    "kind": "non_exact_image",
+    "issue": "Photo is unconfirmed: Generic white UPVC ball valve illustration from a manufacturer category page; brand and size not verifiable.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-022",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Seller photo titled 'zoloto-bronze-gate-valve-screwed-15-mm-1035'; size marking not legible in photo.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-023",
+    "kind": "non_exact_image",
+    "issue": "Photo is unconfirmed: Generic white UPVC ball valve photo from a seller catalogue; brand and size not verifiable.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-024",
+    "kind": "non_exact_image",
+    "issue": "Photo is unconfirmed: Generic white teflon tape roll photo from a seller catalogue; brand and size not verifiable.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-025",
+    "kind": "non_exact_image",
+    "issue": "Photo is unconfirmed: Generic teflon tape bulk photo from a seller page; brand and size not verifiable.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-026",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Actual product photo from the listed seller page (25mm PVC nail cable clip); brand marking not legible.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-027",
+    "kind": "non_exact_image",
+    "issue": "Photo is unconfirmed: Generic stainless worm-drive hose clamp photo; brand and size not verifiable.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-028",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: M-Seal Regular epoxy compound branded pack photo; 100g size not legible in photo.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-029",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Photo shows a 200PCS nitrile rubber ring kit in a compartment box (same kit type); brand marking not legible.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-030",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Anabond 666 RTV Silicone branded tube photo; 260ml size not legible in photo.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-032",
+    "kind": "quote_basis_conflict",
+    "issue": "Quote basis conflict: Moglix lists a price for a PACK OF 10 SETS; shop unit is 'pack' = 1 set.",
+    "needed": "Owner must confirm the pack/price basis (pack size vs shop unit) before a price is set; never average unlike variants."
+  },
+  {
+    "sku": "CAT100-033",
+    "kind": "quote_basis_conflict",
+    "issue": "Quote basis conflict: Moglix price is for a PACK OF 10 line testers; shop unit is 'piece'.",
+    "needed": "Owner must confirm the pack/price basis (pack size vs shop unit) before a price is set; never average unlike variants."
+  },
+  {
+    "sku": "CAT100-041",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Photo is a generic CUMI cutting-abrasives image from an indiamart category page; exact sub-line and size markings are not legible, so variantMatch is family_onl",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-042",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Photo from the CUMI official abrasives site shows a Sleek Universal depressed-centre wheel; exact 100x4x16 markings are not legible, so variantMatch is family_o",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-047",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Exact-model (105) photo failed to download from mtechmart; fallback is a generic Taparia chisel photo from industrybuying - variantMatch family_only.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-049",
+    "kind": "quote_basis_conflict",
+    "issue": "Quote basis conflict: Moglix price is for a PACK OF 2 hammers; shop unit is 'piece'.",
+    "needed": "Owner must confirm the pack/price basis (pack size vs shop unit) before a price is set; never average unlike variants."
+  },
+  {
+    "sku": "CAT100-051",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Label reads 'Asian Paints Tractor Emulsion'; the 4L pack size is not legible on the label in the photo.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-052",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Bucket label reads '3.6L yellow base' - a tinting-base size variant, not the catalogued 4L white pack.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-053",
+    "kind": "resolved",
+    "issue": "RESOLVED 2026-10-12: identity reconciled to Dulux Promise Interior Emulsion 10L (White) matching the exact permitted photo (official AkzoNobel 10L pack art). Pack art shows a tinted shade (beige swatch); white variant uses identical artwork. Reference quote: Build Jahaan Rs.2020/piece incl. taxes (reference only).",
+    "needed": "Owner to confirm stocked shade and selling price/stock."
+  },
+  {
+    "sku": "CAT100-055",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Label reads 'Berger Weathercoat Premium Exterior Smooth Emulsion'; 4L size not legible in photo.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-058",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Label reads 'TruCare Interior Wall Primer, Water Thinnable'; 1L size not legible in photo.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-059",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Tin reads 'WoodTech Touchwood Interior & Exterior 1K PU'; 1L size not legible in photo.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-061",
+    "kind": "resolved",
+    "issue": "RESOLVED 2026-10-12: TIMCO-marked photo replaced with exact photo - handle sticker reads 'JOHNSON Active 2\"' (verified by zoomed inspection); genuine Johnson brand, exact 2-inch size, flat head, green plastic handle.",
+    "needed": "None for photo. Shop price/stock still pending owner."
+  },
+  {
+    "sku": "CAT100-062",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Ferrule reads 75mm (3 inch, exact size); brand not visible in photo.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-063",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Ferrule reads 100mm (4 inch, exact size); brand not visible in photo.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-064",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Photo shows 4-inch mini roller sleeves (refills, unifiber) from a supplier page; catalogued foam roller brand (Bharat) not visible.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-065",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Photo shows a full-size roller with white fabric sleeve on metal frame with wooden handle (retailer product photo); KPL branding not visible.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-066",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Bottle captioned '1 L Turpentine Oil' (exact size); Siv Lac branding not visible on the bottle.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-067",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Photo shows waterproof emery sheets; the backing print carries a different-looking mark (J4) and the 80 grit is not legible.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-068",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Photo shows waterproof emery sheets; 120 grit not legible and brand mark not clearly Cumi.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-069",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Canister reads 'Asian Paints TruGrip Masking Tapes' (exact brand); the 24mm x 20m size is not legible on the canister.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-070",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Photo shows a green plastic 9-inch paint tray with a mini roller in it; KAPIL branding not visible.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-071",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Manufacturer photo of Homdum shaved-head wood screws (assorted kit); exact 25mm box-of-100 pack shot not found.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-071",
+    "kind": "no_price_reference",
+    "issue": "No internet price reference was captured for this SKU.",
+    "needed": "Add at least one referencePrices entry with an explicit sellingUnit/packSize, or confirm none is publicly listed."
+  },
+  {
+    "sku": "CAT100-072",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Manufacturer photo of Homdum shaved-head wood screws (assorted kit); exact 30mm pack shot not found.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-072",
+    "kind": "no_price_reference",
+    "issue": "No internet price reference was captured for this SKU.",
+    "needed": "Add at least one referencePrices entry with an explicit sellingUnit/packSize, or confirm none is publicly listed."
+  },
+  {
+    "sku": "CAT100-073",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Homdum Truphe bugle-head screw photo (38mm variant, same Truphe product line); exact 50mm pack shot not found.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-073",
+    "kind": "no_price_reference",
+    "issue": "No internet price reference was captured for this SKU.",
+    "needed": "Add at least one referencePrices entry with an explicit sellingUnit/packSize, or confirm none is publicly listed."
+  },
+  {
+    "sku": "CAT100-074",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Generic 1kg-bag wire nail retail photo (Wembley Tools, Zimbabwe); Indian 1kg MS nail bag photo not downloadable.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-074",
+    "kind": "wholesale_basis_only",
+    "issue": "Only a wholesale-rate reference exists (bulk MOQ); street retail/shop rate will differ.",
+    "needed": "Owner must set the shop retail price; do not use the wholesale rate as the shop price."
+  },
+  {
+    "sku": "CAT100-075",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Generic loose wire-nail photo (Sameehan Exim, India); exact 65mm 1kg pack shot not found.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-075",
+    "kind": "wholesale_basis_only",
+    "issue": "Only a wholesale-rate reference exists (bulk MOQ); street retail/shop rate will differ.",
+    "needed": "Owner must set the shop retail price; do not use the wholesale rate as the shop price."
+  },
+  {
+    "sku": "CAT100-080",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Generic 4-inch stainless butt hinge photo (TradeIndia supplier); not Harrison-branded.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-080",
+    "kind": "quote_basis_conflict",
+    "issue": "Quote basis conflict: Moglix price is PER SINGLE HINGE; shop unit is 'pair'.",
+    "needed": "Owner must confirm the pack/price basis (pack size vs shop unit) before a price is set; never average unlike variants."
+  },
+  {
+    "sku": "CAT100-081",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Screwtight 3-inch iron butt hinge photo but chrome finish (SKU is brass finish); finish differs.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-081",
+    "kind": "quote_basis_conflict",
+    "issue": "Quote basis conflict: Moglix price is for a PACK OF 5 hinges; shop unit is 'pair'.",
+    "needed": "Owner must confirm the pack/price basis (pack size vs shop unit) before a price is set; never average unlike variants."
+  },
+  {
+    "sku": "CAT100-084",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Generic aluminium tower bolt photo (TradeIndia supplier); not Ebco-branded, exact size unconfirmed.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-084",
+    "kind": "no_price_reference",
+    "issue": "No internet price reference was captured for this SKU.",
+    "needed": "Add at least one referencePrices entry with an explicit sellingUnit/packSize, or confirm none is publicly listed."
+  },
+  {
+    "sku": "CAT100-085",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Generic aluminium tower bolt photo (TradeIndia supplier); not Ebco-branded.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-086",
+    "kind": "resolved",
+    "issue": "RESOLVED 2026-10-12: TrustBasket-labelled photo replaced with exact photo - 'AGRIANSH' logo label visible on green 3-layer braided hose, orange tap adapter and metal clamp shown; 15m identity documented by Flipkart and ToolsVilla listings.",
+    "needed": "None for photo. Shop price/stock still pending owner."
+  },
+  {
+    "sku": "CAT100-087",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Manufacturer catalogue thumbnail from captainpipes.com shows the Captain garden hose family; the 30 m length is documented on the Captain Polyplast page but is",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-088",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Image is a family-level reinforced garden hose photo from a listing that includes a 50 m variant; it does not show the Hosemart branded 50 m roll.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-093",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Retail photo of a Ugaoo 5 L watering can from the Desertcart India listing; the exact UG-HP0185 ripple model and ivory colour are not visually verifiable in thi",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-094",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Flipkart CDN photo of the YK PLASTICS 8-inch pack-of-6 nursery pots in red; the catalog listing is the black variant of the same model (8inch-np-pack6).",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-097",
+    "kind": "non_exact_image",
+    "issue": "Photo is family_only: Photo shows a blue nitrile examination glove only; brand and the box of 100 are not visible in the image.",
+    "needed": "Replace with a photo showing the exact variant, branding, and pack size from the shop's actual stock."
+  },
+  {
+    "sku": "CAT100-099",
+    "kind": "resolved",
+    "issue": "RESOLVED 2026-10-12: identity corrected 8210 -> 8210V. Photo stamp reads '3M 8210V NIOSH TC-84A-5410 N95' with Cool Flow valve; Fisher Scientific / SPI / Ritz Safety spec sheets confirm 8210V is the valved variant (plain 8210 is valveless). Existing IndiaMART quote may describe the valveless 8210 - possible mismatch, flagged in research.",
+    "needed": "Owner to confirm a 8210V-specific price; shop price/stock still pending."
+  },
+  {
+    "sku": "CAT100-016",
+    "kind": "resolved",
+    "issue": "RESOLVED 2026-10-12: old photo showed the 1-pint can; re-sourced exact photo with '1/2 PINT / 8 Fl. Oz. / 0.237 L' legible on label. Upgraded to exact.",
+    "needed": "None for photo. Shop price/stock still pending owner."
+  },
+  {
+    "sku": "CAT100-050",
+    "kind": "downgrade",
+    "issue": "Photo shows graduations to 600mm, inconsistent with the 150mm try-square SKU. Kept family_only; owner must confirm stock identity.",
+    "needed": "Owner to confirm actual stock identity/size/colour, then exact photo."
+  },
+  {
+    "sku": "CAT100-024",
+    "kind": "mismatch",
+    "issue": "Photo is D.N-brand 12m tape, not Crown 10m as recorded. Kept non-exact; owner must confirm stock identity.",
+    "needed": "Owner to confirm actual stock identity/size/colour, then exact photo."
+  },
+  {
+    "sku": "CAT100-025",
+    "kind": "mismatch",
+    "issue": "Photo shows white tape; record is yellow. Kept non-exact; owner must confirm stocked colour.",
+    "needed": "Owner to confirm actual stock identity/size/colour, then exact photo."
+  },
+  {
+    "sku": "CAT100-052",
+    "kind": "mismatch",
+    "issue": "Photo label reads 3.6L yellow base, not 4L white as recorded. Kept non-exact; owner must confirm stock.",
+    "needed": "Owner to confirm actual stock identity/size/colour, then exact photo."
+  },
+  {
+    "sku": "CAT100-074",
+    "kind": "mismatch",
+    "issue": "Photo bag shows 75mm nails, not 40mm as recorded. Kept non-exact; owner must confirm stock size.",
+    "needed": "Owner to confirm actual stock identity/size/colour, then exact photo."
+  },
+  {
+    "sku": "CAT100-042",
+    "kind": "mismatch",
+    "issue": "Photo wheel is 180mm, not 100mm as recorded. Kept non-exact; owner must confirm stock size.",
+    "needed": "Owner to confirm actual stock identity/size/colour, then exact photo."
+  },
+  {
+    "sku": "CAT100-008",
+    "kind": "mismatch",
+    "issue": "Photo shows a threaded straight fitting, not a tee. Kept non-exact; owner must confirm stock identity.",
+    "needed": "Owner to confirm actual stock identity/size/colour, then exact photo."
+  },
+  {
+    "sku": "CAT100-081",
+    "kind": "mismatch",
+    "issue": "Photo is chrome finish; SKU is brass. Kept non-exact; owner must confirm stocked finish.",
+    "needed": "Owner to confirm actual stock identity/size/colour, then exact photo."
+  },
+  {
+    "sku": "CAT100-093",
+    "kind": "mismatch",
+    "issue": "Photo is green; SKU is ivory. Kept non-exact; owner must confirm stocked colour.",
+    "needed": "Owner to confirm actual stock identity/size/colour, then exact photo."
+  }
+]

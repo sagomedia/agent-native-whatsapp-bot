@@ -1,3 +1,4 @@
+import {sellingUnitSchema} from '../../../../packages/contracts/selling-units.js';
 import {admitRequest,type InputAdmission} from './inference-admission.js';
 import {type GenerateContentParameters,GoogleGenAI,ServiceTier,ThinkingLevel} from '@google/genai';
 import {createHash} from 'node:crypto';
@@ -8,10 +9,10 @@ import {geminiTextRate,usageEstimate,validateRateCard,worstCaseReservation} from
 import {tokens,oneEdit} from './catalog.js';
 import type {ImageMedia} from './image-media.js';
 const names=z.object({ta:z.string().max(160),'ta-Latn':z.string().max(160)}).strict();
-export const catalogSuggestionSchema=z.object({name:z.string().trim().min(2).max(160),localNames:names,aliases:z.array(z.string().trim().min(1).max(120)).max(16),keywords:z.array(z.string().trim().min(1).max(120)).max(12),unit:z.enum(['piece','box','pack','pair','roll','bottle','metre','foot','kg','litre']).nullable(),brand:z.string().max(100).nullable(),specifications:z.array(z.object({key:z.string().regex(/^[a-z][a-z0-9_]{0,39}$/),value:z.string().trim().min(1).max(120),source:z.enum(['description','photo'])}).strict()).max(12),familyId:z.string().max(80).nullable(),newType:z.object({label:z.string().min(2).max(160),localNames:names,departmentId:z.string().max(80).nullable()}).strict().nullable(),questions:z.array(z.string().min(1).max(200)).max(5)}).strict();
+export const catalogSuggestionSchema=z.object({name:z.string().trim().min(2).max(160),localNames:names,aliases:z.array(z.string().trim().min(1).max(120)).max(16),keywords:z.array(z.string().trim().min(1).max(120)).max(12),unit:sellingUnitSchema.nullable(),brand:z.string().max(100).nullable(),specifications:z.array(z.object({key:z.string().regex(/^[a-z][a-z0-9_]{0,39}$/),value:z.string().trim().min(1).max(120),source:z.enum(['description','photo'])}).strict()).max(12),familyId:z.string().max(80).nullable(),newType:z.object({label:z.string().min(2).max(160),localNames:names,departmentId:z.string().max(80).nullable()}).strict().nullable(),questions:z.array(z.string().min(1).max(200)).max(5)}).strict();
 export type CatalogSuggestion=z.infer<typeof catalogSuggestionSchema>;
 export type CatalogNode={id:string;parent_id:string|null;kind:string;label:string};
-export const catalogDraftDetailsSchema=z.object({name:z.string().trim().max(160),localNames:names,brand:z.string().trim().max(100),unit:z.enum(['piece','box','pack','pair','roll','bottle','metre','foot','kg','litre']).nullable(),type:z.string().trim().max(160),specifications:z.array(z.object({key:z.string().trim().max(40),value:z.string().trim().max(120)}).strict()).max(20)}).strict();
+export const catalogDraftDetailsSchema=z.object({name:z.string().trim().max(160),localNames:names,brand:z.string().trim().max(100),unit:sellingUnitSchema.nullable(),type:z.string().trim().max(160),specifications:z.array(z.object({key:z.string().trim().max(40),value:z.string().trim().max(120)}).strict()).max(20)}).strict();
 export type CatalogDraftInput={description:string;details?:z.infer<typeof catalogDraftDetailsSchema>;image?:ImageMedia;nodes:CatalogNode[]};
 export interface CatalogGenerator {readonly mode:'live'|'mock';prepareInput?(input:CatalogDraftInput):{admission:InputAdmission;generate(signal:AbortSignal):Promise<ProviderResult>};generate(input:CatalogDraftInput,signal:AbortSignal):Promise<ProviderResult>}
 export const catalogGenerationRate=Object.freeze({...geminiTextRate,maxOutputTokens:2048});

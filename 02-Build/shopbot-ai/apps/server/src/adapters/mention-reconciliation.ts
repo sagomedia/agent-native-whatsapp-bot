@@ -35,15 +35,40 @@ function compatibleItems(a:Item,b:Item){
  if(a.targetLineId&&b.targetLineId&&a.targetLineId!==b.targetLineId)return false;
  return true;
 }
+// Attribute prefix/postfix counts across punctuation-free speech jointly.
+// A literal gap cannot supply two items' counts. If two assignments remain
+// possible, ask for a correction instead of borrowing a neighbouring count.
+function boundedClauses(items:Item[],source:string){
+ const spans=items.map(i=>({start:source.indexOf(i.sourceText),end:source.indexOf(i.sourceText)+i.sourceText.length}));
+ if(spans.some((s,n)=>s.start<0||source.lastIndexOf(items[n].sourceText)!==s.start||n>0&&s.start<spans[n-1].end))return null;
+ let changed=false;
+ const candidates=items.map((item,n)=>{
+  const span=spans[n],clause=mentionClause(source,item.sourceText);
+  if(explicitPurchaseCount(item.sourceText)!==undefined||item.purchaseCount===null||!items.some((other,j)=>j!==n&&clause.includes(other.sourceText)))return [span];
+  const prefix={start:spans[n-1]?.end??0,end:span.end},suffix={start:span.start,end:spans[n+1]?.start??source.length};
+  const count=(s:{start:number;end:number})=>explicitPurchaseCount(source.slice(s.start,s.end));
+  if(count(prefix)===undefined&&count(suffix)===undefined)return [span];
+  changed=true;
+  return [prefix,suffix].filter(s=>s.end-s.start<=500&&count(s)===item.purchaseCount)
+   .filter(s=>!(s===suffix&&n+1<items.length&&items[n+1].purchaseCount===null&&explicitPurchaseCount(source.slice(span.end,spans[n+1].end))===item.purchaseCount));
+ });
+ if(!changed)return null;
+ const ways:number[][]=candidates.map(row=>row.map(()=>0));
+ for(let n=items.length-1;n>=0;n--)for(let j=0;j<candidates[n].length;j++)ways[n][j]=n===items.length-1?1:Math.min(2,candidates[n+1].reduce((sum,next,k)=>sum+(candidates[n][j].end<=next.start?ways[n+1][k]:0),0));
+ if(ways[0].reduce((a,b)=>a+b,0)!==1)throw new Error('Neighbouring item counts need clarification');
+ const result:string[]=[];let end=0;
+ for(let n=0;n<items.length;n++){const index=candidates[n].findIndex((s,j)=>s.start>=end&&ways[n][j]>0),span=candidates[n][index];result.push(source.slice(span.start,span.end).trim());end=span.end;}
+ return result;
+}
 export function consolidateMentions(items:Item[],source:string,image:boolean):Item[]{
  if(image){if(items.some(i=>i.targetLineId!==undefined||i.sameItemOrdinal!==undefined||i.requestMode==='additional'))throw new Error('Images cannot edit existing lines or consolidate list rows');return items;}
- const result:Item[]=[],references=new Map<number,Item>();
- for(const raw of items){
-  let phrase=mentionClause(source,raw.sourceText);
+ const result:Item[]=[],references=new Map<number,Item>(),bounded=boundedClauses(items,source);
+ for(const [position,raw] of items.entries()){
+  let phrase=bounded?.[position]??mentionClause(source,raw.sourceText);
   const start=source.indexOf(raw.sourceText),others=items.filter(other=>other!==raw&&other.sourceText!==raw.sourceText).map(other=>({start:source.indexOf(other.sourceText),end:source.indexOf(other.sourceText)+other.sourceText.length})).filter(other=>other.start>=0);
   // ASR often omits punctuation. Expanding one terse source span must not
   // borrow a different item's count or pack contents from the same clause.
-  if(start>=0&&others.some(other=>phrase.includes(source.slice(other.start,other.end)))){
+  if(!bounded&&start>=0&&others.some(other=>phrase.includes(source.slice(other.start,other.end)))){
    const next=Math.min(source.length,...others.filter(other=>other.start>=start+raw.sourceText.length).map(other=>other.start));
    phrase=source.slice(start,next).trim();
   }

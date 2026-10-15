@@ -22,6 +22,7 @@ import type {Config} from '../config.js';
 import {createAccessVerifier,type AccessVerifier} from './access.js';
 import {geminiTextRate,rateHealth} from '../services/inference-budget.js';
 import {messagingCostSummary} from '../services/messaging-cost.js';
+import {runtimeReleaseMetadata,currentReleaseFingerprint} from '../services/release-manifest.js';
 import type {WhatsAppChannel} from '../services/whatsapp-channel.js';
 
 const uuid=z.uuid();
@@ -65,11 +66,18 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
   }
   await registerOwnerCatalog(app,pool,owner.storeId,write,catalogGenerator??(config.catalogAi?new GoogleCatalogGenerator(config.catalogAi.apiKey):undefined));
+  const release=runtimeReleaseMetadata();
+  app.get('/api/owner/release',async()=>({...release,features:{visualOrdering:!!config.whatsapp?.visualOrdering,unifiedUnderstanding:process.env.GEMINI_UNIFIED_UNDERSTANDING_ENABLED==='true',imageLists:process.env.GEMINI_HANDWRITTEN_LISTS_ENABLED==='true',processing:!!config.whatsapp?.processEnabled,sending:!!config.whatsapp?.sendEnabled,payments:false,inventoryPolicy:'manual_confirm'}}));
+  app.get<{Params:{id:string}}>('/api/owner/conversations/:id/observations',async(req,reply)=>{
+   if(!uuid.safeParse(req.params.id).success)return reply.code(400).send({error:'Invalid conversation'});
+   if(!(await pool.query('SELECT id FROM conversations WHERE store_id=$1 AND id=$2',[owner.storeId,req.params.id])).rowCount)return reply.code(404).send({error:'Conversation not found'});
+   return {attempts:(await pool.query('SELECT id,message_id,stage,state,failure_code,validation_issues,observation FROM provider_attempts WHERE store_id=$1 AND conversation_id=$2 AND observation IS NOT NULL ORDER BY created_at DESC LIMIT 5',[owner.storeId,req.params.id])).rows,limit:5};
+  });
   app.get('/api/owner/snapshot',async()=>{
     const client=await pool.connect();
     try{
       await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
-      const store=(await client.query('SELECT id,name,synthetic,operator_paused,operator_revision FROM stores WHERE id=$1',[owner.storeId])).rows[0];
+      const store=(await client.query('SELECT id,name,synthetic,operator_paused,operator_revision,inventory_policy FROM stores WHERE id=$1',[owner.storeId])).rows[0];
       const conversations=(await client.query(`SELECT c.id,c.actor,c.operator_mode,c.operator_revision,c.reply_language,c.draft,c.version,
         (SELECT text FROM messages WHERE conversation_id=c.id ORDER BY sequence DESC LIMIT 1) AS last_text,
         (SELECT max(created_at) FROM messages WHERE conversation_id=c.id) AS updated_at,
@@ -98,7 +106,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
   });
   app.get<{Params:{id:string}}>('/api/owner/conversations/:id',async(request,reply)=>{
     if(!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Invalid conversation'});
-    const messages=(await pool.query(`SELECT m.id,m.conversation_id,m.direction,m.text,m.status,m.created_at,m.payload,o.sender_kind,(w.conversation_id IS NOT NULL) AS whatsapp,
+    const messages=(await pool.query(`SELECT m.id,m.conversation_id,m.direction,m.text,m.status,m.created_at,m.payload,m.release_fingerprint,o.sender_kind,(w.conversation_id IS NOT NULL) AS whatsapp,
       CASE WHEN m.payload->>'type'='voice' THEN EXISTS(SELECT 1 FROM voice_media v WHERE v.id::text=m.payload->>'mediaId' AND v.conversation_id=c.id AND v.store_id=c.store_id AND v.actor=c.actor)
       WHEN m.payload->>'type'='image' THEN EXISTS(SELECT 1 FROM image_media i WHERE i.id::text=m.payload->>'mediaId' AND i.conversation_id=c.id AND i.store_id=c.store_id AND i.actor=c.actor)
       ELSE NULL END AS media_available
@@ -185,6 +193,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       const obsolete=await client.query("UPDATE whatsapp_outbox o SET state='cancelled',last_error='owner_replied' FROM messages m WHERE o.message_id=m.id AND o.conversation_id=$1 AND o.state='queued' AND m.payload->>'clarificationReason'='owner_handling' RETURNING o.message_id",[request.params.id]);
       if(obsolete.rowCount)await client.query("UPDATE messages SET status='cancelled' WHERE id=ANY($1::uuid[])",[obsolete.rows.map(r=>r.message_id)]);
       await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,payload) VALUES($1,$2,'outbound',$3,'queued',$4::jsonb)",[input.data.id,request.params.id,input.data.text,JSON.stringify({version:1,kind:'text',text:input.data.text,presentation:'text',outboundMessages:1})]);
+      await client.query('UPDATE messages SET release_fingerprint=$1 WHERE id=$2',[currentReleaseFingerprint(),input.data.id]);
       await client.query("INSERT INTO whatsapp_outbox(message_id,conversation_id,operator_revision,sender_kind,reply_payload) VALUES($1,$2,$3,'owner',$4::jsonb)",[input.data.id,request.params.id,row.operator_revision,JSON.stringify({type:'text',text:{preview_url:false,body:input.data.text}})]);
       await client.query('UPDATE conversations SET handoff_requested=false WHERE id=$1',[request.params.id]);
       await client.query("UPDATE messages SET status='processed',claim_token=NULL,lease_until=NULL WHERE conversation_id=$1 AND direction='inbound' AND status IN ('pending','processing')",[request.params.id]);
@@ -214,6 +223,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     const id=randomUUID(),text=requestStatusText({id:request.id,acceptance:request.acceptance,fulfillment:request.fulfillment,payment:request.payment,totalPaise:Number(request.total_paise),lines:request.lines} as OrderRequest,c.reply_language);
     const rich=config.whatsapp?.visualOrdering?materializeVisualReply(visualStatus({replyLanguage:c.reply_language,visualOrdering:true,version:0,draft:request.lines,pending:null,fulfillment:'pickup',lastRequestId:request.id},{id:request.id,acceptance:request.acceptance,fulfillment:request.fulfillment,payment:request.payment,totalPaise:Number(request.total_paise),lines:request.lines})):undefined;
     await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,payload,stage) VALUES($1,$2,'outbound',$3,'queued',$4,$5)",[id,c.id,text,JSON.stringify(rich??{version:1,kind:'text',text,presentation:'text',outboundMessages:1}),rich?'status':null]);
+    await client.query('UPDATE messages SET release_fingerprint=$1 WHERE id=$2',[currentReleaseFingerprint(),id]);
     await client.query("INSERT INTO whatsapp_outbox(message_id,conversation_id,operator_revision,sender_kind,reply_payload) VALUES($1,$2,$3,'system',$4)",[id,c.id,c.operator_revision,JSON.stringify(rich?renderWhatsAppReply(rich,id,config.whatsapp.hostname).payload:{type:'text',text:{preview_url:false,body:text}})]);
     await client.query('INSERT INTO request_notifications(request_id,status_key,message_id) VALUES($1,$2,$3) ON CONFLICT(request_id,status_key) DO UPDATE SET message_id=EXCLUDED.message_id',[request.id,key,id]);return {customerNotification:'queued',messageId:id};
   }

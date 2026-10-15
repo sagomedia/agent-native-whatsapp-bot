@@ -97,7 +97,8 @@ export function amountToCount(line:DraftLine,product:Product):number|null {
  if(['litre','kg','metre','foot'].includes(product.unit)&&convertAmount(amount,product.unit)!==null){
   if(!product.sellingUnitVerified)return null;
   const value=convertAmount(amount,product.unit)!;
-  if(line.amountMode==='continuous'&&(!pack||convertAmount(amount,pack.unit)!==null&&convertAmount(amount,pack.unit)!>pack.value))return null;
+  if(['metre','foot'].includes(product.unit)&&product.sellingPolicy?.cutAllowed!==true)return null;
+  if(line.amountMode==='continuous'){const available=product.sellingPolicy?.continuousLengthAvailable;if(available===undefined||available===null||value>available)return null;}
   return value<=100&&Math.abs(value/product.quantityStep-Math.round(value/product.quantityStep))<1e-8?Math.round(value*1000)/1000:null;
  }
  if(!pack)return null;
@@ -105,9 +106,11 @@ export function amountToCount(line:DraftLine,product:Product):number|null {
  const converted=convertAmount(amount,pack.unit);if(converted===null)return null;
  if(line.amountMode==='continuous'&&converted!==pack.value)return null;
  const count=converted/pack.value,steps=Math.round(count/product.quantityStep);
+ if(physicalMeasure(pack)&&Math.abs(count-Math.round(count))>1e-8&&product.sellingPolicy?.cutAllowed!==true)return null;
  return count>0&&Math.abs(count-steps*product.quantityStep)<1e-8&&count<=100?Math.round(count*1000)/1000:null;
 }
 export function catalogContent(product:Product):Measure|undefined {
+ if(product.sellingPolicy?.packContents)return product.sellingPolicy.packContents;
  const pack=catalogPack(product);if(pack)return pack;
  const explicit=product.specifications?.length;
  if(explicit){const ms=spokenMeasures(explicit);if(ms.length===1&&physicalMeasure(ms[0]))return ms[0];}

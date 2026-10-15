@@ -20,6 +20,8 @@ parser.add_argument('--output-dir', type=Path, required=True)
 args = parser.parse_args()
 app = Path(__file__).resolve().parents[2]
 assert (app / 'dist/apps/server/src/index.js').is_file(), 'Run npm run build first'
+proof=json.loads((app/'dist/release-manifest.json').read_text())
+subprocess.run(['node','--input-type=module','-e',"import {verifyRelease} from './dist/apps/server/src/services/release-manifest.js'; await verifyRelease(process.cwd(),true);"],cwd=app,check=True)
 node_name = 'node-v22.22.1-linux-x64.tar.xz'
 expected = None
 if args.node_archive:
@@ -99,10 +101,20 @@ if args.source_base_commit:
     assert re.fullmatch('[a-f0-9]{40}',args.source_base_commit), 'Invalid source base commit'
     base_commit=args.source_base_commit
 else:
-    base_commit=subprocess.check_output(['git','-c','core.worktree='+str(repository),'--work-tree='+str(repository),'rev-parse','HEAD'],cwd=app,text=True).strip()
+    git_dir=repository/'.git'
+    if git_dir.is_file():
+        pointer=git_dir.read_text().strip()
+        assert pointer.startswith('gitdir: '), 'Invalid managed worktree metadata'
+        git_dir=(repository/pointer.removeprefix('gitdir: ')).resolve()
+    base_commit=subprocess.check_output(['git','--git-dir='+str(git_dir),'--work-tree='+str(repository),'rev-parse','HEAD'],cwd=app,text=True).strip()
+assert proof['gitCommit']==base_commit, 'Built release must match the current source commit'
 manifest = {
     'release_id': release_id,
     'source_base_commit': base_commit,
+    'verified_artifact_sha256':proof['artifactHash'],
+    'prompt_version':proof['promptVersion'],
+    'understanding_version':proof['understandingVersion'],
+    'model_id':proof['model'],
     'dependency_additions':dependency_additions,
     'base_lock_sha256':base_lock_sha256,
     'source_tree_sha256': source_hash.hexdigest(),

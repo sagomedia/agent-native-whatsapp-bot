@@ -1,0 +1,2 @@
+# Preserve the supplied catalog review sheet byte for byte, including CRLF.
+01-Input/catalog-100-corrected/owner-review.csv -text whitespace=cr-at-eol

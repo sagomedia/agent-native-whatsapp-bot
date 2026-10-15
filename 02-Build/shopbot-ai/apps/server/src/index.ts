@@ -9,7 +9,9 @@ import { SimulatorService } from './services/simulator.js';
 import { startSimulatorJobs } from './jobs/simulator.js';
 import {WhatsAppChannel} from './services/whatsapp-channel.js';
 import {startWhatsAppJobs} from './jobs/whatsapp.js';
+import {verifyRelease,bindRuntimeRelease} from './services/release-manifest.js';
 
+await verifyRelease();
 const config = readConfig();
 const pool = new pg.Pool({ connectionString: config.databaseUrl, max: 10 });
 let stopJobs: (() => Promise<void>) | undefined;
@@ -18,6 +20,7 @@ let app: Awaited<ReturnType<typeof createApp>> | undefined;
 try {
   // No HTTP readiness until the locked setup and queue startup complete.
   await setupDatabase(pool, config.mode);
+  await bindRuntimeRelease(pool);
   await mkdir(config.mediaDir, { recursive: true });
   const nativeTest=process.env.ALLOW_LOCAL_AI_TEST==='true'?new GoogleInterpreter(readNativeSettings()):undefined;
   const nativeStore=nativeTest?await setupImageDemo(pool):undefined;

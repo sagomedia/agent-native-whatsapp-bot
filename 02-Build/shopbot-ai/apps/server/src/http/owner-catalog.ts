@@ -7,18 +7,31 @@ import {imageUploadSchema,normalizeImage} from '../services/image-media.js';
 import {catalogDraftDetailsSchema,generateCatalogDraft,type CatalogGenerator} from '../services/catalog-assistant.js';
 import {discoverProducts,getCatalogMap} from '../services/catalog-discovery.js';
 import {productColumns,productFromRow} from '../services/catalog.js';
+import {createProposalSchema,updateProposalSchema,publishProposalSchema,createProposal,updateProposal,listProposals,prepareProposalAsset,addProposalAsset,publishProposal,rejectProposal} from '../services/catalog-proposals.js';
 
 type Write=(action:string,target:string,run:(client:PoolClient)=>Promise<unknown>)=>Promise<unknown>;
+import {ownerProductSchema,saveCatalogProduct} from '../services/catalog-products.js';
+export {ownerProductSchema} from '../services/catalog-products.js';
 const words=z.array(z.string().trim().min(1).max(120)).max(40);
 const names=z.object({ta:z.string().trim().max(160).optional(),'ta-Latn':z.string().trim().max(160).optional()}).strict();
-export const ownerProductSchema=z.object({sku:z.string().regex(/^(?:[A-Za-z0-9][A-Za-z0-9_-]{0,63})?$/).default(''),createId:z.uuid().optional(),newType:z.object({label:z.string().trim().min(2).max(160),localNames:names,departmentId:z.string().max(80).nullable()}).strict().optional(),version:z.number().int().nonnegative(),name:z.string().trim().min(2).max(160),localNames:names,aliases:words,keywords:words,unit:z.enum(['piece','box','pack','pair','roll','bottle','can','metre','foot','kg','litre']),priceStatus:z.enum(['priced','confirm','free']).optional(),pricePaise:z.number().int().nonnegative().max(2147483647),stock:z.number().int().nonnegative().max(2147483647).nullable(),quantityStep:z.number().positive().max(100).refine(n=>Math.abs(n*1000-Math.round(n*1000))<1e-7),familyId:z.string().max(80).default(''),brand:z.string().trim().max(100),specifications:z.record(z.string().regex(/^[a-z][a-z0-9_]{0,39}$/),z.string().trim().min(1).max(120)).refine(s=>Object.keys(s).length<=20),active:z.boolean(),verified:z.boolean()}).strict();
 export async function registerOwnerCatalog(app:FastifyInstance,pool:Pool,storeId:string,write:Write,generator?:CatalogGenerator){
+ app.get('/api/owner/catalog/proposals',async()=>{const c=await pool.connect();try{return {proposals:await listProposals(c,storeId,'draft',200),limit:200}}finally{c.release();}});
+ app.post('/api/owner/catalog/proposals',async(req,reply)=>{const p=createProposalSchema.safeParse(req.body);if(!p.success)return reply.code(400).send({error:'Check the draft fields.'});return write('catalog_draft',p.data.id,c=>createProposal(c,storeId,'owner-dashboard',p.data));});
+ app.post('/api/owner/catalog/proposals/update',async(req,reply)=>{const p=updateProposalSchema.safeParse(req.body);if(!p.success)return reply.code(400).send({error:'Check the draft and its version.'});return write('catalog_draft_edit',p.data.id,c=>updateProposal(c,storeId,p.data));});
+ app.post('/api/owner/catalog/proposals/photo',{bodyLimit:2904000},async(req,reply)=>{let prepared;try{prepared=await prepareProposalAsset(req.body);}catch{return reply.code(400).send({error:'Choose a valid draft and JPG, PNG or WebP photo under 2 MB.'});}return write('catalog_draft_photo',prepared.input.proposalId,c=>addProposalAsset(c,storeId,prepared.input,prepared.media));});
+ app.get<{Params:{id:string;asset:string};Querystring:{original?:string}}>('/api/owner/catalog/proposals/:id/photos/:asset',async(req,reply)=>{
+  if(!z.uuid().safeParse(req.params.id).success||!z.uuid().safeParse(req.params.asset).success)return reply.code(404).send();
+  const row=(await pool.query('SELECT image,original,mime_type FROM catalog_proposal_assets WHERE store_id=$1 AND proposal_id=$2 AND id=$3',[storeId,req.params.id,req.params.asset])).rows[0];
+  if(!row)return reply.code(404).send();return reply.type(req.query.original==='1'?row.mime_type:'image/jpeg').header('Cache-Control','private, no-store').send(req.query.original==='1'?row.original:row.image);
+ });
+ app.post('/api/owner/catalog/proposals/publish',async(req,reply)=>{const p=publishProposalSchema.safeParse(req.body);if(!p.success)return reply.code(400).send({error:'Complete the product fields and merchant confirmations.'});return write('catalog_publish',p.data.id,c=>publishProposal(c,storeId,p.data));});
+ app.post('/api/owner/catalog/proposals/reject',async(req,reply)=>{const p=z.object({id:z.uuid(),version:z.number().int().positive()}).strict().safeParse(req.body);if(!p.success)return reply.code(400).send({error:'Reload the draft before rejecting it.'});return write('catalog_reject',p.data.id,c=>rejectProposal(c,storeId,p.data.id,p.data.version));});
  app.get('/api/owner/catalog',async()=>{
   const client=await pool.connect();try{await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
-   const rows=(await client.query(`SELECT ${productColumns},active,catalog_origin,inventory_updated_at FROM products WHERE store_id=$1 ORDER BY name,sku`,[storeId])).rows;
+   const rows=(await client.query(`SELECT ${productColumns},active,catalog_origin,inventory_updated_at,merchant_verification FROM products WHERE store_id=$1 ORDER BY name,sku`,[storeId])).rows;
    const nodes=(await client.query('SELECT id,parent_id,kind,label,local_names,aliases FROM catalog_nodes WHERE store_id=$1 ORDER BY kind,label',[storeId])).rows;
    const revision=(await client.query('SELECT catalog_revision FROM stores WHERE id=$1',[storeId])).rows[0].catalog_revision;
-   await client.query('COMMIT');return {revision,aiAvailable:!!generator,products:rows.map(p=>({...productFromRow(p),active:p.active,origin:p.catalog_origin,inventoryUpdatedAt:p.inventory_updated_at})),nodes};
+   await client.query('COMMIT');return {revision,aiAvailable:!!generator,products:rows.map(p=>({...productFromRow(p),active:p.active,verification:p.merchant_verification,origin:p.catalog_origin,inventoryUpdatedAt:p.inventory_updated_at})),nodes};
   }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
  });
  app.post('/api/owner/catalog/diagnose',async(req,reply)=>{
@@ -60,30 +73,11 @@ export async function registerOwnerCatalog(app:FastifyInstance,pool:Pool,storeId
   if(priceStatus==='free'&&p.pricePaise!==0||priceStatus==='priced'&&p.pricePaise===0)return reply.code(400).send({error:'Choose price to confirm or explicitly confirm this item is free.'});
   const physical=Object.values(p.specifications).join(' ');
   if(p.active&&(/\d\s*kg\b/i.test(physical)&&p.unit==='litre'||/\d\s*(?:l|litres?|liters?)\b/i.test(physical)&&p.unit==='kg'))return reply.code(400).send({error:'Pack weight and volume must agree with the selling unit.'});
-  return write('catalog_product',storeId,async c=>{
-   if(p.newType&&p.familyId)throw Object.assign(new Error('Choose one product type.'),{statusCode:400});
-   if(!p.familyId){
-    let departmentId=p.newType?.departmentId??'owner-general';
-    if(p.newType?.departmentId){if(!(await c.query("SELECT 1 FROM catalog_nodes WHERE store_id=$1 AND id=$2 AND kind='department'",[storeId,departmentId])).rowCount)throw Object.assign(new Error('Choose a valid department.'),{statusCode:400});}
-    else await c.query("INSERT INTO catalog_nodes(store_id,id,parent_id,kind,label,local_names,aliases) VALUES($1,'owner-general',NULL,'department','Shop products','{}','[]') ON CONFLICT DO NOTHING",[storeId]);
-    if(p.newType){
-     const existing=(await c.query("SELECT id FROM catalog_nodes WHERE store_id=$1 AND parent_id=$2 AND kind='family' AND lower(label)=lower($3) ORDER BY id LIMIT 1",[storeId,departmentId,p.newType.label])).rows[0];
-     p.familyId=existing?.id??'type-'+randomUUID().slice(0,12);
-     if(!existing)await c.query("INSERT INTO catalog_nodes(store_id,id,parent_id,kind,label,local_names,aliases) VALUES($1,$2,$3,'family',$4,$5,$6)",[storeId,p.familyId,departmentId,p.newType.label,JSON.stringify(p.newType.localNames),JSON.stringify([p.newType.label,...Object.values(p.newType.localNames).filter(Boolean)])]);
-    }else{p.familyId='owner-other';await c.query("INSERT INTO catalog_nodes(store_id,id,parent_id,kind,label,local_names,aliases) VALUES($1,'owner-other','owner-general','family','Other products','{}','[]') ON CONFLICT DO NOTHING",[storeId]);}
-   }
-   if(!(await c.query("SELECT 1 FROM catalog_nodes WHERE store_id=$1 AND id=$2 AND kind='family'",[storeId,p.familyId])).rowCount)throw Object.assign(new Error('Choose a valid product type.'),{statusCode:400});
-   const params=[storeId,p.sku,p.name,p.unit,p.pricePaise,p.stock,JSON.stringify(p.localNames),JSON.stringify([...new Set([...p.aliases,...Object.values(p.localNames).filter(Boolean)])]),p.quantityStep,p.familyId,p.brand||null,JSON.stringify(p.specifications),JSON.stringify(p.keywords),p.active];
-   let row;
-   if(p.version===0)row=await c.query(`INSERT INTO products(store_id,sku,name,unit,price_paise,stock,local_names,aliases,quantity_step,family_id,brand,specifications,keywords,active,catalog_origin,inventory_updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'owner',now()) ON CONFLICT DO NOTHING RETURNING sku,version`,params);
-   else row=await c.query(`UPDATE products SET name=$3,unit=$4,price_paise=$5,stock=$6,local_names=$7,aliases=$8,quantity_step=$9,family_id=$10,brand=$11,specifications=$12,keywords=$13,active=$14,catalog_origin='owner',inventory_updated_at=now(),version=version+1 WHERE store_id=$1 AND sku=$2 AND version=$15 RETURNING sku,version`,[...params,p.version]);
-   if(!row.rowCount)throw Object.assign(new Error('This product changed or its code already exists. Reload before saving.'),{statusCode:409});
-   await c.query('INSERT INTO store_policies(store_id,require_product_confirmation) VALUES($1,true) ON CONFLICT(store_id) DO UPDATE SET require_product_confirmation=true',[storeId]);
-   await c.query("INSERT INTO catalog_profiles(store_id,store_type) VALUES($1,'general retail') ON CONFLICT DO NOTHING",[storeId]);
-   await c.query('UPDATE products SET price_status=$1,selling_unit_verified=$2 WHERE store_id=$3 AND sku=$4',[priceStatus,p.verified,storeId,p.sku]);
-   const revision=(await c.query('SELECT catalog_revision FROM stores WHERE id=$1',[storeId])).rows[0].catalog_revision;
-   return {...row.rows[0],active:p.active,familyId:p.familyId,revision};
-  });
+  return write('catalog_product',storeId,c=>saveCatalogProduct(c,storeId,p));
+ });
+ app.post<{Params:{sku:string}}>('/api/owner/catalog/products/:sku/hide',async(req,reply)=>{
+  const p=z.object({version:z.number().int().positive()}).strict().safeParse(req.body);if(!p.success)return reply.code(400).send({error:'Reload the product before hiding it.'});
+  return write('catalog_hide',storeId,async c=>{const row=(await c.query('UPDATE products SET active=false,version=version+1,inventory_updated_at=now() WHERE store_id=$1 AND sku=$2 AND version=$3 RETURNING sku,version,active',[storeId,req.params.sku,p.data.version])).rows[0];if(!row)throw Object.assign(new Error('The product changed. Reload it before hiding.'),{statusCode:409});return row;});
  });
  app.post<{Params:{sku:string}}>('/api/owner/catalog/products/:sku/photo',{bodyLimit:2900000},async(req,reply)=>{
   const parsed=imageUploadSchema.safeParse(req.body);if(!parsed.success)return reply.code(400).send({error:'Choose a JPG, PNG or WebP photo under 2 MB.'});

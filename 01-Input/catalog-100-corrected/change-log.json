@@ -1,0 +1,258 @@
+[
+  {
+    "type": "audit_basis",
+    "before": "AUDIT-OF-CURRENT-PACKAGE.md was referenced in the brief but is not present on disk",
+    "after": "Correction proceeded from the enumerated defects in the task brief (camelCase keys, ownerConfirmation shape, fieldsSupported types, empty missingFields, quote-basis mismatches, 10L paint exchange, 4 priority SKUs)",
+    "reason": "No audit file found; avoid inventing defect claims beyond the brief",
+    "sources": [],
+    "affectedTests": [],
+    "notes": ""
+  },
+  {
+    "type": "snake_case_conversion",
+    "before": "101 specification keys used camelCase (e.g. pipeClass, jointType, pressureClass)",
+    "after": "All keys converted to snake_case; 0 collisions found (no two original keys normalized to the same snake_case key, so no merges or disambiguation renames were needed)",
+    "reason": "App field validator rejects camelCase keys",
+    "sources": [],
+    "affectedTests": [],
+    "notes": "collision details: []"
+  },
+  {
+    "type": "paint_exchange",
+    "sku": "CAT100-053",
+    "before": {
+      "name": "Dulux Promise Interior Emulsion 4L (White)",
+      "brand": "Dulux",
+      "specs": {
+        "size": "4 L",
+        "packType": "Bucket"
+      },
+      "quote": "Rs.940 per bucket from Ganesh Hardware & Sanitary, New Delhi (IndiaMART)"
+    },
+    "after": {
+      "name": "Asian Paints Tractor Emulsion Interior Wall Paint 10L (White)",
+      "brand": "Asian Paints",
+      "specs": {
+        "size": "10 L",
+        "pack_type": "Bucket"
+      },
+      "unit": "can",
+      "quotes": [
+        "Manufacturer MRP Rs.2230 per 10L can (incl. all taxes)",
+        "IndiaMART seller Rs.258/litre (excl. taxes) - per-litre rate for the 10L can"
+      ]
+    },
+    "reason": "CAT100-053 (Dulux Promise 4L) was the weakest/duplicate record: interior-wall-paint had three 4L emulsions. Exchanged for a real documented 10L variant; catalog keeps 100 total records. Stays in interior-wall-paint family.",
+    "sources": [
+      "https://www.asianpaints.com/content/ap/en/home/products/paints-and-textures/interior-walls/plain-finishes/tractor-emulsion.html",
+      "https://www.indiamart.com/proddetail/asian-paints-tractor-emulsion-2859136637455.html"
+    ],
+    "affectedTests": [
+      "exact-dulux-promise",
+      "add-packsize-ambiguous",
+      "exact-tractor-emulsion-4l"
+    ],
+    "notes": "test-cases.json still references CAT100-053 as Dulux and must be updated by the test owner. 10L photo pending image worker (see work/exchange_sku.txt)."
+  },
+  {
+    "type": "owner_confirmation_repair",
+    "before": "ownerConfirmation had inconsistent shapes ({price,specs,stock}, {descriptionConfirmed,...}, {brand,model,price,specs,stock})",
+    "after": "All 100 records now have exactly {price, stock, sellingUnit, productIdentity, photo}, each false (no owner evidence exists)",
+    "reason": "Contract requires the exact 5-key shape",
+    "sources": [],
+    "affectedTests": [],
+    "notes": ""
+  },
+  {
+    "type": "fields_supported_repair",
+    "before": "41 factSources entries used a plain string for fieldsSupported",
+    "after": "All factSources entries use arrays for fieldsSupported",
+    "reason": "Contract requires fieldsSupported as an array",
+    "sources": [],
+    "affectedTests": [],
+    "notes": ""
+  },
+  {
+    "type": "missing_fields_fill",
+    "before": "All 100 missingFields arrays were empty",
+    "after": "Filled per SKU: universal owner-pending items (price, stock, selling unit) + photo problems (62 records with family_only/unconfirmed photos), missing price references (4 SKUs), quote-basis conflicts (8 SKUs), substituted spec/model notes, legibility issues",
+    "reason": "Contract requires genuinely unresolved shop facts/photo problems/spec issues to be listed",
+    "sources": [],
+    "affectedTests": [],
+    "notes": ""
+  },
+  {
+    "type": "quote_basis_clarification",
+    "before": "Several reference quotes used integer packSize or ambiguous sellingUnit, and some quote bases differed from the proposed shop unit",
+    "after": "All packSize values are explicit strings; clarified bases: CAT100-032 (pack of 10 sets), CAT100-033 (pack of 10, not per piece), CAT100-049 (pack of 2, not per piece), CAT100-080 (per hinge, not per pair), CAT100-081 (pack of 5, not per pair), CAT100-086 (per piece = 1 roll), CAT100-087 (Rs.97 PER METRE, not per 30m roll), CAT100-074/075 (wholesale per-kg with 200kg MOQ). Conflicts flagged in reviewNotes and exceptions.",
+    "reason": "Never average unlike variants; keep each quote's actual package/unit basis explicit",
+    "sources": [],
+    "affectedTests": [],
+    "notes": "Price conflicts already present in original reviewNotes (e.g. CAT100-086 Flipkart vs Toolsvilla) were preserved, never averaged."
+  },
+  {
+    "type": "priority_sku_deferral",
+    "before": "CAT100-002, CAT100-061, CAT100-086, CAT100-099 carried over with data-normalization fixes applied",
+    "after": "NOT finalized: identity/photo updates await the image-worker's brief via the parent agent",
+    "reason": "Task B defers finalization of the 4 priority SKUs until the image brief arrives",
+    "sources": [],
+    "affectedTests": [],
+    "notes": "Each has a pending_image_brief entry in exceptions.json and a missingFields item."
+  },
+  {
+    "type": "catalog_map_verify",
+    "before": "catalog-map.json carried over",
+    "after": "All 100 familyId values resolve to a family node with a real department parent (plumbing, tools, paints, fasteners, garden, safety). No changes needed; the 10L paint stays in interior-wall-paint.",
+    "reason": "Contract requires family resolution check",
+    "sources": [],
+    "affectedTests": [],
+    "notes": ""
+  },
+  {
+    "type": "owner_review_csv_regenerate",
+    "before": "owner-review.csv generated from the uncorrected package (camelCase specs, old quotes, old CAT100-053)",
+    "after": "Regenerated from corrected products.json + research.json: shop price/stock cells blank everywhere; internet quotes shown as reference notes only with explicit sellingUnit/packSize; issues_for_owner = corrected missingFields",
+    "reason": "CSV must reflect corrected reality",
+    "sources": [],
+    "affectedTests": [],
+    "notes": ""
+  },
+  {
+    "type": "image_resolution",
+    "sku": "CAT100-002",
+    "before": "180mm grey-pipe family photo (wrong variant)",
+    "after": "Finolex-branded white UPVC pipe photo (family_only - size unverifiable); size-mapping conflict flagged: supplier '20mm = 3/4 inch' vs Finolex brochure '20mm = 1/2 inch'",
+    "reason": "Priority photo defect; no permitted source ties Finolex photo to 20mm/6m/Sch-80 variant",
+    "sources": [
+      "https://dir.indiamart.com/delhi/finolexpipes.html",
+      "https://5.imimg.com/data5/SELLER/Doc/2023/3/294328062/LF/ML/QO/121602779/finolex-astm-sch-80-pipe-3-mtr-.pdf"
+    ],
+    "affectedTests": [
+      "exact-finolex-upvc-pipe-20mm"
+    ],
+    "notes": "Owner must verify stock size before sale."
+  },
+  {
+    "type": "image_resolution",
+    "sku": "CAT100-061",
+    "before": "TIMCO-marked brush photo (wrong brand)",
+    "after": "Exact photo: 'JOHNSON Active 2\"' sticker verified; genuine Johnson, 2-inch, flat head, green plastic handle",
+    "reason": "Priority photo defect",
+    "sources": [
+      "https://www.indiamart.com/proddetail/johnson-paint-brush-17380195755.html"
+    ],
+    "affectedTests": [
+      "exact-johnson-brush-2inch"
+    ],
+    "notes": "variantMatch now exact."
+  },
+  {
+    "type": "image_resolution",
+    "sku": "CAT100-086",
+    "before": "TrustBasket-labelled package photo (wrong brand)",
+    "after": "Exact photo: 'AGRIANSH' logo on green 3-layer braided hose, orange tap adapter + metal clamp visible; 15m documented",
+    "reason": "Priority photo defect",
+    "sources": [
+      "https://www.flipkart.com/agriansh-pvc-garden-hose-pipe-tap-adapter-clamps-1-2-inch-15-meter-49-21foot-3-layer-threaded-braided-water-green-flexible/p/itm49466319cc879",
+      "https://www.toolsvilla.com/15-meter-pvc-pipe-with-accessories"
+    ],
+    "affectedTests": [
+      "exact-agriansh-hose-15m"
+    ],
+    "notes": "variantMatch now exact."
+  },
+  {
+    "type": "identity_correction",
+    "sku": "CAT100-099",
+    "before": {
+      "name": "3M 8210 N95 Particulate Respirator Mask with Valve",
+      "specs": {
+        "model": "8210",
+        "respirator_type": "With valve (as listed by India sellers)"
+      }
+    },
+    "after": {
+      "name": "3M 8210V N95 Particulate Respirator with Cool Flow Valve",
+      "specs": {
+        "model": "8210V",
+        "respirator_type": "With Cool Flow exhalation valve"
+      }
+    },
+    "reason": "Photo stamp reads 3M 8210V NIOSH TC-84A-5410 N95 with Cool Flow valve; Fisher/SPI/Ritz spec sheets confirm 8210V is valved, plain 8210 valveless",
+    "sources": [
+      "https://www.fishersci.com/shop/products/3m-comfort-plus-disposable-filtering-facepiece-respirator-n95-4/p-55692",
+      "https://www.ritzsafety.com/media/sparsh/product_attachment/MMM8210V-+8210V+N95+Particulate+Respirator+WITH+Cool+Flow+Exhalation+Valve+SpecSheet-1764786647.pdf"
+    ],
+    "affectedTests": [
+      "exact-3m-8210-mask"
+    ],
+    "notes": "Existing IndiaMART quote may be for valveless 8210 - flagged as possible mismatch."
+  },
+  {
+    "type": "identity_reconciliation",
+    "sku": "CAT100-053",
+    "before": {
+      "name": "Asian Paints Tractor Emulsion Interior Wall Paint 10L (White)",
+      "brand": "Asian Paints",
+      "assigned_by": "data-fixer exchange (manufacturer page showed 10L pack, MRP Rs.2230)"
+    },
+    "after": {
+      "name": "Dulux Promise Interior Emulsion 10L (White)",
+      "brand": "Dulux",
+      "aligned_to": "exact permitted photo (official AkzoNobel 10L pack art)"
+    },
+    "reason": "Image worker sourced a permitted exact photo of Dulux Promise Interior 10L for the exchange SKU; record aligned to the documented photo identity (same brand as exchanged-out Dulux Promise 4L)",
+    "sources": [
+      "https://www.buildjahaan.com/product-details/akzo-dulux-promise-white-interior-10-ltr-akzo",
+      "https://bw-production.s3.ap-south-1.amazonaws.com/Images/product/pdf/b1251c8095244c15bbd2736314a3d8eb.pdf"
+    ],
+    "affectedTests": [
+      "exact-tractor-emulsion-10l",
+      "exact-dulux-promise"
+    ],
+    "notes": "Reference quote: Build Jahaan Rs.2020/piece incl. taxes (reference only). Pack art shows tinted shade; white uses identical artwork."
+  },
+  {
+    "type": "image_resolution",
+    "sku": "CAT100-016",
+    "before": "1-pint can photo (wrong size)",
+    "after": "Exact photo: '1/2 PINT / 8 Fl. Oz. / 0.237 L' legible on label",
+    "reason": "Bonus fix found during full photo inspection",
+    "sources": [],
+    "affectedTests": [
+      "exact-weldon-705"
+    ],
+    "notes": "variantMatch upgraded to exact."
+  },
+  {
+    "type": "variant_match_reverification",
+    "before": "38 exact / 57 family_only / 5 unconfirmed (original labels)",
+    "after": "44 exact / 51 family_only / 5 unconfirmed (all 100 re-verified against records)",
+    "reason": "Full photo inspection: 7 upgrades to exact (016, 029, 053, 061, 067, 086, 099), 1 downgrade (050: photo shows 600mm graduations vs 150mm SKU); specific mismatches logged for 024/025/052/074/042/008/081/093",
+    "sources": [],
+    "affectedTests": [],
+    "notes": "A cosmetic edit never upgrades variantMatch; kept evidence-based."
+  },
+  {
+    "type": "alias_disambiguation",
+    "before": {
+      "CAT100-074": "shared alias 'MS aani 1 kilo'",
+      "CAT100-075": "shared alias 'MS aani 1 kilo'",
+      "CAT100-067": "shared alias 'sand paper sheet'",
+      "CAT100-068": "shared alias 'sand paper sheet'"
+    },
+    "after": {
+      "CAT100-074": "'MS aani 40mm 1 kilo'",
+      "CAT100-075": "'MS aani 65mm 1 kilo'",
+      "CAT100-067": "'sand paper sheet 80'",
+      "CAT100-068": "'sand paper sheet 120'"
+    },
+    "reason": "Shared aliases cross-contaminated sizes in matching; genuine ambiguity is now encoded as mustClarify test cases instead of silent double matches",
+    "sources": [],
+    "affectedTests": [
+      "ambiguous-nails-ms-aani-1-kilo",
+      "ambiguous-sandpaper-sheet"
+    ],
+    "notes": "Added two ambiguity test cases asserting clarification rather than arbitrary selection."
+  }
+]

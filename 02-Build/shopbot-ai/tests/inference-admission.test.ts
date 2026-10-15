@@ -143,7 +143,7 @@ test('expiry during outbox work rolls back draft changes and queues only the ret
  assert.equal((await pool.query('SELECT state FROM provider_attempts')).rows[0].state,'succeeded');
 }));
 
-test('additive v26 to v27 upgrade preserves prior requests, statuses, rate snapshots and unknown budget holds',()=>fixture(async(pool,inbox)=>{
+test('additive v26 to current upgrade preserves prior requests, statuses, rate snapshots and unknown budget holds',()=>fixture(async(pool,inbox)=>{
  await initializeBudget(pool,inbox.context,5000000);const id=randomUUID();await inbox.ingest({id,type:'text',text:'old unknown request'});
  const provider:Interpreter={name:'offline-upgrade',mode:'live',billing:geminiTextRate,interpret:async()=>{throw new Error('no network');}};
  await withConversation(pool,inbox.context,async client=>{await reserveAttempt(client,inbox.context,id,0,provider);});
@@ -151,13 +151,13 @@ test('additive v26 to v27 upgrade preserves prior requests, statuses, rate snaps
  await pool.query("INSERT INTO order_requests(id,store_id,conversation_id,actor,review_id,lines,total_paise) VALUES($1,$2,$3,$4,$5,'[]',1234)",[randomUUID(),fixtureStore,fixtureConversation,simulatorContext.actor,randomUUID()]);
  await pool.query("INSERT INTO whatsapp_statuses(phone_id,provider_id,recipient,state,provider_timestamp) VALUES('12345','old-delivery','919000000001','delivered',1)");
  // Reconstruct populated v26 in this disposable schema; production is untouched.
- await pool.query('DROP TABLE whatsapp_pricing_events,whatsapp_delivery_costs,whatsapp_delivery_cost_history,whatsapp_pricing_analytics; ALTER TABLE messages DROP COLUMN inference_deadline_at; ALTER TABLE provider_attempts DROP COLUMN input_admission; ALTER TABLE catalog_suggestions DROP COLUMN input_admission; ALTER TABLE whatsapp_statuses DROP COLUMN pricing; DELETE FROM schema_migrations WHERE version=27');
+ await pool.query('DROP TABLE payment_events,payment_attempts,payment_quotes,catalog_proposal_assets,catalog_proposals; ALTER TABLE stores DROP COLUMN inventory_policy; ALTER TABLE products DROP COLUMN merchant_verification,DROP COLUMN selling_policy; ALTER TABLE messages DROP COLUMN release_fingerprint; DROP TABLE runtime_releases; DROP TABLE whatsapp_pricing_events,whatsapp_delivery_costs,whatsapp_delivery_cost_history,whatsapp_pricing_analytics; ALTER TABLE messages DROP COLUMN inference_deadline_at; ALTER TABLE provider_attempts DROP COLUMN input_admission,DROP COLUMN observation; ALTER TABLE catalog_suggestions DROP COLUMN input_admission; ALTER TABLE whatsapp_statuses DROP COLUMN pricing; DELETE FROM schema_migrations WHERE version>=27');
  const tables=['inference_budgets','provider_attempts','order_requests','whatsapp_statuses','messages'];
  const before=await Promise.all(tables.map(table=>pool.query('SELECT * FROM '+table).then(r=>r.rows)));
  await setupDatabase(pool,'mock');await setupDatabase(pool,'mock');
  for(const [n,table] of tables.entries()){
-  const after=(await pool.query('SELECT * FROM '+table)).rows.map(row=>{delete row.input_admission;delete row.inference_deadline_at;delete row.pricing;return row;});assert.deepEqual(after,before[n],table);
+  const after=(await pool.query('SELECT * FROM '+table)).rows.map(row=>{delete row.input_admission;delete row.inference_deadline_at;delete row.pricing;delete row.observation;delete row.release_fingerprint;return row;});assert.deepEqual(after,before[n],table);
  }
  assert.equal((await pool.query('SELECT version FROM schema_migrations WHERE version=27')).rowCount,1);
- assert.equal((await pool.query('SELECT * FROM whatsapp_delivery_costs')).rowCount,0);
+ assert.equal((await pool.query('SELECT * FROM whatsapp_delivery_costs')).rowCount,0);assert.equal((await pool.query('SELECT version FROM schema_migrations WHERE version BETWEEN 27 AND 31')).rowCount,5);
 }));

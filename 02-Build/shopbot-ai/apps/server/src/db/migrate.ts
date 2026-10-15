@@ -215,6 +215,63 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       );
       INSERT INTO schema_migrations(version) VALUES(27);
     `);}
+    const v28=await client.query('SELECT version FROM schema_migrations WHERE version=28');
+    if(!v28.rowCount){await client.query(`ALTER TABLE provider_attempts ADD COLUMN observation jsonb; INSERT INTO schema_migrations(version) VALUES(28);`);}
+    const v29=await client.query('SELECT version FROM schema_migrations WHERE version=29');
+    if(!v29.rowCount){await client.query(`
+      ALTER TABLE products ADD COLUMN merchant_verification jsonb NOT NULL DEFAULT '{"identity":false,"photo":false,"sellingUnit":false,"price":false,"stock":false}';
+      ALTER TABLE products ADD COLUMN selling_policy jsonb NOT NULL DEFAULT '{"cutAllowed":false,"continuousLengthAvailable":null}';
+      CREATE TABLE catalog_proposals (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),batch_id text NOT NULL,client_item_id text NOT NULL,
+        input_hash text NOT NULL,details jsonb NOT NULL,provenance jsonb NOT NULL,actor text NOT NULL,
+        base_sku text,base_version integer,version integer NOT NULL DEFAULT 1,
+        state text NOT NULL DEFAULT 'draft' CHECK(state IN ('draft','published','rejected')),
+        published_sku text,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE(store_id,batch_id,client_item_id),UNIQUE(store_id,id)
+      );
+      CREATE INDEX catalog_proposals_pending ON catalog_proposals(store_id,state,created_at);
+      CREATE TABLE catalog_proposal_assets (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL,proposal_id uuid NOT NULL,
+        original bytea NOT NULL CHECK(octet_length(original)<=2097152),mime_type text NOT NULL,sha256 text NOT NULL,
+        image bytea NOT NULL CHECK(octet_length(image)<=2097152),width integer NOT NULL,height integer NOT NULL,
+        match_kind text NOT NULL CHECK(match_kind IN ('exact','family_only','unconfirmed')),
+        created_at timestamptz NOT NULL DEFAULT now(),
+        FOREIGN KEY(store_id,proposal_id) REFERENCES catalog_proposals(store_id,id),
+        UNIQUE(store_id,proposal_id,sha256)
+      );
+      INSERT INTO schema_migrations(version) VALUES(29);
+    `);}
+    const v30=await client.query('SELECT version FROM schema_migrations WHERE version=30');
+    if(!v30.rowCount){await client.query(`
+      CREATE TABLE payment_quotes (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),request_id uuid NOT NULL REFERENCES order_requests(id),
+        amount_paise integer NOT NULL CHECK(amount_paise>0),currency text NOT NULL CHECK(currency='INR'),
+        original_total_paise bigint NOT NULL,lines jsonb NOT NULL,reason text NOT NULL,input_hash text NOT NULL,
+        state text NOT NULL CHECK(state IN ('offered','accepted','superseded','expired')),
+        consent_message_id uuid UNIQUE REFERENCES messages(id),expires_at timestamptz NOT NULL,created_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE TABLE payment_attempts (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),quote_id uuid NOT NULL REFERENCES payment_quotes(id),request_id uuid NOT NULL REFERENCES order_requests(id),
+        provider text NOT NULL,account_id text NOT NULL,amount_paise integer NOT NULL CHECK(amount_paise>0),currency text NOT NULL CHECK(currency='INR'),
+        state text NOT NULL CHECK(state IN ('creating','pending','paid','failed','expired','cancelled','unknown','refund_pending','refunded','conflicting')),
+        provider_link_id text,checkout_url text,payment_id text,refund_id text,cancel_requested boolean NOT NULL DEFAULT false,
+        expires_at timestamptz NOT NULL,last_error text,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE(provider,account_id,provider_link_id)
+      );
+      CREATE UNIQUE INDEX payment_attempts_one_open ON payment_attempts(quote_id) WHERE state IN ('creating','pending','unknown','paid','refund_pending','refunded','conflicting');
+      CREATE TABLE payment_events (
+        provider text NOT NULL,account_id text NOT NULL,event_id text NOT NULL,store_id uuid NOT NULL REFERENCES stores(id),attempt_id uuid NOT NULL REFERENCES payment_attempts(id),
+        payload_hash text NOT NULL,fact jsonb NOT NULL,received_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(provider,account_id,event_id)
+      );
+      INSERT INTO schema_migrations(version) VALUES(30);
+    `);}
+    const v31=await client.query('SELECT version FROM schema_migrations WHERE version=31');
+    if(!v31.rowCount){await client.query(`
+      ALTER TABLE stores ADD COLUMN inventory_policy text NOT NULL DEFAULT 'manual_confirm' CHECK(inventory_policy='manual_confirm');
+      CREATE TABLE runtime_releases(artifact_hash text PRIMARY KEY CHECK(artifact_hash ~ '^[a-f0-9]{64}$'),metadata jsonb NOT NULL,recorded_at timestamptz NOT NULL DEFAULT now());
+      ALTER TABLE messages ADD COLUMN release_fingerprint text REFERENCES runtime_releases(artifact_hash);
+      INSERT INTO schema_migrations(version) VALUES(31);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

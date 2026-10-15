@@ -1,0 +1,5 @@
+
+> shopbot-ai@0.1.0 catalog:stage
+> tsx scripts/import-catalog-package.ts ../../01-Input/catalog-100-corrected
+
+{"valid":true,"count":100,"sourceHash":"fb271455666940c513b09926890b4cf07be7a3043934051079ea80bfa4ab1d6d","batchId":"catalog100-fb271455666940c513b09926","published":0}

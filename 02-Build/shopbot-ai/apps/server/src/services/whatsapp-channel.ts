@@ -115,7 +115,7 @@ export class WhatsAppChannel {
                 FROM whatsapp_actions a JOIN whatsapp_outbox o ON o.message_id=a.message_id JOIN conversations c ON c.id=a.conversation_id
                 WHERE a.id=$1 AND a.conversation_id=$2 AND a.expires_at>now()`,[tapped.id,ctx.conversationId])).rows[0];
               const parsed=eventSchema.safeParse(action?.event);
-              const complete=parsed.success&&(parsed.data.type==='confirm'||parsed.data.type==='confirm_products')?await reviewDeliveryReady(client,ctx.conversationId,action?.binding_id??binding):true;
+              const complete=parsed.success&&(parsed.data.type==='confirm'||parsed.data.type==='confirm_products')?await reviewDeliveryReady(client,ctx.conversationId,action?.binding_id??binding,true):true;
               if(complete&&action&&parsed.success&&action.source_version===state.version&&action.operator_revision===action.current_revision&&action.binding_id===binding&&['accepted','delivered','read'].includes(action.delivery_state)&&(!m.context||m.context.id===action.provider_id)){
                 event=parsed.data;text=action.label;binding=action.binding_id;
               }

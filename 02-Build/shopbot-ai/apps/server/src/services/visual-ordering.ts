@@ -8,6 +8,7 @@ import {fitText} from './whatsapp-reply.js';
 import {requestStatusText} from './request-status.js';
 import {catalogPack,catalogContent} from './quantity-evidence.js';
 import {needsPipeType} from './catalog-discovery.js';
+import {planReply} from './reply-plan.js';
 
 type Button=NonNullable<RichReply['buttons']>[number];
 export const orderReference=(id:string)=>'Order #'+id.replaceAll('-','').slice(0,8).toUpperCase();
@@ -100,8 +101,9 @@ export function visualBill(state:ConversationState,request?:OrderRequest):RichRe
  return reply(request?'submitted':'bill',parts);
 }
 export function visualReply(base:RichReply,state:ConversationState,request?:OrderRequest|null):RichReply {
- if(!state.visualOrdering||base.readOnly)return base;
- if(base.stage==='error'||base.clarificationReason==='intent_clarification')return withContext({...base,...reply(base.stage==='error'?'error':'identify',[part([instruction(base.stage==='error'?say(state,'Try again','மீண்டும் முயலுங்க','Marubadi try pannunga'):say(state,'One detail','ஒரு விவரம்','Oru vivaram'),base.text.split('\n').filter(Boolean),say(state,'Your list is kept','பட்டியல் அப்படியே இருக்கு','List appadiye irukku'),base.buttons?.slice(0,3))],base.text)],base.clarificationReason),replyLanguage:state.replyLanguage},base.contextLines);
+ const plan=planReply(base,state,request);
+ if(!state.visualOrdering||plan.purpose==='read_only')return base;
+ if(plan.purpose==='error'||base.clarificationReason==='intent_clarification')return nativeReply(base,state);
  if(base.handoffRequested){return {...base,...reply('status',[part([instruction(say(state,'Shop assistance','கடையின் உதவி','Kadai help'),base.text.split('\n').filter(Boolean),say(state,'Waiting for the shop reply','கடை பதிலுக்குக் காத்திருக்கிறது','Kadai bathilukku kaathirukku'))],say(state,'Shop assistance requested. Your list is kept.','கடை உதவி கேட்டிருக்கோம். பட்டியல் அப்படியே இருக்கு.','Kadai help kettirukkom. List appadiye irukku.'))]),handoffRequested:true,replyLanguage:state.replyLanguage};}
  if(request){return {...(base.stage==='submitted'?visualBill(state,request):visualStatus(state,request)),replyLanguage:state.replyLanguage};}
  if(base.stage==='returning')return base;
@@ -113,13 +115,16 @@ export function visualReply(base:RichReply,state:ConversationState,request?:Orde
 
  if(base.buttons?.length&&base.buttons.every(b=>b.event.type==='edit_item'))return visualEditPicker(state);
  if(state.pending?.kind==='products'&&!(base.stage==='identify'&&base.cards?.length))return withContext({...visualProductReview(state),replyLanguage:state.replyLanguage},base.contextLines);
- if(state.pending?.kind==='review'&&!(base.stage==='identify'&&base.cards?.length)){const bill=visualBill(state);return withContext({...bill,replyLanguage:state.replyLanguage},base.contextLines);}
+ if(state.pending?.kind==='review'&&!(base.stage==='identify'&&base.cards?.length)){
+  if(!plan.mayOfferSubmission)return nativeReply({...base,text:say(state,'The list needs a fresh check before submission. Review the product, amount and shop price.','அனுப்பும் முன் பட்டியலை மீண்டும் சரிபார்க்க வேண்டும். பொருள், எண்ணிக்கை, கடை விலையைச் சரிபாருங்கள்.','Anuppum mun list-ai marubadi check pannanum. Porul, count, kadai vilai check pannunga.'),kind:'text',stage:'identify',buttons:(base.buttons??[]).filter(b=>b.event.type!=='confirm')},state);
+  const bill=visualBill(state);return withContext({...bill,replyLanguage:state.replyLanguage},base.contextLines);
+ }
  if(state.editingLineId){
   const selected=state.draft.find(l=>l.id===state.editingLineId),product=selected?.candidates?.find(p=>p.sku===selected.sku);
   if(product){const question=say(state,'What should change: product, size or count?','பொருள், அளவு, எண்ணிக்கை — என்ன மாற்றணும்?','Porul, size, count — enna maathanum?');return {...reply('correction',[part([{kind:'product',lineId:selected!.id,product,caption:productCaption(productName(product,state),[product.specifications?.size,question]),buttons:base.buttons?.slice(0,3)}],question)],'selected_item_change'),replyLanguage:state.replyLanguage};}
  }
  const questionId=state.pending?.kind==='question'?state.pending.lineId:undefined;
- const line=state.draft.find(l=>l.id===questionId);
+ const line=plan.purpose==='clarification'?plan.line:state.draft.find(l=>l.id===questionId);
  if(line&&!line.sku&&line.productIntent?.kind!=='ambiguous'&&needsPipeType(line.query??line.name)&&!(base.stage==='identify'&&base.cards?.length)){
   const pump=/\bpump(?:ing)?\b|\bsuction\b|\bmotor\b|பம்ப்|மோட்டார்/i.test(line.query??line.name);
   const prompt=pump?say(state,'Which kind of pipe for the pump do you need? A brand or photo will help the shop identify it.','பம்புக்கு எந்த வகை பைப் வேணும்? பிராண்ட் அல்லது படம் இருந்தா சொல்லுங்க.','Pump-ku entha vagai pipe venum? Brand illa photo iruntha sollunga.'):say(state,'Which kind of pipe do you mean: rigid PVC, a flexible hose, or a pump delivery/suction pipe?','எந்த வகை பைப் வேணும் — கெட்டியான PVC, வளையும் ஹோஸ், அல்லது மோட்டார் தண்ணீர் பைப்?','Entha vagai pipe venum — rigid PVC, flexible hose, illa motor thanni pipe?');
@@ -129,14 +134,15 @@ export function visualReply(base:RichReply,state:ConversationState,request?:Orde
   const size=line.productMeasures?.map(m=>`${m.value} ${m.unit}`).join(' × ');
   const kept=say(state,'Your requested quantity and size are kept. No catalog product is selected yet.','நீங்கள் சொன்ன எண்ணிக்கையும் அளவும் பட்டியலில் உள்ளது. இன்னும் கடைப் பொருள் தேர்வு செய்யவில்லை.','Neenga sonna count-um size-um list-la irukku. Catalog product innum choose pannala.');
   const choices:Button[]=!pump&&state.pending?.kind==='question'?(['pvc','hose','pump'] as const).map(pipeType=>({label:{pvc:say(state,'Rigid PVC','கெட்டியான PVC','Rigid PVC'),hose:say(state,'Flexible hose','வளையும் ஹோஸ்','Flexible hose'),pump:say(state,'Pump pipe','மோட்டார் பைப்','Pump pipe')}[pipeType],event:{id:randomUUID(),type:'choose_pipe_type',lineId:line.id,questionId:state.pending!.id,pipeType,expectedVersion:state.version}})):[shop(state)];
-  return withContext({...reply('identify',[part([instruction(label,[count,size??'',kept].filter(Boolean),namedPrompt,choices)],namedPrompt)],'product_or_specification'),replyLanguage:state.replyLanguage},base.contextLines);
+  return nativeReply({...base,text:[namedPrompt,size?measurementText(size,state):undefined,count,kept].filter(Boolean).join('\n'),stage:'identify',clarificationReason:'product_or_specification',buttons:choices},state);
  }
  if(line&&!(base.stage==='identify'&&base.cards?.length)&&(line.resolution==='needs_quantity'||line.resolution==='needs_unit')){
   const product=line.candidates?.find(p=>p.sku===line.sku);
   const size=line.packSize??(product?catalogPack(product):undefined);
   const prompt=line.catalogIssue?draftIssueText(line,state)!:say(state,`How many ${line.unit??'packs'} of ${lineName(line,state)}?`,`${lineName(line,state)} — எத்தனை ${unitName(line.unit??'unit',state)} வேணும்?`,`${lineName(line,state)} — eththanai ${line.unit??'packs'} venum?`);
   const details=size?`${size.value} ${size.unit}`:'';
-  const cards:VisualCard[]=product?[{kind:'product',lineId:line.id,product,caption:productCaption(productName(product,state),[measurementText(details,state),requestedAmountText(line,state),productPriceText(product,state),productStockText(product,state),prompt]),buttons:base.buttons?.slice(0,3)}]:[instruction(prompt,[details,requestedAmountText(line,state)??''],prompt,base.buttons?.slice(0,3))];
+  if(!product)return nativeReply({...base,text:prompt,stage:'quantity',clarificationReason:line.requestedAmount?'requested_amount_conversion':'purchase_count'},state);
+  const cards:VisualCard[]=[{kind:'product',lineId:line.id,product,caption:productCaption(productName(product,state),[measurementText(details,state),requestedAmountText(line,state),productPriceText(product,state),productStockText(product,state),prompt]),buttons:base.buttons?.slice(0,3)}];
   return withContext({...reply('quantity',[part(cards,prompt,base.buttons?.slice(0,3))],line.requestedAmount?'requested_amount_conversion':'purchase_count'),replyLanguage:state.replyLanguage},base.contextLines);
  }
  if(base.cards?.length){
@@ -149,6 +155,9 @@ export function visualReply(base:RichReply,state:ConversationState,request?:Orde
  const welcomeButtons:Button[]=[{label:'தமிழ்',event:{id:randomUUID(),type:'change_language',language:'ta'}},{label:'Tanglish',event:{id:randomUUID(),type:'change_language',language:'ta-Latn'}},shop(state)];
  const message=stage==='welcome'?welcome:base.text;
  return {...base,...reply(stage,[part([instruction(stage==='welcome'?say(state,'Welcome','வணக்கம்','Vanakkam'):say(state,'Your list','உங்கள் பட்டியல்','Unga list'),message.split('\n').filter(Boolean),say(state,'Text, voice or photo','எழுத்து, குரல் பதிவு அல்லது படம்','Text, voice illa photo'),stage==='welcome'?welcomeButtons:base.buttons?.slice(0,3))],stage==='welcome'?say(state,'Send what you need.','தேவையானதை அனுப்புங்க.','Thevaiyanathai anuppunga.'):fitText(message.split('\n')[0],180))]),replyLanguage:state.replyLanguage};
+}
+function nativeReply(base:RichReply,state:ConversationState):RichReply {
+ return {...base,text:[...base.contextLines??[],base.text].filter(Boolean).join('\n'),parts:undefined,cards:undefined,presentation:base.buttons?.length?'list':'text',outboundMessages:1,replyLanguage:state.replyLanguage};
 }
 function withContext(result:RichReply,lines:string[]|undefined):RichReply {
  if(!lines?.length||!result.parts?.length)return result;

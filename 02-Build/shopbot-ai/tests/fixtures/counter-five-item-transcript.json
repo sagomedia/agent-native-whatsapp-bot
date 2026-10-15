@@ -1,19 +1,8 @@
 [
   {
     "stage": "identify",
-    "text": "Noted all 5 requested items:\n1 inch pipe — 1\n0.75 inch pipe — 1\nWall scraper 4 inch — 1\nRatchet PVC Pipe Cutter 42 mm — 1\nWhite paint 10 litre — 1\n1 inch pipe: Which kind of pipe do you mean: rigid PVC, a flexible hose, or a pump delivery/suction pipe?",
-    "cards": [
-      {
-        "kind": "instruction",
-        "caption": "1 inch pipe: Which kind of pipe do you mean: rigid PVC, a flexible hose, or a pump delivery/suction pipe?",
-        "title": "1 inch pipe",
-        "lines": [
-          "1 piece",
-          "1 inch",
-          "Your requested quantity and size are kept. No catalog product is selected yet."
-        ]
-      }
-    ],
+    "text": "Noted all 5 requested items:\n1 inch pipe — 1\n0.75 inch pipe — 1\nWall scraper 4 inch — 1\nRatchet PVC Pipe Cutter 42 mm — 1\nWhite paint 10 litre — 1\n1 inch pipe: Which kind of pipe do you mean: rigid PVC, a flexible hose, or a pump delivery/suction pipe?\n1 inch\n1 piece\nYour requested quantity and size are kept. No catalog product is selected yet.",
+    "cards": [],
     "actions": [
       {
         "label": "Rigid PVC",
@@ -79,19 +68,8 @@
   },
   {
     "stage": "identify",
-    "text": "Selected: 1 inch PVC Heavy Pipe Local · 1 piece.\n0.75 inch pipe: Which kind of pipe do you mean: rigid PVC, a flexible hose, or a pump delivery/suction pipe?",
-    "cards": [
-      {
-        "kind": "instruction",
-        "caption": "0.75 inch pipe: Which kind of pipe do you mean: rigid PVC, a flexible hose, or a pump delivery/suction pipe?",
-        "title": "0.75 inch pipe",
-        "lines": [
-          "1 piece",
-          "0.75 inch",
-          "Your requested quantity and size are kept. No catalog product is selected yet."
-        ]
-      }
-    ],
+    "text": "Selected: 1 inch PVC Heavy Pipe Local · 1 piece.\n0.75 inch pipe: Which kind of pipe do you mean: rigid PVC, a flexible hose, or a pump delivery/suction pipe?\n0.75 inch\n1 piece\nYour requested quantity and size are kept. No catalog product is selected yet.",
+    "cards": [],
     "actions": [
       {
         "label": "Rigid PVC",

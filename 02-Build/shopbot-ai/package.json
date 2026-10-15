@@ -16,11 +16,18 @@
     "db:reset:mock": "tsx apps/server/src/db/maintenance.ts reset",
     "native:eval": "tsx scripts/evaluate-native.ts",
     "native:preflight": "tsx scripts/evaluate-native.ts --preflight",
-    "preview:customer": "node --import tsx scripts/customer-preview.ts"
+    "preview:customer": "node --import tsx scripts/customer-preview.ts",
+    "catalog:stage": "tsx scripts/import-catalog-package.ts",
+    "mcp:catalog": "tsx apps/server/src/mcp/stdio.ts",
+    "release:manifest": "tsx scripts/release-manifest.ts",
+    "preview:owner": "tsx scripts/owner-rehearsal.ts",
+    "pilot:evidence": "tsx scripts/pilot-evidence.ts",
+    "release:restore-rehearsal": "tsx scripts/rehearse-restore.ts"
   },
   "dependencies": {
     "@fastify/static": "10.1.5",
     "@google/genai": "2.26.0",
+    "@modelcontextprotocol/server": "2.3.1",
     "@resvg/resvg-js": "^2.6.2",
     "drizzle-orm": "0.45.3",
     "fastify": "5.12.5",
@@ -32,6 +39,7 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "2.3.1",
     "@types/node": "26.6.4",
     "@types/pg": "8.23.1",
     "@types/react": "19.3.0",

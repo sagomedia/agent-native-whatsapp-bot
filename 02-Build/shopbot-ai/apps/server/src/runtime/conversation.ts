@@ -31,6 +31,7 @@ import {getCatalogMap,refinementPlan,discoverProducts} from '../services/catalog
 import { loadState, RetailTools,digest,referenceLine, type ToolResult } from '../services/tools.js';
 import { ToolError, withConversation, type ActorContext } from '../services/context.js';
 import {loadAssistantMemory,saveAssistantMemory,observeCatalog,observationQueries,recheckQueries,isRecheck,pendingItem,assistanceReply,conversationBinding,type AssistantMemory,type CatalogObservation} from '../services/agent-assistance.js';
+import {currentReleaseFingerprint} from '../services/release-manifest.js';
 
 function quantityAnswer(state:ConversationState,lineId:string,amount:{quantity:number;unit?:string},text:string):Interpretation['operations'][number] {
  const line=state.draft.find(l=>l.id===lineId);
@@ -104,6 +105,7 @@ export class ConversationRuntime {
       if(!row.rows[0]) return null;
       const token=randomUUID(),m=row.rows[0];
       const claimedDeadline=await client.query("UPDATE messages SET status='processing',claim_token=$1,lease_until=clock_timestamp()+$3*interval '1 second',inference_deadline_at=coalesce(inference_deadline_at,to_timestamp($4/1000.0)) WHERE id=$2 RETURNING inference_deadline_at",[token,m.id,processingLeaseSeconds(),Date.now()+inferenceTiming.turnMs]);
+      await client.query('UPDATE messages SET release_fingerprint=$1 WHERE id=$2',[currentReleaseFingerprint(),m.id]);
       if(this.options.visualOrdering!==undefined)await client.query('UPDATE conversations SET visual_ordering=$2 WHERE id=$1',[ctx.conversationId,this.options.visualOrdering]);
       const shown=(await client.query("SELECT payload FROM messages WHERE conversation_id=$1 AND direction='outbound' ORDER BY sequence DESC LIMIT 20",[ctx.conversationId])).rows;
       const displayedProducts=shown.flatMap(r=>[...(r.payload?.parts??[]).flatMap((p:any)=>p.cards.flatMap((c:any)=>c.kind==='product'?(c.buttons??[]).map((b:any)=>({event:b.event,product:c.product})):[])),...(r.payload?.cards??[]).flatMap((c:any)=>c.action&&c.product?[{event:c.action,product:c.product}]:[])]);
@@ -293,7 +295,7 @@ export class ConversationRuntime {
             Object.assign(current,await loadState(client,ctx));
             deterministic={...deterministic,args:{...deterministic.args,operations,expectedVersion:current.version}};
           }
-          const invoke=async(call:ToolCall)=>{if(current.visualOrdering&&(call.name==='submit_order_request'||call.name==='confirm_product_choices'&&current.pending?.kind==='products'&&current.pending.completeReview)){const binding=call.name==='submit_order_request'?call.args.reviewId:call.args.batchId;if(!await reviewDeliveryReady(client,ctx.conversationId,binding))throw new ToolError('All review images must finish sending before approval. Please ask to review again.','review_incomplete');}
+          const invoke=async(call:ToolCall)=>{if(current.visualOrdering&&(call.name==='submit_order_request'||call.name==='confirm_product_choices'&&current.pending?.kind==='products'&&current.pending.completeReview)){const binding=call.name==='submit_order_request'?call.args.reviewId:call.args.batchId;if(!await reviewDeliveryReady(client,ctx.conversationId,binding,claimed.event.type==='confirm'||claimed.event.type==='confirm_products'))throw new ToolError('All review parts must be delivered before approval. Please ask to review again.','review_incomplete');}
           return this.tools.invokeInTransaction(client,{...ctx,...(call.name==='submit_order_request'&&(deterministic?.name==='submit_order_request'||explicitSend&&deterministic?.name==='confirm_product_choices')?{consentReviewId:call.args.reviewId}:{}),...(call.name==='confirm_product_choices'&&deterministic?.name==='confirm_product_choices'?{consentProductBatchId:call.args.batchId}:{}),...(selectedCatalogSku?{selectedCatalogSku,selectedCatalogProduct}:{})},call,claimed.id);};
           let result:ToolResult;
           let assistance:CatalogObservation[]|undefined;
@@ -447,6 +449,7 @@ export class ConversationRuntime {
         const id=index===0?replyId:randomUUID();
         const payload=part?{...rich,text:part.text,parts:[part],groupId:replyId,partIndex:index,partCount:parts.length}:rich;
         await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,response_to,payload,reply_group_id,part_index,part_count,stage,clarification_reason) VALUES($1,$2,'outbound',$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11)",[id,ctx.conversationId,payload.text,this.options.queueReply?'queued':'sent',claimed.id,JSON.stringify(payload),replyId,index,parts.length,rich.stage??null,rich.clarificationReason??null]);
+        await client.query('UPDATE messages SET release_fingerprint=$1 WHERE id=$2',[currentReleaseFingerprint(),id]);
         await this.options.queueReply?.(client,ctx,id,payload);
       }
       if(Date.now()>=claimed.deadlineAt){
@@ -458,6 +461,7 @@ export class ConversationRuntime {
         const retained={...plainReply(say(claimed.state,'The turn deadline was reached. Your list is retained. Please try again or ask the shop for help.','செயலாக்க நேரம் முடிந்தது. உங்கள் பட்டியல் அப்படியே உள்ளது. மீண்டும் முயலுங்கள் அல்லது கடையிடம் உதவி கேளுங்கள்.','Processing neram mudinjathu. Unga list appadiye irukku. Marubadi try pannunga illa kadaiyidam help kelunga.')),replyLanguage:claimed.state.replyLanguage??'en',stage:'error' as const,clarificationReason:'turn_deadline'};
         const id=randomUUID();
         await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,response_to,payload,stage,clarification_reason) VALUES($1,$2,'outbound',$3,$4,$5,$6::jsonb,'error','turn_deadline')",[id,ctx.conversationId,retained.text,this.options.queueReply?'queued':'sent',claimed.id,JSON.stringify(retained)]);
+        await client.query('UPDATE messages SET release_fingerprint=$1 WHERE id=$2',[currentReleaseFingerprint(),id]);
         await this.options.queueReply?.(client,ctx,id,retained);
       }
       await client.query("UPDATE messages SET status='processed',claim_token=NULL,lease_until=NULL WHERE id=$1",[claimed.id]);
@@ -719,6 +723,7 @@ export class ConversationRuntime {
       if(timeoutMs<=inferenceTiming.sdkMarginMs){failureCode='turn_deadline';throw new ToolError('The turn deadline was reached. Your list is retained.','turn_deadline');}
       const signal=AbortSignal.timeout(timeoutMs);
       const output=await Promise.race([prepared?prepared.interpret(signal):provider.interpret(input,signal),new Promise<never>((_,reject)=>{signal.addEventListener('abort',()=>reject(new Error('Interpretation timed out; draft retained.')),{once:true});})]);
+      if(output.observation)await this.pool.query('UPDATE provider_attempts SET observation=$1::jsonb WHERE id=$2 AND store_id=$3 AND conversation_id=$4',[JSON.stringify(output.observation),reservation.id,ctx.storeId,ctx.conversationId]);
       failureCode='usage_validation';
       if(!await settleAttempt(this.pool,ctx,reservation.id!,output)) throw new ToolError('Provider usage exceeded the verified limits. No changes applied.');
       if(Date.now()>=claim.deadlineAt){failureCode='turn_deadline';throw new ToolError('The turn deadline was reached. Your list is retained.','turn_deadline');}
@@ -730,7 +735,10 @@ export class ConversationRuntime {
       if(!parsed.success||stage==='recognize'&&(parsed.data.operations.length>0||parsed.data.next!=='continue')||input.image&&!(provider.supportsImageLists&&parsed.data.understanding?.inputKind==='handwritten_list'&&parsed.data.operations.every(op=>op.kind==='add_item'))&&(parsed.data.operations.length>0||!['assist','continue'].includes(parsed.data.next))) throw new ToolError('Could not validate all requested actions. Please rephrase; no changes were applied.');
       failureCode='ledger_write';
       const valid=parsed.data;
-      await this.pool.query("UPDATE provider_attempts SET state='succeeded',response=$1::jsonb,usage=$2::jsonb WHERE id=$3",[JSON.stringify(valid),JSON.stringify(output.usage),reservation.id]);
+      // A safe clarification can survive a rejected perception contract. Keep
+      // the paid usage and evidence, but never cache that attempt as a success.
+      const rejected=valid.understanding?.unresolved.includes('validation_recovery')===true;
+      await this.pool.query("UPDATE provider_attempts SET state=$4,failure_code=$5,response=$1::jsonb,usage=$2::jsonb WHERE id=$3",[JSON.stringify(valid),JSON.stringify(output.usage),reservation.id,rejected?'failed':'succeeded',rejected?'invalid_evidence':null]);
       return valid;
     } catch(error) {
       if(provider.freeQuota&&error instanceof FreeQuotaError) await coolDownFreeQuota(this.pool,provider.freeQuota);

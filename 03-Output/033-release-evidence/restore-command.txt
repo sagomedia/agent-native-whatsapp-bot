@@ -1,0 +1,1 @@
+{"status":"restore_verified","output":"/tmp/shopbot-completion-restore.json","tables":11}

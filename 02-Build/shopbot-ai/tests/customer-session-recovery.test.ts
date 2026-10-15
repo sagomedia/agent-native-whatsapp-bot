@@ -139,7 +139,8 @@ for(const failures of [1,2])test(`${failures} recognition 503s: bounded retry an
   assert.deepEqual(attempts.slice(0,2).map(a=>a.state),failures===1?['failed','succeeded']:['failed','failed']);
   if(failures===2){
     assert.equal(last(s).stage,'error');assert.equal(last(s).clarificationReason,'voice_processing_failed');
-    assert.ok(last(s).parts!.every(p=>p.cards.every(c=>c.kind!=='bill')));
+    assert.equal(last(s).parts,undefined);
+    assert.equal(last(s).presentation,'list');
     const retry=actions(last(s)).find(b=>b.event.type==='retry_voice')!;assert.ok(retry);
     s=await send(inbox,runtime,retry.event);assert.equal(calls,3);assert.equal(s.requests.length,0);
   }else{assert.equal(last(s).clarificationReason,'intent_clarification');assert.equal(last(s).stage,'identify');}
