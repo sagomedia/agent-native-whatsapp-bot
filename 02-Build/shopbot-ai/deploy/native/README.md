@@ -80,7 +80,7 @@ For disk-constrained upgrades with unchanged production dependencies, package
 with `--reuse-release <installed-release>` instead of the Node archive options.
 Upload the checksummed slim archive and run `stage-reused.py` with sudo. It verifies
 the archive, paths, manifest Node version and identical package/lock files, retains
-at least 1 GiB free, and hard-links the existing immutable runtime and dependencies.
+space for the extracted bundle plus a backup reserve (the greater of 256 MiB and twice the current database size), and hard-links the existing immutable runtime and dependencies.
 Do not modify shared runtime/dependency files in place. Then use the existing
 backup/readiness/rollback upgrade script. Dependency changes require a complete
 new-runtime bundle.

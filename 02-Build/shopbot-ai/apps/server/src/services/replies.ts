@@ -1,3 +1,5 @@
+import {estimateText} from './order-estimate.js';
+import {textPresentation} from './message-presentation.js';
 import {say,canonicalShortcut,lineName,productName,unitName,safeQuestion,languageOf,productStockText,productPriceText,draftIssueText} from '../../../../packages/contracts/language.js';
 import {sameUnit} from './catalog.js';
 import {requestStatusText} from './request-status.js';
@@ -50,6 +52,10 @@ export function shopAnswers(state:ConversationState,questions:Interpretation['sh
 
 function questionFromAI(value:string|undefined,state:ConversationState) {return safeQuestion(value,state);}
 export function presentReply(result:ToolResult,state:ConversationState,intent?:Interpretation,event?:SimulatorEvent):RichReply {
+  if(result.state&&state.pending?.kind==='review'&&(state.pending.excludedLineIds||state.pending.advanceRequired)){
+    return textPresentation(estimateText(state,state.draft,!!state.pending.advanceRequired),[{label:say(state,'List is correct','List சரி','List sari'),event:{id:randomUUID(),type:'confirm',reviewId:state.pending.id}},{label:say(state,'Change items','மாற்றணும்','Maathanum'),event:{id:randomUUID(),type:'shopping_action',action:'edit_list',expectedVersion:state.version}}],'bill');
+  }
+
   if(result.estimate)return {...plainReply(result.message),contextLines:[result.message]};
   if(result.handoffRequested)return {...plainReply(result.message),handoffRequested:true};
   if(state.visualOrdering&&state.pending?.kind==='products'&&!result.products&&!result.discovery&&!result.estimate)return {...plainReply(''),stage:'products'};

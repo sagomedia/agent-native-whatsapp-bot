@@ -272,6 +272,49 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       ALTER TABLE messages ADD COLUMN release_fingerprint text REFERENCES runtime_releases(artifact_hash);
       INSERT INTO schema_migrations(version) VALUES(31);
     `);}
+    const v32=await client.query('SELECT version FROM schema_migrations WHERE version=32');
+    if(!v32.rowCount){await client.query(`
+      ALTER TABLE conversations ADD COLUMN partial_reviews boolean NOT NULL DEFAULT false;
+      ALTER TABLE conversations ADD COLUMN welcome_audio_queued boolean NOT NULL DEFAULT false;
+      ALTER TABLE messages ADD COLUMN reply_decision text;
+      ALTER TABLE order_requests ADD COLUMN estimate_complete boolean NOT NULL DEFAULT true;
+      ALTER TABLE order_requests ADD COLUMN excluded_line_ids jsonb NOT NULL DEFAULT '[]';
+      ALTER TABLE order_requests ADD COLUMN advance_required boolean NOT NULL DEFAULT false;
+      ALTER TABLE order_requests ADD COLUMN effective_revision integer NOT NULL DEFAULT 1 CHECK(effective_revision>0);
+      ALTER TABLE order_requests ADD COLUMN effective_lines jsonb;
+      ALTER TABLE order_requests ADD COLUMN effective_total_paise bigint;
+      CREATE TABLE order_advances (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),request_id uuid NOT NULL UNIQUE REFERENCES order_requests(id),
+        amount_paise integer NOT NULL CHECK(amount_paise=1000),currency text NOT NULL DEFAULT 'INR' CHECK(currency='INR'),
+        payee_vpa text NOT NULL,payee_name text NOT NULL,upi_uri text NOT NULL,review_id uuid NOT NULL,
+        state text NOT NULL DEFAULT 'requested' CHECK(state IN ('requested','claimed','verified','refund_pending','refunded')),
+        transaction_reference text,verified_by text,verified_at timestamptz,claimed_at timestamptz,
+        created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),
+        CHECK(state NOT IN ('verified','refund_pending','refunded') OR (transaction_reference IS NOT NULL AND verified_by IS NOT NULL AND verified_at IS NOT NULL))
+      );
+      CREATE UNIQUE INDEX order_advances_bank_reference ON order_advances(transaction_reference) WHERE transaction_reference IS NOT NULL;
+      CREATE TABLE order_amendments (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),request_id uuid NOT NULL REFERENCES order_requests(id),
+        conversation_id uuid NOT NULL REFERENCES conversations(id),source_message_id uuid NOT NULL UNIQUE REFERENCES messages(id),
+        source_version integer NOT NULL,expected_revision integer NOT NULL,
+        kind text NOT NULL DEFAULT 'change' CHECK(kind IN ('change','cancel')),
+        operations jsonb NOT NULL,proposed_lines jsonb NOT NULL,known_subtotal_paise bigint NOT NULL CHECK(known_subtotal_paise>=0),
+        estimate_complete boolean NOT NULL,summary text NOT NULL,
+        state text NOT NULL DEFAULT 'proposed' CHECK(state IN ('proposed','owner_pending','accepted','rejected','withdrawn','superseded')),
+        customer_message_id uuid REFERENCES messages(id),decided_by text,decided_at timestamptz,
+        created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE UNIQUE INDEX order_amendments_one_pending ON order_amendments(request_id) WHERE state IN ('proposed','owner_pending');
+      ALTER TABLE order_advances ADD COLUMN refund_reference text;
+      CREATE TABLE order_quotes (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),request_id uuid NOT NULL REFERENCES order_requests(id),
+        amendment_id uuid REFERENCES order_amendments(id),expected_revision integer NOT NULL,lines jsonb NOT NULL,total_paise bigint NOT NULL CHECK(total_paise>=0),input_hash text NOT NULL,actor text NOT NULL,
+        state text NOT NULL DEFAULT 'offered' CHECK(state IN ('offered','accepted','superseded')),
+        consent_message_id uuid REFERENCES messages(id),created_at timestamptz NOT NULL DEFAULT now(),accepted_at timestamptz
+      );
+      CREATE UNIQUE INDEX order_quotes_one_offered ON order_quotes(request_id) WHERE state='offered';
+      INSERT INTO schema_migrations(version) VALUES(32);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

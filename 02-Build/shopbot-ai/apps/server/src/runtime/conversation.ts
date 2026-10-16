@@ -1,3 +1,8 @@
+import {acceptOrderQuote} from '../services/order-quotes.js';
+import {actionDeliveryReady} from '../services/review-delivery.js';
+import {acknowledgementOnly,amendmentIntent,explicitNewOrder,cancellationIntent,proposeAmendment,customerAmendmentAction,amendmentReviewReply} from '../services/order-amendments.js';
+import {upiAdvanceReply,claimUpiAdvance,paymentClaimText,type UpiAdvanceConfig} from '../services/upi-advance.js';
+import {customerCopy} from '../../../../packages/contracts/customer-copy.js';
 import {discoverProducts as lookupGroundedProducts} from '../services/catalog-discovery.js';
 import {validateCurrentTurn,submissionIntent,namedRemovalsExplicit} from '../services/current-turn.js';
 import {bindExplicitCorrection} from '../services/shopping-corrections.js';
@@ -87,12 +92,12 @@ function discoverySelection(item:Extract<Interpretation['operations'][number],{k
 }
 export class ConversationRuntime {
   readonly tools:RetailTools;
-  constructor(private pool:Pool,private provider:Interpreter,private options:{allowPaidInference?:boolean;allowFreeInference?:boolean;discoveryStages?:boolean;mediaRecommendations?:boolean;sequentialItems?:boolean;visualOrdering?:boolean;maxDraftLines?:number;queueReply?:(client:PoolClient,ctx:ActorContext,id:string,reply:RichReply)=>Promise<void>}={}) {
+  constructor(private pool:Pool,private provider:Interpreter,private options:{advance?:UpiAdvanceConfig;partialReviews?:boolean;welcomeAudio?:string;allowPaidInference?:boolean;allowFreeInference?:boolean;discoveryStages?:boolean;mediaRecommendations?:boolean;sequentialItems?:boolean;visualOrdering?:boolean;maxDraftLines?:number;queueReply?:(client:PoolClient,ctx:ActorContext,id:string,reply:RichReply)=>Promise<void>}={}) {
     if(provider.mode==='live') {
       if(!(provider.freeQuota?options.allowFreeInference:options.allowPaidInference)||!provider.billing) throw new ToolError('Live interpretation is disabled until explicitly authorized metered configuration is supplied');
       if(rateHealth(provider.billing).status==='invalid')validateRateCard(provider.billing);
     }
-    this.tools=new RetailTools(pool,{sequentialItems:provider.unifiedUnderstanding?false:options.sequentialItems,maxDraftLines:options.maxDraftLines});
+    this.tools=new RetailTools(pool,{advance:options.advance,sequentialItems:provider.unifiedUnderstanding?false:options.sequentialItems,maxDraftLines:options.maxDraftLines});
   }
   async processNext(ctx:ActorContext):Promise<boolean> {
     const claimed=await withConversation(this.pool,ctx,async client=>{
@@ -107,6 +112,7 @@ export class ConversationRuntime {
       const claimedDeadline=await client.query("UPDATE messages SET status='processing',claim_token=$1,lease_until=clock_timestamp()+$3*interval '1 second',inference_deadline_at=coalesce(inference_deadline_at,to_timestamp($4/1000.0)) WHERE id=$2 RETURNING inference_deadline_at",[token,m.id,processingLeaseSeconds(),Date.now()+inferenceTiming.turnMs]);
       await client.query('UPDATE messages SET release_fingerprint=$1 WHERE id=$2',[currentReleaseFingerprint(),m.id]);
       if(this.options.visualOrdering!==undefined)await client.query('UPDATE conversations SET visual_ordering=$2 WHERE id=$1',[ctx.conversationId,this.options.visualOrdering]);
+      if(this.options.partialReviews!==undefined)await client.query('UPDATE conversations SET partial_reviews=$2 WHERE id=$1',[ctx.conversationId,this.options.partialReviews]);
       const shown=(await client.query("SELECT payload FROM messages WHERE conversation_id=$1 AND direction='outbound' ORDER BY sequence DESC LIMIT 20",[ctx.conversationId])).rows;
       const displayedProducts=shown.flatMap(r=>[...(r.payload?.parts??[]).flatMap((p:any)=>p.cards.flatMap((c:any)=>c.kind==='product'?(c.buttons??[]).map((b:any)=>({event:b.event,product:c.product})):[])),...(r.payload?.cards??[]).flatMap((c:any)=>c.action&&c.product?[{event:c.action,product:c.product}]:[])]);
       const displayedActions=shown.flatMap(r=>[...(r.payload?.parts??[]).flatMap((p:any)=>[...(p.buttons??[]).map((b:any)=>b.event),...(p.cards??[]).flatMap((c:any)=>(c.buttons??[]).map((b:any)=>b.event))]),...(r.payload?.cards??[]).flatMap((c:any)=>c.action?[c.action]:[]),...(r.payload?.buttons??[]).map((b:any)=>b.event)]);
@@ -129,12 +135,14 @@ export class ConversationRuntime {
     if(quoteRecheck)interpretation={operations:[],next:'price',priceQuery:claimed.memory!.queries[0],priceQuantity:claimed.memory!.quoteQuantity,priceUnit:claimed.memory!.quoteUnit};
     if(!deterministic&&claimed.event.type==='text'&&submissionIntent(claimed.event.text))deterministic=this.knownAction({...claimed,event:{...claimed.event,text:'send it'}});
     let social=claimed.event.type==='text'?socialIntent(claimed.event.text):undefined;
+    if(claimed.state.lastRequestId&&!claimed.state.pending&&claimed.event.type==='text'&&acknowledgementOnly(claimed.event.text))social='thanks';
     if(claimed.event.type==='text'&&negatedSpokenClear(claimed.event.text))social='pause';
     if(social==='handoff')deterministic={name:'request_store_assistance',args:{expectedVersion:claimed.state.version}};
     const inquiry=claimed.event.type==='text'?shopInquiry(claimed.event.text):undefined;
     if(inquiry&&!deterministic)interpretation=inquiry;
+    if(claimed.state.lastRequestId&&claimed.event.type==='text'&&paymentClaimText(claimed.event.text))interpretation={operations:[],next:'continue'};
     if(social&&!deterministic)interpretation={operations:[],next:'continue',conversation:social};
-    if(!failure&&!deterministic&&!social&&!inquiry&&!requestedLanguage&&(claimed.event.type==='text'||claimed.event.type==='voice'||claimed.event.type==='image')) {
+    if(!failure&&!deterministic&&!social&&!inquiry&&!interpretation&&!requestedLanguage&&(claimed.event.type==='text'||claimed.event.type==='voice'||claimed.event.type==='image')) {
       try {interpretation=await this.interpret(ctx,claimed);}
       catch(error) {
         if(error instanceof DeferredRecommendation){
@@ -210,9 +218,21 @@ export class ConversationRuntime {
       const inferred=claimed.state.visualOrdering&&claimed.event.type==='text'?phrasingLanguage(claimed.event.text):undefined;
       if(inferred&&!requestedLanguage&&!current.languageExplicit){current.replyLanguage=inferred;await client.query('UPDATE conversations SET reply_language=$1 WHERE id=$2',[inferred,ctx.conversationId]);}
       let newListProposal:AssistantMemory['newList'];
-      if(current.lastRequestId&&interpretation?.operations.length&&interpretation.operations.every(op=>op.kind==='add_item')){
+      const turnText=claimed.event.type==='text'?claimed.event.text:interpretation?.transcript??'';
+      if(current.lastRequestId&&['text','voice'].includes(claimed.event.type)&&['yes','confirm'].includes(canonicalShortcut(turnText))){
+        const actionable=(await client.query("SELECT id,'confirm_amendment' AS type FROM order_amendments WHERE request_id=$1 AND conversation_id=$2 AND state='proposed' UNION ALL SELECT id,'confirm_order_quote' AS type FROM order_quotes WHERE request_id=$1 AND state='offered'",[current.lastRequestId,ctx.conversationId])).rows;
+        const action=claimed.displayedActions.find(a=>['confirm_amendment','confirm_order_quote'].includes(a.type)&&'expectedVersion' in a&&a.expectedVersion===current.version&&actionable.some(row=>row.type===a.type&&row.id===('amendmentId' in a?a.amendmentId:'quoteId' in a?a.quoteId:undefined)));
+        if(action){claimed.event=action;interpretation={operations:[],next:'continue'};}
+      }
+      const postOrderChange=!!current.lastRequestId&&!explicitNewOrder(turnText)&&(amendmentIntent(turnText)||!!interpretation?.operations.some(op=>!['add_item','set_fulfillment'].includes(op.kind)));
+      if(!failure&&['text','voice'].includes(claimed.event.type)&&current.lastRequestId&&!current.pending&&(acknowledgementOnly(turnText)||interpretation?.conversation==='unrelated'&&interpretation.understanding?.intents.every(i=>['unrelated','thanks'].includes(i)))&&!interpretation?.operations.length&&!requestedLanguage){
+        const proposed=await client.query("SELECT id FROM order_amendments WHERE conversation_id=$1 AND state='proposed' LIMIT 1",[ctx.conversationId]);
+        if(!proposed.rowCount){await client.query("UPDATE messages SET status='processed',reply_decision=$3,claim_token=NULL,lease_until=NULL WHERE id=$1 AND claim_token=$2",[claimed.id,claimed.token,acknowledgementOnly(turnText)?'acknowledgement_only':'unrelated']);return;}
+      }
+
+      if(current.lastRequestId&&!postOrderChange&&interpretation?.operations.length&&interpretation.operations.every(op=>op.kind==='add_item')){
         const items=interpretation.operations as NonNullable<AssistantMemory['newList']>;
-        if(items.length>1)newListProposal=items;
+        if(items.length>1||explicitNewOrder(turnText))newListProposal=items;
         else{
           const first=items[0];
           interpretation={operations:[],next:'assist',transcript:interpretation.transcript,assistance:{rootQuery:first.query,queries:[first.query],search:first.search,...(first.quantity!==null?{quantity:first.quantity}:{}),requestedUnit:first.requestedUnit}};
@@ -225,7 +245,25 @@ export class ConversationRuntime {
       // The savepoint ensures invalid dependent operations cannot partially mutate the draft.
       await client.query('SAVEPOINT turn_actions');
       try {
-        if(requestedLanguage&&!failure) {
+
+        if(!failure&&current.lastRequestId&&(claimed.event.type==='confirm_amendment'||claimed.event.type==='discard_amendment')){
+          if(!claimed.displayedActions.some(a=>digest(a)===digest(claimed.event)))throw new ToolError('Use the displayed amendment choices.','stale_confirmation');
+          if(claimed.event.type==='confirm_amendment'&&!await actionDeliveryReady(client,ctx.conversationId,claimed.event.id,true))throw new ToolError('Wait for the complete amendment review.','review_incomplete');
+          rich=await customerAmendmentAction(client,ctx,current,claimed.event,claimed.id);message=rich.text;
+        } else if(!failure&&current.lastRequestId&&claimed.event.type==='confirm_order_quote'){
+          if(!claimed.displayedActions.some(a=>digest(a)===digest(claimed.event))||!await actionDeliveryReady(client,ctx.conversationId,claimed.event.id,true))throw new ToolError('Use the complete current quote.','stale_confirmation');
+          await acceptOrderQuote(client,ctx,current,claimed.event,claimed.id);
+          rich={...plainReply(say(current,'Your final bill is approved. The shop can now confirm and prepare your order.','Bill confirm ஆகியிருக்கு.\nகடை order-ஐ check பண்ணி தயார்படுத்தும்.','Bill confirm aagiyirukku.\nKadai order-ai check panni thayaarpaduththum.')),readOnly:true};message=rich.text;
+        } else if(!failure&&current.lastRequestId&&(claimed.event.type==='payment_claim'||paymentClaimText(turnText))){
+          if(claimed.event.type==='payment_claim'&&(claimed.event.expectedVersion!==current.version||claimed.event.requestId!==current.lastRequestId||!claimed.displayedActions.some(a=>digest(a)===digest(claimed.event))))throw new ToolError('Use the latest payment choice.','stale_confirmation');
+          const paymentState=await claimUpiAdvance(client,ctx,current.lastRequestId);
+          const paymentText=['verified','refund_pending','refunded'].includes(paymentState)?say(current,paymentState==='verified'?'The shop has already verified your ₹10 advance.':paymentState==='refunded'?'The shop has recorded your ₹10 refund.':'Your advance was received for a closed order. The shop needs to arrange its refund.',paymentState==='verified'?'₹10 advance வந்திருக்குனு கடை confirm பண்ணியிருக்கு.':paymentState==='refunded'?'₹10 refund complete ஆகியிருக்குனு கடை confirm பண்ணியிருக்கு.':'இந்த order முடிஞ்சிருக்கு. வந்த ₹10 advance-ஐ கடை refund பண்ணணும்.','Advance status-ai kadai confirm panniyirukku.'):customerCopy('paymentClaimed',current);
+          rich={...plainReply(paymentText),readOnly:true};message=rich.text;
+        } else if(!failure&&current.lastRequestId&&(postOrderChange||cancellationIntent(turnText))){
+          if(!interpretation?.operations.length&&!cancellationIntent(turnText))rich={...plainReply(customerCopy('amendmentTarget',current)),readOnly:true};
+          else rich=await proposeAmendment(client,ctx,current,claimed.id,interpretation?.operations??[],this.tools,cancellationIntent(turnText));
+          message=rich.text;
+        } else if(requestedLanguage&&!failure) {
           current.replyLanguage=requestedLanguage;current.languageExplicit=true;
           await client.query('UPDATE conversations SET reply_language=$1,reply_language_explicit=true WHERE id=$2 AND store_id=$3 AND actor=$4',[requestedLanguage,ctx.conversationId,ctx.storeId,ctx.actor]);
           rich=presentReply({state:current,message:''},current);
@@ -440,6 +478,7 @@ export class ConversationRuntime {
       rich=unclearTarget||clearConfirmation?{...rich,replyLanguage:finalState.replyLanguage??'en'}:shoppingActions({...rich,replyLanguage:finalState.replyLanguage??'en'},finalState,claimed.catalogMap);
       if(claimed.catalogMap)rich={...rich,storeName:claimed.catalogMap.store.name};
       if(interpretation?.understanding?.unresolved.includes('validation_recovery')&&interpretation.transcript)rich.contextLines=[say(finalState,`Heard: ${interpretation.transcript.slice(0,250)}`,`கேட்டது: ${interpretation.transcript.slice(0,250)}`,`Kettathu: ${interpretation.transcript.slice(0,250)}`),...rich.contextLines??[]];
+      if(replyRequest?.advanceRequired&&this.options.advance)rich=await upiAdvanceReply(client,ctx,finalState,this.options.advance.hostname)??rich;
       rich=materializeVisualReply({...visualReply(rich,finalState,replyRequest),storeName:claimed.catalogMap?.store.name});
       message=rich.text;
       if(finalState.visualOrdering){const binding=conversationBinding(finalState,await loadAssistantMemory(client,ctx));const cancelled=await client.query("UPDATE whatsapp_outbox o SET state='cancelled',last_error='review_superseded' WHERE o.conversation_id=$1 AND o.state='queued' AND o.sender_kind='assistant' AND EXISTS(SELECT 1 FROM whatsapp_actions a WHERE a.message_id=o.message_id AND (a.source_version<>$2 OR a.binding_id IS DISTINCT FROM $3::uuid)) RETURNING o.message_id",[ctx.conversationId,finalState.version,binding]);if(cancelled.rowCount)await client.query("UPDATE messages SET status='cancelled' WHERE id=ANY($1::uuid[])",[cancelled.rows.map(r=>r.message_id)]);}
@@ -451,6 +490,16 @@ export class ConversationRuntime {
         await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,response_to,payload,reply_group_id,part_index,part_count,stage,clarification_reason) VALUES($1,$2,'outbound',$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11)",[id,ctx.conversationId,payload.text,this.options.queueReply?'queued':'sent',claimed.id,JSON.stringify(payload),replyId,index,parts.length,rich.stage??null,rich.clarificationReason??null]);
         await client.query('UPDATE messages SET release_fingerprint=$1 WHERE id=$2',[currentReleaseFingerprint(),id]);
         await this.options.queueReply?.(client,ctx,id,payload);
+      }
+
+      if(rich.stage==='welcome'&&this.options.welcomeAudio){
+        const queued=await client.query('UPDATE conversations SET welcome_audio_queued=true WHERE id=$1 AND NOT welcome_audio_queued RETURNING id',[ctx.conversationId]);
+        if(queued.rowCount){
+          const id=randomUUID(),audio:RichReply={...plainReply(customerCopy('welcome',finalState)),readOnly:true,audio:{url:this.options.welcomeAudio},replyLanguage:finalState.replyLanguage};
+          await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,payload,stage) VALUES($1,$2,'outbound',$3,$4,$5::jsonb,'welcome')",[id,ctx.conversationId,audio.text,this.options.queueReply?'queued':'sent',JSON.stringify(audio)]);
+          await client.query('UPDATE messages SET release_fingerprint=$1 WHERE id=$2',[currentReleaseFingerprint(),id]);
+          await this.options.queueReply?.(client,ctx,id,audio);
+        }
       }
       if(Date.now()>=claimed.deadlineAt){
         // Rendering and outbox work also consume the turn budget. Undo their
@@ -464,12 +513,13 @@ export class ConversationRuntime {
         await client.query('UPDATE messages SET release_fingerprint=$1 WHERE id=$2',[currentReleaseFingerprint(),id]);
         await this.options.queueReply?.(client,ctx,id,retained);
       }
-      await client.query("UPDATE messages SET status='processed',claim_token=NULL,lease_until=NULL WHERE id=$1",[claimed.id]);
+      await client.query("UPDATE messages SET status='processed',reply_decision='reply',claim_token=NULL,lease_until=NULL WHERE id=$1",[claimed.id]);
     });
     return true;
   }
   private knownAction(claim:Claimed):ToolCall|undefined {
     const e=claim.event,s=claim.state;
+    if(e.type==='review_partial')return {name:'preview_order',args:{expectedVersion:e.expectedVersion,allowPartial:true}};
     if(e.type==='shopping_action'&&e.action==='finish_order'){if(e.expectedVersion!==s.version)throw new ToolError('Use the latest list before sending.','stale_version');return this.knownAction({...claim,event:{id:e.id,type:'text',text:'send it'}});}
     if(e.type==='shopping_action'&&e.action==='handoff')return {name:'request_store_assistance',args:{expectedVersion:e.expectedVersion}};
     if(e.type==='shopping_action'&&e.action==='status'){if(e.expectedVersion!==s.version)throw new ToolError('Use the latest request status choice.','stale_version');return {name:'get_order_status',args:{}};}

@@ -1,6 +1,8 @@
+import {readUpiAdvance,type UpiAdvanceConfig} from './upi-advance.js';
 import type {ReplyLanguage} from '../../../../packages/contracts/language.js';
 import {messagingRateSchema,validAccountTimezone,type MessagingRateCard} from './messaging-cost.js';
 export type WhatsAppConfig = {
+  advance?:UpiAdvanceConfig;partialReviews?:boolean;welcomeAudio?:string;
   visualOrdering?:boolean;maxDraftLines?:number;serviceRatePaise?:number;visualMediaDir?:string;hostname:string; path?:'/webhook'|'/webhooks/whatsapp'; privacyPublished?:boolean;storeId:string; appId:string; wabaId:string; phoneId:string;
   appSecret:string; verifyToken:string; accessToken:string; graphVersion:string;
   recipients:string[]; processEnabled:boolean; sendEnabled:boolean; aiEnabled?:boolean; mediaEnabled?:boolean; discoveryStages?:boolean; mediaRecommendations?:boolean; sequentialItems?:boolean; defaultReplyLanguage?:ReplyLanguage; paidEnabled?:boolean; budgetMicrousd?:number; typingEnabled?:boolean;
@@ -34,5 +36,7 @@ export function readWhatsAppConfig(env:NodeJS.ProcessEnv):WhatsAppConfig|undefin
   if(accountTimezone&&!validAccountTimezone(accountTimezone)||businessPhoneNumber&&!/^\d{7,15}$/.test(businessPhoneNumber)||accountCurrency&&!/^[A-Z]{3}$/.test(accountCurrency))throw new Error('Invalid Messaging account timezone, phone number or currency.');
   const pricingRateCard=env.WHATSAPP_RATE_CARD_JSON?messagingRateSchema.parse(JSON.parse(env.WHATSAPP_RATE_CARD_JSON)):undefined;
   if(pricingRateCard&&accountCurrency&&pricingRateCard.currency!==accountCurrency)throw new Error('Messaging rate currency differs from the account currency.');
-  return {visualOrdering:env.WHATSAPP_VISUAL_ORDERING_ENABLED==='true',maxDraftLines,serviceRatePaise,serviceRateMicroInr,accountTimezone,pricingRateCard,businessPhoneNumber,accountCurrency,visualMediaDir:env.VISUAL_MEDIA_DIR,hostname,path,aiEnabled,mediaEnabled,discoveryStages,mediaRecommendations,sequentialItems:env.WHATSAPP_SEQUENTIAL_ITEMS_ENABLED==='true',paidEnabled,budgetMicrousd:validPaid?Math.round(Number(budget)*1000000):undefined,typingEnabled:env.WHATSAPP_TYPING_ENABLED==='true',defaultReplyLanguage:defaultReplyLanguage as ReplyLanguage,privacyPublished:env.WHATSAPP_PRIVACY_PUBLISHED==='true',storeId,appId,wabaId,phoneId,appSecret,verifyToken,accessToken,graphVersion,recipients,processEnabled:env.WHATSAPP_PROCESS_ENABLED==='true',sendEnabled:env.WHATSAPP_SEND_ENABLED==='true'};
+  const welcomeHash=env.WHATSAPP_WELCOME_AUDIO_HASH;
+  if(welcomeHash&&!/^[a-f0-9]{64}$/.test(welcomeHash))throw new Error('Invalid welcome audio hash');
+  return {advance:readUpiAdvance(env,hostname),partialReviews:env.WHATSAPP_PARTIAL_REVIEWS_ENABLED==='true',welcomeAudio:welcomeHash?'/welcome-audio/'+welcomeHash+'.ogg':undefined,visualOrdering:env.WHATSAPP_VISUAL_ORDERING_ENABLED==='true',maxDraftLines,serviceRatePaise,serviceRateMicroInr,accountTimezone,pricingRateCard,businessPhoneNumber,accountCurrency,visualMediaDir:env.VISUAL_MEDIA_DIR,hostname,path,aiEnabled,mediaEnabled,discoveryStages,mediaRecommendations,sequentialItems:env.WHATSAPP_SEQUENTIAL_ITEMS_ENABLED==='true',paidEnabled,budgetMicrousd:validPaid?Math.round(Number(budget)*1000000):undefined,typingEnabled:env.WHATSAPP_TYPING_ENABLED==='true',defaultReplyLanguage:defaultReplyLanguage as ReplyLanguage,privacyPublished:env.WHATSAPP_PRIVACY_PUBLISHED==='true',storeId,appId,wabaId,phoneId,appSecret,verifyToken,accessToken,graphVersion,recipients,processEnabled:env.WHATSAPP_PROCESS_ENABLED==='true',sendEnabled:env.WHATSAPP_SEND_ENABLED==='true'};
 }

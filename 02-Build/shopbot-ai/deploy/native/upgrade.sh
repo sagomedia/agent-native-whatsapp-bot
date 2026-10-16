@@ -9,7 +9,10 @@ test -f "$release/app/dist/apps/server/src/index.js"
 test -L /opt/shopbot-vps/current
 test -f /etc/shopbot-vps.env
 available=$(df --output=avail -k / | tail -1 | tr -d ' ')
-if (( available < 1048576 )); then echo 'Less than 1 GiB free; upgrade refused.' >&2; exit 1; fi
+database_bytes=$(runuser -u postgres -- psql -At -d shopbot_vps_preview -c 'SELECT pg_database_size(current_database())')
+required_kib=$(( (database_bytes * 2 + 1023) / 1024 ))
+(( required_kib >= 262144 )) || required_kib=262144
+if (( available < required_kib )); then echo 'Insufficient free space for a database backup and 256 MiB reserve; upgrade refused.' >&2; exit 1; fi
 previous=$(readlink -f /opt/shopbot-vps/current)
 backup=/var/backups/shopbot-migration/owner-$(date -u +%Y%m%dT%H%M%SZ)
 umask 0077
@@ -17,6 +20,8 @@ install -d -m 0700 "$backup"
 cp -p /etc/shopbot-vps.env "$backup/shopbot-vps.env"
 runuser -u postgres -- pg_dump --format=custom shopbot_vps_preview > "$backup/database.dump"
 pg_restore --list "$backup/database.dump" >/dev/null
+available=$(df --output=avail -k / | tail -1 | tr -d ' ')
+if (( available < 262144 )); then echo 'Backup complete, but less than 256 MiB free; activation refused.' >&2; exit 1; fi
 printf '%s\n' "$previous" > "$backup/previous-release.txt"
 printf '%s\n' "$previous" > /opt/shopbot-vps/previous-release.txt
 install -m 0644 "$release/deploy/shopbot-vps.service" /etc/systemd/system/shopbot-vps.service

@@ -2,7 +2,7 @@ import type {Product} from '../../../packages/contracts/index.js';
 import {normalize, tokens, oneEdit} from '../../../packages/contracts/catalog-text.js';
 
 export type OwnerProduct = Product & {active: boolean; origin: string; inventoryUpdatedAt: string | null};
-export type RequestState = {acceptance: string; fulfillment: string};
+export type RequestState = {acceptance: string; fulfillment: string;advance_required?:boolean;advance_state?:string};
 export const ownerViews = ['conversations', 'requests', 'catalog', 'connections'] as const;
 export type OwnerView = typeof ownerViews[number];
 export const viewLabels: Record<OwnerView, string> = {
@@ -33,7 +33,7 @@ export function requestLabel(request: RequestState) {
   if (request.acceptance === 'rejected') return 'Declined';
   if (request.fulfillment === 'cancelled') return 'Cancelled';
   if (request.fulfillment === 'collected') return 'Collected';
-  if (request.acceptance === 'awaiting_approval') return 'New';
+  if (request.acceptance === 'awaiting_approval') return request.advance_required&&request.advance_state!=='verified'?'Awaiting advance check':'New';
   if (request.fulfillment === 'ready_for_pickup') return 'Ready for pickup';
   if (request.acceptance === 'accepted') return 'Preparing';
   return request.acceptance.replaceAll('_', ' ');

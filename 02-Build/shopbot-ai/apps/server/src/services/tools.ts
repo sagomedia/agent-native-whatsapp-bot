@@ -1,3 +1,6 @@
+import {estimateLines,estimateText,partialReview} from './order-estimate.js';
+import {counterLine} from './counter-state.js';
+import {createUpiAdvance,type UpiAdvanceConfig} from './upi-advance.js';
 import {requestStoreAssistance} from './store-assistance.js';
 import {discoverProductMeanings} from './product-meaning.js';
 import {normalizeAmountEdits} from './amount-edits.js';
@@ -32,7 +35,7 @@ export const toolDefinitions = [
 function canonical(value: any): any { return Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value; }
 export function digest(value: unknown) { return createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex'); }
 export async function loadState(client: PoolClient, ctx: ActorContext): Promise<ConversationState> {
-  const { rows } = await client.query('SELECT c.visual_ordering,c.product_review,c.reply_language_explicit,c.reply_language,c.version,c.draft,c.pending,c.fulfillment,c.last_request_id,c.editing_line_id,c.handoff_requested,p.require_product_confirmation,cp.store_type FROM conversations c LEFT JOIN store_policies p ON p.store_id=c.store_id LEFT JOIN catalog_profiles cp ON cp.store_id=c.store_id WHERE c.id=$1 AND c.store_id=$2 AND c.actor=$3', [ctx.conversationId,ctx.storeId,ctx.actor]);
+  const { rows } = await client.query('SELECT c.partial_reviews,c.visual_ordering,c.product_review,c.reply_language_explicit,c.reply_language,c.version,c.draft,c.pending,c.fulfillment,c.last_request_id,c.editing_line_id,c.handoff_requested,p.require_product_confirmation,cp.store_type FROM conversations c LEFT JOIN store_policies p ON p.store_id=c.store_id LEFT JOIN catalog_profiles cp ON cp.store_id=c.store_id WHERE c.id=$1 AND c.store_id=$2 AND c.actor=$3', [ctx.conversationId,ctx.storeId,ctx.actor]);
   if (!rows[0]) throw new ToolError('Conversation unavailable', 'forbidden');
   const c = rows[0];
   if(c.visual_ordering)for(const line of c.draft as DraftLine[]){
@@ -49,7 +52,7 @@ export async function loadState(client: PoolClient, ctx: ActorContext): Promise<
     }
   }
 
-  return {visualOrdering:c.visual_ordering,productReview:c.product_review, languageExplicit:c.reply_language_explicit,replyLanguage:c.reply_language,version:c.version,draft:c.draft,pending:c.pending,fulfillment:c.fulfillment,lastRequestId:c.last_request_id,editingLineId:c.editing_line_id,handoffRequested:c.handoff_requested,...(c.store_type?{catalogDiscovery:true as const}:{}),...(c.require_product_confirmation||c.visual_ordering?{requireProductConfirmation:true as const}:{}) };
+  return {allowPartialReview:c.partial_reviews,visualOrdering:c.visual_ordering,productReview:c.product_review, languageExplicit:c.reply_language_explicit,replyLanguage:c.reply_language,version:c.version,draft:c.draft,pending:c.pending,fulfillment:c.fulfillment,lastRequestId:c.last_request_id,editingLineId:c.editing_line_id,handoffRequested:c.handoff_requested,...(c.store_type?{catalogDiscovery:true as const}:{}),...(c.require_product_confirmation||c.visual_ordering?{requireProductConfirmation:true as const}:{}) };
 }
 async function saveState(client: PoolClient, ctx: ActorContext, state: ConversationState) {
   await client.query('UPDATE conversations SET draft=$1::jsonb,version=$2,pending=$3::jsonb,fulfillment=$4,last_request_id=$5,product_review=$9::jsonb WHERE id=$6 AND store_id=$7 AND actor=$8', [JSON.stringify(state.draft),state.version,JSON.stringify(state.pending),state.fulfillment,state.lastRequestId,ctx.conversationId,ctx.storeId,ctx.actor,JSON.stringify(state.productReview??null)]);
@@ -143,11 +146,11 @@ export function renderBill(state:ConversationState){
   return state.draft.map((line,index)=>`${index+1}. ${lineName(line,state)}\n   ${line.quantity} ${unitName(line.unit??'unit',state,line.quantity??1)} × ${formatMoney(line.pricePaise!)} = ${formatMoney(lineTotal(line.pricePaise!,line.quantity!))}`).join('\n\n');
 }
 function requestFromRow(row: Record<string,any>): OrderRequest {
-  return {id:row.id,acceptance:row.acceptance,payment:row.payment,fulfillment:row.fulfillment,totalPaise:Number(row.total_paise),lines:row.lines};
+  return {id:row.id,acceptance:row.acceptance,payment:row.payment,fulfillment:row.fulfillment,totalPaise:Number(row.effective_total_paise??row.total_paise),lines:row.effective_lines??row.lines,originalLines:row.lines,estimateComplete:row.estimate_complete,excludedLineIds:row.excluded_line_ids,advanceRequired:row.advance_required,advanceState:row.advance_state,effectiveRevision:row.effective_revision};
 }
 
 export class RetailTools {
-  constructor(private pool: Pool,private options:{sequentialItems?:boolean;maxDraftLines?:number}={}) {}
+  constructor(private pool: Pool,private options:{advance?:UpiAdvanceConfig;sequentialItems?:boolean;maxDraftLines?:number}={}) {}
   // All surfaces (simulator, future channel/owner adapters) share this boundary.
   async invoke(ctx: ActorContext, input: unknown, operationKey: string): Promise<ToolResult> {
     const call=toolCallSchema.parse(input);
@@ -198,7 +201,7 @@ export class RetailTools {
     if(call.name==='get_order_status') {
       const id=call.args.requestId??state.lastRequestId;
       if(!id) return {request:null,message:'No submitted request in this conversation.'};
-      const row=await client.query('SELECT * FROM order_requests WHERE id=$1 AND store_id=$2 AND conversation_id=$3 AND actor=$4',[id,ctx.storeId,ctx.conversationId,ctx.actor]);
+      const row=await client.query('SELECT r.*,(SELECT state FROM order_advances a WHERE a.request_id=r.id) AS advance_state FROM order_requests r WHERE r.id=$1 AND r.store_id=$2 AND r.conversation_id=$3 AND r.actor=$4',[id,ctx.storeId,ctx.conversationId,ctx.actor]);
       if(!row.rows[0]) throw new ToolError('Request is not accessible to this customer','forbidden');
       const request=requestFromRow(row.rows[0]);
       return {request,message:`Request ${request.id}: waiting for shop approval. Payment has not been requested; items are not ready for pickup.`};
@@ -338,6 +341,21 @@ export class RetailTools {
         if(digest(current)!==digest(line)) {state.draft[state.draft.findIndex(l=>l.id===line.id)]=current;refreshed=true;}
       }
       if(refreshed) state.version++;
+      if(call.args.allowPartial){
+        if(!state.allowPartialReview)throw new ToolError('Partial order review is not enabled for this conversation.');
+        const unconfirmed=!!state.requireProductConfirmation&&state.draft.some(line=>counterLine(line).product&&!productConfirmed(line));
+        if(unconfirmed){
+          const check=makeProductCheck(state,!!this.options.sequentialItems);
+          if(check){state.pending=check;await saveState(client,ctx,state);return {state,message:'Check the product photos before reviewing the estimate.'};}
+          throw new ToolError('Check the product photos before reviewing the estimate.');
+        }
+        const estimate=estimateLines(state.draft);
+        const snapshot={lines:state.draft,fulfillment:state.fulfillment,totalPaise:estimate.knownSubtotalPaise,excludedLineIds:estimate.excludedLineIds,...(this.options.advance?{advanceRequired:true}:{} )};
+        state.pending={kind:'review',id:randomUUID(),version:state.version,hash:digest(snapshot),expiresAt:new Date(Date.now()+15*60*1000).toISOString(),...snapshot};
+        await saveState(client,ctx,state);
+        return {state,message:estimateText(state,state.draft,!!this.options.advance)};
+      }
+
       // A missing pipe type cannot be settled by approving the current PVC
       // photos. Ask for that type before showing any product-review batch.
       const active=state.visualOrdering?nextCounterLine(state):undefined;
@@ -356,7 +374,7 @@ export class RetailTools {
         return {state,message:`${renderDraft(state)}\n\n${question} Other lines are retained. No request submitted.`};
       }
       const totalPaise=state.draft.reduce((sum,l)=>sum+lineTotal(l.pricePaise!,l.quantity!),0);
-      const snapshot={lines:state.draft,fulfillment:state.fulfillment,totalPaise};
+      const snapshot={lines:state.draft,fulfillment:state.fulfillment,totalPaise,...(this.options.advance?{advanceRequired:true}:{} )};
       state.pending={kind:'review',id:randomUUID(),version:state.version,hash:digest(snapshot),expiresAt:new Date(Date.now()+15*60*1000).toISOString(),...snapshot};
       await saveState(client,ctx,state);
       return {state,message:`${refreshed?'Catalog facts changed; please review the updated request.\n':''}${renderDraft(state)}\nTotal: ${formatMoney(totalPaise)}. Pickup.\nShall I send this request to the shop? Reply yes or confirm this review. Availability needs shop approval; stock is not reserved.`};
@@ -364,10 +382,15 @@ export class RetailTools {
     // Only this tool can create a request. No staff/payment/readiness action exists in this customer registry.
     if(call.name!=='submit_order_request')throw new ToolError('Unsupported customer tool.');
     const pending=state.pending;
-    if(state.visualOrdering&&state.productReview?.hash!==productListHash(state))throw new ToolError('Check the complete product list again.','stale_confirmation');
+    if(state.visualOrdering&&!partialReview(state.pending)&&state.productReview?.hash!==productListHash(state))throw new ToolError('Check the complete product list again.','stale_confirmation');
     if(!pending||pending.kind!=='review'||pending.id!==call.args.reviewId||pending.version!==state.version||Date.parse(pending.expiresAt)<=Date.now()) throw new ToolError('There is no current unexpired review for that confirmation. Review the draft first.','stale_confirmation');
-    if(digest({lines:state.draft,fulfillment:state.fulfillment,totalPaise:pending.totalPaise})!==pending.hash) throw new ToolError('Review snapshot changed; review again.','stale_confirmation');
+    if(digest({lines:state.draft,fulfillment:state.fulfillment,totalPaise:pending.totalPaise,...(pending.excludedLineIds?{excludedLineIds:pending.excludedLineIds}:{}),...(pending.advanceRequired?{advanceRequired:true}:{})})!==pending.hash) throw new ToolError('Review snapshot changed; review again.','stale_confirmation');
+    if(pending.advanceRequired&&!this.options.advance)throw new ToolError('Advance payment configuration changed. Review the list again.');
     for(const line of state.draft) {
+      if(pending.excludedLineIds?.includes(line.id)){
+        if(line.sku){const [current]=await searchProducts(client,ctx,line.sku);if(!current||current.version!==line.productVersion||state.requireProductConfirmation&&!productConfirmed(line,current))throw new ToolError('Product details changed. Review the list again.','stale_confirmation');}
+        continue;
+      }
       const [product]=await searchProducts(client,ctx,line.sku!);
       if(line.resolution!=='matched'||!product||(state.requireProductConfirmation&&!productConfirmed(line,product))||product.version!==line.productVersion||product.pricePaise!==line.pricePaise||(product.stock!==null&&product.stock<line.quantity!)) {
         state.pending=null; await saveState(client,ctx,state);
@@ -376,8 +399,10 @@ export class RetailTools {
     }
     const id=randomUUID();
     const row=await client.query('INSERT INTO order_requests(id,store_id,conversation_id,actor,review_id,lines,total_paise,pickup_method) VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8) RETURNING *',[id,ctx.storeId,ctx.conversationId,ctx.actor,pending.id,JSON.stringify(pending.lines),pending.totalPaise,pending.fulfillment]);
+    await client.query('UPDATE order_requests SET estimate_complete=$1,excluded_line_ids=$2::jsonb WHERE id=$3',[!pending.excludedLineIds?.length,JSON.stringify(pending.excludedLineIds??[]),id]);
+    if(pending.advanceRequired&&this.options.advance)await createUpiAdvance(client,ctx,id,pending.id,this.options.advance);
     state.pending=null;state.lastRequestId=id;state.version++;
     await saveState(client,ctx,state);
-    return {state,request:requestFromRow(row.rows[0]),message:`Request ${id} received. Waiting for the shop to confirm. Payment has not been requested; packing and readiness require shop actions.`};
+    return {state,request:requestFromRow((await client.query('SELECT * FROM order_requests WHERE id=$1',[id])).rows[0]),message:`Request ${id} received. Waiting for the shop to confirm. Payment has not been requested; packing and readiness require shop actions.`};
   }
 }

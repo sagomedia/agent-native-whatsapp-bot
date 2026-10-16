@@ -61,6 +61,8 @@ for name in ['catalog.json', 'catalog-map.json']:
     shutil.copy2(app / 'resources/catalog/ksmc-demo' / name, catalog / name)
 shutil.copytree(app / 'resources/catalog/ksmc-demo/images', catalog / 'images')
 shutil.copytree(app / 'resources/fonts',stage / 'app/resources/fonts')
+if (app/'resources/welcome').exists():
+    shutil.copytree(app/'resources/welcome',stage/'app/resources/welcome')
 dependency_additions=[]
 base_lock_sha256=None
 if args.dependency_additions_from:

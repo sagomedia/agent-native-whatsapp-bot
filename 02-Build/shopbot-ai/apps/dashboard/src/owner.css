@@ -220,3 +220,5 @@
 .owner-catalog-diagnostic .owner-actions input{flex:1;min-width:0}
 .owner-catalog-diagnostic [role=status]{padding:14px 16px;background:var(--ui-surface-alt,#f4f8f6);border-left:3px solid #18744c}
 @media(max-width:800px){.owner-catalog-diagnostic .owner-actions{flex-direction:column}}
+
+.owner-workflow{display:grid;gap:12px;margin:12px 0}.owner-workflow-section{border-top:1px solid var(--owner-border,#d7ddd8);padding:12px 0}.owner-workflow label{display:grid;gap:4px;margin:8px 0}.owner-workflow input:not([type=checkbox]){width:100%;min-width:0;box-sizing:border-box;padding:9px;font:inherit}.owner-workflow fieldset{min-width:0;margin:12px 0;padding:12px}.owner-quote-fields{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}.owner-workflow .owner-check{display:flex;align-items:center;gap:8px}.owner-workflow .owner-message-text{white-space:pre-wrap;overflow-wrap:anywhere}@media(max-width:640px){.owner-quote-fields{grid-template-columns:1fr}.owner-workflow button{min-height:44px}}

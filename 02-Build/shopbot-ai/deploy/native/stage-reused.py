@@ -54,7 +54,9 @@ with tarfile.open(a.archive,'r:gz') as archive:
         old_scripts=old_package.pop('scripts',{});new_scripts=new_package.pop('scripts',{})
         assert old_package==new_package and old_scripts.get('start')==new_scripts.get('start'), 'Runtime package change requires a complete bundle'
     unpacked=sum(m.size for m in members)
-    assert shutil.disk_usage(base).free-unpacked>1024**3, 'Keep at least 1 GiB free'
+    database_bytes=int(subprocess.check_output(['runuser','-u','postgres','--','psql','-At','-d','shopbot_vps_preview','-c',"SELECT pg_database_size(current_database())"],text=True).strip())
+    reserve=max(256*1024**2,2*database_bytes)
+    assert shutil.disk_usage(base).free-unpacked>reserve, 'Insufficient space for the new content plus database backup reserve'
     stage=base/name
     assert not stage.exists(), 'Immutable release already exists'
     archive.extractall(base,filter='data')

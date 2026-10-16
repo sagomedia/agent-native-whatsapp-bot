@@ -1,3 +1,6 @@
+import {customerCopy} from '../../../../packages/contracts/customer-copy.js';
+import {estimateText} from './order-estimate.js';
+import {textPresentation} from './message-presentation.js';
 import {randomUUID,createHash} from 'node:crypto';
 import type {ConversationState,RichReply,ReplyPart,VisualCard,ProductCheck,OrderRequest} from '../../../../packages/contracts/index.js';
 import {say,lineName,unitName,productName,safeQuestion,localName,draftIssueText,requestedAmountText,measurementText,productPriceText,productStockText} from '../../../../packages/contracts/language.js';
@@ -18,7 +21,7 @@ const instruction=(title:string,lines:string[],caption:string,buttons:Button[]=[
 function reply(stage:RichReply['stage'],parts:ReplyPart[],reason?:string):RichReply {return {version:1,kind:stage==='bill'?'order_review':'text',text:parts.map(p=>p.text).filter(Boolean).join('\n\n'),stage,clarificationReason:reason,parts,outboundMessages:parts.length,presentation:parts.some(p=>p.cards.length>1)?'carousel_preview':'single_product'};}
 const part=(cards:VisualCard[],text:string,buttons?:Button[]):ReplyPart=>({id:randomUUID(),cards,text,buttons});
 const change=(state:ConversationState)=>action(state,'edit_list',say(state,'Change items','மாற்றணும்','Maathanum'));
-const shop=(state:ConversationState)=>action(state,'handoff',say(state,'Talk to shop','கடையிடம் பேசு','Kadaiyila pesu'));
+const shop=(state:ConversationState)=>action(state,'handoff',say(state,'Talk to shop','உதவி வேணும்','Kadaiyila pesu'));
 export function cartProgress(state:ConversationState):string[] {
  if(!state.draft.length||state.lastRequestId)return [];
  const priced=state.draft.filter(l=>counterLine(l).canQuote);
@@ -88,6 +91,11 @@ export function visualProductReview(state:ConversationState):RichReply {
  return reply(missing.length?'shop_check':'products',parts,missing.length?missing.find(l=>l.catalogIssue)?.catalogIssue??'catalog_missing':undefined);
 }
 export function visualBill(state:ConversationState,request?:OrderRequest):RichReply {
+ if(state.pending?.kind==='review'&&(state.pending.excludedLineIds||state.pending.advanceRequired)||request?.estimateComplete===false){
+  const buttons:Button[]=request?[]:[{label:say(state,'List is correct','List சரி','List sari'),event:{id:randomUUID(),type:'confirm',reviewId:state.pending!.id}},change(state)];
+  return textPresentation(estimateText(state,request?.lines??state.draft,!!(state.pending?.kind==='review'&&state.pending.advanceRequired),!request),buttons,request?'submitted':'bill');
+ }
+
  const lines=request?.lines??state.draft,total=request?.totalPaise??(state.pending?.kind==='review'?state.pending.totalPaise:0);
  const buttons:Button[]=request?[{label:say(state,'Order status','ஆர்டர் நிலை','Order status'),event:{id:randomUUID(),type:'shopping_action',action:'status',expectedVersion:state.version}},shop(state)]:state.pending?.kind==='review'?[{label:say(state,'Send to shop','கடைக்கு அனுப்பு','Kadaikku anuppu'),event:{id:randomUUID(),type:'confirm',reviewId:state.pending.id}},change(state)]:[];
  const parts:ReplyPart[]=[];
@@ -147,13 +155,12 @@ export function visualReply(base:RichReply,state:ConversationState,request?:Orde
  }
  if(base.cards?.length){
   const cards:VisualCard[]=base.cards.slice(0,3).map(c=>({kind:'product',product:c.product,caption:productCaption(productName(c.product,state),[c.product.brand,measurementText(c.product.specifications?.size??'',state),productPriceText(c.product,state),productStockText(c.product,state),c.matchLabel,c.quantityLabel]),buttons:[...(c.action?[{label:c.label,event:c.action}]:[]),...base.buttons??[]].slice(0,3)}));
-  return withContext({...reply('identify',[part(cards,base.text.split('\n\n')[0])],'product_or_specification'),replyLanguage:state.replyLanguage},base.contextLines);
+  return withContext({...reply('identify',[part(cards,base.text)],'product_or_specification'),replyLanguage:state.replyLanguage},base.contextLines);
  }
  const welcomeTurn=!state.draft.length&&!state.lastRequestId&&(!base.text||/^(?:Hi[!, ]|Hello[!, ]|வணக்கம்|Vanakkam)/i.test(base.text));
  const stage=state.editingLineId?'correction':welcomeTurn?'welcome':base.stage??'status';
- const welcome=say(state,'Welcome! What items do you need?\nSend text, a voice note up to 30 seconds, or a photo.','வணக்கம்! என்ன பொருள் வேணும்?\nஎழுத்து, 30 நொடிக்குள் குரல் பதிவு அல்லது படம் அனுப்புங்க.','Vanakkam! Enna porul venum?\nText, 30 seconds-kulla voice illa photo anuppunga.');
  const welcomeButtons:Button[]=[{label:'தமிழ்',event:{id:randomUUID(),type:'change_language',language:'ta'}},{label:'Tanglish',event:{id:randomUUID(),type:'change_language',language:'ta-Latn'}},shop(state)];
- const message=stage==='welcome'?welcome:base.text;
+ const message=stage==='welcome'?customerCopy('welcome',state):base.text;
  return {...base,...reply(stage,[part([instruction(stage==='welcome'?say(state,'Welcome','வணக்கம்','Vanakkam'):say(state,'Your list','உங்கள் பட்டியல்','Unga list'),message.split('\n').filter(Boolean),say(state,'Text, voice or photo','எழுத்து, குரல் பதிவு அல்லது படம்','Text, voice illa photo'),stage==='welcome'?welcomeButtons:base.buttons?.slice(0,3))],stage==='welcome'?say(state,'Send what you need.','தேவையானதை அனுப்புங்க.','Thevaiyanathai anuppunga.'):fitText(message.split('\n')[0],180))]),replyLanguage:state.replyLanguage};
 }
 function nativeReply(base:RichReply,state:ConversationState):RichReply {

@@ -1,3 +1,10 @@
+import {ToolError} from '../services/context.js';
+import {verifyManualAdvance,verifyManualRefund} from '../services/upi-advance.js';
+import {decideAmendment} from '../services/order-amendments.js';
+import {orderQuoteSchema,offerOrderQuote,orderQuoteReply} from '../services/order-quotes.js';
+import {queueOrderNotice} from '../services/order-notices.js';
+import {customerCopy} from '../../../../packages/contracts/customer-copy.js';
+import {textPresentation} from '../services/message-presentation.js';
 import type {FastifyInstance} from 'fastify';
 import type {Pool,PoolClient} from 'pg';
 import {visualStatus,visualReply,orderReference,cartProgress} from '../services/visual-ordering.js';
@@ -38,6 +45,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     const local=host!==undefined&&/^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
     const publicOwner=host===owner.hostname;
     if(config.whatsapp&&host===config.whatsapp.hostname&&request.method==='GET'&&/^\/catalog-images\/(?:H\d{2}\.jpg|custom\/[a-f0-9-]{36}\.jpg|messages\/[a-f0-9]{64}\.png)$/.test(request.url.split('?')[0]))return;
+    if(config.whatsapp&&host===config.whatsapp.hostname&&request.method==='GET'&&(/^\/pay\/[a-f0-9-]{36}$/.test(request.url.split('?')[0])||/^\/welcome-audio\/[a-f0-9]{64}\.ogg$/.test(request.url.split('?')[0])))return;
     if(config.whatsapp?.privacyPublished&&host===config.whatsapp.hostname&&request.url.split('?')[0]==='/privacy'&&request.method==='GET')return;
     if(config.whatsapp&&host===config.whatsapp.hostname&&request.url.split('?')[0]===(config.whatsapp.path??'/webhooks/whatsapp')&&['GET','POST'].includes(request.method))return;
     if(!local&&!publicOwner)return reply.code(404).send({error:'Not found'});
@@ -63,11 +71,11 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       const result=await run(client);
       await client.query('INSERT INTO owner_audit(store_id,email,action,target_id,details) VALUES($1,$2,$3,$4,$5::jsonb)',[owner!.storeId,owner!.email,action,target,JSON.stringify(result)]);
       await client.query('COMMIT');return result;
-    }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
+    }catch(error){await client.query('ROLLBACK');if(error instanceof ToolError)Object.assign(error,{statusCode:error.code==='forbidden'?403:409});throw error;}finally{client.release();}
   }
   await registerOwnerCatalog(app,pool,owner.storeId,write,catalogGenerator??(config.catalogAi?new GoogleCatalogGenerator(config.catalogAi.apiKey):undefined));
   const release=runtimeReleaseMetadata();
-  app.get('/api/owner/release',async()=>({...release,features:{visualOrdering:!!config.whatsapp?.visualOrdering,unifiedUnderstanding:process.env.GEMINI_UNIFIED_UNDERSTANDING_ENABLED==='true',imageLists:process.env.GEMINI_HANDWRITTEN_LISTS_ENABLED==='true',processing:!!config.whatsapp?.processEnabled,sending:!!config.whatsapp?.sendEnabled,payments:false,inventoryPolicy:'manual_confirm'}}));
+  app.get('/api/owner/release',async()=>({...release,features:{visualOrdering:!!config.whatsapp?.visualOrdering,unifiedUnderstanding:process.env.GEMINI_UNIFIED_UNDERSTANDING_ENABLED==='true',imageLists:process.env.GEMINI_HANDWRITTEN_LISTS_ENABLED==='true',processing:!!config.whatsapp?.processEnabled,sending:!!config.whatsapp?.sendEnabled,payments:!!config.whatsapp?.advance,paymentVerification:config.whatsapp?.advance?'owner_checked':'disabled',partialReviews:!!config.whatsapp?.partialReviews,inventoryPolicy:'manual_confirm'}}));
   app.get<{Params:{id:string}}>('/api/owner/conversations/:id/observations',async(req,reply)=>{
    if(!uuid.safeParse(req.params.id).success)return reply.code(400).send({error:'Invalid conversation'});
    if(!(await pool.query('SELECT id FROM conversations WHERE store_id=$1 AND id=$2',[owner.storeId,req.params.id])).rowCount)return reply.code(404).send({error:'Conversation not found'});
@@ -84,7 +92,9 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
         (SELECT count(*)::int FROM messages WHERE conversation_id=c.id AND status IN ('pending','processing')) AS pending
         ,c.handoff_requested,(SELECT last_inbound_at FROM whatsapp_conversations WHERE conversation_id=c.id) AS last_inbound_at
         FROM conversations c WHERE store_id=$1 ORDER BY c.handoff_requested DESC,updated_at DESC NULLS LAST,id LIMIT 100`,[owner.storeId])).rows;
-      const requests=(await client.query('SELECT id,conversation_id,acceptance,payment,fulfillment,total_paise,lines,created_at FROM order_requests WHERE store_id=$1 ORDER BY created_at DESC LIMIT 100',[owner.storeId])).rows;
+      const requests=(await client.query('SELECT r.id,r.conversation_id,r.acceptance,r.payment,r.fulfillment,coalesce(r.effective_total_paise,r.total_paise) AS total_paise,coalesce(r.effective_lines,r.lines) AS lines,r.created_at,r.estimate_complete,r.excluded_line_ids,r.advance_required,r.effective_revision,a.state AS advance_state,a.amount_paise AS advance_amount_paise FROM order_requests r LEFT JOIN order_advances a ON a.request_id=r.id WHERE r.store_id=$1 ORDER BY r.created_at DESC LIMIT 100',[owner.storeId])).rows;
+      const amendments=(await client.query("SELECT id,request_id,conversation_id,kind,summary,proposed_lines,state,expected_revision,known_subtotal_paise,estimate_complete,created_at FROM order_amendments WHERE store_id=$1 AND state IN ('owner_pending','proposed') ORDER BY created_at LIMIT 100",[owner.storeId])).rows;
+      const quotes=(await client.query("SELECT id,request_id,state,expected_revision,total_paise,created_at FROM order_quotes WHERE store_id=$1 AND state='offered' ORDER BY created_at LIMIT 100",[owner.storeId])).rows;
       const usage=(await client.query(`SELECT count(*)::int AS attempts,count(*) FILTER(WHERE state='failed')::int AS failures,count(*) FILTER(WHERE state='unknown')::int AS unknown,coalesce(sum(estimated_cost_microusd),0)::text AS estimated_microusd FROM (SELECT state,estimated_cost_microusd FROM provider_attempts WHERE store_id=$1 UNION ALL SELECT state,estimated_cost_microusd FROM catalog_suggestions WHERE store_id=$1) attempts`,[owner.storeId])).rows[0];
       const budget=(await client.query('SELECT limit_microusd,committed_microusd,held_microusd,blocked FROM inference_budgets WHERE store_id=$1',[owner.storeId])).rows[0]??null;
       const audit=(await client.query('SELECT action,target_id,details,created_at FROM owner_audit WHERE store_id=$1 ORDER BY sequence DESC LIMIT 20',[owner.storeId])).rows;
@@ -92,7 +102,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       const channel={whatsapp:!wa?'not_connected':wa.send_blocked?'attention_required':wa.last_received_at?'receiving':wa.verified_at||wa.last_webhook_at?'webhook_verified':'awaiting_verification',liveSending:Boolean(wa&&config.whatsapp?.sendEnabled&&!wa.send_blocked),processing:Boolean(config.whatsapp?.processEnabled),lastReceivedAt:wa?.last_webhook_at??null,error:wa?.last_error??null,testOnly:true};
       const messaging=config.whatsapp&&config.whatsapp.storeId===owner.storeId?{...await messagingCostSummary(client,{storeId:owner.storeId,phoneId:config.whatsapp.phoneId,accountTimezone:config.whatsapp.accountTimezone,rateCard:config.whatsapp.pricingRateCard}),analyticsAvailable:Boolean(config.whatsapp.accountTimezone&&config.whatsapp.accountCurrency&&config.whatsapp.businessPhoneNumber)}:null;
       await client.query('COMMIT');
-      return {store,conversations,requests,usage,budget,audit,messaging,mode:config.mode,ownerEmail:owner.email,channel,inference:{enabled:!!(wa&&config.whatsapp?.aiEnabled&&config.whatsapp.processEnabled),paidEnabled:!!config.whatsapp?.paidEnabled,rateHealth:rateHealth(geminiTextRate)},limits:{conversations:100,requests:100},generatedAt:new Date().toISOString()};
+      return {store,conversations,requests,amendments,quotes,usage,budget,audit,messaging,mode:config.mode,ownerEmail:owner.email,channel,inference:{enabled:!!(wa&&config.whatsapp?.aiEnabled&&config.whatsapp.processEnabled),paidEnabled:!!config.whatsapp?.paidEnabled,rateHealth:rateHealth(geminiTextRate)},limits:{conversations:100,requests:100},generatedAt:new Date().toISOString()};
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
   });
   app.post('/api/owner/pricing/refresh',async(request,reply)=>{
@@ -211,8 +221,9 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     });
   });
   async function notifyStatus(client:PoolClient,request:any,want:boolean){
+    request={...request,lines:request.effective_lines??request.lines,total_paise:request.effective_total_paise??request.total_paise};
     const key=request.acceptance+':'+request.fulfillment;
-    const obsolete=await client.query("UPDATE whatsapp_outbox o SET state='cancelled',last_error='request_status_superseded' FROM request_notifications n WHERE n.message_id=o.message_id AND n.request_id=$1 AND n.status_key<>$2 AND o.state='queued' RETURNING o.message_id",[request.id,key]);
+    const obsolete=await client.query("UPDATE whatsapp_outbox o SET state='cancelled',last_error='request_status_superseded' FROM request_notifications n WHERE n.message_id=o.message_id AND n.request_id=$1 AND n.status_key<>$2 AND n.status_key NOT LIKE 'event:%' AND o.state='queued' RETURNING o.message_id",[request.id,key]);
     if(obsolete.rowCount)await client.query("UPDATE messages SET status='cancelled' WHERE id=ANY($1::uuid[])",[obsolete.rows.map(r=>r.message_id)]);
     if(!want)return {customerNotification:'not_requested'};
     const sent=(await client.query('SELECT n.message_id,o.state FROM request_notifications n JOIN whatsapp_outbox o ON o.message_id=n.message_id WHERE n.request_id=$1 AND n.status_key=$2',[request.id,key])).rows[0];
@@ -231,8 +242,16 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     const input=z.object({decision:z.enum(['accepted','rejected']),notify:z.boolean().default(false)}).strict().safeParse(request.body);
     if(!input.success||!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Invalid request decision'});
     return write('request_decision',request.params.id,async client=>{
+      if(input.data.decision==='accepted'){
+        const current=(await client.query('SELECT r.*,a.state AS advance_state FROM order_requests r LEFT JOIN order_advances a ON a.request_id=r.id WHERE r.id=$1 AND r.store_id=$2 FOR UPDATE OF r',[request.params.id,owner.storeId])).rows[0];
+        if(current?.advance_required&&current.advance_state!=='verified')throw Object.assign(new Error('Check the ₹10 advance in your bank/UPI app and record its reference before accepting.'),{statusCode:409});
+        if((await client.query("SELECT 1 FROM order_quotes WHERE request_id=$1 AND state='offered'",[request.params.id])).rowCount)throw Object.assign(new Error('Wait for the customer to approve the offered final bill.'),{statusCode:409});
+        if(current?.estimate_complete===false)throw Object.assign(new Error('Quote the unresolved items and get the customer’s final-bill approval before accepting.'),{statusCode:409});
+        if((await client.query("SELECT 1 FROM order_amendments WHERE request_id=$1 AND state='owner_pending'",[request.params.id])).rowCount)throw Object.assign(new Error('Resolve the pending amendment before accepting the request.'),{statusCode:409});
+      }
       const updated=await client.query("UPDATE order_requests SET acceptance=$1,fulfillment=$4 WHERE store_id=$2 AND id=$3 AND acceptance='awaiting_approval' RETURNING *",[input.data.decision,owner.storeId,request.params.id,input.data.decision==='accepted'?'preparing':'cancelled']);
       if(!updated.rowCount)throw Object.assign(new Error('Request is already decided or unavailable. Refresh the list.'),{statusCode:409});
+      if(input.data.decision==='rejected')await client.query("UPDATE order_advances SET state='refund_pending',updated_at=now() WHERE request_id=$1 AND state='verified'",[request.params.id]);
       return {acceptance:updated.rows[0].acceptance,fulfillment:updated.rows[0].fulfillment,...await notifyStatus(client,updated.rows[0],input.data.notify)};
     });
   });
@@ -242,10 +261,52 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     return write('request_fulfillment',request.params.id,async client=>{
       const p=parsed.data,row=(await client.query('SELECT * FROM order_requests WHERE store_id=$1 AND id=$2 FOR UPDATE',[owner.storeId,request.params.id])).rows[0];
       if(!row||row.acceptance!=='accepted')throw Object.assign(new Error('Accept the request before updating pickup status.'),{statusCode:409});
+      if(['ready_for_pickup','collected'].includes(p.status)&&((await client.query("SELECT 1 FROM order_quotes WHERE request_id=$1 AND state='offered'",[row.id])).rowCount||(await client.query("SELECT 1 FROM order_amendments WHERE request_id=$1 AND state='owner_pending'",[row.id])).rowCount))throw Object.assign(new Error('Resolve the pending customer quote or amendment before marking ready or collected.'),{statusCode:409});
       if(row.fulfillment===p.status)return {fulfillment:p.status,duplicate:true,...await notifyStatus(client,row,p.notify)};
       if(row.fulfillment!==p.expected||!((['awaiting_approval','preparing'].includes(row.fulfillment)&&['ready_for_pickup','cancelled'].includes(p.status))||(row.fulfillment==='ready_for_pickup'&&['collected','cancelled'].includes(p.status))))throw Object.assign(new Error('Request status changed or that transition is not allowed. Refresh before updating.'),{statusCode:409});
+      if(p.status==='cancelled')await client.query("UPDATE order_advances SET state='refund_pending',updated_at=now() WHERE request_id=$1 AND state='verified'",[request.params.id]);
       const changed=(await client.query('UPDATE order_requests SET fulfillment=$1 WHERE store_id=$2 AND id=$3 RETURNING *',[p.status,owner.storeId,row.id])).rows[0];
       return {fulfillment:p.status,...await notifyStatus(client,changed,p.notify)};
     });
   });
+  app.post<{Params:{id:string}}>('/api/owner/requests/:id/advance/verify',async(request,reply)=>{
+    const p=z.object({reference:z.string().trim().min(6).max(80),notify:z.boolean().default(true)}).strict().safeParse(request.body);
+    if(!p.success||!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Enter the bank/UPI transaction reference.'});
+    return write('advance_verify',request.params.id,async client=>{
+      const result=await verifyManualAdvance(client,owner.storeId,request.params.id,owner.email,p.data.reference);
+      const r=(await client.query('SELECT r.*,c.reply_language FROM order_requests r JOIN conversations c ON c.id=r.conversation_id WHERE r.id=$1 AND r.store_id=$2',[request.params.id,owner.storeId])).rows[0];
+      const text=result.refundRequired?say({replyLanguage:r.reply_language},'Your ₹10 arrived after the order closed. The shop needs to arrange a refund.','Order முடிஞ்ச பிறகு ₹10 வந்திருக்கு.\nகடை refund பண்ணணும்.','Order mudinja piragu ₹10 vanthirukku. Kadai refund pannanum.'):customerCopy('advanceReceived',{replyLanguage:r.reply_language},{reference:r.id.replaceAll('-','').slice(0,8).toUpperCase()});
+      return {...result,...await queueOrderNotice(client,owner.storeId,r.id,'advance-verified',textPresentation(text),config.whatsapp,p.data.notify)};
+    });
+  });
+  app.post<{Params:{id:string}}>('/api/owner/requests/:id/advance/refund',async(request,reply)=>{
+    const p=z.object({reference:z.string().trim().min(6).max(80),notify:z.boolean().default(true)}).strict().safeParse(request.body);
+    if(!p.success||!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Enter the actual refund reference.'});
+    return write('advance_refund',request.params.id,async client=>{
+      const result=await verifyManualRefund(client,owner.storeId,request.params.id,p.data.reference);
+      const r=(await client.query('SELECT c.reply_language FROM order_requests r JOIN conversations c ON c.id=r.conversation_id WHERE r.id=$1 AND r.store_id=$2',[request.params.id,owner.storeId])).rows[0];
+      const text=say({replyLanguage:r.reply_language},'Your ₹10 advance refund is recorded as completed by the shop.','₹10 advance refund complete ஆகியிருக்குனு கடை confirm பண்ணியிருக்கு.','₹10 advance refund complete aagiyirukkunnu kadai confirm panniyirukku.');
+      return {...result,...await queueOrderNotice(client,owner.storeId,request.params.id,'advance-refunded',textPresentation(text),config.whatsapp,p.data.notify)};
+    });
+  });
+  app.post<{Params:{id:string}}>('/api/owner/requests/:id/quote',async(request,reply)=>{
+    const p=orderQuoteSchema.extend({notify:z.boolean().default(true)}).safeParse(request.body);
+    if(!p.success||!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Provide a price, quantity, and selling unit for every requested line.'});
+    return write('order_quote',request.params.id,async client=>{
+      const {notify,...details}=p.data,result=await offerOrderQuote(client,owner.storeId,request.params.id,owner.email,details);
+      const rich=await orderQuoteReply(client,owner.storeId,result.quote.id);
+      return {quoteId:result.quote.id,replayed:result.replayed,...await queueOrderNotice(client,owner.storeId,request.params.id,'quote-'+result.quote.id,rich,config.whatsapp,notify)};
+    });
+  });
+  app.post<{Params:{id:string}}>('/api/owner/amendments/:id/decision',async(request,reply)=>{
+    const p=z.object({decision:z.enum(['accepted','rejected']),notify:z.boolean().default(true)}).strict().safeParse(request.body);
+    if(!p.success||!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Choose accept or reject.'});
+    return write('order_amendment',request.params.id,async client=>{
+      const result=await decideAmendment(client,owner.storeId,request.params.id,owner.email,p.data.decision);
+      const language=(await client.query('SELECT reply_language FROM conversations WHERE id=$1',[result.row.conversation_id])).rows[0].reply_language;
+      const text=customerCopy(p.data.decision==='accepted'?'amendmentAccepted':'amendmentRejected',{replyLanguage:language},{items:result.row.kind==='cancel'?say({replyLanguage:language},'Order cancelled. Any advance refund is handled separately.','Order cancel ஆகியிருக்கு. Advance refund-ஐ தனியா கடை check பண்ணும்.','Order cancel aagiyirukku. Advance refund-ai thaniyaa kadai check pannum.'):result.row.summary});
+      return {amendmentId:result.row.id,state:result.row.state,replayed:result.replayed,...await queueOrderNotice(client,owner.storeId,result.row.request_id,'amendment-'+result.row.id+'-'+p.data.decision,textPresentation(text),config.whatsapp,p.data.notify)};
+    });
+  });
+
 }

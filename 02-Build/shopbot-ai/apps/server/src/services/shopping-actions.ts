@@ -11,7 +11,7 @@ export function shoppingActions(reply:RichReply,state:ConversationState,map?:Cat
   const flow=(action:Parameters<typeof shoppingButton>[1],en:string,ta:string,latin:string)=>shoppingButton(state,action,say(state,en,ta,latin));
   const plan=planReply(reply,state);
   if(['read_only','shop_help','error'].includes(plan.purpose))return reply;
-  if(state.lastRequestId&&!reply.cards?.length)return reply.buttons?.length?reply:{...reply,buttons:[flow('status','Request status','கோரிக்கை நிலை','Request status'),flow('new_list','New list','புதிய பட்டியல்','Pudhu list'),flow('handoff','Talk to shop','கடையிடம் பேசு','Kadaiyila pesu')]};
+  if(state.lastRequestId&&!reply.cards?.length)return reply.buttons?.length?reply:{...reply,buttons:[flow('status','Request status','கோரிக்கை நிலை','Request status'),flow('new_list','New list','புதிய பட்டியல்','Pudhu list'),flow('handoff','Talk to shop','உதவி வேணும்','Kadaiyila pesu')]};
   if(reply.kind==='order_review')return {...reply,presentation:'text',buttons:[...(plan.mayOfferSubmission?reply.buttons??[]:[]).slice(0,1),flow('edit_list','Edit list','பட்டியலை மாற்று','List maathu'),flow('keep_list','Keep for later','பிறகு தொடரலாம்','Piragu thodarlaam')]};
   if(state.editingLineId)return reply;
   const line=plan.purpose==='clarification'?plan.line:undefined;
@@ -21,13 +21,15 @@ export function shoppingActions(reply:RichReply,state:ConversationState,map?:Cat
     return {...reply,buttons:[...amounts.map(quantity=>({label:`${quantity} ${unitName(line.unit??'unit',state,quantity)}`,event:{id:id(),type:'set_quantity' as const,lineId:line.id,quantity,expectedVersion:state.version}})),{label:say(state,'Other amount','வேறு எண்ணிக்கை','Vera quantity'),event:{id:id(),type:'edit_item',lineId:line.id,expectedVersion:state.version}}]};
   }
   if(line?.resolution==='unavailable'||line?.resolution==='needs_unit'){
+    if(state.allowPartialReview)return {...reply,buttons:[{label:say(state,'Review estimate','Bill காட்டு','Bill kaattu'),event:{id:id(),type:'review_partial',expectedVersion:state.version}},flow('edit_list','Change item','மாற்றணும்','Maathanum'),flow('handoff','Shop help','உதவி வேணும்','Help venum')]};
+
     const next=!line.shopCheckDeferred&&state.draft.some(l=>l.id!==line.id&&!l.shopCheckDeferred&&(l.resolution!=='matched'||state.requireProductConfirmation&&!productConfirmed(l)));
-    return {...reply,buttons:[...(next?[flow('next_item','Check next item','அடுத்த பொருளைப் பார்','Adutha porulai paaru')]:[]),...(reply.buttons??[]).slice(0,next?1:2),flow('handoff','Talk to shop','கடையிடம் பேசு','Kadaiyila pesu')]};
+    return {...reply,buttons:[...(next?[flow('next_item','Check next item','அடுத்த பொருளைப் பார்','Adutha porulai paaru')]:[]),...(reply.buttons??[]).slice(0,next?1:2),flow('handoff','Talk to shop','உதவி வேணும்','Kadaiyila pesu')]};
   }
   if(reply.cards?.length)return {...reply,buttons:[...(reply.buttons??[]),flow('options','More options','மேலும் தேர்வுகள்','Innum options')]};
   if(!reply.cards?.length&&!reply.buttons?.length&&!state.pending){
-    if(state.draft.length)return {...reply,buttons:[{label:say(state,'Review list','பட்டியலைப் பார்','List paaru'),event:{id:id(),type:'review',expectedVersion:state.version}},flow('edit_list','Change an item','பொருளை மாற்று','Porulai maathu'),flow('handoff','Talk to shop','கடையிடம் பேசு','Kadaiyila pesu')]};
-    return {...reply,buttons:[flow('browse','Browse items','பொருட்களைப் பார்','Porutkal paaru'),flow('help','Help me choose','உதவி வேண்டும்','Help venum'),flow('handoff','Talk to shop','கடையிடம் பேசு','Kadaiyila pesu')]};
+    if(state.draft.length)return {...reply,buttons:[{label:say(state,'Review list','பட்டியலைப் பார்','List paaru'),event:{id:id(),type:'review',expectedVersion:state.version}},flow('edit_list','Change an item','பொருளை மாற்று','Porulai maathu'),flow('handoff','Talk to shop','உதவி வேணும்','Kadaiyila pesu')]};
+    return {...reply,buttons:[flow('browse','Browse items','பொருட்களைப் பார்','Porutkal paaru'),flow('help','Help me choose','உதவி வேண்டும்','Help venum'),flow('handoff','Talk to shop','உதவி வேணும்','Kadaiyila pesu')]};
   }
   return reply;
 }

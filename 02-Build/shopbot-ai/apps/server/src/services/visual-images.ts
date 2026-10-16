@@ -76,7 +76,7 @@ export function renderVisualImage(card:Exclude<VisualCard,{kind:'product'}>,dire
 }
 export function materializeVisualReply(reply:RichReply,directory=visualMediaDir()):RichReply {
  if(!reply.parts)return reply;
- return {...reply,parts:reply.parts.map(part=>({...part,cards:part.cards.map(card=>card.kind==='product'?(card.product.imageUrl?card:{...card,product:{...card.product,imageUrl:renderVisualImage({kind:'instruction',title:card.product.name,lines:['Catalog photo unavailable',card.product.specifications?.size??''],caption:card.caption},directory)}}):{...card,imageUrl:renderVisualImage({...card,storeName:reply.storeName},directory)})}))};
+ return {...reply,parts:reply.parts.map(part=>({...part,cards:part.cards.map(card=>card.kind==='product'?(card.product.imageUrl?card:{...card,product:{...card.product,imageUrl:renderVisualImage({kind:'instruction',title:card.product.name,lines:['Catalog photo unavailable',card.product.specifications?.size??''],caption:card.caption},directory)}}):{...card,imageUrl:card.imageUrl??renderVisualImage({...card,storeName:reply.storeName},directory)})}))};
 }
 export function readVisualImage(hash:string):Buffer|undefined {
  if(!/^[a-f0-9]{64}\.png$/.test(hash))return;

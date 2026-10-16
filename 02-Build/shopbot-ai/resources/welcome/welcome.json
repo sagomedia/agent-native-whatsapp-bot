@@ -1,0 +1,20 @@
+{
+  "sha256": "b46badddf9cf48b3b769e4c899df0c8558f7f045b8a00f63a0eebb0b79c2994c",
+  "language": "ta",
+  "text": "வணக்கம்! என்னென்ன பொருள் வேணும்? வாய்ஸ்ல சொல்லி அனுப்புங்க. டெக்ஸ்ட் அல்லது ஃபோட்டோ அனுப்பினாலும் சரி.",
+  "voice": "ta-IN-PallaviNeural",
+  "source": "Synthetic fixed greeting generated once using edge-tts; no customer audio",
+  "media": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "codec_name": "opus",
+        "channels": 1
+      }
+    ],
+    "format": {
+      "duration": "8.814500"
+    }
+  }
+}

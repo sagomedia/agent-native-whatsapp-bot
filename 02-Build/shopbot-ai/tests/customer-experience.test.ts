@@ -51,7 +51,7 @@ test('targeted quantity edits retain every other item, and keeping the list inva
 }));
 test('handoff pauses AI, cancels assistant work, and authenticated owner replies are idempotent and window-bound',async()=>fixture(async(pool,channel,sent)=>{
  await turn(channel,{type:'text',text:{body:'hello'}});await turn(channel,tap(await action(pool,'shopping_action','handoff')));
- const c=(await pool.query('SELECT * FROM conversations WHERE id IN (SELECT conversation_id FROM whatsapp_conversations)')).rows[0];assert.equal(c.operator_mode,'owner');assert.equal(c.handoff_requested,true);assert.match(sent.at(-1).text.body,/Shop assistance requested/);
+ const c=(await pool.query('SELECT * FROM conversations WHERE id IN (SELECT conversation_id FROM whatsapp_conversations)')).rows[0];assert.equal(c.operator_mode,'owner');assert.equal(c.handoff_requested,true);assert.match(sent.at(-1).text.body,/Your message is with the shop owner/);
  await channel.receive(inbound({type:'text',text:{body:'Could you check this size?'}}));assert.equal(await channel.processNext(),false);
  const owner={hostname:'owner.example.test',issuer:'https://test.cloudflareaccess.com',audience:'offline-audience',email:'owner@example.test',storeId:fixtureStore};
  const app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,port:3017,host:'127.0.0.1',mediaDir:'/tmp/offline-media',owner,whatsapp:cfg},pool,undefined,undefined,async()=>({email:owner.email,subject:'offline-owner'}),channel);

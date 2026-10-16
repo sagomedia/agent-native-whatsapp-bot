@@ -4,7 +4,7 @@ import {productName,unitName,say} from '../../../../packages/contracts/language.
 import {formatMoney} from '../../../../packages/contracts/money.js';
 
 export type WhatsAppAction={id:string;label:string;event:SimulatorEvent};
-export type WhatsAppReply={payload:Record<string,unknown>;actions:WhatsAppAction[];format:'text'|'buttons'|'image'|'carousel'|'list'};
+export type WhatsAppReply={payload:Record<string,unknown>;actions:WhatsAppAction[];format:'text'|'buttons'|'image'|'carousel'|'list'|'audio'};
 // Count Unicode code points but cut only at grapheme boundaries, including Tamil.
 export function fitText(text:string,limit:number):string {
   if(Array.from(text).length<=limit)return text;
@@ -33,6 +33,7 @@ export function cardText(card:ProductCard,reply:RichReply):string {
   return fitText([name,price,last||undefined].filter(Boolean).join('\n'),160);
 }
 export function renderWhatsAppReply(reply:RichReply,messageId:string,hostname:string):WhatsAppReply {
+  if(reply.audio){if(!/^\/welcome-audio\/[a-f0-9]{64}\.ogg$/.test(reply.audio.url))throw new Error('Invalid welcome audio');return {format:'audio',actions:[],payload:{type:'audio',audio:{link:`https://${hostname}${reply.audio.url}`,voice:true}}};}
   if(reply.parts)return renderVisualPart(reply,messageId,hostname);
   if((reply.cards?.length??0)>10)throw new Error('A WhatsApp reply may contain at most ten product cards');
   const actions:WhatsAppAction[]=[];
@@ -82,7 +83,9 @@ export function renderWhatsAppReply(reply:RichReply,messageId:string,hostname:st
 
 function renderVisualPart(reply:RichReply,messageId:string,hostname:string):WhatsAppReply {
  if(reply.parts?.length!==1)throw new Error('Render and track one ordered part at a time');
- const part=reply.parts[0];if(!part.cards.length||part.cards.length>10)throw new Error('Visual parts require 1–10 cards');
+ const part=reply.parts[0];
+ if(!part.cards.length){if(Array.from(part.text).length>4096||part.buttons?.length&&Array.from(part.text).length>1024)throw new Error('Text part exceeds channel limit');return renderWhatsAppReply({...reply,parts:undefined,kind:part.buttons?.length?reply.kind:'text',text:part.text,buttons:part.buttons},messageId,hostname);}
+ if(part.cards.length>10)throw new Error('Visual parts require 1–10 cards');
  const actions:WhatsAppAction[]=[];
  const bind=(button:NonNullable<RichReply['buttons']>[number])=>{const id='w'+createHash('sha256').update(messageId+':'+actions.length+':'+button.event.id).digest('base64url').slice(0,19);const action={id,label:fitText(button.label,20),event:button.event};actions.push(action);return action;};
  const media=part.cards.map(c=>productMediaUrl(c.kind==='product'?c.product.imageUrl:c.imageUrl,hostname));

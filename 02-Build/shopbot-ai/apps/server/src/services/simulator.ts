@@ -25,10 +25,10 @@ export class SimulatorService {
       const ctx=this.context;
       const enabled=await catalogEnabled(client,ctx),catalog=enabled?await catalogContext(client,ctx):await getProducts(client,ctx),conversation=await loadState(client,ctx),catalogMap=enabled?await getCatalogMap(client,ctx):undefined,memory=await loadAssistantMemory(client,ctx),discoveryBindingId=memory?.purpose==='discovery'&&memory.sourceVersion===conversation.version?memory.id:undefined;
       const history=await client.query("SELECT m.id,m.direction,m.text,m.status,m.created_at,m.payload,v.duration_seconds FROM messages m LEFT JOIN voice_media v ON m.payload->>'mediaId'=v.id::text AND v.conversation_id=m.conversation_id WHERE m.conversation_id=$1 ORDER BY m.sequence",[ctx.conversationId]);
-      const requests=await client.query('SELECT id,acceptance,payment,fulfillment,total_paise,lines FROM order_requests WHERE store_id=$1 AND conversation_id=$2 AND actor=$3 ORDER BY created_at',[ctx.storeId,ctx.conversationId,ctx.actor]);
+      const requests=await client.query('SELECT * FROM order_requests WHERE store_id=$1 AND conversation_id=$2 AND actor=$3 ORDER BY created_at',[ctx.storeId,ctx.conversationId,ctx.actor]);
       const attempts=await client.query('SELECT count(*)::int AS count FROM provider_attempts WHERE store_id=$1 AND conversation_id=$2 AND actor=$3',[ctx.storeId,ctx.conversationId,ctx.actor]);
       return {catalogMap,discoveryBindingId,mode:'mock',provider:this.provider.name,catalog,conversation,messages:history.rows.map(r=>({id:r.id,direction:r.direction,text:r.text,status:r.status,createdAt:r.created_at,voice:r.payload?.type==='voice'?{mediaId:r.payload.mediaId,durationSeconds:Number(r.duration_seconds)}:undefined,image:r.payload?.type==='image'?{mediaId:r.payload.mediaId}:undefined,rich:r.direction==='outbound'?r.payload??undefined:undefined})),pending:history.rows.filter(m=>['pending','processing'].includes(m.status)).length,
-        requests:requests.rows.map(r=>({id:r.id,acceptance:r.acceptance,payment:r.payment,fulfillment:r.fulfillment,totalPaise:Number(r.total_paise),lines:r.lines})),interpretationAttempts:attempts.rows[0].count};
+        requests:requests.rows.map(r=>({id:r.id,acceptance:r.acceptance,payment:r.payment,fulfillment:r.fulfillment,totalPaise:Number(r.effective_total_paise??r.total_paise),lines:r.effective_lines??r.lines})),interpretationAttempts:attempts.rows[0].count};
     });
   }
   async ingest(input:SimulatorEvent,voice?:VoiceMedia,image?:ImageMedia) {
