@@ -315,6 +315,14 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       CREATE UNIQUE INDEX order_quotes_one_offered ON order_quotes(request_id) WHERE state='offered';
       INSERT INTO schema_migrations(version) VALUES(32);
     `);}
+    const v33=await client.query('SELECT version FROM schema_migrations WHERE version=33');
+    if(!v33.rowCount){await client.query(`
+      ALTER TABLE whatsapp_media ADD COLUMN original_audio bytea CHECK(original_audio IS NULL OR octet_length(original_audio) BETWEEN 1 AND 1048576);
+      ALTER TABLE whatsapp_media ADD COLUMN original_mime_type text CHECK(original_mime_type IS NULL OR original_mime_type IN ('audio/webm','audio/ogg','audio/mp4','audio/wav','audio/mpeg'));
+      ALTER TABLE whatsapp_media ADD COLUMN downloaded_at timestamptz;
+      ALTER TABLE whatsapp_media ADD CONSTRAINT whatsapp_media_original_pair CHECK((original_audio IS NULL)=(original_mime_type IS NULL));
+      INSERT INTO schema_migrations(version) VALUES(33);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

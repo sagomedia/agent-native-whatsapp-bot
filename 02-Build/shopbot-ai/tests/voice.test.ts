@@ -1,7 +1,7 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {randomUUID} from 'node:crypto';import pg from 'pg';import {FinishReason,GenerateContentResponse,ThinkingLevel} from '@google/genai';
 import {spokenClearCommand} from '../apps/server/src/services/shopping-language.js';
 import {geminiSpeechRate} from '../apps/server/src/services/inference-budget.js';
-import {setupDatabase} from '../apps/server/src/db/migrate.js';import {setupImageDemo,demoCatalogStore} from '../apps/server/src/services/demo-catalog.js';import {normalizeVoice,pcmWav,loadVoice} from '../apps/server/src/services/voice-media.js';import {SimulatorService} from '../apps/server/src/services/simulator.js';import {ConversationRuntime} from '../apps/server/src/runtime/conversation.js';import {GoogleInterpreter} from '../apps/server/src/adapters/google-interpreter.js';import {initializeBudget} from '../apps/server/src/services/inference-budget.js';import {createApp} from '../apps/server/src/http/app.js';
+import {setupDatabase} from '../apps/server/src/db/migrate.js';import {setupImageDemo,demoCatalogStore} from '../apps/server/src/services/demo-catalog.js';import {normalizeVoice,pcmWav,verifyVoiceDecoder,loadVoice} from '../apps/server/src/services/voice-media.js';import {SimulatorService} from '../apps/server/src/services/simulator.js';import {ConversationRuntime} from '../apps/server/src/runtime/conversation.js';import {GoogleInterpreter} from '../apps/server/src/adapters/google-interpreter.js';import {initializeBudget} from '../apps/server/src/services/inference-budget.js';import {createApp} from '../apps/server/src/http/app.js';
 const settings={allowPaidInference:false,apiKey:'offline-placeholder',model:'gemini-3.5-flash-lite',budgetMicrousd:0,freeQuota:{scope:'voice-test',model:'gemini-3.5-flash-lite'}};
 function wav(seconds:number){const pcm=Buffer.alloc(Math.round(seconds*16000)*2);for(let i=0;i<pcm.length/2;i++)pcm.writeInt16LE(Math.round(Math.sin(i*0.17)*1200),i*2);return pcmWav(pcm);}
 function upload(seconds=1,id=randomUUID()){return {id,mimeType:'audio/wav' as const,data:wav(seconds).toString('base64')};}
@@ -234,3 +234,8 @@ test('paid retry cannot bypass the configured budget or release a failed request
  const b=(await pool.query('SELECT limit_microusd,held_microusd,committed_microusd FROM inference_budgets WHERE store_id=$1',[inbox.context.storeId])).rows[0];
  assert.equal(Number(b.limit_microusd),400000);assert.equal(Number(b.held_microusd),Number(attempts[0].reserved_microusd));assert.equal(Number(b.committed_microusd),0);
 }));
+
+
+test('the deployed decoder preflight works and a WhatsApp-style 16-second Ogg Opus note becomes a private mono WAV',async()=>{
+ assert.deepEqual(await verifyVoiceDecoder(),{status:'ready'});const {readFile}=await import('node:fs/promises');const bytes=await readFile('tests/fixtures/audio/opus-16s.ogg');const audio=await normalizeVoice({id:randomUUID(),mimeType:'audio/ogg',data:bytes.toString('base64')});assert.ok(Math.abs(audio.durationSeconds-16)<.1);assert.equal(audio.audio.subarray(0,4).toString(),'RIFF');assert.equal(audio.audio.readUInt16LE(22),1);assert.equal(audio.audio.readUInt32LE(24),16000);assert.ok(audio.audio.length<=960044);
+});

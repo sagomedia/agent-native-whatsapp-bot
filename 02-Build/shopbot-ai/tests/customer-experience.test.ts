@@ -109,7 +109,7 @@ test('a failed voice attachment offers bound browse and handoff buttons without 
  const provider:Interpreter={name:'offline-unreadable-voice',mode:'live',billing:geminiTextRate,supportsAudio:true,interpret:async()=>{throw new Error('Must not call AI for undecoded media');}};
  const channel=new WhatsAppChannel(pool,{...cfg,defaultReplyLanguage:'ta',aiEnabled:true,paidEnabled:true,budgetMicrousd:500000,mediaEnabled:true,mediaRecommendations:true},async()=>new Response('{}',{status:404}),provider);await channel.setup();
  await channel.receive(inbound({type:'audio',audio:{id:'123456'}}));await channel.processNext();
- const reply=(await pool.query("SELECT text,payload FROM messages WHERE direction='outbound' ORDER BY sequence DESC LIMIT 1")).rows[0];assert.match(reply.text,/குரல் பதிவைத் திறக்க முடியவில்லை/);assert.equal(reply.text.split('\n').length,1);assert.equal(reply.payload.cards?.length??0,0);
+ const reply=(await pool.query("SELECT text,payload FROM messages WHERE direction='outbound' ORDER BY sequence DESC LIMIT 1")).rows[0];assert.match(reply.text,/Voice-ஐ open பண்ண முடியல/);assert.equal(reply.text.split('\n').length,1);assert.equal(reply.payload.cards?.length??0,0);
  assert.ok(await action(pool,'shopping_action','browse'));assert.ok(await action(pool,'shopping_action','handoff'));assert.equal((await pool.query('SELECT * FROM provider_attempts')).rowCount,0);
 }));
 test('provider rejection codes are diagnosable without saving secrets or retrying the request',async()=>fixture(async(pool)=>{
@@ -324,4 +324,19 @@ test('paid multimodal voice bills recognition and planning separately and durabl
  const input=inbound({type:'audio',audio:{id:'123456'}});await channel.receive(input);await channel.processNext();await channel.receive(input);await channel.processNext();assert.equal(calls,2);
  const budget=(await pool.query('SELECT * FROM inference_budgets WHERE store_id=$1',[cfg.storeId])).rows[0];assert.equal(Number(budget.held_microusd),0);assert.equal(Number(budget.committed_microusd),1340);assert.equal(Number(budget.limit_microusd),500000);
  const reply=(await pool.query("SELECT payload FROM messages WHERE direction='outbound' ORDER BY sequence DESC LIMIT 1")).rows[0].payload;assert.equal(reply.replyLanguage,'ta');assert.ok(reply.cards.length>=1);assert.equal((await pool.query('SELECT * FROM voice_media')).rowCount,1);assert.equal((await pool.query('SELECT * FROM order_requests')).rowCount,0);
+}));
+
+
+test('a downloaded recording survives normalization failure without calling AI or losing private playback',async()=>fixture(async(pool)=>{
+ const bytes=Buffer.from('This is a corrupt audio fixture, not spoken audio');let calls=0;
+ const provider:Interpreter={name:'offline-corrupt-audio',mode:'live',billing:geminiTextRate,supportsAudio:true,interpret:async()=>{calls++;throw new Error('Must not infer from undecoded audio');}};
+ const channel=new WhatsAppChannel(pool,{...cfg,aiEnabled:true,paidEnabled:true,budgetMicrousd:500000,mediaEnabled:true},async url=>String(url).includes('graph.facebook.com')?new Response(JSON.stringify({url:'https://lookaside.fbsbx.com/audio',mime_type:'audio/ogg; codecs=opus',file_size:bytes.length})):new Response(new Uint8Array(bytes)),provider);
+ await channel.setup();await channel.receive(inbound({type:'audio',audio:{id:'123456'}}));await channel.processNext();
+ const row=(await pool.query('SELECT * FROM whatsapp_media')).rows[0];assert.equal(row.state,'failed');assert.equal(row.last_error,'media_decode_failed');assert.deepEqual(row.original_audio,bytes);assert.equal(row.original_mime_type,'audio/ogg');assert.ok(row.downloaded_at);assert.equal(calls,0);assert.equal((await pool.query('SELECT id FROM voice_media')).rowCount,0);
+ const conversation=(await pool.query('SELECT conversation_id FROM whatsapp_conversations')).rows[0].conversation_id;
+ const owner={hostname:'shopbot-owner.example.test',issuer:'https://offline.cloudflareaccess.com',audience:'offline-audience',email:'offline-owner@example.test',storeId:fixtureStore};
+ const app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,port:3017,host:'127.0.0.1',mediaDir:'/tmp/audio-failure-test',owner},pool,undefined,undefined,async()=>({email:owner.email,subject:'offline-owner'}));
+ try{const headers={host:owner.hostname,'cf-access-jwt-assertion':'offline-owner'},history=(await app.inject({url:'/api/owner/conversations/'+conversation,headers})).json();assert.equal(history.messages.find((m:any)=>m.id===row.message_id).media_available,true);assert.equal(history.messages.find((m:any)=>m.id===row.message_id).media_error,'media_decode_failed');const playback=await app.inject({url:`/api/owner/conversations/${conversation}/media/voice/${row.message_id}`,headers});assert.equal(playback.statusCode,200);assert.equal(playback.headers['content-type'],'audio/ogg');assert.equal(playback.headers['cache-control'],'private, no-store');assert.deepEqual(playback.rawPayload,bytes);
+ const foreign=randomUUID();await pool.query("INSERT INTO conversations(id,store_id,actor) VALUES($1,$2,'foreign-recording')",[foreign,fixtureStore]);assert.equal((await app.inject({url:`/api/owner/conversations/${foreign}/media/voice/${row.message_id}`,headers})).statusCode,404);
+ }finally{await app.close();}
 }));

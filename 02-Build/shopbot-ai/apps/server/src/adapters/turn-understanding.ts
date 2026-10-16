@@ -17,11 +17,21 @@ export const understandingInstruction=baseUnderstandingInstruction+spokenTamilIn
 For audio, the catalogVocabulary is only a pronunciation aid for hardware names. Listen independently to the current audio; do not fill missing counts or words from this vocabulary or the cart. Separate a count before or after a pack size from the size itself, including code-mixed speech. If the count cannot be heard, mark quantity unresolved and ask how many. A named container's packSize is not also a requestedAmount unless the customer explicitly asks for a total amount. Do not infer rubber/plastic/material from a hose or any product category. An explicit this/that/இந்த item with a changed total or continuous length refines the referenced current line; do not append another item merely because its requested length differs from the current pack. Keep independent clear items even when another edit needs a target question. Use unrelated only for clearly off-topic messages with no shopping, payment, pickup or order action; uncertainty about a product is not unrelated. A mixed thanks plus order change is an edit, not acknowledgement-only. Ask exactly one missing question, retaining all supplied sizes/counts; use only the saved reply language without unrelated script characters.`;
 
 export function understandingResponseSchema(){
- // Preserve Google's supported numeric/array bounds. String formats and
- // exclusive bounds remain strict local checks rather than invented keywords.
+ // The pinned provider rejects the fully bounded backend grammar. Keep the
+ // transport grammar compact; strict local parsing still enforces all limits,
+ // source evidence, UUIDs, schema version and allowed action dependencies.
  const schema=z.toJSONSchema(turnUnderstandingSchema);
- function strip(value:unknown):unknown{if(Array.isArray(value))return value.map(strip);if(value&&typeof value==='object'){if('const' in value){const {const:literal,...rest}=value as Record<string,unknown>;return strip({...rest,enum:[literal]});}return Object.fromEntries(Object.entries(value).filter(([key])=>!['$schema','exclusiveMinimum','exclusiveMaximum','minLength','maxLength','format'].includes(key)).map(([key,v])=>[key,strip(v)]));}return value;}
- return strip(schema);
+ function compact(value:unknown):unknown{
+  if(Array.isArray(value))return value.map(compact);
+  if(value&&typeof value==='object'){
+   const input=value as Record<string,unknown>;
+   const result=Object.fromEntries(Object.entries(input).filter(([key])=>!['$schema','minimum','maximum','exclusiveMinimum','exclusiveMaximum','minLength','maxLength','minItems','maxItems','format','pattern','const'].includes(key)).map(([key,v])=>[key,compact(v)]));
+   if('const' in input)result.enum=[input.const];
+   return result;
+  }
+  return value;
+ }
+ return compact(schema);
 }
 export function understandingPrompt(input:InterpretationInput){
  const state=input.state.lastRequestId&&!input.audio&&!amendmentIntent(input.text)?{...input.state,draft:[],pending:null,editingLineId:null}:input.state;

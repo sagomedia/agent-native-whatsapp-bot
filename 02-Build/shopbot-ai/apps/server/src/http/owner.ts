@@ -24,7 +24,7 @@ import type {OrderRequest} from '../../../../packages/contracts/index.js';
 import {registerOwnerCatalog} from './owner-catalog.js';
 import {catalogPhoto} from '../services/catalog-photos.js';
 import {loadImage} from '../services/image-media.js';
-import {loadVoice} from '../services/voice-media.js';
+import {loadVoicePlayback} from '../services/voice-media.js';
 import type {Config} from '../config.js';
 import {createAccessVerifier,type AccessVerifier} from './access.js';
 import {geminiTextRate,rateHealth} from '../services/inference-budget.js';
@@ -117,10 +117,10 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
   app.get<{Params:{id:string}}>('/api/owner/conversations/:id',async(request,reply)=>{
     if(!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Invalid conversation'});
     const messages=(await pool.query(`SELECT m.id,m.conversation_id,m.direction,m.text,m.status,m.created_at,m.payload,m.release_fingerprint,o.sender_kind,(w.conversation_id IS NOT NULL) AS whatsapp,
-      CASE WHEN m.payload->>'type'='voice' THEN EXISTS(SELECT 1 FROM voice_media v WHERE v.id::text=m.payload->>'mediaId' AND v.conversation_id=c.id AND v.store_id=c.store_id AND v.actor=c.actor)
+      CASE WHEN m.payload->>'type'='voice' THEN (EXISTS(SELECT 1 FROM voice_media v WHERE v.id::text=m.payload->>'mediaId' AND v.conversation_id=c.id AND v.store_id=c.store_id AND v.actor=c.actor) OR EXISTS(SELECT 1 FROM whatsapp_media a WHERE a.message_id=m.id AND a.message_id::text=m.payload->>'mediaId' AND a.kind='voice' AND a.original_audio IS NOT NULL))
       WHEN m.payload->>'type'='image' THEN EXISTS(SELECT 1 FROM image_media i WHERE i.id::text=m.payload->>'mediaId' AND i.conversation_id=c.id AND i.store_id=c.store_id AND i.actor=c.actor)
-      ELSE NULL END AS media_available
-      FROM messages m JOIN conversations c ON c.id=m.conversation_id LEFT JOIN whatsapp_conversations w ON w.conversation_id=c.id LEFT JOIN whatsapp_outbox o ON o.message_id=m.id WHERE c.store_id=$1 AND c.id=$2 ORDER BY m.sequence DESC LIMIT 200`,[owner.storeId,request.params.id])).rows.reverse();
+      ELSE NULL END AS media_available,wm.state AS media_state,wm.last_error AS media_error
+      FROM messages m JOIN conversations c ON c.id=m.conversation_id LEFT JOIN whatsapp_conversations w ON w.conversation_id=c.id LEFT JOIN whatsapp_outbox o ON o.message_id=m.id LEFT JOIN whatsapp_media wm ON wm.message_id=m.id WHERE c.store_id=$1 AND c.id=$2 ORDER BY m.sequence DESC LIMIT 200`,[owner.storeId,request.params.id])).rows.reverse();
     if(!(await pool.query('SELECT id FROM conversations WHERE store_id=$1 AND id=$2',[owner.storeId,request.params.id])).rowCount)return reply.code(404).send({error:'Conversation not found'});
     return {messages,limit:200};
   });
@@ -141,7 +141,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     const row=(await pool.query('SELECT actor FROM conversations WHERE store_id=$1 AND id=$2',[owner.storeId,id])).rows[0];
     if(!row)return reply.code(404).send({error:'Media not found'});
     const ctx={storeId:owner.storeId,conversationId:id,actor:row.actor,role:'customer' as const};
-    try{const media=kind==='image'?await loadImage(pool,ctx,mediaId):await loadVoice(pool,ctx,mediaId);return reply.type(media.mimeType).send(Buffer.from(media.data,'base64'));}catch{return reply.code(404).send({error:'Media not found'});}
+    try{const media=kind==='image'?await loadImage(pool,ctx,mediaId):await loadVoicePlayback(pool,ctx,mediaId);return reply.header('Cache-Control','private, no-store').header('X-Content-Type-Options','nosniff').type(media.mimeType).send(Buffer.from(media.data,'base64'));}catch{return reply.code(404).send({error:'Media not found'});}
   });
   app.post<{Params:{id:string}}>('/api/owner/conversations/:id/control',async(request,reply)=>{
     const input=z.object({mode:z.enum(['assistant','owner']),revision,notify:z.boolean().default(false),acknowledge:z.boolean().default(false)}).strict().safeParse(request.body);

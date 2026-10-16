@@ -1,3 +1,4 @@
+import {normalizeVoice} from './voice-media.js';
 import {reviewDeliveryReady} from './review-delivery.js';
 import {catalogPhoto} from './catalog-photos.js';
 import {createHash,randomUUID} from 'node:crypto';
@@ -161,12 +162,19 @@ export class WhatsAppChannel {
     try{
       await client.query('BEGIN');
       row=(await client.query(`SELECT a.*,m.conversation_id,c.actor,c.operator_revision FROM whatsapp_media a JOIN messages m ON m.id=a.message_id JOIN conversations c ON c.id=m.conversation_id JOIN whatsapp_conversations w ON w.conversation_id=c.id WHERE c.store_id=$1 AND w.phone_id=$2 AND (a.state='pending' OR a.state='fetching' AND a.lease_until<=now()) ORDER BY m.sequence LIMIT 1 FOR UPDATE OF a SKIP LOCKED`,[this.config.storeId,this.config.phoneId])).rows[0];
-      if(row)row.claimLease=(await client.query("UPDATE whatsapp_media SET state='fetching',lease_until=now()+interval '75 seconds' WHERE message_id=$1 RETURNING lease_until::text AS lease",[row.message_id])).rows[0].lease;
+      if(row)row.claimLease=(await client.query("UPDATE whatsapp_media SET state='fetching',lease_until=now()+interval '120 seconds' WHERE message_id=$1 RETURNING lease_until::text AS lease",[row.message_id])).rows[0].lease;
       await client.query('COMMIT');
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
     if(!row)return false;
     let media:Awaited<ReturnType<typeof downloadWhatsAppMedia>>|undefined,mediaError:string|null=null;
-    try{media=await downloadWhatsAppMedia(this.config,this.request,row.media_id,row.kind,row.message_id);}catch(error){mediaError=mediaFailureCode(error);}
+    try{
+      if(row.kind==='voice'&&row.original_audio&&row.original_mime_type){
+        media=await normalizeVoice({id:row.message_id,mimeType:row.original_mime_type,data:row.original_audio.toString('base64')});
+      }else media=await downloadWhatsAppMedia(this.config,this.request,row.media_id,row.kind,row.message_id,async source=>{
+        const saved=await this.pool.query("UPDATE whatsapp_media SET original_audio=$1,original_mime_type=$2,downloaded_at=now() WHERE message_id=$3 AND state='fetching' AND lease_until=$4::timestamptz AND lease_until>now()",[source.audio,source.mimeType,row.message_id,row.claimLease]);
+        if(!saved.rowCount)throw new Error('Media work lease expired before saving the downloaded recording');
+      });
+    }catch(error){mediaError=mediaFailureCode(error);}
     const ctx:ActorContext={storeId:this.config.storeId,conversationId:row.conversation_id,actor:row.actor,role:'customer'};
     const held=await this.pool.connect();
     try{
@@ -178,7 +186,7 @@ export class WhatsAppChannel {
       await held.query("UPDATE whatsapp_media SET state=$1,lease_until=NULL,last_error=$2 WHERE message_id=$3",[media?'ready':'failed',media?null:mediaError,row.message_id]);
       if(!media){
         await held.query("UPDATE messages SET status='processed' WHERE id=$1",[row.message_id]);
-        const state=await loadState(held,ctx),memory=await loadAssistantMemory(held,ctx),reply=plainReply(row.kind==='voice'?say(state,mediaError==='media_duration_invalid'?'Please send a voice note under 30 seconds; your list is kept.':'That voice note did not open; your list is kept.',mediaError==='media_duration_invalid'?'30 வினாடிக்குள் குரல் பதிவு அனுப்புங்கள்; உங்கள் பட்டியல் உள்ளது.':'அந்தக் குரல் பதிவைத் திறக்க முடியவில்லை; உங்கள் பட்டியல் உள்ளது.',mediaError==='media_duration_invalid'?'30 seconds-kulla voice note anuppunga; unga list irukku.':'Antha voice note-ai thirakka mudiyala; unga list irukku.'):say(state,'That photo did not open; your list is kept.','அந்தப் படத்தைத் திறக்க முடியவில்லை; உங்கள் பட்டியல் உள்ளது.','Antha photo-ai thirakka mudiyala; unga list irukku.')),replyId=randomUUID();
+        const state=await loadState(held,ctx),memory=await loadAssistantMemory(held,ctx),reply=plainReply(row.kind==='voice'?say(state,mediaError==='media_duration_invalid'?'Please send a voice note under 30 seconds; your list is kept.':mediaError==='media_decode_timeout'?'Audio processing took too long. Your list is kept. Please try a shorter voice note or send text.':'That voice note did not open; your list is kept.',mediaError==='media_duration_invalid'?'30 seconds-க்குள்ள voice அனுப்புங்க. உங்க list அப்படியே இருக்கு.':mediaError==='media_decode_timeout'?'Voice process பண்ண நேரம் ஆகிடுச்சு. உங்க list அப்படியே இருக்கு. சின்ன voice அல்லது text அனுப்புங்க.':'Voice-ஐ open பண்ண முடியல. உங்க list அப்படியே இருக்கு.',mediaError==='media_duration_invalid'?'30 seconds-kulla voice anuppunga. Unga list appadiye irukku.':mediaError==='media_decode_timeout'?'Voice process panna neram aagiduchu. Unga list appadiye irukku. Chinna voice illa text anuppunga.':'Voice-ai open panna mudiyala. Unga list appadiye irukku.'):say(state,'That photo did not open; your list is kept.','அந்தப் படத்தைத் திறக்க முடியவில்லை; உங்கள் பட்டியல் உள்ளது.','Antha photo-ai thirakka mudiyala; unga list irukku.')),replyId=randomUUID();
         reply.replyLanguage=state.replyLanguage;
         reply.buttons=[shoppingButton(state,'browse',say(state,'Browse items','பொருட்களைப் பார்','Porutkal paaru')),shoppingButton(state,'handoff',say(state,'Talk to shop','கடையிடம் பேசு','Kadaiyila pesu'))];
         const rendered=renderWhatsAppReply(reply,replyId,this.config.hostname);

@@ -1,3 +1,4 @@
+import {verifyVoiceDecoder} from './services/voice-media.js';
 import {setupImageDemo} from './services/demo-catalog.js';
 import {GoogleInterpreter,readNativeSettings} from './adapters/google-interpreter.js';
 import pg from 'pg';
@@ -13,6 +14,7 @@ import {verifyRelease,bindRuntimeRelease} from './services/release-manifest.js';
 
 await verifyRelease();
 const config = readConfig();
+if(config.whatsapp?.mediaEnabled)await verifyVoiceDecoder();
 const pool = new pg.Pool({ connectionString: config.databaseUrl, max: 10 });
 let stopJobs: (() => Promise<void>) | undefined;
 let stopWhatsApp: (() => Promise<void>) | undefined;
