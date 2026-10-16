@@ -33,9 +33,46 @@ function shapedText(value:string,x:number,y:number,size:number,color:string,anch
  return `<g aria-label="${escape(value)}">${paths}</g>`;
 }
 function text(value:string,x:number,y:number,size=36,color='#172b22') {return shapedText(value,x,y,size,color);}
+export const INVOICE_ROWS_PER_PAGE=8;
+function invoiceSvg(card:Exclude<VisualCard,{kind:'product'}>):string {
+ const width=1080,ink='#202b30',muted='#647177',rule='#dce2e3',accent='#16665b';
+ let y=64,content='';
+ const draw=(value:string,x:number,baseline:number,size=24,color=ink,anchor='start')=>shapedText(value,x,baseline,size,color,anchor);
+ for(const name of wrapPixels(card.storeName??'Shop',640,32)){content+=draw(name,56,y,32);y+=42;}
+ content+=draw('Estimate',1024,64,30,accent,'end');
+ content+=draw('INR',1024,102,20,muted,'end');
+ if(card.reference){content+=draw(card.reference,56,y+10,20,muted);y+=40;}
+ y=Math.max(y+24,156);content+=`<path d="M56 ${y}H1024" stroke="${ink}" stroke-width="2"/>`;y+=42;
+ content+=draw('Item / pack',72,y,22,muted)+draw('Qty',724,y,22,muted,'end')+draw('Rate',868,y,22,muted,'end')+draw('Amount',1008,y,22,muted,'end');
+ y+=18;content+=`<path d="M56 ${y}H1024" stroke="${rule}"/>`;
+ for(const row of card.billRows??[]){
+  const top=y+38,name=wrapPixels(row.name,530,25),pack=wrapPixels(row.packSize,530,20),quantity=wrapPixels(row.count,122,22);
+  let baseline=top;
+  for(const line of name){content+=draw(line,72,baseline,25);baseline+=35;}
+  for(const line of pack){content+=draw(line,72,baseline,20,muted);baseline+=29;}
+  for(const [index,line] of quantity.entries())content+=draw(line,724,top+index*31,22,ink,'end');
+  content+=draw(row.unitPrice,868,top,22,row.unitPrice==='—'?muted:ink,'end');
+  const amount=row.unitPrice==='—'?'—':row.total;
+  // Keep narrow money columns clear even for the largest supported quantities.
+  const moneySize=textWidth(amount,24)>128?Math.max(15,24*128/textWidth(amount,24)):24;
+  content+=draw(amount,1008,top,moneySize,amount==='—'?muted:ink,'end');
+  y=Math.max(baseline,top+quantity.length*31)+20;content+=`<path d="M56 ${y}H1024" stroke="${rule}"/>`;
+ }
+ y+=38;
+ for(const paragraph of card.lines){for(const line of wrapPixels(paragraph,920,20)){content+=draw(line,72,y,20,muted);y+=29;}}
+ if(card.total){
+  y+=24;content+=`<path d="M56 ${y}H1024" stroke="${ink}" stroke-width="2"/>`;y+=42;
+  const money=/^(.*):\s*(₹[\d,.]+)$/.exec(card.total);
+  if(money){for(const line of wrapPixels(money[1],Math.max(240,920-textWidth(money[2],34)-28),24)){content+=draw(line,72,y,24,accent);y+=34;}content+=draw(money[2],1008,y-34,34,ink,'end');}
+  else for(const line of wrapPixels(card.total,920,26)){content+=draw(line,72,y,26,accent);y+=36;}
+ }
+ y+=24;content+=draw('Estimate only · final stock and prices confirmed by the shop',72,y,20,muted);y+=38;
+ return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${y+32}" viewBox="0 0 ${width} ${y+32}" role="img" aria-label="${escape(card.title)}"><rect width="${width}" height="${y+32}" fill="#fff"/>${content}</svg>`;
+}
 export function visualSvg(card:Exclude<VisualCard,{kind:'product'}>):string {
  const rows=card.billRows??[];
- if(rows.length>5)throw new Error('A bill image holds at most five rows');
+ if(rows.length>INVOICE_ROWS_PER_PAGE)throw new Error('An invoice image holds at most eight rows');
+ if(card.billRows)return invoiceSvg(card);
  let y=card.storeName?156:76,content='<rect x="28" y="28" width="10" height="52" rx="4" fill="#167846"/>';
  if(card.storeName){content+='<path d="M40 44h36l-4-16H44zM44 48v24h28V48M55 72V56h10v16" fill="none" stroke="#167846" stroke-width="3"/>';for(const [i,line] of wrapPixels(card.storeName,488,28).slice(0,2).entries())content+=text(line,96,48+i*34,28,'#506358');content+='<path d="M40 94h560" stroke="#ccd8cd"/>'; }
  for(const line of wrapPixels(card.title,532,54)){content+=text(line,56,y,54);y+=68;}

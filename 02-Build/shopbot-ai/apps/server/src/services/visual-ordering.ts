@@ -10,6 +10,7 @@ import {canQuoteDraft,counterLine,productCheckCoversDraft} from './counter-state
 import {fitText} from './whatsapp-reply.js';
 import {requestStatusText} from './request-status.js';
 import {catalogPack,catalogContent} from './quantity-evidence.js';
+import {INVOICE_ROWS_PER_PAGE} from './visual-images.js';
 import {needsPipeType} from './catalog-discovery.js';
 import {planReply} from './reply-plan.js';
 
@@ -88,7 +89,7 @@ export function visualProductReview(state:ConversationState):RichReply {
   if(!identified&&final)lines.push(say(state,'Some items still need checking.','சில பொருட்களை இன்னும் சரிபார்க்க வேண்டும்.','Sila porutkalai innum check pannanum.'));
   const estimate:Button={label:say(state,'Show estimate','Bill காட்டு','Bill kaattu'),event:{id:randomUUID(),type:'review_partial',expectedVersion:state.version}};
   const buttons=final?[confirmShown?approve:state.allowPartialReview?estimate:edit]:[edit];
-  const countNeeded=identified&&!all?state.draft.slice(start,start+9).filter(l=>l.quantity===null&&!l.requestedAmount).map(l=>say(state,`${lineName(l,state)}: quantity still needed.`,`${lineName(l,state)}: எண்ணிக்கை சொல்ல வேண்டும்.`,`${lineName(l,state)}: quantity sollanum.`)):[];
+  const countNeeded=identified&&!all?state.draft.slice(start,start+9).filter(l=>l.quantity===null&&l.requestedQuantity===undefined&&!l.requestedAmount).map(l=>say(state,`${lineName(l,state)}: quantity still needed.`,`${lineName(l,state)}: எண்ணிக்கை சொல்ல வேண்டும்.`,`${lineName(l,state)}: quantity sollanum.`)):[];
   parts.push(part([...cards.slice(start,start+9),instruction(say(state,'Check the products','பொருட்களைப் பாருங்க','Porutkalai paarunga'),lines,say(state,'Check all photos','எல்லா படங்களையும் பாருங்க','Ella photos-aiyum paarunga'),buttons)],say(state,`Products ${start+1}–${Math.min(cards.length,start+9)} / ${cards.length}`,`பொருட்கள் ${start+1}–${Math.min(cards.length,start+9)} / ${cards.length}`,`Porutkal ${start+1}–${Math.min(cards.length,start+9)} / ${cards.length}`)+'\n'+say(state,'Swipe to check every photo.','பக்கமா நகர்த்தி எல்லா படங்களையும் பாருங்க.','Pakkamaaga nagarththi ella photos-aiyum paarunga.')+(all?'\n'+say(state,'Confirm these products to review the bill. Nothing is sent yet.','இந்தப் பொருட்களை உறுதி செய்ததும் பில் பார்க்கலாம். இன்னும் அனுப்பவில்லை.','Intha porutkalai confirm pannina bill paarkkalaam. Innum anuppala.'):countNeeded.length?'\n'+countNeeded.join('\n'):'')));
  }
  return reply(missing.length?'shop_check':'products',parts,missing.length?missing.find(l=>l.catalogIssue)?.catalogIssue??'catalog_missing':undefined);
@@ -96,29 +97,28 @@ export function visualProductReview(state:ConversationState):RichReply {
 export function visualBill(state:ConversationState,request?:OrderRequest):RichReply {
  const lines=request?.lines??state.draft,estimate=estimateLines(lines);
  const buttons:Button[]=request?[]:state.pending?.kind==='review'?[{label:say(state,'Send order to shop','கடைக்கு அனுப்பு','Order kadaikku anuppu'),event:{id:randomUUID(),type:'confirm',reviewId:state.pending.id}},change(state)]:[];
- const cards:VisualCard[]=[],pages=Math.ceil(lines.length/3);
- for(let offset=0;offset<lines.length;offset+=3){
-  const page=offset/3+1,final=page===pages;
-  const rows=lines.slice(offset,offset+3).map(line=>{
+ const cards:Exclude<VisualCard,{kind:'product'}>[]=[],pages=Math.ceil(lines.length/INVOICE_ROWS_PER_PAGE);
+ for(let offset=0;offset<lines.length;offset+=INVOICE_ROWS_PER_PAGE){
+  const page=offset/INVOICE_ROWS_PER_PAGE+1,final=page===pages;
+  const rows=lines.slice(offset,offset+INVOICE_ROWS_PER_PAGE).map(line=>{
    const product=line.candidates?.find(p=>p.sku===line.sku),pack=line.packSize??(product?catalogPack(product):undefined),priced=estimate.priced.includes(line);
    return {name:lineName(line,state),packSize:measurementText(pack?`${pack.value} ${pack.unit}`:product?.specifications?.size??'',state)+(line.requestedAmount?` · ${requestedAmountText(line,state)}`:''),count:line.quantity===null?line.requestedQuantity!==undefined?`${line.requestedQuantity} ${unitName(line.requestedUnit??'unit',state,line.requestedQuantity)}`:say(state,'To check','Check பண்ணணும்','Check pannanum'):`${line.quantity} ${unitName(line.requestedUnit??line.unit??'unit',state,line.quantity)}`,unitPrice:priced?formatMoney(line.pricePaise!):'—',total:priced?formatMoney(lineTotal(line.pricePaise!,line.quantity!)):say(state,'Price pending','விலை இன்னும் வரல','Vilai innum varala')};
   });
   const total=estimate.priced.length?say(state,`${estimate.complete?'Estimated total':'Known items only'}: ${formatMoney(estimate.knownSubtotalPaise)}`,`${estimate.complete?'Estimate':'விலை தெரிஞ்ச items மட்டும்'}: ${formatMoney(estimate.knownSubtotalPaise)}`,`${estimate.complete?'Estimate':'Vilai therinja items mattum'}: ${formatMoney(estimate.knownSubtotalPaise)}`):say(state,'Prices need a shop quote','விலை கடை சொன்னதும் தெரியும்','Vilai kadai sonnathum theriyum');
-  cards.push({kind:request?'status':'bill',title:say(state,'Estimated invoice','Estimate Bill','Estimate Bill'),reference:request?orderReference(request.id):undefined,lines:[say(state,`Page ${page} / ${pages}`,`பக்கம் ${page} / ${pages}`,`Page ${page} / ${pages}`),estimate.excluded.length?say(state,`${estimate.excluded.length} items await a quote; their prices are excluded.`,`${estimate.excluded.length} items விலை இன்னும் சேர்க்கல.`,`${estimate.excluded.length} items vilai innum serkkala.`):say(state,'Final availability is checked by the shop','கடை stock-ஐ check பண்ணி confirm பண்ணும்','Kadai stock-ai check panni confirm pannum')],billRows:rows,total:final?total:undefined,caption:say(state,`Estimated invoice ${page} / ${pages}`,`Estimate Bill ${page} / ${pages}`,`Estimate Bill ${page} / ${pages}`),buttons:request?[{label:say(state,'Order status','Order நிலை','Order status'),event:{id:randomUUID(),type:'shopping_action',action:'status',expectedVersion:state.version}}]:[change(state)]});
+  cards.push({kind:request?'status':'bill',title:say(state,'Estimated invoice','Estimate Bill','Estimate Bill'),reference:request?orderReference(request.id):state.pending?.kind==='review'?'Estimate #'+state.pending.id.slice(0,8).toUpperCase():undefined,lines:[say(state,`Page ${page} / ${pages}`,`பக்கம் ${page} / ${pages}`,`Page ${page} / ${pages}`),estimate.excluded.length?say(state,`${estimate.excluded.length} items await a quote; their prices are excluded.`,`${estimate.excluded.length} items விலை இன்னும் சேர்க்கல.`,`${estimate.excluded.length} items vilai innum serkkala.`):say(state,'Final availability is checked by the shop','கடை stock-ஐ check பண்ணி confirm பண்ணும்','Kadai stock-ai check panni confirm pannum')],billRows:rows,total:final?total:undefined,caption:say(state,`Estimated invoice ${page} / ${pages}`,`Estimate Bill ${page} / ${pages}`,`Estimate Bill ${page} / ${pages}`),buttons:request?[{label:say(state,'Order status','Order நிலை','Order status'),event:{id:randomUUID(),type:'shopping_action',action:'status',expectedVersion:state.version}}]:final?buttons:[change(state)]});
  }
- const parts:ReplyPart[]=[];
- for(let offset=0;offset<cards.length;offset+=10)parts.push(part(cards.slice(offset,offset+10),say(state,'Your estimated invoice. Full item details follow below.','உங்க Estimate Bill.\nமுழு details-ம் கீழே இருக்கு.','Unga Estimate Bill. Muzhu details-um keezhe irukku.')));
- // Keep complete accessible names/counts, including long unknown items. Only
- // the final text page carries consent for the complete delivered invoice.
- const text=estimateText(state,lines,false,!request),full=textPresentation(text,buttons,request?'submitted':'bill');
- return {...reply(request?'submitted':'bill',[...parts,...full.parts!]),text,kind:request?'text':'order_review'};
+ const text=estimateText(state,lines,false,!request);
+ // Each page is one native image. Consent travels with the final invoice page;
+ // earlier pages must be delivered before its buttons become available.
+ const parts=cards.map((card,index)=>part([card],[card.caption,index===cards.length-1?card.total:undefined,index===cards.length-1?(request?say(state,'Your order is with the shop.','Order கடைக்கு போயிருக்கு.','Order kadaikku poyirukku.'):say(state,'Check the bill, then send the order to the shop.','Bill சரியா பாருங்க. அப்புறம் கடைக்கு அனுப்புங்க.','Bill sariya paarunga. Appuram kadaikku anuppunga.')):undefined].filter(Boolean).join('\n\n')));
+ return {...reply(request?'submitted':'bill',parts),text,accessibleText:text,kind:request?'text':'order_review'};
 }
 export function visualEstimate(state:ConversationState,lines:ConversationState['draft']):RichReply {
- const invoice=visualBill({...state,draft:lines,pending:null});
- const next:Button={label:say(state,'Continue checkout','Order தொடரலாம்','Order thodarlaam'),event:state.allowPartialReview?{id:randomUUID(),type:'review_partial',expectedVersion:state.version}:{id:randomUUID(),type:'review',expectedVersion:state.version}};
- const details=textPresentation(estimateText(state,lines,false,false),[next],'bill');
- return {...invoice,readOnly:true,text:details.text,parts:[...invoice.parts!.filter(p=>p.cards.length),...details.parts!],buttons:[next]};
+ const invoice=visualBill({...state,draft:lines,pending:null}),next:Button={label:say(state,'Continue checkout','Order தொடரலாம்','Order thodaralaam'),event:state.allowPartialReview?{id:randomUUID(),type:'review_partial',expectedVersion:state.version}:{id:randomUUID(),type:'review',expectedVersion:state.version}};
+ const parts=invoice.parts!.map((p,index)=>({...p,cards:p.cards.map(c=>({...c,buttons:index===invoice.parts!.length-1?[next]:[change(state)]}))}));
+ return {...invoice,readOnly:true,text:estimateText(state,lines,false,false),accessibleText:estimateText(state,lines,false,false),parts,buttons:[next]};
 }
+
 export function visualReply(base:RichReply,state:ConversationState,request?:OrderRequest|null):RichReply {
  const plan=planReply(base,state,request);
  if(!state.visualOrdering||plan.purpose==='read_only')return base;
@@ -190,7 +190,7 @@ export function returningReply(state:ConversationState):RichReply {
 export function visualStatus(state:ConversationState,request:OrderRequest):RichReply {
  const reference=orderReference(request.id),text=requestStatusText(request,state.replyLanguage);
  const status=request.acceptance==='rejected'||request.fulfillment==='cancelled'?say(state,'Shop could not fulfill','கடை நிறைவேற்ற முடியவில்லை','Kadai niraivetra mudiyala'):request.fulfillment==='collected'?say(state,'Collected','பெற்றுக்கொண்டீர்கள்','Vaangiyaachu'):request.fulfillment==='ready_for_pickup'?say(state,'Ready for pickup','பெற்றுக்கொள்ளத் தயார்','Vaangikka ready'):request.acceptance==='accepted'?say(state,'Shop accepted','கடை ஏற்றுக்கொண்டது','Kadai accept panniyirukku'):say(state,'Sent to shop','கடைக்கு அனுப்பியாச்சு','Kadaikku anuppiyaachu');
- return {...reply('status',[part([{kind:'status',title:status,reference,lines:[say(state,'Estimated amount','உத்தேச தொகை','Estimate amount')+': '+formatMoney(request.totalPaise),say(state,'Shop price may change','கடை விலை மாறலாம்','Kadai vilai maaralaam'),say(state,'Check pickup and payment with the shop','Pickup, payment பற்றி கடையிடம் கேளுங்கள்','Pickup, payment paththi kadaiyila kelunga')],caption:reference}],text)]),replyLanguage:state.replyLanguage};
+ return {...reply('status',[part([{kind:'status',title:status,reference,lines:[say(state,'Estimated amount','உத்தேச தொகை','Estimate amount')+': '+formatMoney(request.totalPaise),say(state,'Shop price may change','கடை விலை மாறலாம்','Kadai vilai maaralaam'),say(state,'Check pickup and payment with the shop','Pickup, payment பற்றி கடையிடம் கேளுங்கள்','Pickup, payment paththi kadaiyila kelunga')],caption:reference,buttons:request.advanceRequired&&['requested','claimed'].includes(request.advanceState??'')?[{label:say(state,'Show ₹10 QR','₹10 QR காட்டு','₹10 QR kaattu'),event:{id:randomUUID(),type:'show_payment_qr',requestId:request.id,expectedVersion:state.version}}]:[]}],text)]),replyLanguage:state.replyLanguage};
 }
 
 function visualEditPicker(state:ConversationState):RichReply {

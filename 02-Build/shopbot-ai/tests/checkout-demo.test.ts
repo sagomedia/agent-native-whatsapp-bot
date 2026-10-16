@@ -60,7 +60,7 @@ test('known and missing products progress through photos, invoice, explicit subm
  let s=await turn('two PTFE tape rolls and one unknown unicorn bolt');
  const approve=buttons(last(s)).find(b=>b.event.type==='confirm_products')?.event;assert.ok(approve,'a clear checkout step exists despite a missing catalog item: '+JSON.stringify(last(s)));
  s=await turn(approve);assert.equal(last(s).stage,'bill');assert.equal(s.requests.length,0);
- assert.match(last(s).text,/unknown unicorn bolt/);assert.match(last(s).text,/₹40/);assert.ok(s.messages.filter(m=>m.rich?.groupId===last(s).groupId).flatMap(m=>m.rich?.parts?.flatMap(p=>p.cards)??[]).some(c=>c.kind==='bill'&&c.billRows?.some(row=>row.unitPrice==='—')));
+ assert.match(last(s).accessibleText!,/unknown unicorn bolt/);assert.match(last(s).text,/₹40/);assert.ok(s.messages.filter(m=>m.rich?.groupId===last(s).groupId).flatMap(m=>m.rich?.parts?.flatMap(p=>p.cards)??[]).some(c=>c.kind==='bill'&&c.billRows?.some(row=>row.unitPrice==='—')));
  const confirm=buttons(last(s)).find(b=>b.event.type==='confirm')!.event;s=await turn(confirm);assert.equal(s.requests.length,1);
  const qr=last(s),pay=buttons(qr).find(b=>b.event.type==='pay_at_shop')!.event;assert.ok(qr.parts?.[0].cards[0].kind!=='product'&&qr.parts?.[0].cards[0].imageUrl);assert.match(qr.text,/No advance has been received yet/);
  assert.ok(renderWhatsAppReply(qr,randomUUID(),advance.hostname).actions.some(a=>a.event.type==='pay_at_shop'));
@@ -118,7 +118,7 @@ test('a bad catalog selling basis retains the requested one-container count in t
  set({operations:[{kind:'add_item',query:'Asian Paints Tractor Uno Acrylic Distemper 10kg',quantity:1,requestedUnit:'container',packSize:{value:10,unit:'litre'},supportingPhrase:'one 10 litre Asian Paints Tractor Uno Acrylic Distemper can'}],next:'review'});
  let s=await turn('one 10 litre Asian Paints Tractor Uno Acrylic Distemper can');s=await turn(buttons(last(s)).find(b=>b.event.type==='select_product')!.event);
  s=await turn({id:randomUUID(),type:'review_partial',expectedVersion:s.conversation.version});
- assert.equal(last(s).stage,'bill');assert.match(last(s).text,/1 container/);assert.doesNotMatch(last(s).text,/₹112/);
+ assert.equal(last(s).stage,'bill');assert.match(last(s).accessibleText!,/1 container/);assert.doesNotMatch(last(s).text,/₹112/);
  const row=s.messages.filter(m=>m.rich?.groupId===last(s).groupId).flatMap(m=>m.rich?.parts?.flatMap(p=>p.cards)??[]).find(c=>c.kind==='bill');assert.ok(row&&row.kind!=='product');assert.equal(row.billRows?.[0].count,'1 container');assert.equal(row.billRows?.[0].unitPrice,'—');
  assert.equal(s.requests.length,0);
 }));

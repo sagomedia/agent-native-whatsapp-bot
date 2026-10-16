@@ -1,6 +1,6 @@
 # Tamil copy — complete backend review
 
-Generated from the actual TypeScript source, including inline messages outside the central copy table. 562 unique Tamil literals/templates are listed with every source location. Customer recordings, messages and catalog rows are not read.
+Generated from the actual TypeScript source, including inline messages outside the central copy table. 567 unique Tamil literals/templates are listed with every source location. Customer recordings, messages and catalog rows are not read.
 
 Review the first section for customer-facing wording. Add your preferred wording beneath **Your replacement**; keep the ID and placeholders such as {amount}, {name}, and JavaScript template expressions unchanged. Repeated wording in different modules has separate IDs so all call sites can be updated.
 
@@ -8,7 +8,7 @@ The second section contains accepted customer phrases/aliases. The last section 
 
 The deterministic checkout is: product photos → approve shown products → estimated invoice (unknown prices excluded) → send order to shop → optional demo QR offer → pay at shop OR genuine receipt verification → owner confirmation / packing / ready / collected. Human help is a separate explicit request.
 
-## Fixed replies, labels and message templates (420)
+## Fixed replies, labels and message templates (425)
 
 ### apps/server/src/http/app.ts
 
@@ -58,7 +58,7 @@ _Leave blank to keep the current wording._
 
 #### TA-9FE2C30385
 
-Source: [line 170](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/http/owner.ts:170)
+Source: [line 177](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/http/owner.ts:177)
 
 **Current wording**
 
@@ -73,7 +73,7 @@ _Leave blank to keep the current wording._
 
 #### TA-FA190AA740
 
-Source: [line 170](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/http/owner.ts:170)
+Source: [line 177](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/http/owner.ts:177)
 
 **Current wording**
 
@@ -88,7 +88,7 @@ _Leave blank to keep the current wording._
 
 #### TA-D48FC4EB5A
 
-Source: [line 179](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/http/owner.ts:179)
+Source: [line 186](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/http/owner.ts:186)
 
 **Current wording**
 
@@ -102,7 +102,7 @@ _Leave blank to keep the current wording._
 
 #### TA-831BF1A024
 
-Source: [line 278](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/http/owner.ts:278)
+Source: [line 285](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/http/owner.ts:285)
 
 **Current wording**
 
@@ -117,7 +117,7 @@ _Leave blank to keep the current wording._
 
 #### TA-FDC63549F5
 
-Source: [line 288](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/http/owner.ts:288)
+Source: [line 295](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/http/owner.ts:295)
 
 **Current wording**
 
@@ -131,7 +131,7 @@ _Leave blank to keep the current wording._
 
 #### TA-C7C26E35ED
 
-Source: [line 307](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/http/owner.ts:307)
+Source: [line 314](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/http/owner.ts:314)
 
 **Current wording**
 
@@ -147,7 +147,7 @@ _Leave blank to keep the current wording._
 
 #### TA-334E641133
 
-Source: [line 181](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:181), [line 576](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:576), [line 689](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:689)
+Source: [line 181](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:181), [line 579](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:579), [line 692](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:692)
 
 **Current wording**
 
@@ -161,7 +161,7 @@ _Leave blank to keep the current wording._
 
 #### TA-8878B70CE1
 
-Source: [line 181](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:181), [line 576](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:576), [line 689](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:689)
+Source: [line 181](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:181), [line 579](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:579), [line 692](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:692)
 
 **Current wording**
 
@@ -219,9 +219,23 @@ Bill confirm ஆகியிருக்கு.
 
 _Leave blank to keep the current wording._
 
+#### TA-E93628DB08
+
+Source: [line 260](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:260)
+
+**Current wording**
+
+```text
+இந்த order-க்கு advance pending இல்ல. Order status பாருங்க.
+```
+
+**Your replacement**
+
+_Leave blank to keep the current wording._
+
 #### TA-A1862DB176
 
-Source: [line 265](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:265)
+Source: [line 268](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:268)
 
 **Current wording**
 
@@ -235,7 +249,7 @@ _Leave blank to keep the current wording._
 
 #### TA-4FD384EB60
 
-Source: [line 265](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:265)
+Source: [line 268](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:268)
 
 **Current wording**
 
@@ -249,7 +263,7 @@ _Leave blank to keep the current wording._
 
 #### TA-3984794F8A
 
-Source: [line 265](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:265)
+Source: [line 268](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:268)
 
 **Current wording**
 
@@ -263,7 +277,7 @@ _Leave blank to keep the current wording._
 
 #### TA-95360E7A04
 
-Source: [line 279](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:279)
+Source: [line 282](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:282)
 
 **Current wording**
 
@@ -277,7 +291,7 @@ _Leave blank to keep the current wording._
 
 #### TA-48D2E5B842
 
-Source: [line 279](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:279)
+Source: [line 282](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:282)
 
 **Current wording**
 
@@ -291,7 +305,7 @@ _Leave blank to keep the current wording._
 
 #### TA-B2179AAF0F
 
-Source: [line 279](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:279)
+Source: [line 282](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:282)
 
 **Current wording**
 
@@ -305,7 +319,7 @@ _Leave blank to keep the current wording._
 
 #### TA-B266AAF546
 
-Source: [line 279](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:279)
+Source: [line 282](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:282)
 
 **Current wording**
 
@@ -319,7 +333,7 @@ _Leave blank to keep the current wording._
 
 #### TA-CD95FA7739
 
-Source: [line 279](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:279)
+Source: [line 282](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:282)
 
 **Current wording**
 
@@ -333,7 +347,7 @@ _Leave blank to keep the current wording._
 
 #### TA-FE0261F1B8
 
-Source: [line 287](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:287)
+Source: [line 290](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:290)
 
 **Current wording**
 
@@ -347,7 +361,7 @@ _Leave blank to keep the current wording._
 
 #### TA-6BBD4A5A75
 
-Source: [line 287](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:287)
+Source: [line 290](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:290)
 
 **Current wording**
 
@@ -361,7 +375,7 @@ _Leave blank to keep the current wording._
 
 #### TA-D82DE12D08
 
-Source: [line 287](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:287), [line 449](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:449)
+Source: [line 290](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:290), [line 452](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:452)
 
 **Current wording**
 
@@ -375,7 +389,7 @@ _Leave blank to keep the current wording._
 
 #### TA-FF1B133C60
 
-Source: [line 295](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:295)
+Source: [line 298](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:298)
 
 **Current wording**
 
@@ -389,7 +403,7 @@ _Leave blank to keep the current wording._
 
 #### TA-C8DE63F265
 
-Source: [line 394](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:394)
+Source: [line 397](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:397)
 
 **Current wording**
 
@@ -403,7 +417,7 @@ _Leave blank to keep the current wording._
 
 #### TA-8A1035E48A
 
-Source: [line 403](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:403)
+Source: [line 406](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:406)
 
 **Current wording**
 
@@ -417,7 +431,7 @@ _Leave blank to keep the current wording._
 
 #### TA-C07AA3CC41
 
-Source: [line 404](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:404)
+Source: [line 407](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:407)
 
 **Current wording**
 
@@ -431,7 +445,7 @@ _Leave blank to keep the current wording._
 
 #### TA-6503A5A305
 
-Source: [line 430](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:430)
+Source: [line 433](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:433)
 
 **Current wording**
 
@@ -445,7 +459,7 @@ _Leave blank to keep the current wording._
 
 #### TA-55AEC0F73C
 
-Source: [line 430](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:430)
+Source: [line 433](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:433)
 
 **Current wording**
 
@@ -459,7 +473,7 @@ _Leave blank to keep the current wording._
 
 #### TA-AB625C36B7
 
-Source: [line 432](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:432)
+Source: [line 435](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:435)
 
 **Current wording**
 
@@ -475,7 +489,7 @@ _Leave blank to keep the current wording._
 
 #### TA-B7C47C6E33
 
-Source: [line 432](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:432)
+Source: [line 435](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:435)
 
 **Current wording**
 
@@ -491,7 +505,7 @@ _Leave blank to keep the current wording._
 
 #### TA-51839F2F00
 
-Source: [line 447](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:447)
+Source: [line 450](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:450)
 
 **Current wording**
 
@@ -505,7 +519,7 @@ _Leave blank to keep the current wording._
 
 #### TA-6B2EB0BA56
 
-Source: [line 447](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:447)
+Source: [line 450](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:450)
 
 **Current wording**
 
@@ -519,7 +533,7 @@ _Leave blank to keep the current wording._
 
 #### TA-8502304C32
 
-Source: [line 449](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:449)
+Source: [line 452](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:452)
 
 **Current wording**
 
@@ -533,7 +547,7 @@ _Leave blank to keep the current wording._
 
 #### TA-5F3E8BC17A
 
-Source: [line 451](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:451)
+Source: [line 454](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:454)
 
 **Current wording**
 
@@ -547,7 +561,7 @@ _Leave blank to keep the current wording._
 
 #### TA-AB1656EAEA
 
-Source: [line 457](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:457)
+Source: [line 460](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:460)
 
 **Current wording**
 
@@ -561,7 +575,7 @@ _Leave blank to keep the current wording._
 
 #### TA-F285D3BD04
 
-Source: [line 460](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:460)
+Source: [line 463](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:463)
 
 **Current wording**
 
@@ -575,7 +589,7 @@ _Leave blank to keep the current wording._
 
 #### TA-A0E922889A
 
-Source: [line 461](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:461)
+Source: [line 464](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:464)
 
 **Current wording**
 
@@ -589,7 +603,7 @@ _Leave blank to keep the current wording._
 
 #### TA-8822D71224
 
-Source: [line 479](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:479)
+Source: [line 482](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:482)
 
 **Current wording**
 
@@ -603,7 +617,7 @@ _Leave blank to keep the current wording._
 
 #### TA-698773AD05
 
-Source: [line 479](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:479)
+Source: [line 482](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:482)
 
 **Current wording**
 
@@ -617,7 +631,7 @@ _Leave blank to keep the current wording._
 
 #### TA-CC2B6FBE50
 
-Source: [line 480](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:480)
+Source: [line 483](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:483)
 
 **Current wording**
 
@@ -631,7 +645,7 @@ _Leave blank to keep the current wording._
 
 #### TA-2D532D9C32
 
-Source: [line 481](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:481)
+Source: [line 484](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:484)
 
 **Current wording**
 
@@ -645,7 +659,7 @@ _Leave blank to keep the current wording._
 
 #### TA-1FAD0CB202
 
-Source: [line 481](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:481)
+Source: [line 484](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:484)
 
 **Current wording**
 
@@ -659,7 +673,7 @@ _Leave blank to keep the current wording._
 
 #### TA-C36B272723
 
-Source: [line 485](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:485)
+Source: [line 488](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:488)
 
 **Current wording**
 
@@ -673,7 +687,7 @@ _Leave blank to keep the current wording._
 
 #### TA-ED43CA24C8
 
-Source: [line 515](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:515)
+Source: [line 518](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:518)
 
 **Current wording**
 
@@ -687,7 +701,7 @@ _Leave blank to keep the current wording._
 
 #### TA-CCB8E9A50B
 
-Source: [line 576](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:576)
+Source: [line 579](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/runtime/conversation.ts:579)
 
 **Current wording**
 
@@ -3301,9 +3315,23 @@ _Leave blank to keep the current wording._
 
 ### apps/server/src/services/upi-advance.ts
 
+#### TA-E2AAE6F2ED
+
+Source: [line 47](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/upi-advance.ts:47)
+
+**Current wording**
+
+```text
+${reference} கடைக்கு அனுப்பியாச்சு.
+```
+
+**Your replacement**
+
+_Leave blank to keep the current wording._
+
 #### TA-189DACACEC
 
-Source: [line 48](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/upi-advance.ts:48)
+Source: [line 49](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/upi-advance.ts:49)
 
 **Current wording**
 
@@ -3317,7 +3345,7 @@ _Leave blank to keep the current wording._
 
 #### TA-2F6A912F21
 
-Source: [line 48](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/upi-advance.ts:48)
+Source: [line 49](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/upi-advance.ts:49)
 
 **Current wording**
 
@@ -3333,7 +3361,7 @@ _Leave blank to keep the current wording._
 
 #### TA-3337E3E32E
 
-Source: [line 23](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:23)
+Source: [line 24](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:24)
 
 **Current wording**
 
@@ -3347,7 +3375,7 @@ _Leave blank to keep the current wording._
 
 #### TA-00A114DB73
 
-Source: [line 24](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:24)
+Source: [line 25](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:25)
 
 **Current wording**
 
@@ -3361,7 +3389,7 @@ _Leave blank to keep the current wording._
 
 #### TA-9AA0DD2FC1
 
-Source: [line 32](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:32)
+Source: [line 33](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:33)
 
 **Current wording**
 
@@ -3375,7 +3403,7 @@ _Leave blank to keep the current wording._
 
 #### TA-9D339E028F
 
-Source: [line 33](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:33), [line 198](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:198)
+Source: [line 34](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:34), [line 198](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:198)
 
 **Current wording**
 
@@ -3389,7 +3417,7 @@ _Leave blank to keep the current wording._
 
 #### TA-DCA34D6AF4
 
-Source: [line 34](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:34)
+Source: [line 35](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:35)
 
 **Current wording**
 
@@ -3403,7 +3431,7 @@ _Leave blank to keep the current wording._
 
 #### TA-0B97F08076
 
-Source: [line 35](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:35), [line 152](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:152)
+Source: [line 36](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:36), [line 152](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:152)
 
 **Current wording**
 
@@ -3417,7 +3445,7 @@ _Leave blank to keep the current wording._
 
 #### TA-1DD72DF7BA
 
-Source: [line 38](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:38)
+Source: [line 39](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:39)
 
 **Current wording**
 
@@ -3431,7 +3459,7 @@ _Leave blank to keep the current wording._
 
 #### TA-3C95EE5837
 
-Source: [line 38](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:38)
+Source: [line 39](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:39)
 
 **Current wording**
 
@@ -3445,7 +3473,7 @@ _Leave blank to keep the current wording._
 
 #### TA-7DD1683ABC
 
-Source: [line 39](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:39)
+Source: [line 40](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:40)
 
 **Current wording**
 
@@ -3459,7 +3487,7 @@ _Leave blank to keep the current wording._
 
 #### TA-D8B517A4E9
 
-Source: [line 44](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:44)
+Source: [line 45](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:45)
 
 **Current wording**
 
@@ -3473,7 +3501,7 @@ _Leave blank to keep the current wording._
 
 #### TA-9EADCC9FDB
 
-Source: [line 44](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:44)
+Source: [line 45](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:45)
 
 **Current wording**
 
@@ -3487,7 +3515,7 @@ _Leave blank to keep the current wording._
 
 #### TA-91EF646271
 
-Source: [line 51](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:51)
+Source: [line 52](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:52)
 
 **Current wording**
 
@@ -3501,7 +3529,7 @@ _Leave blank to keep the current wording._
 
 #### TA-B8524006D1
 
-Source: [line 54](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:54)
+Source: [line 55](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:55)
 
 **Current wording**
 
@@ -3515,7 +3543,7 @@ _Leave blank to keep the current wording._
 
 #### TA-F55228DCB1
 
-Source: [line 56](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:56)
+Source: [line 57](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:57)
 
 **Current wording**
 
@@ -3529,7 +3557,7 @@ _Leave blank to keep the current wording._
 
 #### TA-149918CABE
 
-Source: [line 64](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:64)
+Source: [line 65](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:65)
 
 **Current wording**
 
@@ -3543,7 +3571,7 @@ _Leave blank to keep the current wording._
 
 #### TA-D82F4550D3
 
-Source: [line 69](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:69)
+Source: [line 70](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:70)
 
 **Current wording**
 
@@ -3557,7 +3585,7 @@ _Leave blank to keep the current wording._
 
 #### TA-D1F65AE897
 
-Source: [line 69](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:69)
+Source: [line 70](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:70)
 
 **Current wording**
 
@@ -3571,7 +3599,7 @@ _Leave blank to keep the current wording._
 
 #### TA-92AFD27A1D
 
-Source: [line 70](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:70)
+Source: [line 71](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:71)
 
 **Current wording**
 
@@ -3585,7 +3613,7 @@ _Leave blank to keep the current wording._
 
 #### TA-CA89D6CC0B
 
-Source: [line 70](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:70)
+Source: [line 71](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:71)
 
 **Current wording**
 
@@ -3599,7 +3627,7 @@ _Leave blank to keep the current wording._
 
 #### TA-845168AFA2
 
-Source: [line 74](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:74), [line 198](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:198)
+Source: [line 75](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:75), [line 198](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:198)
 
 **Current wording**
 
@@ -3613,7 +3641,7 @@ _Leave blank to keep the current wording._
 
 #### TA-0454419928
 
-Source: [line 76](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:76)
+Source: [line 77](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:77)
 
 **Current wording**
 
@@ -3627,7 +3655,7 @@ _Leave blank to keep the current wording._
 
 #### TA-A494AD06D3
 
-Source: [line 76](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:76)
+Source: [line 77](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:77)
 
 **Current wording**
 
@@ -3641,7 +3669,7 @@ _Leave blank to keep the current wording._
 
 #### TA-1892B8108B
 
-Source: [line 76](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:76)
+Source: [line 77](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:77)
 
 **Current wording**
 
@@ -3655,7 +3683,7 @@ _Leave blank to keep the current wording._
 
 #### TA-76A8277502
 
-Source: [line 76](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:76)
+Source: [line 77](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:77)
 
 **Current wording**
 
@@ -3669,7 +3697,7 @@ _Leave blank to keep the current wording._
 
 #### TA-1295DA476A
 
-Source: [line 79](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:79)
+Source: [line 80](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:80)
 
 **Current wording**
 
@@ -3683,7 +3711,7 @@ _Leave blank to keep the current wording._
 
 #### TA-61EA371B9A
 
-Source: [line 86](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:86)
+Source: [line 87](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:87)
 
 **Current wording**
 
@@ -3697,7 +3725,7 @@ _Leave blank to keep the current wording._
 
 #### TA-ADF7DF8966
 
-Source: [line 86](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:86)
+Source: [line 87](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:87)
 
 **Current wording**
 
@@ -3713,7 +3741,7 @@ _Leave blank to keep the current wording._
 
 #### TA-A0302F39B7
 
-Source: [line 87](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:87)
+Source: [line 88](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:88)
 
 **Current wording**
 
@@ -3727,7 +3755,7 @@ _Leave blank to keep the current wording._
 
 #### TA-0FF125EE98
 
-Source: [line 88](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:88)
+Source: [line 89](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:89)
 
 **Current wording**
 
@@ -3741,7 +3769,7 @@ _Leave blank to keep the current wording._
 
 #### TA-6BABC0CA63
 
-Source: [line 89](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:89)
+Source: [line 90](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:90)
 
 **Current wording**
 
@@ -3755,7 +3783,7 @@ _Leave blank to keep the current wording._
 
 #### TA-ACA7D0F983
 
-Source: [line 91](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:91)
+Source: [line 92](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:92)
 
 **Current wording**
 
@@ -3769,7 +3797,7 @@ _Leave blank to keep the current wording._
 
 #### TA-D94A1B17BC
 
-Source: [line 92](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:92)
+Source: [line 93](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:93)
 
 **Current wording**
 
@@ -3783,7 +3811,7 @@ _Leave blank to keep the current wording._
 
 #### TA-AA7EF4FE83
 
-Source: [line 92](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:92)
+Source: [line 93](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:93)
 
 **Current wording**
 
@@ -3797,7 +3825,7 @@ _Leave blank to keep the current wording._
 
 #### TA-CAC07265D4
 
-Source: [line 92](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:92)
+Source: [line 93](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:93)
 
 **Current wording**
 
@@ -3811,7 +3839,7 @@ _Leave blank to keep the current wording._
 
 #### TA-9BD2CD9D65
 
-Source: [line 92](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:92)
+Source: [line 93](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:93)
 
 **Current wording**
 
@@ -3825,7 +3853,7 @@ _Leave blank to keep the current wording._
 
 #### TA-25371B5844
 
-Source: [line 92](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:92)
+Source: [line 93](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:93)
 
 **Current wording**
 
@@ -3839,7 +3867,7 @@ _Leave blank to keep the current wording._
 
 #### TA-C58FB7CABA
 
-Source: [line 98](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:98)
+Source: [line 99](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:99)
 
 **Current wording**
 
@@ -3853,7 +3881,7 @@ _Leave blank to keep the current wording._
 
 #### TA-2A9ED25C07
 
-Source: [line 104](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:104)
+Source: [line 105](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:105)
 
 **Current wording**
 
@@ -3867,7 +3895,7 @@ _Leave blank to keep the current wording._
 
 #### TA-C46E4CA7A7
 
-Source: [line 104](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:104)
+Source: [line 105](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:105)
 
 **Current wording**
 
@@ -3881,7 +3909,7 @@ _Leave blank to keep the current wording._
 
 #### TA-54F7BFC0CC
 
-Source: [line 106](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:106)
+Source: [line 107](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:107)
 
 **Current wording**
 
@@ -3895,7 +3923,7 @@ _Leave blank to keep the current wording._
 
 #### TA-22A90E1B79
 
-Source: [line 106](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:106)
+Source: [line 107](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:107)
 
 **Current wording**
 
@@ -3909,7 +3937,7 @@ _Leave blank to keep the current wording._
 
 #### TA-14C1F8027F
 
-Source: [line 107](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:107)
+Source: [line 108](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:108)
 
 **Current wording**
 
@@ -3923,7 +3951,7 @@ _Leave blank to keep the current wording._
 
 #### TA-9E869C10F3
 
-Source: [line 107](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:107)
+Source: [line 108](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:108)
 
 **Current wording**
 
@@ -3937,7 +3965,7 @@ _Leave blank to keep the current wording._
 
 #### TA-52B1944EF2
 
-Source: [line 107](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:107)
+Source: [line 108](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:108)
 
 **Current wording**
 
@@ -3951,7 +3979,7 @@ _Leave blank to keep the current wording._
 
 #### TA-03373A9C28
 
-Source: [line 107](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:107)
+Source: [line 108](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:108)
 
 **Current wording**
 
@@ -3963,15 +3991,28 @@ Order நிலை
 
 _Leave blank to keep the current wording._
 
-#### TA-5374BE55C5
+#### TA-23F93F4049
 
-Source: [line 110](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:110)
+Source: [line 113](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:113)
 
 **Current wording**
 
 ```text
-உங்க Estimate Bill.
-முழு details-ம் கீழே இருக்கு.
+Order கடைக்கு போயிருக்கு.
+```
+
+**Your replacement**
+
+_Leave blank to keep the current wording._
+
+#### TA-FDECAF76B0
+
+Source: [line 113](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:113)
+
+**Current wording**
+
+```text
+Bill சரியா பாருங்க. அப்புறம் கடைக்கு அனுப்புங்க.
 ```
 
 **Your replacement**
@@ -3980,7 +4021,7 @@ _Leave blank to keep the current wording._
 
 #### TA-3FFD0815D8
 
-Source: [line 118](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:118)
+Source: [line 117](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:117)
 
 **Current wording**
 
@@ -4496,6 +4537,20 @@ Pickup, payment பற்றி கடையிடம் கேளுங்க�
 
 _Leave blank to keep the current wording._
 
+#### TA-773F52553F
+
+Source: [line 193](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:193)
+
+**Current wording**
+
+```text
+₹10 QR காட்டு
+```
+
+**Your replacement**
+
+_Leave blank to keep the current wording._
+
 #### TA-974706F553
 
 Source: [line 197](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/visual-ordering.ts:197)
@@ -4570,7 +4625,7 @@ _Leave blank to keep the current wording._
 
 #### TA-1E5775F1C7
 
-Source: [line 131](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:131)
+Source: [line 133](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:133)
 
 **Current wording**
 
@@ -4584,7 +4639,7 @@ _Leave blank to keep the current wording._
 
 #### TA-C283D88031
 
-Source: [line 137](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:137)
+Source: [line 139](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:139)
 
 **Current wording**
 
@@ -4598,7 +4653,7 @@ _Leave blank to keep the current wording._
 
 #### TA-4975C92B8A
 
-Source: [line 137](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:137)
+Source: [line 139](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:139)
 
 **Current wording**
 
@@ -4610,9 +4665,23 @@ Source: [line 137](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/serv
 
 _Leave blank to keep the current wording._
 
+#### TA-2ACFA508F7
+
+Source: [line 140](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:140)
+
+**Current wording**
+
+```text
+Bill முழுசா இன்னும் வந்து சேரல. கொஞ்சம் wait பண்ணிட்டு, latest bill-ல கடைக்கு அனுப்பு அழுத்துங்க. Order இன்னும் அனுப்பல.
+```
+
+**Your replacement**
+
+_Leave blank to keep the current wording._
+
 #### TA-F6CEC8D778
 
-Source: [line 138](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:138)
+Source: [line 141](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:141)
 
 **Current wording**
 
@@ -4626,7 +4695,7 @@ _Leave blank to keep the current wording._
 
 #### TA-DC9D02DD5D
 
-Source: [line 138](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:138)
+Source: [line 141](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:141)
 
 **Current wording**
 
@@ -4640,7 +4709,7 @@ _Leave blank to keep the current wording._
 
 #### TA-7AAB1C38C9
 
-Source: [line 189](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:189)
+Source: [line 192](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:192)
 
 **Current wording**
 
@@ -4654,7 +4723,7 @@ _Leave blank to keep the current wording._
 
 #### TA-96C32CF910
 
-Source: [line 189](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:189)
+Source: [line 192](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:192)
 
 **Current wording**
 
@@ -4668,7 +4737,7 @@ _Leave blank to keep the current wording._
 
 #### TA-72A434DC25
 
-Source: [line 189](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:189)
+Source: [line 192](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:192)
 
 **Current wording**
 
@@ -4682,7 +4751,7 @@ _Leave blank to keep the current wording._
 
 #### TA-B9E5AC8B66
 
-Source: [line 189](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:189)
+Source: [line 192](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:192)
 
 **Current wording**
 
@@ -4696,7 +4765,7 @@ _Leave blank to keep the current wording._
 
 #### TA-DB6904A3CB
 
-Source: [line 191](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:191)
+Source: [line 194](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:194)
 
 **Current wording**
 
@@ -4710,7 +4779,7 @@ _Leave blank to keep the current wording._
 
 #### TA-F16293485C
 
-Source: [line 191](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:191)
+Source: [line 194](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/whatsapp-channel.ts:194)
 
 **Current wording**
 

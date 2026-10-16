@@ -151,14 +151,14 @@
   },
   {
     "stage": "bill",
-    "text": "Your estimated invoice. Full item details follow below.",
+    "text": "Estimated invoice 1 / 1\n\nEstimated total: ₹2,040.00\n\nCheck the bill, then send the order to the shop.",
     "cards": [
       {
         "kind": "bill",
-        "caption": "Estimated invoice 1 / 2",
+        "caption": "Estimated invoice 1 / 1",
         "title": "Estimated invoice",
         "lines": [
-          "Page 1 / 2",
+          "Page 1 / 1",
           "Final availability is checked by the shop"
         ],
         "billRows": [
@@ -182,18 +182,7 @@
             "total": "₹65.00",
             "packSize": "4 inch",
             "unitPrice": "₹65.00"
-          }
-        ]
-      },
-      {
-        "kind": "bill",
-        "caption": "Estimated invoice 2 / 2",
-        "title": "Estimated invoice",
-        "lines": [
-          "Page 2 / 2",
-          "Final availability is checked by the shop"
-        ],
-        "billRows": [
+          },
           {
             "name": "Ratchet PVC Pipe Cutter 42 mm",
             "count": "1 piece",
@@ -212,23 +201,6 @@
         "total": "Estimated total: ₹2,040.00"
       }
     ],
-    "actions": [
-      {
-        "label": "Change items",
-        "type": "shopping_action",
-        "action": "edit_list"
-      },
-      {
-        "label": "Change items",
-        "type": "shopping_action",
-        "action": "edit_list"
-      }
-    ]
-  },
-  {
-    "stage": "bill",
-    "text": "*Your list — estimate*\n\n1. 1 inch PVC Heavy Pipe Local — 1 piece\n   ₹245.00 / piece\n   This item: ₹245.00\n\n2. 0.75 inch PVC Pipe Local — 1 piece\n   ₹180.00 / piece\n   This item: ₹180.00\n\n3. Wall scraper 4 inch — 1 piece\n   ₹65.00 / piece\n   This item: ₹65.00\n\n4. Ratchet PVC Pipe Cutter 42 mm — 1 piece\n   ₹350.00 / piece\n   This item: ₹350.00\n\n5. White paint 10 litre — 1 can\n   ₹1,200.00 / can\n   This item: ₹1,200.00\n\n*Estimated amount: ₹2,040.00*\n\nIs this list correct? Shall I send it to the shop?",
-    "cards": [],
     "actions": [
       {
         "label": "Send order to shop",

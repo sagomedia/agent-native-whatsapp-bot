@@ -102,6 +102,7 @@ export class WhatsAppChannel {
             if(media)event=media.kind==='image'?{id:messageId,type:'image',mediaId:messageId,caption:m.image?.caption??''}:{id:messageId,type:'voice',mediaId:messageId};
             let text=event?.type==='text'?event.text:`[${m.type} message]`,binding=conversationBinding(state,memory);
             const interactive=m.type==='interactive'?m.interactive:undefined;
+            let invoiceArriving=false;
             let staleContext=false;
             if(event?.type==='text'&&m.context){
               const quoted=(await client.query(`SELECT a.binding_id,a.source_version FROM whatsapp_actions a JOIN whatsapp_outbox o ON o.message_id=a.message_id WHERE o.provider_id=$1 AND a.conversation_id=$2 AND o.state IN ('accepted','delivered','read') LIMIT 1`,[m.context.id,ctx.conversationId])).rows[0];
@@ -116,7 +117,8 @@ export class WhatsAppChannel {
                 FROM whatsapp_actions a JOIN whatsapp_outbox o ON o.message_id=a.message_id JOIN conversations c ON c.id=a.conversation_id
                 WHERE a.id=$1 AND a.conversation_id=$2 AND a.expires_at>now()`,[tapped.id,ctx.conversationId])).rows[0];
               const parsed=eventSchema.safeParse(action?.event);
-              const complete=parsed.success&&(parsed.data.type==='confirm'||parsed.data.type==='confirm_products')?await reviewDeliveryReady(client,ctx.conversationId,action?.binding_id??binding,true):true;
+              const complete=parsed.success&&(parsed.data.type==='confirm'||parsed.data.type==='confirm_products')?await reviewDeliveryReady(client,ctx.conversationId,action?.binding_id??binding,true,parsed.data.id):true;
+              invoiceArriving=!complete&&!!action&&action.source_version===state.version&&action.binding_id===binding;
               if(complete&&action&&parsed.success&&action.source_version===state.version&&action.operator_revision===action.current_revision&&action.binding_id===binding&&['accepted','delivered','read'].includes(action.delivery_state)&&(!m.context||m.context.id===action.provider_id)){
                 event=parsed.data;text=action.label;binding=action.binding_id;
               }
@@ -135,6 +137,7 @@ export class WhatsAppChannel {
             }
             if(!event){
               const replyId=randomUUID(),reply=plainReply(tapped||staleContext?say(state,'That choice has expired. Please use the latest product choices or review your list. Your list is unchanged.','இந்தத் தேர்வு காலாவதியானது. தற்போதைய படங்களில் தேர்வு செய்யுங்கள் அல்லது பட்டியலைப் பாருங்கள். பட்டியல் மாறவில்லை.','Intha choice expired. Latest photos-la choose pannunga illa list-ai paarunga. List maarala.'):say(state,'Please type your request or use the product buttons.','உங்கள் கோரிக்கையை எழுதுங்கள் அல்லது பொருள் பொத்தான்களைப் பயன்படுத்துங்கள்.','Unga request-ai type pannunga illa product buttons use pannunga.'));
+              if(invoiceArriving){reply.text=say(state,'The full bill is still arriving. Wait a moment, then use Send order to shop on the latest bill. No order has been sent yet.','Bill முழுசா இன்னும் வந்து சேரல. கொஞ்சம் wait பண்ணிட்டு, latest bill-ல கடைக்கு அனுப்பு அழுத்துங்க. Order இன்னும் அனுப்பல.','Bill muzhusa innum vandhu serala. Konjam wait pannittu latest bill-la kadaikku anuppu press pannunga. Order innum anuppala.');reply.clarificationReason='invoice_delivery_pending';}
               if(tapped||staleContext)reply.buttons=[state.lastRequestId?{label:say(state,'Request status','கோரிக்கை நிலை','Request status'),event:{id:randomUUID(),type:'shopping_action',action:'status',expectedVersion:state.version}}:{label:say(state,'Review list','பட்டியலைப் பார்','List paaru'),event:{id:randomUUID(),type:'review',expectedVersion:state.version}}];
               const rendered=renderWhatsAppReply(reply,replyId,c.hostname);
               await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,response_to,payload) VALUES($1,$2,'outbound',$3,'queued',$4,$5::jsonb)",[replyId,ctx.conversationId,reply.text,messageId,JSON.stringify(reply)]);
@@ -253,9 +256,11 @@ export class WhatsAppChannel {
       // Recovered in-flight sends are ambiguous: never automatically resend them.
       await client.query("UPDATE messages SET status='unknown' WHERE id IN (SELECT o.message_id FROM whatsapp_outbox o JOIN whatsapp_conversations w ON w.conversation_id=o.conversation_id WHERE w.phone_id=$1 AND o.state='sending' AND o.started_at<now()-interval '1 minute')",[c.phoneId]);
       await client.query("UPDATE whatsapp_outbox o SET state='unknown',last_error='interrupted_send' FROM whatsapp_conversations w WHERE w.conversation_id=o.conversation_id AND w.phone_id=$1 AND o.state='sending' AND o.started_at<now()-interval '1 minute'",[c.phoneId]);
+      // Meta can accept a carousel before delivering its images. Do not expose
+      // a later confirmation while the earlier invoice pages are still in flight.
       const row=(await client.query(`SELECT o.*,m.text,w.recipient,w.last_inbound_at,c.operator_mode,c.operator_revision AS current_revision,s.operator_paused
         FROM whatsapp_outbox o JOIN whatsapp_conversations w ON w.conversation_id=o.conversation_id JOIN conversations c ON c.id=w.conversation_id JOIN stores s ON s.id=c.store_id JOIN messages m ON m.id=o.message_id
-        WHERE w.phone_id=$1 AND c.store_id=$2 AND o.state='queued' AND o.next_attempt_at<=now() AND NOT EXISTS(SELECT 1 FROM messages prior JOIN whatsapp_outbox po ON po.message_id=prior.id WHERE prior.reply_group_id=m.reply_group_id AND prior.part_index<m.part_index AND po.state NOT IN ('accepted','delivered','read')) AND
+        WHERE w.phone_id=$1 AND c.store_id=$2 AND o.state='queued' AND o.next_attempt_at<=now() AND NOT EXISTS(SELECT 1 FROM messages prior JOIN whatsapp_outbox po ON po.message_id=prior.id WHERE prior.reply_group_id=m.reply_group_id AND prior.part_index<m.part_index AND po.state NOT IN ('delivered','read')) AND
         (o.sender_kind='owner' AND c.operator_mode='owner' OR o.sender_kind='system' OR o.sender_kind='assistant' AND NOT s.operator_paused AND c.operator_mode='assistant') ORDER BY m.sequence LIMIT 1 FOR UPDATE OF o,c SKIP LOCKED`,[c.phoneId,c.storeId])).rows[0];
       if(!row){await client.query('COMMIT');return false;}
       if(row.sender_kind==='assistant'&&(row.operator_paused||row.operator_mode==='owner')){await client.query('COMMIT');return false;}

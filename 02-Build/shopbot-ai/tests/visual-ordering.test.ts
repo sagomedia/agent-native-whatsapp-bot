@@ -11,7 +11,7 @@ import {SimulatorService,simulatorContext} from '../apps/server/src/services/sim
 import {ConversationRuntime} from '../apps/server/src/runtime/conversation.js';
 import type {Interpreter} from '../apps/server/src/adapters/interpreter.js';
 import {protectQuantityEvidence,amountToCount} from '../apps/server/src/services/quantity-evidence.js';
-import {visualSvg,renderVisualImage} from '../apps/server/src/services/visual-images.js';
+import {visualSvg,renderVisualImage,INVOICE_ROWS_PER_PAGE} from '../apps/server/src/services/visual-images.js';
 import {renderWhatsAppReply} from '../apps/server/src/services/whatsapp-reply.js';
 import {planWhatsAppReply} from '../apps/server/src/services/whatsapp-plan.js';
 import {WhatsAppChannel} from '../apps/server/src/services/whatsapp-channel.js';
@@ -36,7 +36,7 @@ for(const count of [1,9,10,18,20,50])test(`${count} products: complete ordered r
  let s=await text(inbox,runtime,'shopping list');const rows=s.messages.filter(m=>m.direction==='outbound');assert.equal(rows.length,Math.ceil(count/9));assert.equal(s.conversation.pending?.kind,'products');
  const cards=rows.flatMap(m=>m.rich!.parts!.flatMap(p=>p.cards));assert.equal(cards.filter(c=>c.kind==='product').length,count);assert.equal(new Set(cards.filter(c=>c.kind==='product').map(c=>c.lineId)).size,count);
  for(const [i,m] of rows.entries()){assert.equal(m.rich!.partIndex,i);assert.equal(m.rich!.parts![0].cards.at(-1)!.kind,'instruction');assert.ok(m.rich!.parts![0].cards.length<=10);const rendered=renderWhatsAppReply(m.rich!,m.id,'example.test');assert.equal(rendered.format,'carousel');if(i<rows.length-1)assert.ok(!rendered.actions.some(a=>a.event.type==='confirm_products'));}
- s=await event(inbox,runtime,approve(s));assert.equal(s.requests.length,0);assert.equal(s.conversation.pending?.kind,'review');assert.equal(last(s).stage,'bill');const bill=invoiceCards(s);assert.ok(bill.every(c=>c.kind!=='product'&&(c.billRows?.length??0)<=5));
+ s=await event(inbox,runtime,approve(s));assert.equal(s.requests.length,0);assert.equal(s.conversation.pending?.kind,'review');assert.equal(last(s).stage,'bill');const bill=invoiceCards(s);assert.ok(bill.every(c=>c.kind!=='product'&&(c.billRows?.length??0)<=INVOICE_ROWS_PER_PAGE));
  const final=submit(s);s=await event(inbox,runtime,final);assert.equal(s.requests.length,1);assert.equal(last(s).stage,'submitted');assert.ok(s.messages.filter(m=>m.rich?.stage==='submitted').flatMap(m=>m.rich!.parts?.flatMap(p=>p.cards)??[]).some(c=>c.kind==='status'&&c.billRows?.length));await inbox.ingest(final);assert.equal(await runtime.processNext(inbox.context),false);assert.equal((await inbox.snapshot()).requests.length,1);
 }));
 
@@ -107,8 +107,8 @@ test('truncated interpretation and configured 50-line overflow never apply a par
  const ops:Operation[]=Array.from({length:51},(_,i)=>({kind:'add_item',query:'TEST'+(i%50),quantity:null}));let runtime=new ConversationRuntime(pool,planner(ops),{visualOrdering:true});let s=await text(inbox,runtime,'long list');assert.equal(s.conversation.draft.length,0);runtime=new ConversationRuntime(pool,planner(ops.slice(0,20),undefined,true),{visualOrdering:true});s=await text(inbox,runtime,'truncated list');assert.equal(s.conversation.draft.length,0);
 }));
 
-test('PNG templates shape mixed Tamil/Latin, cache identical renders and reject more than five rows',()=>{
- const dir=mkdtempSync('/tmp/visual-png-'),card={kind:'instruction' as const,title:'பொருட்களைப் பாருங்க',lines:['எல்லா photo-வும் பாருங்க.','மாற்றம் இருந்தா text / voice-ல சொல்லுங்க.'],caption:'Check'};const svg=visualSvg(card);assert.ok(svg.includes('aria-label="எல்லா photo-வும் பாருங்க."'));assert.ok(!svg.includes('<text'));const url=renderVisualImage(card,dir);assert.equal(renderVisualImage(card,dir),url);assert.ok(readFileSync(dir+'/'+url.split('/').at(-1)).subarray(1,4).equals(Buffer.from('PNG')));assert.throws(()=>visualSvg({...card,billRows:Array(6).fill({name:'x',packSize:'x',count:'1',unitPrice:'₹1',total:'₹1'})}),/five/);
+test('PNG templates shape mixed Tamil/Latin, cache identical renders and reject more than eight rows',()=>{
+ const dir=mkdtempSync('/tmp/visual-png-'),card={kind:'instruction' as const,title:'பொருட்களைப் பாருங்க',lines:['எல்லா photo-வும் பாருங்க.','மாற்றம் இருந்தா text / voice-ல சொல்லுங்க.'],caption:'Check'};const svg=visualSvg(card);assert.ok(svg.includes('aria-label="எல்லா photo-வும் பாருங்க."'));assert.ok(!svg.includes('<text'));const url=renderVisualImage(card,dir);assert.equal(renderVisualImage(card,dir),url);assert.ok(readFileSync(dir+'/'+url.split('/').at(-1)).subarray(1,4).equals(Buffer.from('PNG')));assert.throws(()=>visualSvg({...card,billRows:Array(9).fill({name:'x',packSize:'x',count:'1',unitPrice:'₹1',total:'₹1'})}),/eight/);
 });
 
 test('cost planning uses configured service/category rates for the actual ordered group count',()=>{
@@ -124,7 +124,7 @@ test('partial group send blocks later parts and text approval until a complete r
 test('multipart approval requires delivery receipts for every part; accepted HTTP responses alone do not prove delivery',()=>fixture(async(pool)=>{
  const channel=new WhatsAppChannel(pool,cfg,async()=>new Response(JSON.stringify({messages:[{id:'synthetic-'+randomUUID()}]}),{status:200}),new GoogleInterpreter({allowPaidInference:false,apiKey:'offline-placeholder',model:'gemini-3.5-flash-lite',budgetMicrousd:0,freeQuota:{scope:'delivery-proof',model:'gemini-3.5-flash-lite'}},{generateContent:async()=>Object.assign(new GenerateContentResponse(),{candidates:[{content:{parts:[{text:JSON.stringify({operations:Array.from({length:10},(_,i)=>({kind:'add_item',query:'TEST'+i,quantity:1})),next:'review'})}]},finishReason:FinishReason.STOP}],modelVersion:'gemini-3.5-flash-lite',usageMetadata:{promptTokenCount:1000,candidatesTokenCount:300,totalTokenCount:1300}})}));
  await channel.setup();await channel.receive(webhook('ten item list','delivery-proof'));await channel.processNext();while(await channel.sendNext()){}
- const rows=(await pool.query('SELECT m.id,m.conversation_id,m.part_count,o.state FROM messages m JOIN whatsapp_outbox o ON o.message_id=m.id ORDER BY m.sequence')).rows;assert.equal(rows.length,2);assert.ok(rows.every(r=>r.state==='accepted'));
+ const rows=(await pool.query('SELECT m.id,m.conversation_id,m.part_count,o.state FROM messages m JOIN whatsapp_outbox o ON o.message_id=m.id ORDER BY m.sequence')).rows;assert.equal(rows.length,2);assert.equal(rows[0].state,'accepted');assert.ok(rows.slice(1).every(r=>r.state==='queued'),'later pages wait for delivered/read, not just accepted');
  const conversation=rows[0].conversation_id,binding=(await pool.query('SELECT pending FROM conversations WHERE id=$1',[conversation])).rows[0].pending.id,c=await pool.connect();
  try{
   assert.equal(await reviewDeliveryReady(c,conversation,binding),false);assert.equal(await reviewDeliveryReady(c,conversation,binding,true),false);

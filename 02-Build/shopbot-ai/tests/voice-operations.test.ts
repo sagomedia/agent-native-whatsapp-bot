@@ -71,7 +71,7 @@ test('unknown price blocks sending; explicit shop help retains the list and know
 }));
 
 test('a read-only estimate preserves the current review and excludes unpriced lines',()=>fixture(async(pool,i)=>{
- await pool.query("UPDATE products SET price_status='confirm',price_paise=0 WHERE store_id=$1 AND sku='H05'",[demoCatalogStore]);const r=new ConversationRuntime(pool,provider(()=>({operations:[{kind:'add_item',query:'H13',quantity:1},{kind:'add_item',query:'H05',quantity:1}],next:'review'})),{visualOrdering:true});let s=await text(i,r,'one hose and one elbow');const before=structuredClone(s.conversation);s=await text(i,r,'bill');assert.deepEqual(s.conversation,before);assert.match(last(s).text,/450/);assert.match(last(s).text,/1 items/);assert.equal(s.requests.length,0);
+ await pool.query("UPDATE products SET price_status='confirm',price_paise=0 WHERE store_id=$1 AND sku='H05'",[demoCatalogStore]);const r=new ConversationRuntime(pool,provider(()=>({operations:[{kind:'add_item',query:'H13',quantity:1},{kind:'add_item',query:'H05',quantity:1}],next:'review'})),{visualOrdering:true});let s=await text(i,r,'one hose and one elbow');const before=structuredClone(s.conversation);s=await text(i,r,'bill');assert.deepEqual(s.conversation,before);assert.match(last(s).text,/450/);assert.match(last(s).accessibleText!,/1 items/);assert.equal(s.requests.length,0);
 }));
 
 test('voice edits and removal affect only their named line',()=>fixture(async(pool,i)=>{

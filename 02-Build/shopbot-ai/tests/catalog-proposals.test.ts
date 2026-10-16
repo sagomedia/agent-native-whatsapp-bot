@@ -63,7 +63,9 @@ test('real stdio MCP handshake creates a draft and photo but exposes no publicat
  const transport=new StdioClientTransport({command:process.execPath,args:['--import','tsx','apps/server/src/mcp/stdio.ts'],cwd:process.cwd(),env:{PATH:process.env.PATH!,SHOPBOT_MCP_DATABASE_URL:db.toString(),SHOPBOT_MCP_STORE_ID:fixtureStore,SHOPBOT_MCP_ACTOR:'codex-synthetic-test'},stderr:'pipe'});
  const client=new Client({name:'shopbot-integration-test',version:'1.0.0'});
  try{
-  await client.connect(transport);const tools=(await client.listTools()).tools.map(t=>t.name);assert.deepEqual(tools.sort(),['catalog_drafts','catalog_edit_draft','catalog_propose','catalog_search','catalog_stage_photo'].sort());
+  await client.connect(transport);const tools=(await client.listTools()).tools.map(t=>t.name);assert.deepEqual(tools.sort(),['catalog_drafts','catalog_edit_draft','catalog_inventory','catalog_propose','catalog_search','catalog_stage_photo'].sort());
+  const inventory=await client.callTool({name:'catalog_inventory',arguments:{limit:1}});const page=JSON.parse((inventory.content[0] as {text:string}).text);assert.equal(page.products.length,1);assert.ok(page.nextCursor);
+  const second=await client.callTool({name:'catalog_inventory',arguments:{limit:1,afterSku:page.nextCursor}});assert.notEqual(JSON.parse((second.content[0] as {text:string}).text).products[0].sku,page.products[0].sku);
   const p=input(),created=await client.callTool({name:'catalog_propose',arguments:p});assert.equal(created.isError,undefined);const result=JSON.parse((created.content[0] as {text:string}).text);assert.equal(result.id,p.id);
   const bytes=await readFile('resources/catalog/ksmc-demo/images/H19.jpg');const staged=await client.callTool({name:'catalog_stage_photo',arguments:{proposalId:p.id,version:1,photo:{id:randomUUID(),mimeType:'image/jpeg',data:bytes.toString('base64'),caption:''},matchKind:'exact'}});assert.equal(staged.isError,undefined);const image=JSON.parse((staged.content[0] as {text:string}).text);
   await assert.rejects(client.callTool({name:'catalog_publish',arguments:{id:p.id}}));

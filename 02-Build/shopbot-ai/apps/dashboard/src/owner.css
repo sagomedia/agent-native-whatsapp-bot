@@ -37,6 +37,18 @@
 .owner-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px!important}
 .owner-header p{margin-top:6px}
 .owner-header-status{text-align:right;display:flex;align-items:flex-end;flex-direction:column;gap:2px}
+.owner-sync{display:flex;align-items:center;gap:12px;margin-bottom:8px;color:var(--ui-muted);font-size:12px}
+.owner-sync>span{white-space:nowrap}
+.owner-sync button{min-height:34px;padding:5px 12px;font-size:12px}
+.owner-checkout-notice{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px 20px;border:1px solid var(--ui-border);border-left:3px solid var(--ui-accent);border-radius:5px;background:var(--ui-surface);margin:16px 0}
+.owner-checkout-notice p{font-size:13px;margin-top:5px}
+.owner-checkout-notice button{flex-shrink:0}
+.owner-checkout-card .owner-request-action>span{color:var(--ui-muted);font-size:12px;margin-right:auto}
+.owner-invoice-text{margin-bottom:8px}
+.owner-invoice-text>summary{font-size:12px!important;padding:2px 0!important;min-height:28px!important}
+.owner-message:has(.owner-invoice-text) .visual-card{flex-basis:440px;max-width:100%;width:440px}
+.owner-message:has(.owner-invoice-text) .visual-card img{height:auto;max-height:650px;object-fit:contain;background:#fff}
+@media(max-width:640px){.owner-checkout-notice{align-items:flex-start;flex-direction:column}.owner-sync{gap:8px}.owner-header{align-items:flex-start}.owner-message:has(.owner-invoice-text){max-width:100%}}
 .owner-status{display:inline-block;border-radius:4px;padding:4px 8px;font-size:12px;line-height:1.5;background:var(--ui-selected);color:var(--ui-accent);white-space:nowrap}
 .owner-status-neutral{background:var(--ui-page);color:var(--ui-muted)}
 .owner-shell .owner-success,.owner-shell .owner-error{border-radius:5px;padding:12px 14px;margin:0 0 16px;color:var(--ui-text);background:var(--ui-selected);border-left:3px solid var(--ui-accent);overflow-wrap:anywhere}
