@@ -254,8 +254,8 @@ export class ConversationRuntime {
           rich=await customerAmendmentAction(client,ctx,current,claimed.event,claimed.id);message=rich.text;
         } else if(!failure&&current.lastRequestId&&claimed.event.type==='confirm_order_quote'){
           if(!claimed.displayedActions.some(a=>digest(a)===digest(claimed.event))||!await actionDeliveryReady(client,ctx.conversationId,claimed.event.id,true))throw new ToolError('Use the complete current quote.','stale_confirmation');
-          await acceptOrderQuote(client,ctx,current,claimed.event,claimed.id);
-          rich={...plainReply(say(current,'Your final bill is approved. The shop can now confirm and prepare your order.','Bill confirm ஆகியிருக்கு.\nகடை order-ஐ check பண்ணி தயார்படுத்தும்.','Bill confirm aagiyirukku.\nKadai order-ai check panni thayaarpaduththum.')),readOnly:true};message=rich.text;
+          const approved=await acceptOrderQuote(client,ctx,current,claimed.event,claimed.id);
+          rich={...plainReply(formatMoney(approved.totalPaise)+'\n'+say(current,'Your final bill is approved. The shop can now confirm and prepare your order.','Bill confirm ஆகியிருக்கு.\nகடை order-ஐ check பண்ணி தயார்படுத்தும்.','Bill confirm aagiyirukku.\nKadai order-ai check panni thayaarpaduththum.')),readOnly:true};message=rich.text;
         } else if(!failure&&current.lastRequestId&&claimed.event.type==='show_payment_qr'){
           if(claimed.event.expectedVersion!==current.version||claimed.event.requestId!==current.lastRequestId||!claimed.displayedActions.some(a=>digest(a)===digest(claimed.event)))throw new ToolError('Use the latest order payment button.','stale_confirmation');
           rich=(this.options.advance?await upiAdvanceReply(client,ctx,current,this.options.advance.hostname,{demoPayAtShop:this.options.advance.demoPayAtShop}):null)??{...plainReply(say(current,'This order has no pending advance. Ask for its current status.','இந்த order-க்கு advance pending இல்ல. Order status பாருங்க.','Intha order-ku advance pending illa. Order status paarunga.')),readOnly:true};message=rich.text;
@@ -304,7 +304,7 @@ export class ConversationRuntime {
           const event=claimed.event.type==='edit_item'||claimed.event.type==='shopping_action'?claimed.event:{id:claimed.id,type:'shopping_action' as const,action:social==='handoff'?'handoff' as const:'edit_list' as const,expectedVersion:claimed.state.version};
           const proposed=event.type==='shopping_action'&&event.action==='new_list'&&current.lastRequestId&&claimed.memory?.sourceVersion===current.version?claimed.memory.newList:undefined;
           if(proposed&&(!claimed.memory||claimed.bindingId!==claimed.memory.id||!claimed.displayedActions.some(action=>digest(action)===digest(event))))throw new ToolError('Use the latest new-list button.','stale_question');
-          if(event.type==='shopping_action'&&['next_item','view_products'].includes(event.action)&&!claimed.displayedActions.some(action=>digest(action)===digest(event)))throw new ToolError('Use the displayed next-item button.','stale_question');
+          if(event.type==='shopping_action'&&['next_item','view_products','edit_quote'].includes(event.action)&&!claimed.displayedActions.some(action=>digest(action)===digest(event)))throw new ToolError('Use the displayed next-item button.','stale_question');
           if(event.type==='shopping_action'&&event.action==='confirm_clear'&&!claimed.displayedActions.some(action=>digest(action)===digest(event)))throw new ToolError('Use the current clear-list confirmation. Your list is unchanged.','stale_confirmation');
           rich=await handleShoppingAction(client,ctx,current,event,claimed.catalogMap);
           if(event.type==='shopping_action'&&event.action==='continue_list'){const next=await this.tools.invokeInTransaction(client,ctx,{name:'preview_order',args:{expectedVersion:current.version}},claimed.id+':continue');rich=presentReply(next,next.state!);}

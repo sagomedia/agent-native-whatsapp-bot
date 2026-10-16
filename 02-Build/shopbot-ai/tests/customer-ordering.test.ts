@@ -108,6 +108,8 @@ test('owner quotes an unknown line; only the customer’s bound final-bill appro
  const client=await pool.connect();let rich:RichReply;try{rich=await orderQuoteReply(client,simulatorContext.storeId,id);}finally{client.release();}
  assert.match(rich!.text,/₹95/);assert.equal((await pool.query('SELECT estimate_complete FROM order_requests')).rows[0].estimate_complete,false);
  await pool.query("INSERT INTO messages(id,conversation_id,direction,text,status,payload) VALUES($1,$2,'outbound',$3,'sent',$4::jsonb)",[randomUUID(),simulatorContext.conversationId,rich!.text,JSON.stringify(rich!)]);
+ const beforeChange=(await pool.query('SELECT effective_revision,lines FROM order_requests')).rows[0];
+ const changing=await turn(rich!.buttons![1].event);assert.match(lastRich(changing).text,/What should change/);assert.deepEqual((await pool.query('SELECT effective_revision,lines FROM order_requests')).rows[0],beforeChange);assert.equal((await pool.query('SELECT operator_mode FROM conversations WHERE id=$1',[simulatorContext.conversationId])).rows[0].operator_mode,'assistant');
  await turn(rich!.buttons![0].event);
  const row=(await pool.query('SELECT * FROM order_requests')).rows[0];assert.equal(row.estimate_complete,true);assert.equal(Number(row.effective_total_paise),9500);assert.deepEqual(row.lines,original.lines);assert.equal(row.effective_lines[1].pricePaise,2500);
 }));

@@ -17,6 +17,10 @@ export function editListReply(state:ConversationState):RichReply {
 export async function handleShoppingAction(client:PoolClient,ctx:ActorContext,state:ConversationState,event:Extract<SimulatorEvent,{type:'shopping_action'|'edit_item'}>,map?:CatalogMap):Promise<RichReply> {
   if(event.expectedVersion!==state.version)throw new ToolError('Your list changed. Please use the latest choices.','stale_version');
   const reply=(text:string):RichReply=>({version:1,kind:'text',presentation:'text',outboundMessages:1,text});
+  if(event.type==='shopping_action'&&event.action==='edit_quote'){
+    if(!state.lastRequestId||!(await client.query("SELECT 1 FROM order_quotes WHERE store_id=$1 AND request_id=$2 AND state='offered'",[ctx.storeId,state.lastRequestId])).rowCount)throw new ToolError('Use the latest offered shop bill.','stale_question');
+    return {...reply(say(state,'What should change in this bill? Tell me the item, count or pack by voice/text. Your order and bill stay unchanged until the change is checked.','இந்த Bill-ல என்ன மாற்றணும்? Item, count அல்லது pack-ஐ voice / text-ல சொல்லுங்க. Change confirm ஆகுற வரைக்கும் பழைய order அப்படியே இருக்கும்.','Intha Bill-la enna maathanum? Item, count illa pack-ai voice / text-la sollunga. Change confirm aagura varaikkum pazhaiya order appadiye irukkum.')),readOnly:true};
+  }
   if(event.type==='shopping_action'&&event.action==='view_products'){
     if(state.pending?.kind!=='products'||state.lastRequestId)throw new ToolError('Use the latest product-photo button.','stale_question');
     return {...visualProductReview(state),readOnly:true};

@@ -39,14 +39,14 @@ function invoiceSvg(card:Exclude<VisualCard,{kind:'product'}>):string {
  let y=64,content='';
  const draw=(value:string,x:number,baseline:number,size=24,color=ink,anchor='start')=>shapedText(value,x,baseline,size,color,anchor);
  for(const name of wrapPixels(card.storeName??'Shop',640,32)){content+=draw(name,56,y,32);y+=42;}
- content+=draw('Estimate',1024,64,30,accent,'end');
+ content+=draw(card.invoiceType==='quote'?'Shop quote':'Estimate',1024,64,30,accent,'end');
  content+=draw('INR',1024,102,20,muted,'end');
  if(card.reference){content+=draw(card.reference,56,y+10,20,muted);y+=40;}
  y=Math.max(y+24,156);content+=`<path d="M56 ${y}H1024" stroke="${ink}" stroke-width="2"/>`;y+=42;
  content+=draw('Item / pack',72,y,22,muted)+draw('Qty',724,y,22,muted,'end')+draw('Rate',868,y,22,muted,'end')+draw('Amount',1008,y,22,muted,'end');
  y+=18;content+=`<path d="M56 ${y}H1024" stroke="${rule}"/>`;
  for(const row of card.billRows??[]){
-  const top=y+38,name=wrapPixels(row.name,530,25),pack=wrapPixels(row.packSize,530,20),quantity=wrapPixels(row.count,122,22);
+  const top=y+38,name=wrapPixels(row.name,470,25),pack=wrapPixels(row.packSize,470,20),quantity=wrapPixels(row.count,174,22);
   let baseline=top;
   for(const line of name){content+=draw(line,72,baseline,25);baseline+=35;}
   for(const line of pack){content+=draw(line,72,baseline,20,muted);baseline+=29;}
@@ -66,7 +66,7 @@ function invoiceSvg(card:Exclude<VisualCard,{kind:'product'}>):string {
   if(money){for(const line of wrapPixels(money[1],Math.max(240,920-textWidth(money[2],34)-28),24)){content+=draw(line,72,y,24,accent);y+=34;}content+=draw(money[2],1008,y-34,34,ink,'end');}
   else for(const line of wrapPixels(card.total,920,26)){content+=draw(line,72,y,26,accent);y+=36;}
  }
- y+=24;content+=draw('Estimate only · final stock and prices confirmed by the shop',72,y,20,muted);y+=38;
+ y+=24;for(const line of wrapPixels(card.footer??'Estimate only · final stock and prices confirmed by the shop',920,20)){content+=draw(line,72,y,20,muted);y+=29;}y+=9;
  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${y+32}" viewBox="0 0 ${width} ${y+32}" role="img" aria-label="${escape(card.title)}"><rect width="${width}" height="${y+32}" fill="#fff"/>${content}</svg>`;
 }
 export function visualSvg(card:Exclude<VisualCard,{kind:'product'}>):string {
@@ -97,7 +97,7 @@ export function visualSvg(card:Exclude<VisualCard,{kind:'product'}>):string {
 }
 const renderCache=new Map<string,string>();
 export function renderVisualImage(card:Exclude<VisualCard,{kind:'product'}>,directory=visualMediaDir()):string {
- const key=createHash('sha256').update(JSON.stringify({title:card.title,lines:card.lines,billRows:card.billRows,total:card.total,reference:card.reference,storeName:card.storeName})).digest('hex');
+ const key=createHash('sha256').update(JSON.stringify({title:card.title,invoiceType:card.invoiceType,footer:card.footer,lines:card.lines,billRows:card.billRows,total:card.total,reference:card.reference,storeName:card.storeName})).digest('hex');
  const cached=renderCache.get(directory+'|'+key);if(cached&&existsSync(join(directory,cached.split('/').at(-1)!)))return cached;
  const svg=visualSvg(card),hash=createHash('sha256').update('visual-v5\0'+svg).digest('hex'),filename=hash+'.png';
  mkdirSync(directory,{recursive:true});const path=join(directory,filename);
