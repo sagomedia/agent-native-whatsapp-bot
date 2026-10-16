@@ -162,7 +162,7 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       ALTER TABLE stores ADD COLUMN catalog_revision integer NOT NULL DEFAULT 1;
       ALTER TABLE conversations ADD COLUMN reply_language_explicit boolean NOT NULL DEFAULT false;
       ALTER TABLE provider_attempts DROP CONSTRAINT provider_attempts_stage_check;
-      ALTER TABLE provider_attempts ADD CONSTRAINT provider_attempts_stage_check CHECK(stage IN ('recognize','identify','repair','recommend')); 
+      ALTER TABLE provider_attempts ADD CONSTRAINT provider_attempts_stage_check CHECK(stage IN ('recognize','identify','repair','recommend'));
       ALTER TABLE products ADD COLUMN price_status text NOT NULL DEFAULT 'priced' CHECK(price_status IN ('priced','confirm','free')), ADD COLUMN selling_unit_verified boolean NOT NULL DEFAULT false;
       UPDATE products SET price_status='confirm' WHERE price_paise=0;
       CREATE FUNCTION bump_shop_catalog_revision() RETURNS trigger LANGUAGE plpgsql AS $$

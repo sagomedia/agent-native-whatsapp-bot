@@ -1,0 +1,253 @@
+[
+  {
+    "conversationId": "02facf9a-643c-45c8-939b-a411d0eb4ca2",
+    "replyLanguage": "ta",
+    "version": 0,
+    "draft": [],
+    "pending": null,
+    "requests": 0,
+    "attempts": [
+      {
+        "state": "succeeded",
+        "response_model": "gemini-3.5-flash-lite",
+        "billing_state": "free_declared",
+        "estimated_cost_microusd": null,
+        "usage": {
+          "totalTokenCount": 5140,
+          "promptTokenCount": 5015,
+          "candidatesTokenCount": 125
+        },
+        "failure_code": null,
+        "validation_issues": null
+      }
+    ],
+    "messages": [
+      {
+        "direction": "inbound",
+        "text": "இந்தப் பொருள் போல கடையில் என்ன இருக்கு?"
+      },
+      {
+        "direction": "outbound",
+        "text": "உங்கள் படத்திற்கு பொருத்தமாக இருக்கக்கூடிய பொருட்கள் இவை. பிராண்ட், அளவு மற்றும் வகையைச் சரிபார்த்துத் தேர்வு செய்யுங்கள்.\n\nநீங்கள் கேட்ட பொருளைச் சரிபார்ப்போம். படத்தையும் பெயரையும் பாருங்கள். உங்களுக்கு எது வேண்டும்?",
+        "cards": [
+          {
+            "sku": "H14",
+            "label": "இதைத் தேர்வு செய்"
+          }
+        ],
+        "outboundMessages": 1
+      }
+    ]
+  },
+  {
+    "conversationId": "57f3c924-fabc-4e93-964b-708733393587",
+    "replyLanguage": "ta-Latn",
+    "version": 3,
+    "draft": [
+      {
+        "sku": "H02",
+        "quantity": 2,
+        "unit": "piece",
+        "checked": true
+      },
+      {
+        "sku": "H07",
+        "quantity": 5,
+        "unit": "bottle",
+        "checked": true
+      }
+    ],
+    "pending": {
+      "kind": "review",
+      "id": "ab87fd6e-ac1e-44ae-b2e8-bb106b177803",
+      "totalPaise": 118500
+    },
+    "requests": 0,
+    "attempts": [
+      {
+        "state": "succeeded",
+        "response_model": "gemini-3.5-flash-lite",
+        "billing_state": "free_declared",
+        "estimated_cost_microusd": null,
+        "usage": {
+          "totalTokenCount": 6890,
+          "promptTokenCount": 6848,
+          "candidatesTokenCount": 42
+        },
+        "failure_code": null,
+        "validation_issues": null
+      }
+    ],
+    "messages": [
+      {
+        "direction": "inbound",
+        "text": "Tanglish-la pesu"
+      },
+      {
+        "direction": "outbound",
+        "text": "Ini Tanglish-la pesalaam. Unga list appadiye irukku.\n\nUnga list kaaliya irukku. Enna porul venum?",
+        "outboundMessages": 1
+      },
+      {
+        "direction": "inbound",
+        "text": "Enakku rendu 1 inch PVC pipe-um, 5 bottle PVC pipe pasai-um venum. Photos kaattunga."
+      },
+      {
+        "direction": "outbound",
+        "text": "Naan purinjukittathai sari paarunga:\n1. 2 × 1 inch PVC pipe: entha brand venum — Local Heavy, Blueguard?\n2. 5 × PVC pipe pasai: Neenga kettathu ithuthaana?\n\nPhoto-vum peyarum paathu sariyana porutkalai serunga. Thappaa irunthaa peyar, size illa type-ai marubadi sollunga. Innum kadaikku anuppala.",
+        "cards": [
+          {
+            "sku": "H01",
+            "label": "Ithai choose pannu"
+          },
+          {
+            "sku": "H02",
+            "label": "Ithai choose pannu"
+          },
+          {
+            "sku": "H07",
+            "label": "Intha porulai seru"
+          }
+        ],
+        "outboundMessages": 1
+      },
+      {
+        "direction": "inbound",
+        "text": "Blueguard ISI 1 inch PVC pipe venum"
+      },
+      {
+        "direction": "outbound",
+        "text": "Naan purinjukittathai sari paarunga:\n2. 5 × PVC pipe pasai: Neenga kettathu ithuthaana?\n\nPhoto-vum peyarum paathu sariyana porutkalai serunga. Thappaa irunthaa peyar, size illa type-ai marubadi sollunga. Innum kadaikku anuppala.",
+        "cards": [
+          {
+            "sku": "H07",
+            "label": "Intha porulai seru"
+          }
+        ],
+        "outboundMessages": 1
+      },
+      {
+        "direction": "inbound",
+        "text": "PVC pipe pasai 100ml venum"
+      },
+      {
+        "direction": "outbound",
+        "text": "Unga list:\n1. 2 × Blueguard ISI 1 inch PVC pipe — ₹760.00\n2. 5 × PVC pipe pasai 100ml — ₹425.00\n\nMoththam: ₹1,185.00. Kadaiyila vanthu vaangikkalaam. Intha request-ai kadaikku anuppalaama? Stock-um ready status-um kadai confirm pannum.",
+        "cards": [
+          {
+            "sku": "H02",
+            "label": "Porul confirm aachu"
+          },
+          {
+            "sku": "H07",
+            "label": "Porul confirm aachu"
+          }
+        ],
+        "outboundMessages": 1
+      }
+    ]
+  },
+  {
+    "conversationId": "7ec3b6fa-3926-44d0-90f0-74341b4e92bb",
+    "replyLanguage": "en",
+    "version": 4,
+    "draft": [
+      {
+        "sku": "H14",
+        "quantity": 2,
+        "unit": "piece",
+        "checked": true
+      }
+    ],
+    "pending": {
+      "kind": "review",
+      "id": "b6701634-c3fd-48e8-a7fb-6a6e607b33d3",
+      "totalPaise": 7000
+    },
+    "requests": 0,
+    "attempts": [
+      {
+        "state": "succeeded",
+        "response_model": "gemini-3.5-flash-lite",
+        "billing_state": "free_declared",
+        "estimated_cost_microusd": null,
+        "usage": {
+          "totalTokenCount": 7407,
+          "promptTokenCount": 7240,
+          "candidatesTokenCount": 167
+        },
+        "failure_code": null,
+        "validation_issues": null
+      }
+    ],
+    "messages": [
+      {
+        "direction": "inbound",
+        "text": "hi"
+      },
+      {
+        "direction": "outbound",
+        "text": "வணக்கம்! நான் ShopBot, உங்கள் கடை உதவியாளர். என்ன பொருள் வேண்டும்? பெயர் அல்லது அளவு தெரியாவிட்டால், என்ன வேலைக்குத் தேவை என்று சொல்லுங்கள்.",
+        "outboundMessages": 1
+      },
+      {
+        "direction": "inbound",
+        "text": "ரெண்டு கட்டிங் பிளேடு வேண்டும். என்ன வகைகள் இருக்கு?"
+      },
+      {
+        "direction": "outbound",
+        "text": "இவை தொடர்புடைய பரிந்துரைகள். என்ன வேலைக்குத் தேவை? இந்தப் பொருள் வேண்டும் என்றால் மட்டும் தேர்வு செய்யுங்கள். எந்த பிராண்ட் வேண்டும்? Pro-Cut, Premium Industrial?",
+        "cards": [
+          {
+            "sku": "H14",
+            "label": "இதைத் தேர்வு செய்"
+          },
+          {
+            "sku": "H15",
+            "label": "இதைத் தேர்வு செய்"
+          }
+        ],
+        "outboundMessages": 1
+      },
+      {
+        "direction": "inbound",
+        "text": "Pro-Cut · கட்டிங் வீல் 4 இன்ச் வேண்டும்"
+      },
+      {
+        "direction": "outbound",
+        "text": "Pro-Cut · கட்டிங் வீல் 4 இன்ச் எத்தனை எண்ணம் வேண்டும்?",
+        "outboundMessages": 1
+      },
+      {
+        "direction": "inbound",
+        "text": "ரெண்டு பீஸ்"
+      },
+      {
+        "direction": "outbound",
+        "text": "உங்கள் பட்டியல்:\n1. 2 × Pro-Cut · கட்டிங் வீல் 4 இன்ச் — ₹70.00\n\nமொத்தம்: ₹70.00. கடையில் வந்து பெற்றுக்கொள்ளலாம். இந்தக் கோரிக்கையை கடைக்கு அனுப்பலாமா? இருப்பையும் தயார் நிலையையும் கடை உறுதி செய்யும்.",
+        "cards": [
+          {
+            "sku": "H14",
+            "label": "பொருள் உறுதியானது"
+          }
+        ],
+        "outboundMessages": 1
+      },
+      {
+        "direction": "inbound",
+        "text": "Reply in English"
+      },
+      {
+        "direction": "outbound",
+        "text": "I’ll reply in English. Your list is kept.\n\nHere’s your list:\n1. 2 × Pro-Cut Cutting Wheel 4 inch — ₹70.00\n\nTotal: ₹70.00 for pickup. Shall I send this request to the shop? They’ll confirm availability before it’s ready.",
+        "cards": [
+          {
+            "sku": "H14",
+            "label": "Product checked"
+          }
+        ],
+        "outboundMessages": 1
+      }
+    ]
+  }
+]
