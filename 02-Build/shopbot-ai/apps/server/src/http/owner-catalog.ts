@@ -93,7 +93,7 @@ export async function registerOwnerCatalog(app:FastifyInstance,pool:Pool,storeId
   const media=await normalizeImage(parsed.data),assetId=randomUUID();
   return write('catalog_photo',storeId,async c=>{
    const path='/catalog-images/custom/'+assetId+'.jpg';
-   const row=await c.query('UPDATE products SET image_path=$1,active=false,merchant_verification=jsonb_set(merchant_verification,'{photo}','false'),inventory_updated_at=now(),version=version+1 WHERE store_id=$2 AND sku=$3 AND version=$4 RETURNING version',[path,storeId,req.params.sku,version]);
+   const row=await c.query("UPDATE products SET image_path=$1,active=false,merchant_verification=jsonb_set(merchant_verification,'{photo}','false'),inventory_updated_at=now(),version=version+1 WHERE store_id=$2 AND sku=$3 AND version=$4 RETURNING version",[path,storeId,req.params.sku,version]);
    if(!row.rowCount)throw Object.assign(new Error('Product changed. Reload before adding a photo.'),{statusCode:409});
    await c.query('INSERT INTO catalog_photos(id,store_id,image,width,height) VALUES($1,$2,$3,$4,$5)',[assetId,storeId,media.image,media.width,media.height]);return {sku:req.params.sku,version:row.rows[0].version,imageUrl:path,active:false};
   });
