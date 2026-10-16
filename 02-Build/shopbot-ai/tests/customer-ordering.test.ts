@@ -172,3 +172,12 @@ test('a completed order cannot accumulate an amendment the shop can never accept
  provider.next={operations:[{kind:'set_quantity',reference:request.lines[0].id,quantity:3}],next:'review'};
  const snapshot=await turn('change tape quantity to three');assert.match(lastRich(snapshot).text,/closed/);assert.equal((await pool.query('SELECT id FROM order_amendments')).rowCount,0);assert.deepEqual((await pool.query('SELECT lines FROM order_requests')).rows[0].lines,request.lines);
 }));
+
+
+test('fifty unknown long product names remain fully visible across estimate pages',()=>{
+ const lines=Array.from({length:50},(_,i)=>({id:randomUUID(),name:`Unknown requested item ${i} `+'long hardware description '.repeat(6),quantity:1,resolution:'unavailable' as const}));
+ const text=estimateText({replyLanguage:'en',draft:lines} as any,lines,true,true),rich=textPresentation(text,[{label:'List is correct',event:{id:randomUUID(),type:'confirm',reviewId:randomUUID()}}],'bill');
+ assert.equal(rich.parts!.map(part=>part.text).join('\n\n'),text);assert.match(text,/50 items still need checking/);assert.doesNotMatch(text,/₹0/);
+ for(const line of lines)assert.ok(text.includes(line.name));
+ for(const [index,part] of rich.parts!.entries()){assert.ok(Array.from(part.text).length<=(index===rich.parts!.length-1?950:3900));assert.equal(part.buttons?.length??0,index===rich.parts!.length-1?1:0);}
+});

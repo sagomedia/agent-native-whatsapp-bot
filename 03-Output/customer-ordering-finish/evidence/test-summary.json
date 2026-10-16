@@ -1,0 +1,21 @@
+{
+  "tests": 522,
+  "passed": 522,
+  "failed": 0,
+  "command": "npm run test:integration",
+  "mode": "offline fixtures on disposable PostgreSQL 17",
+  "build": "passed",
+  "typecheck": "passed",
+  "nativePackagerSyntax": "passed",
+  "ownerBrowser": {
+    "desktop": true,
+    "mobileOverflow": false,
+    "pageErrors": 0,
+    "receiptPost": 200,
+    "quotePost": 200
+  },
+  "limitations": [
+    "No real customer message was sent for testing",
+    "Real phone Tamil audio and ₹10 receipt need merchant acceptance"
+  ]
+}

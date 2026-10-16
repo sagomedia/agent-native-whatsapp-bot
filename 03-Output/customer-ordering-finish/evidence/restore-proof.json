@@ -1,0 +1,28 @@
+{
+  "status": "restored_and_migrated",
+  "schemaVersion": 32,
+  "protectedTables": {
+    "conversations": {
+      "count": 3,
+      "hash": "121ba2ac8f2f71228dd94aac8bdabeed4f304be03e42749b9f51a11e2af5a07f"
+    },
+    "order_requests": {
+      "count": 3,
+      "hash": "c9e9759a10a305daee4c2f792ad4127176e99b2cf588ccaf71c7b441b193104d"
+    },
+    "inference_budgets": {
+      "count": 1,
+      "hash": "bc506f355374999193c62e4d6abe31e18ba06429b8eb60e5305969f88c3367f9"
+    },
+    "provider_attempts": {
+      "count": 109,
+      "hash": "d52e8a2779e4fb6130c76e256fa417c98b8278ef6ad8caa9179916e8fb21f9b2"
+    },
+    "whatsapp_outbox": {
+      "count": 175,
+      "hash": "6cddea1200b1c92147d4ccf2bd4e37f93d6ea72455879c4583e7f0190c40af14"
+    }
+  },
+  "existingRowsPreserved": true,
+  "idempotent": true
+}
