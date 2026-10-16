@@ -2037,7 +2037,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/order-estimate.ts",
       "lines": [
-        14
+        15
       ],
       "text": "Count இன்னும் சொல்லணும்",
       "raw": "'Count இன்னும் சொல்லணும்'"
@@ -2047,7 +2047,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/order-estimate.ts",
       "lines": [
-        16
+        17
       ],
       "text": "இந்த item",
       "raw": "'இந்த item'"
@@ -2057,7 +2057,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/order-estimate.ts",
       "lines": [
-        16
+        17
       ],
       "text": "கடை check பண்ணணும். விலை இன்னும் confirm ஆகல.",
       "raw": "'கடை check பண்ணணும். விலை இன்னும் confirm ஆகல.'"

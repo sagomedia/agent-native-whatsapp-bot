@@ -1259,7 +1259,7 @@ _Leave blank to keep the current wording._
 
 #### TA-057096AF21
 
-Source: [line 14](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/order-estimate.ts:14)
+Source: [line 15](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/order-estimate.ts:15)
 
 **Current wording**
 
@@ -1273,7 +1273,7 @@ _Leave blank to keep the current wording._
 
 #### TA-2A9DD27571
 
-Source: [line 16](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/order-estimate.ts:16)
+Source: [line 17](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/order-estimate.ts:17)
 
 **Current wording**
 
@@ -1287,7 +1287,7 @@ _Leave blank to keep the current wording._
 
 #### TA-132DA7D350
 
-Source: [line 16](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/order-estimate.ts:16)
+Source: [line 17](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server/src/services/order-estimate.ts:17)
 
 **Current wording**
 

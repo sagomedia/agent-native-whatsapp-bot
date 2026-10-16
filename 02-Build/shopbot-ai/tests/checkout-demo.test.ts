@@ -103,3 +103,14 @@ test('an unpaid demo order appears in owner requests and can be accepted, packed
   const count=s.messages.length;s=await turn('thanks');assert.equal(s.messages.length,count+1);s=await turn('status');assert.match(last(s).text,/collected/i);
  }finally{await app.close();}
 }));
+
+
+test('a bad catalog selling basis retains the requested one-container count in the unpriced invoice',()=>fixture(async({pool,turn,set})=>{
+ await pool.query("UPDATE products SET unit='litre',selling_unit_verified=false WHERE sku='PAINT-KG'");
+ set({operations:[{kind:'add_item',query:'Asian Paints Tractor Uno Acrylic Distemper 10kg',quantity:1,requestedUnit:'container',packSize:{value:10,unit:'litre'},supportingPhrase:'one 10 litre Asian Paints Tractor Uno Acrylic Distemper can'}],next:'review'});
+ let s=await turn('one 10 litre Asian Paints Tractor Uno Acrylic Distemper can');s=await turn(buttons(last(s)).find(b=>b.event.type==='select_product')!.event);
+ s=await turn({id:randomUUID(),type:'review_partial',expectedVersion:s.conversation.version});
+ assert.equal(last(s).stage,'bill');assert.match(last(s).text,/1 container/);assert.doesNotMatch(last(s).text,/₹112/);
+ const row=s.messages.filter(m=>m.rich?.groupId===last(s).groupId).flatMap(m=>m.rich?.parts?.flatMap(p=>p.cards)??[]).find(c=>c.kind==='bill');assert.ok(row&&row.kind!=='product');assert.equal(row.billRows?.[0].count,'1 container');assert.equal(row.billRows?.[0].unitPrice,'—');
+ assert.equal(s.requests.length,0);
+}));

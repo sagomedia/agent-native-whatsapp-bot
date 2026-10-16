@@ -11,7 +11,8 @@ export function estimateLines(lines:DraftLine[]) {
 }
 export function estimateText(state:ConversationState,lines=state.draft,advance=false,review=true) {
  const estimate=estimateLines(lines),blocks=lines.map((line,index)=>{
-  const priced=estimate.priced.includes(line),count=line.requestedAmount?`${line.requestedAmount.value} ${line.requestedAmount.unit}`:line.quantity!==null?`${line.quantity} ${unitName(line.requestedUnit??line.unit??'unit',state,line.quantity)}`:say(state,'quantity to check','Count இன்னும் சொல்லணும்','Count innum sollanum');
+  const priced=estimate.priced.includes(line),requestedCount=line.quantity??line.requestedQuantity;
+  const count=line.requestedAmount?`${line.requestedAmount.value} ${line.requestedAmount.unit}`:requestedCount!==undefined&&requestedCount!==null?`${requestedCount} ${unitName(line.requestedUnit??line.unit??'unit',state,requestedCount)}`:say(state,'quantity to check','Count இன்னும் சொல்லணும்','Count innum sollanum');
   const name=`${index+1}. ${(line.merchantConfirmed?line.name:lineName(line,state))} — ${count}`;
   return priced?`${name}\n   ${formatMoney(line.pricePaise!)} / ${unitName(line.unit??'unit',state)}\n   ${say(state,'This item','இந்த item','Intha item')}: ${formatMoney(lineTotal(line.pricePaise!,line.quantity!))}`:`${name}\n   ${say(state,'Shop needs to confirm product, unit or price. Price excluded.','கடை check பண்ணணும். விலை இன்னும் confirm ஆகல.','Kadai check pannanum. Vilai innum confirm aagala.')}`;
  });
