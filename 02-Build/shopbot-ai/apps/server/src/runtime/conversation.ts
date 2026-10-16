@@ -573,7 +573,7 @@ export class ConversationRuntime {
       if(s.pending?.kind==='question'&&s.draft.length)return {name:'preview_order',args:{expectedVersion:s.version}};
       if(!s.pending&&s.draft.length)return {name:'preview_order',args:{expectedVersion:s.version}};
     }
-    if(['bill','invoice','estimated bill','estimate','show bill','bill evvalavu','பில் எவ்வளவு','பில் காட்டு','உத்தேச பில்'].includes(text))return {name:'estimate_order',args:{expectedVersion:s.version}};
+    if(['bill','invoice','estimated bill','estimate','show bill','bill evvalavu','பில் எவ்வளவு','பில் காட்டு','உத்தேச பில்'].includes(text))return s.lastRequestId?{name:'get_order_status',args:{}}:{name:'estimate_order',args:{expectedVersion:s.version}};
     if(text==='edit my list')return {name:'get_draft',args:{}};
     // Text channels can select a code that the backend actually displayed.
     // Never treat an arbitrary model-proposed or stale SKU as trusted consent.
