@@ -10,6 +10,7 @@ import {ConversationRuntime} from '../apps/server/src/runtime/conversation.js';
 import {chooseDemoPayAtShop,readUpiAdvance,verifyManualAdvance} from '../apps/server/src/services/upi-advance.js';
 import {withConversation} from '../apps/server/src/services/context.js';
 import {createApp} from '../apps/server/src/http/app.js';
+import {visualStatus} from '../apps/server/src/services/visual-ordering.js';
 import {renderWhatsAppReply} from '../apps/server/src/services/whatsapp-reply.js';
 
 const advance={vpa:'fixture.merchant@bank',name:'Fixture shop',hostname:'bot.example.com',demoPayAtShop:true};
@@ -122,3 +123,11 @@ test('a bad catalog selling basis retains the requested one-container count in t
  const row=s.messages.filter(m=>m.rich?.groupId===last(s).groupId).flatMap(m=>m.rich?.parts?.flatMap(p=>p.cards)??[]).find(c=>c.kind==='bill');assert.ok(row&&row.kind!=='product');assert.equal(row.billRows?.[0].count,'1 container');assert.equal(row.billRows?.[0].unitPrice,'—');
  assert.equal(s.requests.length,0);
 }));
+
+// Payment prompts must disappear with a declined, cancelled or collected order.
+test('closed orders cannot advertise a pending advance QR',()=>{
+ const state={version:1,draft:[],pending:null,fulfillment:'pickup' as const,lastRequestId:randomUUID(),replyLanguage:'en' as const};
+ const request={id:state.lastRequestId,acceptance:'awaiting_approval' as const,fulfillment:'awaiting_approval' as const,payment:'pending' as const,totalPaise:100,lines:[],advanceRequired:true,advanceState:'requested'};
+ assert.ok(buttons(visualStatus(state,request)).some(b=>b.event.type==='show_payment_qr'));
+ for(const closed of [{...request,acceptance:'rejected' as const},{...request,fulfillment:'cancelled' as const},{...request,acceptance:'accepted' as const,fulfillment:'collected' as const}])assert.equal(buttons(visualStatus(state,closed)).some(b=>b.event.type==='show_payment_qr'),false);
+});

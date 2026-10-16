@@ -1,0 +1,24 @@
+{
+  "transport": "SSH stdio to current VPS release",
+  "server": {
+    "name": "shopbot-owner-catalog",
+    "version": "1.1.0"
+  },
+  "connected": true,
+  "tools": [
+    "catalog_drafts",
+    "catalog_edit_draft",
+    "catalog_inventory",
+    "catalog_propose",
+    "catalog_search",
+    "catalog_stage_photo"
+  ],
+  "inventoryPagesRead": 2,
+  "paginationPreservesIdentity": true,
+  "realPaintSearchFound": 2,
+  "readOnlyInventoryHint": true,
+  "publicationOrOrderToolExposed": false,
+  "draftsWritten": 0,
+  "bankPaymentMade": false,
+  "whatsappMessageSent": false
+}

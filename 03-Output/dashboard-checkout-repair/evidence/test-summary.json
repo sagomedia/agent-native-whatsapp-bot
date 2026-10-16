@@ -1,6 +1,6 @@
 {
-  "integrationTests": 537,
-  "passed": 537,
+  "integrationTests": 538,
+  "passed": 538,
   "failed": 0,
   "skipped": 0,
   "followupRegressions": 30,
@@ -9,5 +9,6 @@
   "realMoneyTransferred": false,
   "liveCustomerMessageSent": false,
   "browserFixture": "synthetic loopback database; desktop 1440 and mobile 390",
-  "originalInvoiceProductFactsPreserved": true
+  "originalInvoiceProductFactsPreserved": true,
+  "closedOrderPaymentPromptRegression": "passed"
 }

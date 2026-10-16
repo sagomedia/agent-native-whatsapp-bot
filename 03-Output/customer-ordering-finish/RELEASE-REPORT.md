@@ -1,3 +1,5 @@
+Current deployment: [dashboard, invoice and MCP handoff](../dashboard-checkout-repair/README.md). The record below describes the previous checkout release.
+
 # Deployment handoff — 16 October 2026
 
 The guided checkout repair is deployed on the existing VPS. The actual customer's paint query now retrieves the matching catalog photo despite the Tamil spelling difference and the litre/kg mismatch. The bot asks the customer to choose the real pack; it does not convert litres to kilograms or silently select a different paint.

@@ -28,6 +28,12 @@ Example request to Codex:
 
 After a new server is added, reconnect MCP servers or start a new chat so the tool list refreshes. Check registration with `codex mcp get shopbot_catalog`.
 
-If SSH access expires, unlock the existing key **in a terminal** using the configured agent socket and `ssh-add -t 2h /home/gk-pc/.ssh/google_compute_engine`, then reconnect. The wrapper reports this condition and never asks for a passphrase through MCP.
+If SSH access expires, run this in your terminal, enter the key passphrase there, then reconnect:
+
+```sh
+/home/gk-pc/.local/bin/shopbot-mcp-unlock
+```
+
+The helper reuses or restarts the dedicated agent and unlocks the existing key for two hours. Keep the passphrase out of chat. The MCP wrapper reports locked access and exits; it never requests a passphrase through a tool.
 
 [Official Codex MCP configuration](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).

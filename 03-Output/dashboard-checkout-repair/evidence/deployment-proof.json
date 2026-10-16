@@ -1,0 +1,143 @@
+{
+  "deployment": {
+    "activeRelease": "preview-3a10873e26da",
+    "backup": "/var/backups/shopbot-migration/dashboard-20261016T124408Z",
+    "ready": true,
+    "demoPayAtShop": true,
+    "artifactHash": "7cd58c55ca77d259506cef5e4c06cd0f51ac486e9ffb0f0f45063532bb53db52",
+    "sourceCommit": "b3343f53929b449878a9524a5d7b8512058e4287"
+  },
+  "preservation": {
+    "preservation": {
+      "orders": true,
+      "advances": true,
+      "amendments": true,
+      "quotes": true,
+      "controls": true,
+      "budgets": true,
+      "inventory": true
+    },
+    "schemaVersion": 34,
+    "budgetCeilingsPreserved": true,
+    "environmentUnchanged": true
+  },
+  "realCartProbe": {
+    "release": "preview-3a10873e26da",
+    "realCartRead": true,
+    "invoicePages": 1,
+    "invoiceRows": 4,
+    "knownRows": 3,
+    "unpricedRows": 1,
+    "originalContainerCountRetained": true,
+    "knownSubtotalPaise": 319500,
+    "allRowsPreserved": true,
+    "readOnly": true,
+    "automaticOrderConsent": false,
+    "customerDraftUnchanged": true,
+    "transactionRolledBack": true,
+    "providerCalls": 0,
+    "whatsappMessagesSent": 0,
+    "existingOrders": 3,
+    "activeOrders": 0,
+    "privateImageFiles": [
+      "/var/lib/shopbot-vps/deployment-probes/dashboard/51276cac837708a5d57e2839aadc4344497056ced051da019c77eea54c3fe585.png"
+    ]
+  },
+  "liveHttpChecks": {
+    "activeRelease": "preview-3a10873e26da",
+    "release": {
+      "model": "gemini-3.5-flash-lite",
+      "status": "content_verified",
+      "gitTree": "ad9893f7a5049039dc7828206a0603b0721f939c",
+      "createdAt": "2026-10-16T12:46:32.373Z",
+      "gitCommit": "b3343f53929b449878a9524a5d7b8512058e4287",
+      "artifactHash": "7cd58c55ca77d259506cef5e4c06cd0f51ac486e9ffb0f0f45063532bb53db52",
+      "promptVersion": "2026-10-15.4",
+      "understandingVersion": 2
+    },
+    "schemaVersion": 34,
+    "service": {
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "SubState": "running"
+    },
+    "publicChecks": {
+      "ownerLogin": {
+        "status": 302,
+        "bytes": 510,
+        "mimeType": "text/html"
+      },
+      "welcomeAudio": {
+        "status": 200,
+        "bytes": 32125,
+        "mimeType": "audio/ogg"
+      },
+      "publicSimulator": {
+        "status": 404,
+        "bytes": 21,
+        "mimeType": "application/json"
+      },
+      "ownerWithoutJwt": {
+        "status": 403,
+        "bytes": 34,
+        "mimeType": "application/json"
+      },
+      "nativeReadiness": {
+        "status": 200,
+        "bytes": 32,
+        "mimeType": "application/json"
+      },
+      "actualPaintPhoto": {
+        "status": 200,
+        "bytes": 19030,
+        "mimeType": "image/jpeg"
+      }
+    },
+    "demoPayAtShop": true,
+    "paymentVerification": "owner_checked",
+    "orderCount": 3,
+    "ledger": [
+      {
+        "limit_microusd": 4500000,
+        "committed_microusd": 290820,
+        "held_microusd": 1536820,
+        "blocked": false
+      }
+    ],
+    "bankPaymentTested": false,
+    "whatsappTestMessageSent": false
+  },
+  "inventoryMcp": {
+    "transport": "SSH stdio to current VPS release",
+    "server": {
+      "name": "shopbot-owner-catalog",
+      "version": "1.1.0"
+    },
+    "connected": true,
+    "tools": [
+      "catalog_drafts",
+      "catalog_edit_draft",
+      "catalog_inventory",
+      "catalog_propose",
+      "catalog_search",
+      "catalog_stage_photo"
+    ],
+    "inventoryPagesRead": 2,
+    "paginationPreservesIdentity": true,
+    "realPaintSearchFound": 2,
+    "readOnlyInventoryHint": true,
+    "publicationOrOrderToolExposed": false,
+    "draftsWritten": 0,
+    "bankPaymentMade": false,
+    "whatsappMessageSent": false
+  },
+  "codexMcpConfiguration": {
+    "configured": "shopbot_catalog",
+    "enabled": true,
+    "otherServersPreserved": true,
+    "tools": 6,
+    "privateConfigurationBackup": "/home/gk-pc/.codex/config.toml.shopbot-catalog-backup-20261016T125223Z"
+  },
+  "databaseBackupBytes": 65527230,
+  "databaseBackupRestoreListValid": true
+}

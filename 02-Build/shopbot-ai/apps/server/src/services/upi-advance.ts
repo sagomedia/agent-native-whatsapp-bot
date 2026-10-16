@@ -40,7 +40,7 @@ export async function qrImage(uri:string,directory=visualMediaDir()) {
 export async function upiAdvanceReply(client:PoolClient,ctx:ActorContext,state:ConversationState,hostname:string,options:{demoPayAtShop?:boolean;onlyOnce?:boolean}={}):Promise<RichReply|null> {
  if(!state.lastRequestId)return null;
  const row=(await client.query('SELECT a.*,r.acceptance,r.fulfillment FROM order_advances a JOIN order_requests r ON r.id=a.request_id WHERE a.store_id=$1 AND a.request_id=$2 AND r.conversation_id=$3 AND r.actor=$4',[ctx.storeId,state.lastRequestId,ctx.conversationId,ctx.actor])).rows[0];
- if(!row||!['requested','claimed'].includes(row.state)||row.acceptance==='rejected'||row.fulfillment==='cancelled')return null;
+ if(!row||!['requested','claimed'].includes(row.state)||row.acceptance==='rejected'||['cancelled','collected'].includes(row.fulfillment))return null;
  if(options.onlyOnce&&row.offered_at)return null;
  const demo=!!options.demoPayAtShop&&row.demo_pay_at_shop_allowed;
  const reference='Order #'+state.lastRequestId.replaceAll('-','').slice(0,8).toUpperCase();
