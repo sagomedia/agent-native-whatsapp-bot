@@ -36,6 +36,16 @@ async function fixture(run:(f:{pool:pg.Pool;inbox:SimulatorService;runtime:Conve
 async function submitKnown(turn:(e:SimulatorEvent|string)=>Promise<any>){await turn('I need two PTFE tape rolls');await turn('yes');}
 const lastRich=(snapshot:any)=>snapshot.messages.filter((m:any)=>m.direction==='outbound').at(-1).rich as RichReply;
 
+test('a manual paint quote cannot silently price one litre as a sealed 10L can',()=>fixture(async({pool,turn})=>{
+ let s=await turn('add one unicorn bolt');s=await turn({id:randomUUID(),type:'review_partial',expectedVersion:s.conversation.version});s=await turn({id:randomUUID(),type:'confirm',reviewId:s.conversation.pending.id});
+ const request=(await pool.query('SELECT * FROM order_requests')).rows[0],line={id:request.lines[0].id,name:'Asian Paints 10L',quantity:1,unit:'litre',pricePaise:25000};
+ const quote=(value:object)=>withConversation(pool,simulatorContext,c=>offerOrderQuote(c,simulatorContext.storeId,request.id,'fixture-owner',{id:randomUUID(),expectedRevision:1,lines:[value]}));
+ await assert.rejects(quote(line),/measured\/loose/);
+ assert.equal((await pool.query('SELECT count(*)::int AS n FROM order_quotes')).rows[0].n,0);
+ const accepted=await quote({...line,saleMode:'measured'});assert.equal(accepted.quote.lines[0].quantity,1);assert.equal(accepted.quote.lines[0].unit,'litre');assert.equal(accepted.quote.lines[0].merchantConfirmed.saleMode,'measured');
+ await assert.rejects(quote({...line,name:'Paint 10kg',saleMode:'measured'}),/weight and volume/);
+}));
+
 test('partial review keeps unknown items unpriced and one approved review creates one pending ₹10 advance',()=>fixture(async({pool,turn})=>{
  let s=await turn('I need two PTFE tape rolls and one unicorn bolt');assert.equal(s.conversation.draft.length,2);
  s=await turn({id:randomUUID(),type:'review_partial',expectedVersion:s.conversation.version});

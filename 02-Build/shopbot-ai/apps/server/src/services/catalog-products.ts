@@ -2,6 +2,7 @@ import type {PoolClient} from 'pg';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {sellingUnitSchema,merchantVerificationSchema,sellingPolicySchema} from '../../../../packages/contracts/selling-units.js';
+import {sellingBasisIssues} from '../../../../packages/contracts/selling-basis.js';
 const words=z.array(z.string().trim().min(1).max(120)).max(40);
 const names=z.object({ta:z.string().trim().max(160).optional(),'ta-Latn':z.string().trim().max(160).optional()}).strict();
 export const ownerProductSchema=z.object({sku:z.string().regex(/^(?:[A-Za-z0-9][A-Za-z0-9_-]{0,63})?$/).default(''),createId:z.uuid().optional(),newType:z.object({label:z.string().trim().min(2).max(160),localNames:names,departmentId:z.string().max(80).nullable()}).strict().optional(),version:z.number().int().nonnegative(),name:z.string().trim().min(2).max(160),localNames:names,aliases:words,keywords:words,unit:sellingUnitSchema,priceStatus:z.enum(['priced','confirm','free']).optional(),pricePaise:z.number().int().nonnegative().max(2147483647),stock:z.number().int().nonnegative().max(2147483647).nullable(),quantityStep:z.number().positive().max(100).refine(n=>Math.abs(n*1000-Math.round(n*1000))<1e-7),familyId:z.string().max(80).default(''),brand:z.string().trim().max(100),specifications:z.record(z.string().regex(/^[a-z][a-z0-9_]{0,39}$/),z.string().trim().min(1).max(120)).refine(s=>Object.keys(s).length<=20),active:z.boolean(),verified:z.boolean(),verification:merchantVerificationSchema.optional(),sellingPolicy:sellingPolicySchema.optional()}).strict();
@@ -14,8 +15,7 @@ export async function saveCatalogProduct(c:PoolClient,storeId:string,input:unkno
  if(p.active&&(!p.verified||!p.verification||!Object.values(p.verification).every(Boolean)))throw invalid('Confirm identity, photo, selling unit, price status and stock status before publishing.');
  const priceStatus=p.priceStatus??(p.pricePaise>0?'priced':'confirm');
  if(priceStatus==='free'&&p.pricePaise!==0||priceStatus==='priced'&&p.pricePaise===0)throw invalid('Choose price to confirm or explicitly confirm this item is free.');
- const physical=Object.values(p.specifications).join(' ');
- if(p.active&&(/\d\s*kg\b/i.test(physical)&&p.unit==='litre'||/\d\s*(?:l|litres?|liters?)\b/i.test(physical)&&p.unit==='kg'))throw invalid('Pack weight and volume must agree with the selling unit.');
+ const issues=sellingBasisIssues(p);if(p.active&&issues.length)throw invalid(issues.join(' '));
    if(p.newType&&p.familyId)throw Object.assign(new Error('Choose one product type.'),{statusCode:400});
    if(!p.familyId){
     let departmentId=p.newType?.departmentId??'owner-general';

@@ -1,5 +1,6 @@
 import {estimateLines,estimateText,partialReview} from './order-estimate.js';
 import {counterLine} from './counter-state.js';
+import {sellingBasisIssues} from '../../../../packages/contracts/selling-basis.js';
 import {createUpiAdvance,type UpiAdvanceConfig} from './upi-advance.js';
 import {requestStoreAssistance} from './store-assistance.js';
 import {discoverProductMeanings} from './product-meaning.js';
@@ -93,6 +94,7 @@ function resolvedLine(product: Product, quantity: number | null, query: string, 
   if(requestedUnit&&!sameUnit(requestedUnit,product.unit)) return {...evidence,...(pack?{packSize:pack}:{}),id,query,sku:product.sku,name:product.name,quantity:null,unit:product.unit,pricePaise:product.pricePaise,productVersion:product.version,requestedUnit:normalizeUnit(requestedUnit),...(quantity!==null?{requestedQuantity:quantity}:{}),resolution:'needs_unit',candidates:[product]};
   validateQuantity(product,quantity);
   if(pack&&['litre','kg'].includes(product.unit)&&(!product.sellingUnitVerified||!requestedUnit&&!evidence.requestedAmount))return {...evidence,packSize:pack,id,query,sku:product.sku,name:product.name,quantity:null,requestedQuantity:quantity??undefined,unit:product.unit,pricePaise:product.pricePaise,productVersion:product.version,resolution:'needs_unit',catalogIssue:'selling_unit_unverified',candidates:[product]};
+  if(sellingBasisIssues(product).length)return {...evidence,...(pack?{packSize:pack}:{}),id,query,sku:product.sku,name:product.name,quantity:null,requestedQuantity:quantity??undefined,unit:product.unit,pricePaise:product.pricePaise,productVersion:product.version,resolution:'needs_unit',catalogIssue:'selling_unit_unverified',candidates:[product]};
   if(product.priceStatus==='confirm'||product.pricePaise===0&&product.priceStatus!=='free')return {...evidence,...(pack?{packSize:pack}:{}),id,query,sku:product.sku,name:product.name,quantity,unit:product.unit,pricePaise:product.pricePaise,productVersion:product.version,resolution:'unavailable',catalogIssue:'price_unverified',candidates:[product]};
   return {...evidence,...(pack?{packSize:pack}:{}), id,query,sku:product.sku,quantity,name:product.name,unit:product.unit,pricePaise:product.pricePaise,productVersion:product.version,
     ...(requestedUnit?{requestedUnit:normalizeUnit(requestedUnit)}:{}),...(product.stock===0?{catalogIssue:'out_of_stock' as const}:{}),resolution:quantity===null?'needs_quantity':product.stock===0?'unavailable':'matched',candidates:[product] };
@@ -421,7 +423,7 @@ export class RetailTools {
         continue;
       }
       const [product]=await searchProducts(client,ctx,line.sku!);
-      if(line.resolution!=='matched'||!product||(state.requireProductConfirmation&&!productConfirmed(line,product))||product.version!==line.productVersion||product.pricePaise!==line.pricePaise||(product.stock!==null&&product.stock<line.quantity!)) {
+      if(line.resolution!=='matched'||!product||sellingBasisIssues(product).length||(state.requireProductConfirmation&&!productConfirmed(line,product))||product.version!==line.productVersion||product.pricePaise!==line.pricePaise||(product.stock!==null&&product.stock<line.quantity!)) {
         state.pending=null; await saveState(client,ctx,state);
         return {state,message:'Price or availability changed after the review. No request submitted. Review the draft again.'};
       }

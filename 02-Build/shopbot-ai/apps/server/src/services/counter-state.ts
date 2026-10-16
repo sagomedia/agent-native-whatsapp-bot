@@ -1,6 +1,7 @@
 import type {ConversationState,DraftLine,ProductCheck} from '../../../../packages/contracts/index.js';
 import {needsPipeType} from './catalog-discovery.js';
 import {productConfirmed,productIdentity} from './product-confirmation.js';
+import {sellingBasisIssues} from '../../../../packages/contracts/selling-basis.js';
 
 export type CounterBlocker='specification'|'variant'|'product_confirmation'|'quantity'|'unit'|'shop_check';
 
@@ -20,7 +21,7 @@ export function counterLine(line:DraftLine) {
   const step=product?.quantityStep??1;
   const validCount=line.quantity!==null&&Number.isFinite(line.quantity)&&line.quantity>0&&line.quantity<=100&&Number.isFinite(step)&&step>0&&Math.abs(line.quantity/step-Math.round(line.quantity/step))<1e-7;
   if(!validCount&&!blockers.includes('quantity'))blockers.push('quantity');
-  const canQuote=line.resolution==='matched'&&priced&&current&&enough&&!line.catalogIssue&&validCount;
+  const canQuote=line.resolution==='matched'&&priced&&current&&enough&&!line.catalogIssue&&validCount&&!!product&&!sellingBasisIssues(product).length;
   if(product&&!canQuote&&line.resolution==='matched'&&!blockers.includes('quantity'))blockers.push('shop_check');
   return {product,blockers:[...new Set(blockers)],canQuote,ready:canQuote&&productConfirmed(line,product)};
 }

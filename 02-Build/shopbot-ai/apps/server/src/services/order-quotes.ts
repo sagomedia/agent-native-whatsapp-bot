@@ -8,9 +8,10 @@ import {messageBlocks} from '../../../../packages/contracts/customer-copy.js';
 import {digest} from './tools.js';
 import {textPresentation} from './message-presentation.js';
 import {ToolError,type ActorContext} from './context.js';
+import {sellingBasisIssues} from '../../../../packages/contracts/selling-basis.js';
 
 const count=z.number().positive().max(100).refine(n=>Math.abs(n*1000-Math.round(n*1000))<1e-7);
-export const orderQuoteSchema=z.object({id:z.uuid(),amendmentId:z.uuid().optional(),expectedRevision:z.number().int().positive(),lines:z.array(z.object({id:z.uuid(),name:z.string().trim().min(1).max(200),quantity:count,unit:z.string().trim().min(1).max(30),pricePaise:z.number().int().min(0).max(100000000),free:z.boolean().optional()}).strict()).min(1).max(50)}).strict();
+export const orderQuoteSchema=z.object({id:z.uuid(),amendmentId:z.uuid().optional(),expectedRevision:z.number().int().positive(),lines:z.array(z.object({id:z.uuid(),name:z.string().trim().min(1).max(200),quantity:count,unit:z.string().trim().min(1).max(30),saleMode:z.enum(['pack','measured']).optional(),pricePaise:z.number().int().min(0).max(100000000),free:z.boolean().optional()}).strict()).min(1).max(50)}).strict();
 export async function offerOrderQuote(client:PoolClient,storeId:string,requestId:string,actor:string,input:unknown) {
  const p=orderQuoteSchema.parse(input),hash=digest(p);
  const request=(await client.query('SELECT * FROM order_requests WHERE id=$1 AND store_id=$2 FOR UPDATE',[requestId,storeId])).rows[0];
@@ -27,7 +28,11 @@ export async function offerOrderQuote(client:PoolClient,storeId:string,requestId
  const lines:DraftLine[]=p.lines.map(line=>{
   if(!line.pricePaise&&!line.free)throw new ToolError('An unknown price cannot be zero. Explicitly mark a free item.');
   const original=old.find(o=>o.id===line.id)!;
-  return {...original,sku:line.name===original.name&&line.unit===original.unit?original.sku:undefined,candidates:line.name===original.name&&line.unit===original.unit?original.candidates:[],name:line.name,quantity:line.quantity,unit:line.unit,pricePaise:line.pricePaise,resolution:'matched',catalogIssue:undefined,requestedUnit:undefined,requestedAmount:undefined,merchantConfirmed:{actor,at,free:!!line.free}};
+  const unchanged=line.name===original.name&&line.unit===original.unit,product=unchanged?original.candidates?.find(p=>p.sku===original.sku):undefined;
+  const saleMode=line.saleMode??(unchanged?original.merchantConfirmed?.saleMode??product?.sellingPolicy?.saleMode:undefined);
+  const issues=sellingBasisIssues({name:line.name,unit:line.unit,specifications:product?.specifications,sellingPolicy:{...(product?.sellingPolicy??{cutAllowed:false,continuousLengthAvailable:null}),...(saleMode?{saleMode}:{})}});
+  if(issues.length)throw new ToolError(`${line.name}: ${issues.join(' ')}`);
+  return {...original,sku:unchanged?original.sku:undefined,candidates:unchanged?original.candidates:[],name:line.name,quantity:line.quantity,unit:line.unit,pricePaise:line.pricePaise,resolution:'matched',catalogIssue:undefined,requestedUnit:undefined,requestedAmount:undefined,merchantConfirmed:{actor,at,free:!!line.free,...(saleMode?{saleMode}:{})}};
  });
  const total=lines.reduce((n,line)=>n+lineTotal(line.pricePaise!,line.quantity!),0);
  await client.query("UPDATE order_quotes SET state='superseded' WHERE request_id=$1 AND state='offered'",[requestId]);
