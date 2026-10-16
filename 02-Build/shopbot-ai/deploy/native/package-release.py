@@ -91,7 +91,19 @@ if args.node_archive:
             destination.write_bytes(source.read())
     (stage / 'node/bin/node').chmod(0o755)
 shutil.copytree(app / 'deploy/native', stage / 'deploy', ignore=shutil.ignore_patterns('__pycache__'))
-subprocess.run(['node','--input-type=module','-e',"import {verifyRelease} from './dist/apps/server/src/services/release-manifest.js'; await verifyRelease(process.cwd(),true);"],cwd=stage/'app',check=True)
+# A slim stage intentionally lacks the reused dependency tree until staging on
+# the VPS. Verify its exact artifact set without importing Node dependencies.
+assert json.loads((stage/'app/dist/release-manifest.json').read_text())==proof
+packaged_files=[]
+for root in ['dist','resources','package.json','package-lock.json']:
+    target=stage/'app'/root
+    for path in sorted(target.rglob('*')) if target.is_dir() else [target]:
+        if path.is_file():
+            relative=path.relative_to(stage/'app').as_posix()
+            if relative!='dist/release-manifest.json':
+                assert not path.is_symlink(), 'Artifact symlinks are forbidden'
+                packaged_files.append({'path':relative,'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
+assert sorted(packaged_files,key=lambda item:item['path'])==proof['files'], 'Packaged artifacts differ from the verified source build'
 for name in ['install.sh', 'rollback.sh', 'upgrade.sh']:
     (stage / 'deploy' / name).chmod(0o755)
 
