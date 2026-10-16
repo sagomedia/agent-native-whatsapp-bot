@@ -1,11 +1,11 @@
 {
   "deployment": {
-    "activeRelease": "preview-3a10873e26da",
-    "backup": "/var/backups/shopbot-migration/dashboard-20261016T124408Z",
+    "activeRelease": "preview-668a03eec8b7",
+    "backup": "/var/backups/shopbot-migration/dashboard-20261016T133458Z",
     "ready": true,
     "demoPayAtShop": true,
-    "artifactHash": "7cd58c55ca77d259506cef5e4c06cd0f51ac486e9ffb0f0f45063532bb53db52",
-    "sourceCommit": "b3343f53929b449878a9524a5d7b8512058e4287"
+    "artifactHash": "6fff7c7ade387802020e6d3aea25d0bc597fed02055a9a080333da59c8878b8c",
+    "sourceCommit": "f3f97e177026f87f687adc93574b892344c534c3"
   },
   "preservation": {
     "preservation": {
@@ -22,7 +22,7 @@
     "environmentUnchanged": true
   },
   "realCartProbe": {
-    "release": "preview-3a10873e26da",
+    "release": "preview-668a03eec8b7",
     "realCartRead": true,
     "invoicePages": 1,
     "invoiceRows": 4,
@@ -44,14 +44,14 @@
     ]
   },
   "liveHttpChecks": {
-    "activeRelease": "preview-3a10873e26da",
+    "activeRelease": "preview-668a03eec8b7",
     "release": {
       "model": "gemini-3.5-flash-lite",
       "status": "content_verified",
-      "gitTree": "ad9893f7a5049039dc7828206a0603b0721f939c",
-      "createdAt": "2026-10-16T12:46:32.373Z",
-      "gitCommit": "b3343f53929b449878a9524a5d7b8512058e4287",
-      "artifactHash": "7cd58c55ca77d259506cef5e4c06cd0f51ac486e9ffb0f0f45063532bb53db52",
+      "gitTree": "9e8e29ae22914e398ea3296d243ac33a4f7c0ed1",
+      "createdAt": "2026-10-16T13:08:11.269Z",
+      "gitCommit": "f3f97e177026f87f687adc93574b892344c534c3",
+      "artifactHash": "6fff7c7ade387802020e6d3aea25d0bc597fed02055a9a080333da59c8878b8c",
       "promptVersion": "2026-10-15.4",
       "understandingVersion": 2
     },
@@ -138,6 +138,22 @@
     "tools": 6,
     "privateConfigurationBackup": "/home/gk-pc/.codex/config.toml.shopbot-catalog-backup-20261016T125223Z"
   },
-  "databaseBackupBytes": 65527230,
-  "databaseBackupRestoreListValid": true
+  "databaseBackupBytes": 65527347,
+  "databaseBackupRestoreListValid": true,
+  "staging": {
+    "staged_release": "preview-668a03eec8b7",
+    "runtime_reused_from": "preview-3a10873e26da",
+    "bundle_sha256": "f01c4a89f4aff8dedb12435bea55aeba03f12f863bbb88465105b42f19380ddd",
+    "new_content_bytes": 8187816,
+    "disk_free_bytes": 500752384
+  },
+  "cleanup": {
+    "activeRelease": "preview-668a03eec8b7",
+    "previousReleaseRetained": true,
+    "previousCheckoutReleaseRetained": true,
+    "freshBackupRetained": true,
+    "privateMcpEnvironmentBackedUp": true,
+    "privateOperationScriptsSaved": true,
+    "diskFreeBytes": 499761152
+  }
 }

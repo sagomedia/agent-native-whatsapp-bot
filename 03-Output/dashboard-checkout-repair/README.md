@@ -4,9 +4,9 @@ The repair is deployed. The inventory MCP is connected and configured in Codex. 
 
 | Deployment | Verified value |
 | --- | --- |
-| Active VPS release | `preview-3a10873e26da` |
-| Runtime source commit | `b3343f53929b449878a9524a5d7b8512058e4287` |
-| Artifact SHA-256 | `7cd58c55ca77d259506cef5e4c06cd0f51ac486e9ffb0f0f45063532bb53db52` |
+| Active VPS release | `preview-668a03eec8b7` |
+| Runtime source commit | `f3f97e177026f87f687adc93574b892344c534c3` |
+| Artifact SHA-256 | `6fff7c7ade387802020e6d3aea25d0bc597fed02055a9a080333da59c8878b8c` |
 | Database | Migration 34 retained; no new application migration |
 | Tests | 538 passed; 0 failed/skipped; 30 follow-up regression checks passed |
 | Release build | Clean-source TypeScript and production build passed; 133 content-verified files |
@@ -77,4 +77,6 @@ Orders, advances, amendments, quotes, customer drafts/handling controls, invento
 
 Reload the dashboard tab to load the new interface. The earlier attempted checkout remains saved; send **சரி பேக் பண்ணுங்க** in WhatsApp, check the fresh bill and tap **கடைக்கு அனுப்பு**. That current confirmation creates the active order and QR. Select **கடைல பணம் தர்றேன்** for the demo, then manage the order in owner Requests.
 
-Fresh private backup: `/var/backups/shopbot-migration/dashboard-20261016T124408Z/database.dump`, 65,527,230 bytes. Restore-list validation passed before activation. Original environment, service unit, prior release pointer and private operation evidence are retained there. The previous checkout release `preview-27f9774fb582` remains available. Keep the database current when reviewing a code rollback; do not overwrite subsequent customer traffic with an older dump.
+Fresh private backup: `/var/backups/shopbot-migration/dashboard-20261016T133458Z/database.dump`, 65,527,347 bytes. Restore-list validation passed before activation. Original environment, service unit, prior release pointer and private operation evidence are retained there. The preceding repair release `preview-3a10873e26da` and earlier checkout release `preview-27f9774fb582` remain available. Keep the database current when reviewing a code rollback; do not overwrite subsequent customer traffic with an older dump.
+
+Inactive release copies were checksum-verified into private local recovery archives before removal from the VPS. Live, rollback and data-bearing releases and database backups were retained. Archiving 28 inactive installed copies recovered root disk headroom; moving 35 old upload archives separately freed temporary-filesystem space. Recovery files are `/home/gk-pc/shopbot-dashboard-verification/vps-staging-recovery/inactive-installed-releases.tar.gz` and `old-release-uploads.tar`. See [installed-copy receipt](evidence/retired-cleanup-proof.json) and [upload receipt](evidence/staging-cleanup-proof.json).
