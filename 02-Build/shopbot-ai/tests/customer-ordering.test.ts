@@ -112,7 +112,7 @@ test('a long estimate is paginated without dropping prices, exclusions, or final
 
 test('UPI QR uses the supplied VPA, INR and exactly ₹10; a phone-only destination is rejected',async()=>{
  const uri=upiUri(advance,'SGO12345'),parsed=new URL(uri);assert.equal(parsed.searchParams.get('pa'),advance.vpa);assert.equal(parsed.searchParams.get('am'),'10.00');assert.equal(parsed.searchParams.get('cu'),'INR');
- assert.throws(()=>upiUri({vpa:'8939237308',name:'Shop'},'SGO1'),/recipient/);assert.throws(()=>readUpiAdvance({UPI_ADVANCE_ENABLED:'true',UPI_PAYEE_VPA:'8939237308',UPI_PAYEE_NAME:'Shop'},'bot.example.com'),/VPA/);
+ assert.throws(()=>upiUri({vpa:'9000000000',name:'Shop'},'SGO1'),/recipient/);assert.throws(()=>readUpiAdvance({UPI_ADVANCE_ENABLED:'true',UPI_PAYEE_VPA:'9000000000',UPI_PAYEE_NAME:'Shop'},'bot.example.com'),/VPA/);
  assert.throws(()=>upiUri(advance,'x'.repeat(36)),/reference/);
  const directory=mkdtempSync('/tmp/shopbot-qr-'),path=await qrImage(uri,directory),bytes=readFileSync(directory+'/'+path.split('/').at(-1));assert.equal(bytes.subarray(0,8).toString('hex'),'89504e470d0a1a0a');assert.equal(await qrImage(uri,directory),path);
 });
