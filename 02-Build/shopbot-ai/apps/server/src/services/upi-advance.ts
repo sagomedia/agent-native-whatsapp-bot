@@ -18,11 +18,11 @@ export function readUpiAdvance(env:NodeJS.ProcessEnv,hostname?:string):UpiAdvanc
 }
 export function upiUri(config:Pick<UpiAdvanceConfig,'vpa'|'name'>,reference:string) {
  if(!/^[a-zA-Z0-9._-]{2,200}@[a-zA-Z0-9.-]{2,80}$/.test(config.vpa)||!config.name.trim()||config.name.length>80)throw new Error('Invalid UPI recipient');
- if(!/^[a-zA-Z0-9-]{1,60}$/.test(reference))throw new Error('Invalid UPI reference');
+ if(!/^[a-zA-Z0-9]{1,35}$/.test(reference))throw new Error('Invalid UPI reference');
  return 'upi://pay?'+new URLSearchParams({pa:config.vpa,pn:config.name,am:'10.00',cu:'INR',tr:reference,tn:'Order advance '+reference}).toString();
 }
 export async function createUpiAdvance(client:PoolClient,ctx:ActorContext,requestId:string,reviewId:string,config:UpiAdvanceConfig) {
- const id=randomUUID(),uri=upiUri(config,'SAGO-'+requestId.replaceAll('-',''));
+ const id=randomUUID(),uri=upiUri(config,'SGO'+requestId.replaceAll('-',''));
  await client.query("INSERT INTO order_advances(id,store_id,request_id,amount_paise,payee_vpa,payee_name,upi_uri,review_id) VALUES($1,$2,$3,1000,$4,$5,$6,$7)",[id,ctx.storeId,requestId,config.vpa,config.name,uri,reviewId]);
  await client.query("UPDATE order_requests SET advance_required=true,payment='pending' WHERE id=$1 AND store_id=$2",[requestId,ctx.storeId]);
  return id;

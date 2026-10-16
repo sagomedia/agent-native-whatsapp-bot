@@ -43,6 +43,7 @@ test('partial review keeps unknown items unpriced and one approved review create
  const bill=lastRich(s);assert.match(bill.text,/Known-price items only: ₹70/);assert.match(bill.text,/unicorn bolt/);assert.doesNotMatch(bill.text,/₹0(?:\D|$)/);
  const event={id:randomUUID(),type:'confirm' as const,reviewId:s.conversation.pending.id};s=await turn(event);
  const row=(await pool.query('SELECT * FROM order_requests')).rows[0];assert.equal(row.estimate_complete,false);assert.equal(row.advance_required,true);assert.equal(row.payment,'pending');assert.equal(row.lines.length,2);
+ const payment=(await pool.query('SELECT upi_uri FROM order_advances')).rows[0];assert.match(new URL(payment.upi_uri).searchParams.get('tr')!,/^[a-zA-Z0-9]{35}$/);
  assert.equal((await pool.query('SELECT * FROM order_advances')).rowCount,1);assert.match(lastRich(s).text,/₹10/);assert.ok(lastRich(s).parts?.[0].cards[0].kind==='instruction');
  assert.equal((await turn('yes')).requests.length,1);assert.equal((await pool.query('SELECT * FROM order_advances')).rowCount,1);
 }));
@@ -110,8 +111,9 @@ test('a long estimate is paginated without dropping prices, exclusions, or final
 });
 
 test('UPI QR uses the supplied VPA, INR and exactly ₹10; a phone-only destination is rejected',async()=>{
- const uri=upiUri(advance,'SAGO-12345'),parsed=new URL(uri);assert.equal(parsed.searchParams.get('pa'),advance.vpa);assert.equal(parsed.searchParams.get('am'),'10.00');assert.equal(parsed.searchParams.get('cu'),'INR');
- assert.throws(()=>upiUri({vpa:'8939237308',name:'Shop'},'SAGO-1'),/recipient/);assert.throws(()=>readUpiAdvance({UPI_ADVANCE_ENABLED:'true',UPI_PAYEE_VPA:'8939237308',UPI_PAYEE_NAME:'Shop'},'bot.example.com'),/VPA/);
+ const uri=upiUri(advance,'SGO12345'),parsed=new URL(uri);assert.equal(parsed.searchParams.get('pa'),advance.vpa);assert.equal(parsed.searchParams.get('am'),'10.00');assert.equal(parsed.searchParams.get('cu'),'INR');
+ assert.throws(()=>upiUri({vpa:'8939237308',name:'Shop'},'SGO1'),/recipient/);assert.throws(()=>readUpiAdvance({UPI_ADVANCE_ENABLED:'true',UPI_PAYEE_VPA:'8939237308',UPI_PAYEE_NAME:'Shop'},'bot.example.com'),/VPA/);
+ assert.throws(()=>upiUri(advance,'x'.repeat(36)),/reference/);
  const directory=mkdtempSync('/tmp/shopbot-qr-'),path=await qrImage(uri,directory),bytes=readFileSync(directory+'/'+path.split('/').at(-1));assert.equal(bytes.subarray(0,8).toString('hex'),'89504e470d0a1a0a');assert.equal(await qrImage(uri,directory),path);
 });
 
