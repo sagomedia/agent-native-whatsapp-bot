@@ -18,6 +18,8 @@ Make focused commits describing the behavior changed. Review `git diff` and `git
 
 Track bugs, requested features and remaining acceptance work in GitHub Issues, and link the relevant issue from the pull request. Keep owner/device acceptance issues open until the actual checks are recorded; merging code does not complete a real-device or payment test.
 
+For every major implementation stage, publish a focused commit and record its commit link, relevant validation and remaining work in the linked GitHub issue. Keep the issue checklist current. Commit the accepted scope before broad implementation so later changes can be traced to the owner's decision.
+
 Before reporting work as published, confirm that the remote branch contains the intended commit and provide the pull request URL and its check status. A local commit or recovery bundle is not publication. If a push fails, report the exact failure and which checkpoint remains local so the blocker can be resolved promptly. Keep unfinished changes out of the published checkpoint.
 
 The current GitHub login has repository and workflow access. If authorization later expires or a workflow push is rejected for a missing scope, use `gh auth refresh --hostname github.com --scopes workflow`, complete browser authorization and verify `gh auth status` before retrying. Keep active development on a normal local-disk Git checkout; the historical SMB workspace can be unavailable and its Git metadata pointer is specific to one computer.
