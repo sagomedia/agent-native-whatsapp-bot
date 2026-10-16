@@ -1,17 +1,17 @@
 # Deployment handoff — 15 October 2026 (America/Adak)
 
-The customer ordering implementation is deployed and healthy on the existing VPS. The deployed source commit is `fea4a9d56f46d040166903eb443d75150984e3a5`.
+The customer ordering implementation is deployed on the existing VPS. A live voice incident revealed decoder timeouts and a provider schema rejection after the original deployment. The audio corrections and their measured live verification are documented in [AUDIO-INCIDENT.md](AUDIO-INCIDENT.md). The final runtime source commit is `423611b957c77f09ebc3df62d0b74baa8f032b01`.
 
 | Item | Verified value |
 | --- | --- |
-| Active release | `preview-3edcf01749a1` |
-| Artifact SHA-256 | `9bbe9f676b3b6acf5d7b9037fde323075272b23a7904fff07e1cb330ee8b0927` |
+| Active release | `preview-5e57206b0419` |
+| Artifact SHA-256 | `ab656eaf8a9991748c36be4c9a25512273fa65e1d615468aaa48ff8dd8e788ec` |
 | Source branch | `codex/finish-customer-ordering-20261015` |
-| Database migration | 26 → 32 |
-| Prompt version | `2026-10-15.2` |
+| Database migration | 26 → 32 → 33 |
+| Prompt version | `2026-10-15.3` |
 | Understanding schema | 2 |
 | Runtime verification | 133 artifact files; content verified as both root and the service user |
-| Integration tests | 523 passed, 0 failed |
+| Integration tests | 526 passed, 0 failed; final dashboard adjustment also passed release build |
 | Service | active/running; no automatic restarts at final check |
 | Model | Existing `gemini-3.5-flash-lite` configuration retained |
 
@@ -30,11 +30,11 @@ The customer ordering implementation is deployed and healthy on the existing VPS
 
 ## Verification and preservation
 
-`npm run build`, TypeScript checking, native script syntax checks and the full 523-case integration suite passed. The final test fixture cleanup also passed its focused QR test. The release packager verified the exact artifact set before upload, and the VPS verified its content again.
+`npm run build`, TypeScript checking, native script syntax checks and the original 523-case integration suite passed. The audio correction expanded this to 526 passing cases; see the incident document for actual VPS decoder/provider checks. The final test fixture cleanup also passed its focused QR test. The release packager verified the exact artifact set before upload, and the VPS verified its content again.
 
 A private copy of the real database was actually restored into disposable local PostgreSQL 17, migrated twice and compared using hashes of protected records. Conversations, requests, inference budgets, provider attempts and the WhatsApp outbox were preserved. The temporary database and dump are removed after the rehearsal.
 
-On the VPS, all three original order snapshots, the spending ledger and the owner handling modes were unchanged. Existing delivery states remained 171 delivered, 1 failed and 3 cancelled. The $4.50 inference ceiling was retained, with committed and held ledger values unchanged. No real customer message or payment was sent to test this deployment.
+The original deployment preserved all three order snapshots, the spending ledger and owner handling modes. Subsequent live voice attempts and the isolated audio diagnostics retain their actual usage or unknown holds. The $4.50 inference ceiling was not increased or reset. No WhatsApp customer message or bank payment was sent by the deployment diagnostics. The audio incident evidence records the final preservation checks.
 
 The owner quote editor was inspected at desktop and mobile widths, with no page errors or horizontal overflow. Synthetic receipt recording and quote submission both returned HTTP 200. The invoice remains gated until required checks and customer consent are complete.
 
@@ -44,15 +44,15 @@ Final public checks: welcome audio HTTP 200 (`audio/ogg`, 32,125 bytes), owner l
 
 ## Backups and recovery
 
-A 150-second orchestration timeout and a 30-second cold-start window caused intermediate attempts to return to the working release. Orders and accounting remained intact. The native upgrade now allows a bounded 120-second cold start. The final code-only switch used a longer readiness allowance and reused the freshly completed consistent backup; it changed neither schema nor environment.
+A 150-second orchestration timeout and a 30-second cold-start window caused intermediate attempts to return to the working release. Orders and accounting remained intact. The native upgrade now allows a bounded 120-second cold start. The audio correction took a new consistent backup, applied additive migration 33, and passed readiness. A final dashboard update reused that completed backup and passed the same bounded readiness check; environment and audio backend were preserved.
 
-The completed database backup is `/var/backups/shopbot-migration/owner-20261016T045244Z/database.dump`. Final environment/service recovery information is in `/var/backups/shopbot-migration/final-code-20261016T050107Z`. Earlier database backups and the original private environment are retained. The previous working executable is `preview-931f6c6628c7`; the original pre-task release `preview-539dc247a0a0` is also retained.
+The latest completed database backup is `/var/backups/shopbot-migration/owner-20261016T060306Z/database.dump`, taken before additive audio migration 33. Its size is 63,370,024 bytes and `pg_restore --list` succeeded before activation. The same private directory retains the environment and previous release pointer. Earlier backups and the original private environment remain available. The verified voice executable `preview-fc1cd867ff4c`, pre-audio release `preview-3edcf01749a1`, and original pre-task release `preview-539dc247a0a0` are retained. The final dashboard artifacts use the same audio backend; their only other server byte difference is a removed trailing space in already-applied migration 23, checked explicitly before activation. Dashboard recovery metadata is in `/var/backups/shopbot-migration/audio-ui-20261016T060958Z/`.
 
 For an executable rollback, atomically point `/opt/shopbot-vps/current` at the reviewed prior release and restart `shopbot-vps.service`, then check native readiness. Keep the additive database in place. Do not automatically restore an older database after new customer traffic, and do not use the legacy-app rollback script for this native cutover.
 
 ## Owner acceptance still needed
 
-1. Open the [owner dashboard](https://shopbot-preview.sagoautomation.tech/owner). One existing WhatsApp conversation is in owner takeover. Click **Return to assistant** in that conversation before testing the bot.
+1. Open the [owner dashboard](https://shopbot-preview.sagoautomation.tech/owner) and select your conversation. The reported voice failure occurred while the assistant was handling that chat; takeover was not its cause.
 2. Send a real Tamil voice list with known and unknown items. Check the recognized counts, photos, spacing and spoken welcome.
 3. Check the bank-resolved recipient name, make one real ₹10 test transfer, and verify the actual receipt in the owner dashboard. Wallet/deep-link compatibility and receipt cannot be proven by offline QR decoding.
 4. Finish an owner quote if needed, approve it as the customer, then test ready/collected status and an amendment before collection. Send thanks, followed by a status question.
@@ -63,6 +63,6 @@ Review [the implementation and flow](IMPLEMENTATION.md), [the actual fixed Tamil
 
 ## Source handoff
 
-Source and evidence are committed in `/home/gk-pc/whatsapp-bot-finish`. The deployable archive and a portable source bundle are saved under `/home/gk-pc/shopbot-finish-release`.
+Source and evidence are committed in `/home/gk-pc/whatsapp-bot-finish`. The original deployment files are under `/home/gk-pc/shopbot-finish-release`; the audio correction archive and updated portable source bundle are under `/home/gk-pc/shopbot-audio-final-release`.
 
-GitHub was not updated in this run. The recovered baseline includes a workflow file that an earlier push could not publish with the existing OAuth workflow scope. No alternate credential surface was used to bypass that restriction. This does not affect the verified VPS release.
+The runtime source was verified on GitHub branch `codex/finish-customer-ordering-20261015` at `423611b957c77f09ebc3df62d0b74baa8f032b01` using `git ls-remote`. This audio diagnosis/deployment run did not perform that publication. Incident evidence and the final handoff are also saved locally in the source checkout.

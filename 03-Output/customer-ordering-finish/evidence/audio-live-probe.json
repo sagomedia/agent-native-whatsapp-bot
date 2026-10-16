@@ -1,0 +1,43 @@
+{
+  "kind": "isolated metered VPS diagnostic; no WhatsApp output",
+  "results": [
+    {
+      "release": {
+        "status": "content_verified",
+        "gitCommit": "4b21a0eaabe99233f88b07118248cd972811554c",
+        "gitTree": "a3b72e88b834b4220e97baa1b5ad8265678d1a27",
+        "artifactHash": "225c5a7a1d162b32ad79b2ffeef7ca0cf0a6160cd504a32513ba7690347bda0f",
+        "model": "gemini-3.5-flash-lite",
+        "promptVersion": "2026-10-15.3",
+        "understandingVersion": 2,
+        "createdAt": "2026-10-16T05:59:17.289Z"
+      }
+    },
+    {
+      "decodedOriginal": true,
+      "originalBytes": 31159,
+      "durationSeconds": 16.7135,
+      "wavBytes": 534876,
+      "preflightAndDecodeMs": 27019
+    },
+    {
+      "success": true,
+      "diagnosticConversation": "296b9674-ad37-4ca2-af80-0b7489f11526",
+      "attempts": [
+        {
+          "state": "succeeded",
+          "failure_code": null,
+          "stage": "identify",
+          "billing_state": "estimated",
+          "estimated_cost_microusd": "2071"
+        }
+      ],
+      "result": {
+        "version": 1,
+        "draft_items": 4
+      },
+      "whatsappMessagesSent": 0,
+      "ordersUnchanged": true
+    }
+  ]
+}

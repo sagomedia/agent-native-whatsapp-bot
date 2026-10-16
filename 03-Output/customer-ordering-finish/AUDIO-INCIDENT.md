@@ -25,4 +25,27 @@ The strict Zod contracts remain authoritative locally. The fix removes provider 
 
 The new checks cover a real 16-second Ogg Opus fixture, decoder preflight, original retention after a failed decode, authenticated playback fallback, cross-conversation isolation and compact provider grammar with strict local rejection of invalid quantities/UUIDs/version. The original audio fixture contains only a generated sine tone, with no customer speech.
 
-Validation and deployment results are appended after verification. Diagnostic provider calls retain their paid usage or unknown holds in the existing spending ledger. No spending limit is increased or reset.
+The full integration suite passed **526/526**, with **56/56** focused contract checks after the final schema refinement. The release build includes TypeScript checking, the dashboard build and server compilation. A final dashboard-only adjustment preserves missing-photo explanations alongside the new voice failure details; it passed the same release build.
+
+## Actual recovered voice
+
+The failed original was refreshed from Meta into private service storage on the VPS: 31,159 bytes of Ogg audio. The patched decoder converted it to a 16.7135-second, 534,876-byte mono 16 kHz WAV. Decoder preflight plus conversion took 27.019 seconds under the service identity, 128 MB Node heap, 256/384 MB service memory limits, private temporary directory and filesystem protections.
+
+The original audio then went through the patched compiled adapter and normal metered conversation runtime in a separate diagnostic conversation. The provider returned a strictly validated successful identification, with four draft items for review, one usage-accounted call and an estimated 2,071 microusd. No WhatsApp outbox entry was created and the three existing orders were unchanged. The diagnostic unit used 164.5 MB peak memory and exited successfully. This verifies that the recovered voice can be decoded and interpreted; it does not measure recognition accuracy against a human transcript.
+
+Diagnostic provider calls retain their paid usage or unknown holds in the existing spending ledger. No spending limit is increased or reset. The final deployment and playback restoration passed the checks below.
+
+
+## Deployed result
+
+- Active release: `preview-5e57206b0419`; source `423611b957c77f09ebc3df62d0b74baa8f032b01`; prompt `2026-10-15.3`; schema migration **33**.
+- Artifact SHA-256: `ab656eaf8a9991748c36be4c9a25512273fa65e1d615468aaa48ff8dd8e788ec`. Startup verified all 133 files. The final audio backend matches the successful live probe; an audited concurrent merge removed only one trailing space from already-applied migration 23.
+- Fresh database/environment backup: `/var/backups/shopbot-migration/owner-20261016T060306Z/`. The 63,370,024-byte dump passed `pg_restore --list` before activation. Final dashboard recovery metadata is under `/var/backups/shopbot-migration/audio-ui-20261016T060958Z/`.
+- The historical failed message now has its recovered original and verified WAV saved under its original conversation/actor and source version. Authenticated playback loading returned the 534,876-byte WAV. Its inbound message remains processed; no shopping request or customer reply was replayed.
+- Before/after hashes matched for all three original orders and all advance, amendment and quote records. Customer draft versions, contents, assistant/owner modes and revisions matched. Spending ceiling and committed/held ledger values matched the pre-activation snapshot after the metered diagnostics.
+- Native readiness returned `ready`; service remained active with **0 automatic restarts**. Public welcome audio returned **200** (32,125 bytes); owner login **302**; direct owner API without its JWT **403**; public simulator **404**.
+- The temporary integration PostgreSQL container and its anonymous volume were removed. Customer audio and private backups remain on the VPS; no customer voice recording is committed to the repository.
+
+Evidence: [live decoder/provider result](evidence/audio-live-probe.json), [deployment and preservation](evidence/audio-deployment-proof.json), [test summary](evidence/audio-test-summary.json), [service health](evidence/audio-service-health.txt).
+
+The next acceptance step is a fresh customer Tamil voice note on WhatsApp and review of the proposed products/counts. The original failed message has been preserved without changing the current order. Human accent accuracy, bank settlement and unrestricted WhatsApp onboarding are not established by this audio incident check.

@@ -1,0 +1,8 @@
+NRestarts=0
+MemoryCurrent=95821824
+ActiveState=active
+SubState=running
+/opt/shopbot-vps/releases/preview-5e57206b0419
+{"status":"ready","mode":"mock"}owner_without_jwt=403
+Filesystem     1K-blocks    Used Available Use% Mounted on
+/dev/sda1       10088732 9047740    506928  95% /

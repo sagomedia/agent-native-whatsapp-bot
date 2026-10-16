@@ -1,0 +1,64 @@
+{
+  "results": [
+    {
+      "activeRelease": "preview-5e57206b0419",
+      "audioBackendArtifactsUnchanged": true,
+      "auditedAdditionalBackendDiff": "one trailing space removed in already-applied migration 23",
+      "contentVerifiedAtStartup": true,
+      "backup": "/var/backups/shopbot-migration/owner-20261016T060306Z",
+      "codeOnlyRecovery": "/var/backups/shopbot-migration/audio-ui-20261016T060958Z",
+      "ready": true
+    },
+    {
+      "historicalPlaybackRestored": true,
+      "messageId": "982c8dee-4b66-4295-a2b2-5bf8b85da060",
+      "durationSeconds": 16.7135,
+      "originalBytes": 31159,
+      "wavBytes": 534876,
+      "customerDraftUnchanged": true,
+      "historicalMessageReplayed": false
+    },
+    {
+      "ownerPlaybackValidated": true,
+      "mimeType": "audio/wav",
+      "bytes": 534876
+    },
+    {
+      "ordersAndPaymentsUnchanged": true,
+      "customerDraftsAndControlsUnchanged": true,
+      "budgetCeilingsPreserved": true,
+      "ledger": [
+        {
+          "store_id": "00000000-0000-4000-8000-000000000001",
+          "limit_microusd": "4500000",
+          "committed_microusd": "281452",
+          "held_microusd": "1536820",
+          "blocked": false
+        }
+      ],
+      "schemaVersion": 33,
+      "release": {
+        "model": "gemini-3.5-flash-lite",
+        "status": "content_verified",
+        "gitTree": "151f59f530ba9bb5993060f5bd6f70468a13c28a",
+        "createdAt": "2026-10-16T06:04:07.589Z",
+        "gitCommit": "423611b957c77f09ebc3df62d0b74baa8f032b01",
+        "artifactHash": "ab656eaf8a9991748c36be4c9a25512273fa65e1d615468aaa48ff8dd8e788ec",
+        "promptVersion": "2026-10-15.3",
+        "understandingVersion": 2
+      }
+    }
+  ],
+  "publicChecks": {
+    "ownerLogin": 302,
+    "welcomeAudio": {
+      "status": 200,
+      "bytes": 32125,
+      "mimeType": "audio/ogg"
+    },
+    "publicSimulator": 404,
+    "ownerWithoutJwt": 403,
+    "nativeReadiness": "ready",
+    "serviceAutomaticRestarts": 0
+  }
+}
