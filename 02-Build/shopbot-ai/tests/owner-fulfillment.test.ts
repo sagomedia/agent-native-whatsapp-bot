@@ -86,7 +86,7 @@ test('customer photo choice and bound submission continue through owner approval
   await turn(channel,tap(await action(pool,{type:'shopping_action',action:'status'})));assert.match(sent.at(-1).interactive.body.text,/ready for pickup/i);
   const snapshot=(await app.inject({url:'/api/owner/snapshot',headers})).json();assert.equal(snapshot.requests.find((r:any)=>r.id===submitted.id).fulfillment,'ready_for_pickup');
 
-  await turn(channel,tap(await action(pool,{type:'shopping_action',action:'handoff'})));
+  await turn(channel,{type:'text',text:{body:'talk to shop'}});
   const handedOff=await state();assert.equal(handedOff.operator_mode,'owner');assert.equal(handedOff.handoff_requested,true);
   assert.deepEqual(handedOff.draft,review.lines);assert.equal(handedOff.last_request_id,submitted.id);assert.deepEqual((await request()).lines,review.lines);
   const followup=inbound({type:'text',text:{body:'Where should I collect this?'}});
@@ -170,7 +170,7 @@ test('staff acknowledges a handoff with a scoped visual receipt, rejects stale c
   await setupDatabase(pool,'mock');await setupImageDemo(pool,fixtureStore);
   const visualCfg={...cfg,visualOrdering:true};
   const channel=new WhatsAppChannel(pool,visualCfg,async(_url,init)=>{sent.push(JSON.parse(String(init!.body)));return new Response(JSON.stringify({messages:[{id:'wamid.ack.'+sent.length}]}),{status:200});});await channel.setup();
-  await turn(channel,{type:'text',text:{body:'hello'}});await turn(channel,tap(await action(pool,{type:'shopping_action',action:'handoff'})));
+  await turn(channel,{type:'text',text:{body:'hello'}});await turn(channel,{type:'text',text:{body:'talk to shop'}});
   const c=(await pool.query("SELECT * FROM conversations WHERE handoff_requested=true")).rows[0];assert.ok(c);
   app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,port:3017,host:'127.0.0.1',mediaDir:'/tmp/offline-handoff-ack',owner,whatsapp:visualCfg},pool,undefined,undefined,async()=>({email:owner.email,subject:'offline-owner'}),channel);
   const post=(id:string,payload:object)=>app!.inject({method:'POST',url:'/api/owner/conversations/'+id+'/control',headers,payload});

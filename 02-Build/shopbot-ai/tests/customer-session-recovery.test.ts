@@ -29,7 +29,7 @@ function provider(plan:(input:InterpretationInput)=>Interpretation,recognize:()=
   return {name:'customer-session-fixture',mode:'mock',supportsAudio:true,interpret:async input=>({output:input.stage==='recognize'?{transcript:recognize(),operations:[],next:'continue'}:plan(input),truncated:false,usage:null})};
 }
 const last=(s:Snapshot)=>s.messages.at(-1)!.rich!;
-const actions=(r:RichReply)=>r.parts?.flatMap(p=>p.cards.flatMap(c=>c.buttons??p.buttons??[]))??r.buttons??[];
+const actions=(r:RichReply)=>r.parts?.flatMap(p=>[...p.buttons??[],...p.cards.flatMap(c=>c.buttons??[])])??r.buttons??[];
 const choose=(s:Snapshot,type:SimulatorEvent['type'])=>actions(last(s)).find(a=>a.event.type===type)!.event;
 async function send(inbox:SimulatorService,runtime:ConversationRuntime,event:SimulatorEvent){await inbox.ingest(event);await runtime.processNext(inbox.context);return inbox.snapshot();}
 const text=(inbox:SimulatorService,runtime:ConversationRuntime,value:string)=>send(inbox,runtime,{id:randomUUID(),type:'text',text:value});
@@ -59,7 +59,7 @@ test('ambiguous spoken tube asks product type, keeps other items, and completes 
   assert.equal(last(s).stage,'products');
   s=await send(inbox,runtime,choose(s,'confirm_products'));
   assert.equal(last(s).stage,'bill');assert.equal(s.requests.length,0);
-  const bill=last(s).parts![0].cards[0];assert.ok(bill.kind==='bill');
+  const bill=s.messages.filter(m=>m.rich?.groupId===last(s).groupId).flatMap(m=>m.rich?.parts?.flatMap(p=>p.cards)??[]).find(c=>c.kind==='bill')!;assert.ok(bill.kind==='bill');
   assert.equal(bill.billRows![0].packSize,'0.5 இன்ச் x 10 மீட்டர்');assert.match(bill.billRows![0].count,/1/);
   assert.equal(s.conversation.pending?.kind==='review'&&s.conversation.pending.totalPaise,55500);
   const confirm=choose(s,'confirm');s=await send(inbox,runtime,confirm);

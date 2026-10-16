@@ -1,7 +1,7 @@
 import {acceptOrderQuote} from '../services/order-quotes.js';
 import {actionDeliveryReady} from '../services/review-delivery.js';
 import {acknowledgementOnly,amendmentIntent,explicitNewOrder,cancellationIntent,proposeAmendment,customerAmendmentAction,amendmentReviewReply} from '../services/order-amendments.js';
-import {upiAdvanceReply,claimUpiAdvance,paymentClaimText,type UpiAdvanceConfig} from '../services/upi-advance.js';
+import {upiAdvanceReply,claimUpiAdvance,chooseDemoPayAtShop,paymentClaimText,demoPayAtShopText,type UpiAdvanceConfig} from '../services/upi-advance.js';
 import {customerCopy} from '../../../../packages/contracts/customer-copy.js';
 import {discoverProducts as lookupGroundedProducts} from '../services/catalog-discovery.js';
 import {validateCurrentTurn,submissionIntent,namedRemovalsExplicit} from '../services/current-turn.js';
@@ -140,7 +140,7 @@ export class ConversationRuntime {
     if(social==='handoff')deterministic={name:'request_store_assistance',args:{expectedVersion:claimed.state.version}};
     const inquiry=claimed.event.type==='text'?shopInquiry(claimed.event.text):undefined;
     if(inquiry&&!deterministic)interpretation=inquiry;
-    if(claimed.state.lastRequestId&&claimed.event.type==='text'&&paymentClaimText(claimed.event.text))interpretation={operations:[],next:'continue'};
+    if(claimed.state.lastRequestId&&claimed.event.type==='text'&&(paymentClaimText(claimed.event.text)||demoPayAtShopText(claimed.event.text)))interpretation={operations:[],next:'continue'};
     if(social&&!deterministic)interpretation={operations:[],next:'continue',conversation:social};
     if(!failure&&!deterministic&&!social&&!inquiry&&!interpretation&&!requestedLanguage&&(claimed.event.type==='text'||claimed.event.type==='voice'||claimed.event.type==='image')) {
       try {interpretation=await this.interpret(ctx,claimed);}
@@ -185,8 +185,9 @@ export class ConversationRuntime {
         }catch(error){failure=error instanceof Error?error.message:'Invalid spoken list control';}
       }
     }
-    if(!deterministic&&interpretation?.conversation==='handoff'&&!interpretation.operations.length)deterministic={name:'request_store_assistance',args:{expectedVersion:claimed.state.version}};
+    if(!deterministic&&interpretation?.conversation==='handoff'&&!interpretation.operations.length&&!interpretation.understanding?.intents.includes('estimate'))deterministic={name:'request_store_assistance',args:{expectedVersion:claimed.state.version}};
     if(!failure&&!deterministic&&claimed.event.type!=='image'&&interpretation?.understanding?.intents.includes('status')&&!interpretation.operations.length)deterministic={name:'get_order_status',args:{}};
+    if(!failure&&!deterministic&&!claimed.state.lastRequestId&&claimed.state.draft.length&&!interpretation?.operations.length&&(interpretation?.understanding?.intents.includes('estimate')||interpretation?.understanding?.intents.includes('submit')))deterministic={name:'preview_order',args:{expectedVersion:claimed.state.version,allowPartial:claimed.state.allowPartialReview}};
     const explicitSend=claimed.event.type==='shopping_action'&&claimed.event.action==='finish_order'||(claimed.event.type==='text'?submissionIntent(claimed.event.text):claimed.event.type==='voice'&&!!interpretation?.transcript&&submissionIntent(interpretation.transcript));
     // A job answer during read-only exploration is still a product proposal.
     // The model cannot turn that phase into a cart write or default its amount.
@@ -254,11 +255,15 @@ export class ConversationRuntime {
           if(!claimed.displayedActions.some(a=>digest(a)===digest(claimed.event))||!await actionDeliveryReady(client,ctx.conversationId,claimed.event.id,true))throw new ToolError('Use the complete current quote.','stale_confirmation');
           await acceptOrderQuote(client,ctx,current,claimed.event,claimed.id);
           rich={...plainReply(say(current,'Your final bill is approved. The shop can now confirm and prepare your order.','Bill confirm ஆகியிருக்கு.\nகடை order-ஐ check பண்ணி தயார்படுத்தும்.','Bill confirm aagiyirukku.\nKadai order-ai check panni thayaarpaduththum.')),readOnly:true};message=rich.text;
+        } else if(!failure&&current.lastRequestId&&(claimed.event.type==='pay_at_shop'||demoPayAtShopText(turnText))){
+          if(claimed.event.type==='pay_at_shop'&&(claimed.event.expectedVersion!==current.version||claimed.event.requestId!==current.lastRequestId||!claimed.displayedActions.some(a=>digest(a)===digest(claimed.event))))throw new ToolError('Use the latest payment choice.','stale_confirmation');
+          await chooseDemoPayAtShop(client,ctx,current.lastRequestId,!!this.options.advance?.demoPayAtShop);
+          rich={...plainReply(customerCopy('demoPayAtShop',current)),readOnly:true};message=rich.text;
         } else if(!failure&&current.lastRequestId&&(claimed.event.type==='payment_claim'||paymentClaimText(turnText))){
           if(claimed.event.type==='payment_claim'&&(claimed.event.expectedVersion!==current.version||claimed.event.requestId!==current.lastRequestId||!claimed.displayedActions.some(a=>digest(a)===digest(claimed.event))))throw new ToolError('Use the latest payment choice.','stale_confirmation');
           const paymentState=await claimUpiAdvance(client,ctx,current.lastRequestId);
           const paymentText=['verified','refund_pending','refunded'].includes(paymentState)?say(current,paymentState==='verified'?'The shop has already verified your ₹10 advance.':paymentState==='refunded'?'The shop has recorded your ₹10 refund.':'Your advance was received for a closed order. The shop needs to arrange its refund.',paymentState==='verified'?'₹10 advance வந்திருக்குனு கடை confirm பண்ணியிருக்கு.':paymentState==='refunded'?'₹10 refund complete ஆகியிருக்குனு கடை confirm பண்ணியிருக்கு.':'இந்த order முடிஞ்சிருக்கு. வந்த ₹10 advance-ஐ கடை refund பண்ணணும்.','Advance status-ai kadai confirm panniyirukku.'):customerCopy('paymentClaimed',current);
-          rich={...plainReply(paymentText),readOnly:true};message=rich.text;
+          rich={...plainReply(paymentState==='pay_at_shop'?customerCopy('demoPayAtShop',current):paymentText),readOnly:true};message=rich.text;
         } else if(!failure&&current.lastRequestId&&(postOrderChange||cancellationIntent(turnText))){
           if(!interpretation?.operations.length&&!cancellationIntent(turnText))rich={...plainReply(customerCopy('amendmentTarget',current)),readOnly:true};
           else rich=await proposeAmendment(client,ctx,current,claimed.id,interpretation?.operations??[],this.tools,cancellationIntent(turnText));
@@ -333,7 +338,7 @@ export class ConversationRuntime {
             Object.assign(current,await loadState(client,ctx));
             deterministic={...deterministic,args:{...deterministic.args,operations,expectedVersion:current.version}};
           }
-          const invoke=async(call:ToolCall)=>{if(current.visualOrdering&&(call.name==='submit_order_request'||call.name==='confirm_product_choices'&&current.pending?.kind==='products'&&current.pending.completeReview)){const binding=call.name==='submit_order_request'?call.args.reviewId:call.args.batchId;if(!await reviewDeliveryReady(client,ctx.conversationId,binding,claimed.event.type==='confirm'||claimed.event.type==='confirm_products'))throw new ToolError('All review parts must be delivered before approval. Please ask to review again.','review_incomplete');}
+          const invoke=async(call:ToolCall)=>{if(current.visualOrdering&&(call.name==='submit_order_request'||call.name==='confirm_product_choices'&&current.pending?.kind==='products'&&(current.pending.completeReview||claimed.event.type!=='select_product'))){const binding=call.name==='submit_order_request'?call.args.reviewId:call.args.batchId;if(!await reviewDeliveryReady(client,ctx.conversationId,binding,claimed.event.type==='confirm'||claimed.event.type==='confirm_products'))throw new ToolError('All review parts must be delivered before approval. Please ask to review again.','review_incomplete');}
           return this.tools.invokeInTransaction(client,{...ctx,...(call.name==='submit_order_request'&&(deterministic?.name==='submit_order_request'||explicitSend&&deterministic?.name==='confirm_product_choices')?{consentReviewId:call.args.reviewId}:{}),...(call.name==='confirm_product_choices'&&deterministic?.name==='confirm_product_choices'?{consentProductBatchId:call.args.batchId}:{}),...(selectedCatalogSku?{selectedCatalogSku,selectedCatalogProduct}:{})},call,claimed.id);};
           let result:ToolResult;
           let assistance:CatalogObservation[]|undefined;
@@ -352,7 +357,7 @@ export class ConversationRuntime {
             assistanceBindingId=await saveAssistantMemory(client,ctx,queries.length?{purpose:assistanceLineId?'pending':'discovery',queries,lineId:assistanceLineId??null,sourceVersion:current.version,requestedQuantity:rechecking?claimed.memory?.requestedQuantity:interpretation?.assistance?.quantity,requestedUnit:rechecking?claimed.memory?.requestedUnit:interpretation?.assistance?.requestedUnit,observations:assistance}:null);
           } else if(deterministic) {
             result=await invoke(deterministic);
-            if(deterministic.name==='confirm_product_choices'||deterministic.name==='apply_draft_changes'&&(current.requireProductConfirmation||claimed.event.type==='select_candidate'||claimed.event.type==='choose_product'||(claimed.event.type==='text'&&claimed.state.pending?.kind==='question'))) result=await invoke({name:'preview_order',args:{expectedVersion:result.state!.version}});
+            if(deterministic.name==='confirm_product_choices'||deterministic.name==='apply_draft_changes'&&(current.requireProductConfirmation||claimed.event.type==='select_candidate'||claimed.event.type==='choose_product'||(claimed.event.type==='text'&&claimed.state.pending?.kind==='question'))) result=await invoke({name:'preview_order',args:{expectedVersion:result.state!.version,...(deterministic.name==='confirm_product_choices'&&current.allowPartialReview&&(claimed.event.type==='confirm_products'||claimed.event.type==='text')?{allowPartial:true}:{})}});
             // Product identity approval presents the bill. Submission requires
             // another explicit consent bound to that current bill.
 
@@ -478,7 +483,7 @@ export class ConversationRuntime {
       rich=unclearTarget||clearConfirmation?{...rich,replyLanguage:finalState.replyLanguage??'en'}:shoppingActions({...rich,replyLanguage:finalState.replyLanguage??'en'},finalState,claimed.catalogMap);
       if(claimed.catalogMap)rich={...rich,storeName:claimed.catalogMap.store.name};
       if(interpretation?.understanding?.unresolved.includes('validation_recovery')&&interpretation.transcript)rich.contextLines=[say(finalState,`Heard: ${interpretation.transcript.slice(0,250)}`,`கேட்டது: ${interpretation.transcript.slice(0,250)}`,`Kettathu: ${interpretation.transcript.slice(0,250)}`),...rich.contextLines??[]];
-      if(replyRequest?.advanceRequired&&this.options.advance)rich=await upiAdvanceReply(client,ctx,finalState,this.options.advance.hostname)??rich;
+      if(replyRequest?.advanceRequired&&this.options.advance&&!rich.readOnly)rich=await upiAdvanceReply(client,ctx,finalState,this.options.advance.hostname,{demoPayAtShop:this.options.advance.demoPayAtShop,onlyOnce:true})??rich;
       rich=materializeVisualReply({...visualReply(rich,finalState,replyRequest),storeName:claimed.catalogMap?.store.name});
       message=rich.text;
       if(finalState.visualOrdering){const binding=conversationBinding(finalState,await loadAssistantMemory(client,ctx));const cancelled=await client.query("UPDATE whatsapp_outbox o SET state='cancelled',last_error='review_superseded' WHERE o.conversation_id=$1 AND o.state='queued' AND o.sender_kind='assistant' AND EXISTS(SELECT 1 FROM whatsapp_actions a WHERE a.message_id=o.message_id AND (a.source_version<>$2 OR a.binding_id IS DISTINCT FROM $3::uuid)) RETURNING o.message_id",[ctx.conversationId,finalState.version,binding]);if(cancelled.rowCount)await client.query("UPDATE messages SET status='cancelled' WHERE id=ANY($1::uuid[])",[cancelled.rows.map(r=>r.message_id)]);}
@@ -529,7 +534,7 @@ export class ConversationRuntime {
     if(e.type==='select_product'||e.type==='confirm_products') {
       const pending=s.pending;
       if(pending?.kind!=='products'||pending.id!==e.batchId||pending.version!==s.version)throw new ToolError('That product check is no longer current. Review your list again.','stale_confirmation');
-      if(s.visualOrdering&&e.type==='confirm_products'&&!productCheckCoversDraft(s,pending))throw new ToolError('Some requested items still need checking.');
+      if(s.visualOrdering&&e.type==='confirm_products'&&!productCheckCoversDraft(s,pending)&&!(s.allowPartialReview&&pending.groups.length&&pending.groups.every(g=>g.products.length===1&&s.draft.find(l=>l.id===g.lineId)?.sku===g.products[0].sku)))throw new ToolError('Some requested items still need checking.');
       if(e.type==='confirm_products'&&pending.groups.some(g=>g.products.length!==1&&!(s.catalogDiscovery&&s.draft.some(l=>l.id===g.lineId&&g.products.some(p=>p.sku===l.sku)))))throw new ToolError('Choose the correct option for each requested item first.');
       return {name:'confirm_product_choices',args:{batchId:e.batchId,choices:e.type==='select_product'?[{lineId:e.lineId,sku:e.sku}]:pending.groups.map(g=>({lineId:g.lineId,sku:s.catalogDiscovery?s.draft.find(l=>l.id===g.lineId)?.sku??g.products[0].sku:g.products[0].sku}))}};
     }
@@ -559,13 +564,16 @@ export class ConversationRuntime {
     if(text==='send it'&&s.visualOrdering&&!s.lastRequestId){
       if(s.pending?.kind==='products'){
         if(claim.bindingId!==s.pending.id&&!(claim.memory?.purpose==='quote'&&claim.memory.sourceVersion===s.version&&claim.bindingId===claim.memory.id)||s.pending.version!==s.version||Date.parse(s.pending.expiresAt)<=Date.now())throw new ToolError('Use the current product review before sending.','stale_confirmation');
-        if(!productCheckCoversDraft(s,s.pending))return {name:'preview_order',args:{expectedVersion:s.version}};
+        if(!productCheckCoversDraft(s,s.pending)){
+          if(s.allowPartialReview&&s.pending.groups.length&&s.pending.groups.every(g=>g.products.length===1&&s.draft.find(l=>l.id===g.lineId)?.sku===g.products[0].sku))return {name:'confirm_product_choices',args:{batchId:s.pending.id,choices:s.pending.groups.map(g=>({lineId:g.lineId,sku:g.products[0].sku}))}};
+          return {name:'preview_order',args:{expectedVersion:s.version,allowPartial:s.allowPartialReview}};
+        }
         return {name:'confirm_product_choices',args:{batchId:s.pending.id,choices:s.pending.groups.map(g=>({lineId:g.lineId,sku:s.draft.find(l=>l.id===g.lineId)?.sku??g.products[0].sku}))}};
       }
       if(s.pending?.kind==='question'&&s.draft.length)return {name:'preview_order',args:{expectedVersion:s.version}};
       if(!s.pending&&s.draft.length)return {name:'preview_order',args:{expectedVersion:s.version}};
     }
-    if(['bill','estimated bill','estimate','show bill','bill evvalavu','பில் எவ்வளவு','பில் காட்டு','உத்தேச பில்'].includes(text))return {name:'estimate_order',args:{expectedVersion:s.version}};
+    if(['bill','invoice','estimated bill','estimate','show bill','bill evvalavu','பில் எவ்வளவு','பில் காட்டு','உத்தேச பில்'].includes(text))return {name:'estimate_order',args:{expectedVersion:s.version}};
     if(text==='edit my list')return {name:'get_draft',args:{}};
     // Text channels can select a code that the backend actually displayed.
     // Never treat an arbitrary model-proposed or stale SKU as trusted consent.

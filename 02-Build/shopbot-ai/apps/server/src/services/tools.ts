@@ -18,7 +18,7 @@ import {getCatalogMap,discoverProducts,needsPipeType} from './catalog-discovery.
 import {productIdentity,productConfirmed,preserveConfirmation,markProductConfirmed,makeProductCheck} from './product-verification.js';
 import {nextCounterLine,productCheckCoversDraft} from './counter-state.js';
 
-export type ToolResult = { estimate?:{knownSubtotalPaise:number;complete:boolean;missingLineIds:string[]}; handoffRequested?:true;state?: ConversationState; products?: Product[];discovery?:DiscoveryResult;catalogMap?:CatalogMap;discoveryBindingId?:string; request?: OrderRequest | null; totalCount?:number; quote?:{quantity:number;unit:string;totalPaise:number}; message: string };
+export type ToolResult = { estimate?:{knownSubtotalPaise:number;complete:boolean;missingLineIds:string[];lines?:DraftLine[]}; handoffRequested?:true;state?: ConversationState; products?: Product[];discovery?:DiscoveryResult;catalogMap?:CatalogMap;discoveryBindingId?:string; request?: OrderRequest | null; totalCount?:number; quote?:{quantity:number;unit:string;totalPaise:number}; message: string };
 export const toolDefinitions = [
   { name: 'search_products', purpose: 'Find actual products and variants in the verified store' },
   { name: 'get_catalog_map', purpose:'Read this store’s departments and product families without loading every SKU' },
@@ -63,8 +63,8 @@ function validateQuantity(product: Product, quantity: number | null) {
   const step = Math.round(product.quantityStep * 1000);
   if (scaled <= 0 || quantity > 100 || !step || scaled % step !== 0) throw new ToolError(`Use increments of ${product.quantityStep} ${product.unit} for ${product.name}.`);
 }
-type LineEvidence=Pick<DraftLine,'budgetCountDerived'|'sourceUncertainty'|'requestedBudgetPaise'|'packSize'|'productMeasures'|'productIntent'|'requestedAmount'|'amountMode'|'supportingPhrase'|'quantityEvidenceVersion'>;
-function lineEvidence(value:LineEvidence):LineEvidence {return Object.fromEntries(['budgetCountDerived','sourceUncertainty','requestedBudgetPaise','packSize','productMeasures','productIntent','requestedAmount','amountMode','supportingPhrase','quantityEvidenceVersion'].flatMap(key=>value[key as keyof LineEvidence]===undefined?[]:[[key,value[key as keyof LineEvidence]]])) as LineEvidence;}
+type LineEvidence=Pick<DraftLine,'packUnitAlternative'|'budgetCountDerived'|'sourceUncertainty'|'requestedBudgetPaise'|'packSize'|'productMeasures'|'productIntent'|'requestedAmount'|'amountMode'|'supportingPhrase'|'quantityEvidenceVersion'>;
+function lineEvidence(value:LineEvidence):LineEvidence {return Object.fromEntries(['packUnitAlternative','budgetCountDerived','sourceUncertainty','requestedBudgetPaise','packSize','productMeasures','productIntent','requestedAmount','amountMode','supportingPhrase','quantityEvidenceVersion'].flatMap(key=>value[key as keyof LineEvidence]===undefined?[]:[[key,value[key as keyof LineEvidence]]])) as LineEvidence;}
 function resolvedLine(product: Product, quantity: number | null, query: string, id: string = randomUUID(), requestedUnit?:string,evidence:LineEvidence={}): DraftLine {
   evidence=lineEvidence(evidence);
   if(evidence.productMeasures&&!matchesProductMeasures(product,evidence.productMeasures))throw new ToolError('The shop must verify the requested product dimensions.');
@@ -115,12 +115,37 @@ async function resolveLine(client: PoolClient, ctx: ActorContext, query: string,
     if(previous&&!replacement){const supplied=evidence;evidence={...lineEvidence(previous),...supplied};if(query!==previous.query&&!supplied.productIntent)delete evidence.productIntent;if(query!==previous.query&&supplied.supportingPhrase)delete evidence.sourceUncertainty;requestedUnit??=previous.requestedUnit;}
     if(evidence.productIntent?.kind==='ambiguous')return {...evidence,id,query,quantity,name:query,...(requestedUnit?{requestedUnit:normalizeUnit(requestedUnit)}:{}),resolution:'needs_choice',candidates:discovery.products,discovery};
     if(evidence.productMeasures){discovery.products=discovery.products.filter(p=>matchesProductMeasures(p,evidence.productMeasures!));const allowed=new Set(discovery.products.map(p=>p.sku));discovery.rankings=discovery.rankings.filter(r=>allowed.has(r.sku));if(!discovery.products.length)discovery.noExactMatch=true;}
+    let retrievedProducts=[...discovery.products];
     if(evidence.packSize){
       const requested=evidence.packSize;
       discovery.products=discovery.products.filter(product=>{const verified=catalogPack(product);return verified&&sameUnit(requested.unit,verified.unit)&&requested.value===verified.value;});
       const allowed=new Set(discovery.products.map(product=>product.sku));
       discovery.rankings=discovery.rankings.filter(ranking=>allowed.has(ranking.sku));
       if(!discovery.products.length)discovery.noExactMatch=true;
+    }
+    if(!discovery.products.length&&evidence.packSize&&!evidence.productMeasures?.length){
+      const pack=evidence.packSize;
+      const strip=(text:string)=>packSearchQuery(packSearchQuery(text,parsePackSize(text),true),pack,true);
+      const specifications=Object.fromEntries(Object.entries(search?.specifications??{}).filter(([,value])=>{const m=parsePackSize(value);return !m||m.value!==pack.value||!sameUnit(m.unit,pack.unit);}));
+      const alternativePlan={...search,keywords:(search?.keywords??[query]).map(strip),specifications};
+      const related=await discoverProducts(client,ctx,strip(query),alternativePlan);
+      retrievedProducts=[...new Map([...retrievedProducts,...related.products].map(p=>[p.sku,p])).values()];
+      if(related.products.length){
+        const exact=related.products.filter(p=>{const actual=catalogPack(p);return actual&&sameUnit(actual.unit,pack.unit)&&actual.value===pack.value;});
+        const allowed=new Set(exact.map(p=>p.sku));
+        discovery={...related,products:exact,rankings:related.rankings.filter(r=>allowed.has(r.sku)),noExactMatch:!exact.length};
+      }
+    }
+    // Keep a real identity match visible when only the pack dimension differs.
+    // This is an alternative requiring a fresh customer choice, never a
+    // litre/kg conversion or an automatically selected/quoted catalog item.
+    if(!discovery.products.length&&evidence.packSize&&!evidence.productMeasures?.length){
+      const requested=evidence.packSize;
+      const alternatives=retrievedProducts.filter(product=>{const actual=catalogPack(product);return actual&&actual.value===requested.value&&!sameUnit(actual.unit,requested.unit)&&convertAmount(actual,requested.unit)===null;});
+      if(alternatives.length){
+        discovery={...discovery,products:alternatives,rankings:alternatives.map(p=>({sku:p.sku,score:0,match:'related' as const,reason:'Same requested product identity; pack unit differs and needs explicit selection'})),noExactMatch:true};
+        return {...evidence,id,query,quantity,name:query,...(requestedUnit?{requestedUnit:normalizeUnit(requestedUnit)}:{}),resolution:'needs_choice',catalogIssue:'pack_unit_mismatch',packUnitAlternative:{requested},candidates:alternatives,discovery};
+      }
     }
     const exact=discovery.products.filter(p=>exactProductMatch(searchQuery,p));
     if(!exact.length&&discovery.products.length===1&&evidence.packSize&&(!search?.familyId||search.familyId===discovery.products[0].familyId))exact.push(discovery.products[0]);
@@ -181,7 +206,8 @@ export class RetailTools {
       let knownSubtotalPaise=0;const missingLineIds:string[]=[];
       for(const line of state.draft){const product=line.sku?products.get(line.sku):undefined;if(product&&sameUnit(product.unit,line.unit??'')&&line.quantity!==null&&product.priceStatus!=='confirm'&&(product.pricePaise>0||product.priceStatus==='free'))knownSubtotalPaise+=lineTotal(product.pricePaise,line.quantity);else missingLineIds.push(line.id);}
       const complete=state.draft.length>0&&!missingLineIds.length;
-      return {state,estimate:{knownSubtotalPaise,complete,missingLineIds},message:say(state,complete?`Estimated total: ${formatMoney(knownSubtotalPaise)}.`:`Known-price subtotal: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} item(s) still need a price or quantity. You can send the list to the store for checking.`,complete?`உத்தேச மொத்தம்: ${formatMoney(knownSubtotalPaise)}.`:`தெரிந்த விலைகளின் கூட்டுத்தொகை: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} பொருட்களுக்கு விலை அல்லது எண்ணிக்கை தேவை. சரிபார்க்கப் பட்டியலைக் கடைக்கு அனுப்பலாம்.`,complete?`Estimate moththam: ${formatMoney(knownSubtotalPaise)}.`:`Therintha vilaikal subtotal: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} porutkalukku vilai illa count venum. List-ai kadaikku check panna anuppalaam.`)};
+      const lines=state.draft.map(line=>{const product=line.sku?products.get(line.sku):undefined;return product?{...line,pricePaise:product.pricePaise,productVersion:product.version,candidates:[product]}:{...line,candidates:[]};});
+      return {state,estimate:{knownSubtotalPaise,complete,missingLineIds,lines},message:say(state,complete?`Estimated total: ${formatMoney(knownSubtotalPaise)}.`:`Known-price subtotal: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} item(s) still need a price or quantity. You can send the list to the store for checking.`,complete?`உத்தேச மொத்தம்: ${formatMoney(knownSubtotalPaise)}.`:`தெரிந்த விலைகளின் கூட்டுத்தொகை: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} பொருட்களுக்கு விலை அல்லது எண்ணிக்கை தேவை. சரிபார்க்கப் பட்டியலைக் கடைக்கு அனுப்பலாம்.`,complete?`Estimate moththam: ${formatMoney(knownSubtotalPaise)}.`:`Therintha vilaikal subtotal: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} porutkalukku vilai illa count venum. List-ai kadaikku check panna anuppalaam.`)};
     }
     if(call.name==='request_store_assistance')return requestStoreAssistance(client,ctx,state,call.args.expectedVersion);
     if(call.name==='get_catalog_map')return {catalogMap:await getCatalogMap(client,ctx,call.args.departmentId),message:'Store departments and product families.'};
@@ -218,10 +244,13 @@ export class RetailTools {
         if(!product||productIdentity(product)!==productIdentity(displayed))throw new ToolError('The product details changed. Review the latest photo and name before adding it.','stale_confirmation');
         const old=state.draft[index];
         if(state.catalogDiscovery&&old.discovery){
-          const eligible=await discoverProducts(client,ctx,old.query??old.name,old.discovery.plan);
+          const eligible=await discoverProducts(client,ctx,old.discovery.query,old.discovery.plan);
           if(!eligible.products.some(p=>p.sku===choice.sku))throw new ToolError('That option no longer matches the requested item. Review the latest choices.','stale_confirmation');
         }
-        const line=resolvedLine(product,old.requestedQuantity??old.quantity,old.query??product.name,old.id,old.requestedUnit,old);
+        const alternative=old.packUnitAlternative&&!old.packUnitAlternative.acceptedSku;
+        const evidence=alternative?{...old,packSize:catalogPack(product)}:old;
+        const line=resolvedLine(product,old.requestedQuantity??old.quantity,old.query??product.name,old.id,old.requestedUnit,evidence);
+        if(old.packUnitAlternative)line.packUnitAlternative={...old.packUnitAlternative,acceptedSku:product.sku};
         markProductConfirmed(line,product);state.draft[index]=line;
       }
       state.version++;

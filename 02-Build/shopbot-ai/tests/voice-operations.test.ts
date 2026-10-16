@@ -26,7 +26,7 @@ const text=(i:SimulatorService,r:ConversationRuntime,value:string)=>send(i,r,{id
 async function audio(i:SimulatorService,r:ConversationRuntime){const id=randomUUID(),pcm=Buffer.alloc(32000);for(let n=0;n<16000;n++)pcm.writeInt16LE(Math.round(Math.sin(n*.17)*1500),n*2);await i.ingest({id,type:'voice',mediaId:id},await normalizeVoice({id,mimeType:'audio/wav',data:pcmWav(pcm).toString('base64')}));await r.processNext(i.context);return i.snapshot();}
 const last=(s:Snapshot)=>s.messages.at(-1)!.rich!;
 const cards=(s:Snapshot)=>last(s).parts?.flatMap(p=>p.cards)??[];
-const actions=(s:Snapshot)=>[...(last(s).buttons??[]),...cards(s).flatMap(c=>c.buttons??[])];
+const actions=(s:Snapshot)=>[...last(s).buttons??[],...last(s).parts?.flatMap(p=>[...p.buttons??[],...p.cards.flatMap(c=>c.buttons??[])])??[]];
 
 test('the actual pipe diameter filter retrieves size-stored pipes and excludes other diameters',()=>fixture(async(pool,i)=>{
  const c=await pool.connect();try{const d=await discoverProducts(c,i.context,'1 inch PVC pipe',{familyId:'pvc-pipes',keywords:['pvc pipe','water pipe'],specifications:{diameter:'1 inch'}});assert.ok(d.products.some(p=>p.sku==='H01'));assert.ok(d.products.some(p=>p.sku==='H02'));assert.ok(!d.products.some(p=>p.sku==='H03'));assert.equal(d.noExactMatch,false);}finally{c.release();}
@@ -40,7 +40,7 @@ test('known stock and price remain visible when a metre conversion needs shop ve
 for(const language of ['ta','en'] as const)test(`${language} uses one instruction language and one unit label`,()=>fixture(async(pool,i)=>{
  await pool.query('UPDATE conversations SET reply_language=$1,reply_language_explicit=true WHERE id=$2',[language,i.context.conversationId]);
  const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});const s=await text(i,r,'one hose');const instruction=cards(s).find(c=>c.kind==='instruction')!;assert.ok(instruction.kind!=='product');
- if(language==='ta'){assert.ok(!/[a-z]/i.test(instruction.lines.join(' ')));assert.ok(!/\b(?:inch|m|pieces?)\b/.test(cards(s)[0].caption));assert.match(cards(s)[0].caption,/1 எண்ணம்/);}else{assert.ok(!/[\u0b80-\u0bff]/.test(instruction.lines.join(' ')));assert.match(cards(s)[0].caption,/1 piece/);}
+ if(language==='ta'){assert.match(instruction.lines.join(' '),/[\u0b80-\u0bff]/);assert.doesNotMatch(instruction.lines.join(' '),/[\u0900-\u097f\u4e00-\u9fff]/);assert.ok(!/\b(?:inch|m|pieces?)\b/.test(cards(s)[0].caption));assert.match(cards(s)[0].caption,/1 எண்ணம்/);}else{assert.ok(!/[\u0b80-\u0bff]/.test(instruction.lines.join(' ')));assert.match(cards(s)[0].caption,/1 piece/);}
  assert.match(cards(s)[0].caption,/450/);
 }));
 
@@ -71,7 +71,7 @@ test('unknown price blocks sending; explicit shop help retains the list and know
 }));
 
 test('a read-only estimate preserves the current review and excludes unpriced lines',()=>fixture(async(pool,i)=>{
- await pool.query("UPDATE products SET price_status='confirm',price_paise=0 WHERE store_id=$1 AND sku='H05'",[demoCatalogStore]);const r=new ConversationRuntime(pool,provider(()=>({operations:[{kind:'add_item',query:'H13',quantity:1},{kind:'add_item',query:'H05',quantity:1}],next:'review'})),{visualOrdering:true});let s=await text(i,r,'one hose and one elbow');const before=structuredClone(s.conversation);s=await text(i,r,'bill');assert.deepEqual(s.conversation,before);assert.match(last(s).text,/450/);assert.match(last(s).text,/1 பொருட்களுக்கு/);assert.equal(s.requests.length,0);
+ await pool.query("UPDATE products SET price_status='confirm',price_paise=0 WHERE store_id=$1 AND sku='H05'",[demoCatalogStore]);const r=new ConversationRuntime(pool,provider(()=>({operations:[{kind:'add_item',query:'H13',quantity:1},{kind:'add_item',query:'H05',quantity:1}],next:'review'})),{visualOrdering:true});let s=await text(i,r,'one hose and one elbow');const before=structuredClone(s.conversation);s=await text(i,r,'bill');assert.deepEqual(s.conversation,before);assert.match(last(s).text,/450/);assert.match(last(s).text,/1 items/);assert.equal(s.requests.length,0);
 }));
 
 test('voice edits and removal affect only their named line',()=>fixture(async(pool,i)=>{

@@ -45,19 +45,9 @@
         "sku": "H01"
       },
       {
-        "label": "Talk to shop",
-        "type": "shopping_action",
-        "action": "handoff"
-      },
-      {
         "label": "Choose this",
         "type": "select_product",
         "sku": "H02"
-      },
-      {
-        "label": "Talk to shop",
-        "type": "shopping_action",
-        "action": "handoff"
       }
     ]
   },
@@ -127,8 +117,8 @@
         "caption": "Check all photos",
         "title": "Check the products",
         "lines": [
-          "Check each item. Tell me any changes by text or voice.",
-          "Review the estimated bill before sending your order."
+          "Check the photos and counts. Tell me any changes by text or voice.",
+          "If these items are right, review the estimate next. Items needing a shop check stay in the order without a confirmed price."
         ]
       }
     ],
@@ -138,68 +128,38 @@
         "type": "edit_item"
       },
       {
-        "label": "Talk to shop",
-        "type": "shopping_action",
-        "action": "handoff"
+        "label": "Change this",
+        "type": "edit_item"
       },
       {
         "label": "Change this",
         "type": "edit_item"
       },
       {
-        "label": "Talk to shop",
-        "type": "shopping_action",
-        "action": "handoff"
+        "label": "Change this",
+        "type": "edit_item"
       },
       {
         "label": "Change this",
         "type": "edit_item"
       },
       {
-        "label": "Talk to shop",
-        "type": "shopping_action",
-        "action": "handoff"
-      },
-      {
-        "label": "Change this",
-        "type": "edit_item"
-      },
-      {
-        "label": "Talk to shop",
-        "type": "shopping_action",
-        "action": "handoff"
-      },
-      {
-        "label": "Change this",
-        "type": "edit_item"
-      },
-      {
-        "label": "Talk to shop",
-        "type": "shopping_action",
-        "action": "handoff"
-      },
-      {
-        "label": "Review bill",
+        "label": "Correct, show bill",
         "type": "confirm_products"
-      },
-      {
-        "label": "Talk to shop",
-        "type": "shopping_action",
-        "action": "handoff"
       }
     ]
   },
   {
     "stage": "bill",
-    "text": "Check sizes and counts. Say “send it to the store” by text or voice, or use the button.",
+    "text": "Your estimated invoice. Full item details follow below.",
     "cards": [
       {
         "kind": "bill",
-        "caption": "Bill 1 / 2",
-        "title": "Estimated bill",
+        "caption": "Estimated invoice 1 / 2",
+        "title": "Estimated invoice",
         "lines": [
           "Page 1 / 2",
-          "Shop price may change"
+          "Final availability is checked by the shop"
         ],
         "billRows": [
           {
@@ -227,11 +187,11 @@
       },
       {
         "kind": "bill",
-        "caption": "Bill 2 / 2",
-        "title": "Estimated bill",
+        "caption": "Estimated invoice 2 / 2",
+        "title": "Estimated invoice",
         "lines": [
           "Page 2 / 2",
-          "Shop price may change"
+          "Final availability is checked by the shop"
         ],
         "billRows": [
           {
@@ -259,12 +219,19 @@
         "action": "edit_list"
       },
       {
-        "label": "Talk to shop",
+        "label": "Change items",
         "type": "shopping_action",
-        "action": "handoff"
-      },
+        "action": "edit_list"
+      }
+    ]
+  },
+  {
+    "stage": "bill",
+    "text": "*Your list — estimate*\n\n1. 1 inch PVC Heavy Pipe Local — 1 piece\n   ₹245.00 / piece\n   This item: ₹245.00\n\n2. 0.75 inch PVC Pipe Local — 1 piece\n   ₹180.00 / piece\n   This item: ₹180.00\n\n3. Wall scraper 4 inch — 1 piece\n   ₹65.00 / piece\n   This item: ₹65.00\n\n4. Ratchet PVC Pipe Cutter 42 mm — 1 piece\n   ₹350.00 / piece\n   This item: ₹350.00\n\n5. White paint 10 litre — 1 can\n   ₹1,200.00 / can\n   This item: ₹1,200.00\n\n*Estimated amount: ₹2,040.00*\n\nIs this list correct? Shall I send it to the shop?",
+    "cards": [],
+    "actions": [
       {
-        "label": "Send to shop",
+        "label": "Send order to shop",
         "type": "confirm"
       },
       {

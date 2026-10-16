@@ -323,6 +323,14 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       ALTER TABLE whatsapp_media ADD CONSTRAINT whatsapp_media_original_pair CHECK((original_audio IS NULL)=(original_mime_type IS NULL));
       INSERT INTO schema_migrations(version) VALUES(33);
     `);}
+    const v34=await client.query('SELECT version FROM schema_migrations WHERE version=34');
+    if(!v34.rowCount){await client.query(`
+      ALTER TABLE order_advances DROP CONSTRAINT order_advances_state_check;
+      ALTER TABLE order_advances ADD CONSTRAINT order_advances_state_check CHECK(state IN ('requested','claimed','verified','refund_pending','refunded','pay_at_shop'));
+      ALTER TABLE order_advances ADD COLUMN demo_pay_at_shop_allowed boolean NOT NULL DEFAULT false;
+      ALTER TABLE order_advances ADD COLUMN offered_at timestamptz;
+      INSERT INTO schema_migrations(version) VALUES(34);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

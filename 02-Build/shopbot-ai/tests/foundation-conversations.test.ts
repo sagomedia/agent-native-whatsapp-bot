@@ -174,7 +174,7 @@ test('empty discovery acknowledges the named request and quantity instead of rep
   assert.match(last(s).text,/Asian Paints wall paint/);assert.match(last(s).text,/1/);
   assert.doesNotMatch(last(s).text,/What size|What will you use|not in stock|brand|என்ன வேலை|Enna velaikku/i);
   assert.equal(last(s).cards?.length??0,0);assert.equal(s.requests.length,0);
-  assert.ok(last(s).buttons?.some(button=>button.event.type==='shopping_action'&&button.event.action==='handoff'));
+  assert.ok(last(s).buttons?.some(button=>button.event.type==='shopping_action'&&button.event.action==='options'));
  }
 }));
 

@@ -66,6 +66,7 @@ function visible(reply:RichReply) {
       ...(a.event.type==='choose_pipe_type'?{pipeType:a.event.pipeType}:{})})),
   }));
 }
+function visibleTurn(snapshot:Snapshot){const message=snapshot.messages.filter(m=>m.direction==='outbound').at(-1)!;return snapshot.messages.filter(m=>m.direction==='outbound'&&(message.rich?.groupId?m.rich?.groupId===message.rich.groupId:m.id===message.id)).map(m=>visible(m.rich!));}
 function textOnPhone(reply:RichReply) {
   const frame=visible(reply);
   return [frame.text,...frame.cards.flatMap((c:{caption:string;lines?:string[];billRows?:Record<string,string>[];total?:string})=>[c.caption,...c.lines??[],...c.billRows?.map(row=>Object.values(row).join(' '))??[],c.total??''])].join('\n');
@@ -180,13 +181,13 @@ test('an explicitly free product can reach a zero bill and still needs final con
 test('five-item conversation matches the full phone transcript and submits exactly once',()=>fixture(async(pool,inbox)=>{
   const runtime=new ConversationRuntime(pool,planner(fiveItems),{visualOrdering:true});
   const frames:ReturnType<typeof visible>[]=[];
-  let snapshot=await turn(inbox,runtime,shoppingList);frames.push(visible(lastReply(snapshot)));
-  snapshot=await turn(inbox,runtime,action(snapshot,e=>e.type==='choose_pipe_type'&&e.pipeType==='pvc'));frames.push(visible(lastReply(snapshot)));
+  let snapshot=await turn(inbox,runtime,shoppingList);frames.push(...visibleTurn(snapshot));
+  snapshot=await turn(inbox,runtime,action(snapshot,e=>e.type==='choose_pipe_type'&&e.pipeType==='pvc'));frames.push(...visibleTurn(snapshot));
   const pipeChoice=action(snapshot,e=>e.type==='select_product'&&e.sku==='H01');
-  snapshot=await turn(inbox,runtime,'price of H19');frames.push(visible(lastReply(snapshot)));
-  snapshot=await turn(inbox,runtime,pipeChoice);frames.push(visible(lastReply(snapshot)));
-  snapshot=await turn(inbox,runtime,action(snapshot,e=>e.type==='choose_pipe_type'&&e.pipeType==='pvc'));frames.push(visible(lastReply(snapshot)));
-  snapshot=await turn(inbox,runtime,action(snapshot,e=>e.type==='confirm_products'));frames.push(visible(lastReply(snapshot)));
+  snapshot=await turn(inbox,runtime,'price of H19');frames.push(...visibleTurn(snapshot));
+  snapshot=await turn(inbox,runtime,pipeChoice);frames.push(...visibleTurn(snapshot));
+  snapshot=await turn(inbox,runtime,action(snapshot,e=>e.type==='choose_pipe_type'&&e.pipeType==='pvc'));frames.push(...visibleTurn(snapshot));
+  snapshot=await turn(inbox,runtime,action(snapshot,e=>e.type==='confirm_products'));frames.push(...visibleTurn(snapshot));
   assert.equal(snapshot.requests.length,0);
   const confirm=action(snapshot,e=>e.type==='confirm');
   snapshot=await turn(inbox,runtime,confirm);
