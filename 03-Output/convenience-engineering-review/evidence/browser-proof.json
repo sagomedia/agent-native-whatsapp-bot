@@ -1,0 +1,20 @@
+{
+  "syntheticOnly": true,
+  "desktopWidth": 1440,
+  "mobileWidth": 390,
+  "horizontalOverflow": false,
+  "pageErrors": [],
+  "acceptReservedStock": true,
+  "packingRequired": true,
+  "collectedOnce": true,
+  "restockOnHand57": true,
+  "merchantChecksPersist": true,
+  "priceEditClearsOnlyPrice": true,
+  "galleryLanguages": [
+    "ta",
+    "ta-Latn",
+    "en"
+  ],
+  "galleryControlsDisabled": true,
+  "invoiceAndQRInspected": true
+}

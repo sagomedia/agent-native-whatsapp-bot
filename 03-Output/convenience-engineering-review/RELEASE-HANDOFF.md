@@ -32,16 +32,19 @@ Before activation, take a fresh private database/environment backup, verify the 
 
 A pre-inventory release cannot honor reservations. The upgrade helper stops instead of automatically returning to old code after a schema-35 readiness failure. Repair forward with processing stopped if necessary. Never restore an old database over customer traffic.
 
-## Current deployment state
+## Verified deployment
 
-The new implementation has **not been deployed**. The available SSH agent has no unlocked identities. The last verified VPS baseline was `preview-668a03eec8b7` on schema 34; current VPS state must be checked again after unlocking.
+- Active VPS release: `preview-ee77b7c4ba47`, schema **35**.
+- Application source: `7bdb45a1e39e95386da3aec19528f712b91f2130`.
+- Verified artifact: `58fef78a9699b8c32e4f7a448e77e8377d70c05a793ccb2961f16c0db26b532d`.
+- Fresh private backup: `/var/backups/shopbot-migration/convenience-20261016T174652Z` (66,742,727 bytes).
+- Service readiness passed. Environment, demo pay-at-shop and the existing UPI configuration were preserved.
+- Offline before/after record fingerprints matched for all 20 checked tables, including catalog, orders, messages/media, quotes, payments and inference budgets. Existing orders remained legacy, with zero backfilled reservations/movements and no stock deductions.
+- Deployed read-only owner snapshot/catalog/Tamil-gallery smoke passed; availability fields and stock invariants checked without configuring a sender/provider. Inventory MCP retained read access and no ledger-write permission.
+- Production build, all **553** integration tests (zero failed/skipped), four Python catalog checks and desktop/mobile browser verification passed. Both GitHub push/PR checks passed for the deployed source.
 
-When back at the terminal, unlock the existing key with:
+See [deployment proof](evidence/deployment-proof.json), [integration summary](evidence/integration-summary.json), [browser proof](evidence/browser-proof.json) and [hosted CI](evidence/github-ci.json). Application source is unchanged by the later evidence/documentation commit.
 
-```sh
-SSH_AUTH_SOCK=/home/gk-pc/.ssh/shopbot-checkout-01a142c9.sock ssh-add -t 2h /home/gk-pc/.ssh/google_compute_engine
-```
+Refresh the dashboard to load the new navigation and use **Message review** for wording checks. Existing orders are preserved; use the owner guide before reconciling their stock. Actual customer/device testing and real bank settlement remain in #6; this release did not generate a synthetic customer order or claim a payment receipt.
 
-Enter the passphrase only in the terminal. If the agent socket is unavailable, the existing `/home/gk-pc/.local/bin/shopbot-mcp-unlock` helper starts it and prompts locally. No password, PIN or OTP belongs in chat.
-
-Local source build, focused integration checks and desktop/mobile browser checks passed. A final complete sequential regression and immutable release packaging are in progress; their actual results are recorded in the implementation tracker/evidence once completed.
+SSH unlock access was supplied by the user and used only for the authorized deployment. Future reconnection can use the existing `/home/gk-pc/.local/bin/shopbot-mcp-unlock` helper; enter the passphrase only in the terminal.
