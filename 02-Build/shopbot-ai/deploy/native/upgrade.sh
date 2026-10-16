@@ -29,8 +29,9 @@ systemctl daemon-reload
 ln -s "$release" /opt/shopbot-vps/next-release
 mv -Tf /opt/shopbot-vps/next-release /opt/shopbot-vps/current
 systemctl restart shopbot-vps.service
-for attempt in {1..30}; do
-  if curl --fail --silent http://127.0.0.1:3017/health/ready >/dev/null; then
+readiness_deadline=$((SECONDS + 120))
+while (( SECONDS < readiness_deadline )); do
+  if curl --max-time 3 --fail --silent http://127.0.0.1:3017/health/ready >/dev/null; then
     echo "Upgraded to $(basename "$release"); private backup: $backup"
     exit 0
   fi
