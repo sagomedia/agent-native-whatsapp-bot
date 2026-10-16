@@ -44,4 +44,8 @@ Model interpretation proposes meaning and natural clarification. Prices, pack co
 
 All fixed Tamil replies, buttons and message templates are in [the complete editable wording review](TAMIL-ALL-DETERMINISTIC-COPY.md). Its source map is [TAMIL-COPY-SOURCE.json](TAMIL-COPY-SOURCE.json). Add replacements beneath the stable IDs while retaining placeholders. Input aliases and model instructions have separate sections.
 
-Validation and the deployed release are recorded after the final checks. No real bank payment or test WhatsApp message is required to exercise the isolated test flow.
+## Final validation and deployment
+
+All 536 integration tests and the production build passed. The actual customer draft was checked with staged release `preview-27f9774fb582` inside a rolled-back transaction: the real 10 kg paint and its photo were retrieved for the 10 litre request, no SKU was selected, and the draft remained unchanged. That exact content-verified release is now active with migration 34 and the demo payment choice enabled. Existing orders, advances, drafts, budgets and inventory hashes were preserved.
+
+The photo, welcome audio, authenticated dashboard boundary and native readiness passed their live HTTP checks. No real bank payment or WhatsApp test message was sent. Full proof and backup details are in [RELEASE-REPORT.md](RELEASE-REPORT.md).

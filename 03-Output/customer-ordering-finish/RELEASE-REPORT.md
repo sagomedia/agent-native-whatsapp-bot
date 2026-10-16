@@ -1,68 +1,60 @@
-# Deployment handoff — 15 October 2026 (America/Adak)
+# Deployment handoff — 16 October 2026
 
-The customer ordering implementation is deployed on the existing VPS. A live voice incident revealed decoder timeouts and a provider schema rejection after the original deployment. The audio corrections and their measured live verification are documented in [AUDIO-INCIDENT.md](AUDIO-INCIDENT.md). The final runtime source commit is `423611b957c77f09ebc3df62d0b74baa8f032b01`.
+The guided checkout repair is deployed on the existing VPS. The actual customer's paint query now retrieves the matching catalog photo despite the Tamil spelling difference and the litre/kg mismatch. The bot asks the customer to choose the real pack; it does not convert litres to kilograms or silently select a different paint.
 
 | Item | Verified value |
 | --- | --- |
-| Active release | `preview-5e57206b0419` |
-| Artifact SHA-256 | `ab656eaf8a9991748c36be4c9a25512273fa65e1d615468aaa48ff8dd8e788ec` |
+| Active release | `preview-27f9774fb582` |
+| Runtime source commit | `531bc3ae50eae3200363af82140adb3ad84ac690` |
+| Artifact SHA-256 | `5ebc75c1c61fa8e480398391ee9cc13e12768e9e6c3bf25336224e70d67cc48b` |
 | Source branch | `codex/finish-customer-ordering-20261015` |
-| Database migration | 26 → 32 → 33 |
-| Prompt version | `2026-10-15.3` |
-| Understanding schema | 2 |
-| Runtime verification | 133 artifact files; content verified as both root and the service user |
-| Integration tests | 526 passed, 0 failed; final dashboard adjustment also passed release build |
-| Service | active/running; no automatic restarts at final check |
+| Database migration | 34; additive changes to order advances |
+| Prompt version / understanding schema | `2026-10-15.4` / 2 |
+| Runtime verification | 133 content-verified artifact files |
+| Integration tests | 536 passed; 0 failed or skipped |
+| Build | TypeScript check, production build and clean-source release build passed |
+| Service | active/running; 0 automatic restarts |
 | Model | Existing `gemini-3.5-flash-lite` configuration retained |
+| Demo payment | `UPI_DEMO_PAY_AT_SHOP_ENABLED=true`; actual receipt verification remains manual |
 
-## Delivered behavior
+## Customer flow
 
-- Natural Tamil with familiar English shop words, shared model style instructions, and a fixed 8.8-second welcome recording queued once per conversation.
-- Voice, text and photo proposals pass through catalog, quantity, product evidence, version and consent checks. No new recognition-accuracy percentage is claimed.
-- Estimates preserve paragraph spacing and every item across WhatsApp pages. Unresolved items retain their names and counts without a fabricated price. Only known-price items contribute to the subtotal; an entirely unpriced list does not show a complete ₹0 bill.
-- Maximum-size lists with 50 long unknown product names remain fully visible. The footer uses the excluded item count rather than duplicating every long name.
-- A ₹10 UPI QR and same-phone payment link use the exact configured VPA. References preserve the complete request UUID in a 35-character alphanumeric value. NPCI specifies a reference limit of 35 characters/digits; uniqueness is also required in the [Google payment request guidance](https://developers.google.com/pay/india/api/web/create-payment-method). See the [NPCI merchant circular](https://www.npci.org.in/PDF/npci/upi/circular/2017/Circular18_BankCompliances_to_enbaleUPIMerchantecosystem_0.pdf).
-- A customer payment claim does not verify receipt. The authenticated owner checks their bank/UPI app and records the actual transaction reference. One receipt reference cannot verify multiple orders. The advance remains separate from payment of the full bill.
-- Unknown items can receive a complete owner quote. Customer approval of the current final bill is required before that quote becomes effective. The ₹10 verified advance is credited in the bill.
-- Post-order status questions remain actionable. Whole acknowledgements and unrelated messages have an explicit silent outcome. Mixed thanks plus an edit is processed as an edit.
-- Amendments preserve the original submitted snapshot. The customer approves the proposed change, then the owner accepts, declines or quotes it. Catalog changes prevent acceptance of a stale price. Closed orders cannot accumulate unusable amendment requests.
-- Late advances for closed orders are recorded as needing refund. Refund completion is recorded only after the owner supplies its actual reference; the application does not execute bank refunds.
+1. A Tamil voice note, text or photo proposes items. Inventory checks retain the product identity, dimensions and original requested count. Real product photos guide explicit choices.
+2. Product cards offer selection and editing. Routine shopping does not repeatedly push the customer toward human help.
+3. The final product check offers **சரி, Bill காட்டு**. The estimated invoice includes the full item list, spaced text and invoice images. Products needing a price remain visible with a dash; only known prices contribute to the subtotal.
+4. **கடைக்கு அனுப்பு** explicitly creates one order in the owner's Requests. Asking for an estimate or human help alone does not submit it. Ordinary Tamil such as **சரி பேக் பண்ணுங்க** can open checkout without creating an order implicitly.
+5. The bot offers the ₹10 QR once automatically. In this demo **கடைல பணம் தர்றேன்** lets the customer continue and pay the full bill at the shop. The stored state is unpaid: `pay_at_shop`, `payment=not_requested`, `advance_required=false`. Neither the customer nor the owner is told that an advance was received.
+6. The owner checks unresolved items, supplies a quote if needed, accepts and prepares the order, and marks it ready and collected. Status questions and legitimate amendments remain actionable after ordering; a simple thanks can be silent. Asking for a bill after submission does not start a second checkout.
 
-## Verification and preservation
+The default production configuration keeps the advance gate. A customer saying they paid is only a claim. Actual ₹10 receipt requires the authenticated owner to check their bank/UPI app and record its real transaction reference. The existing refund and duplicate-reference controls remain.
 
-`npm run build`, TypeScript checking, native script syntax checks and the original 523-case integration suite passed. The audio correction expanded this to 526 passing cases; see the incident document for actual VPS decoder/provider checks. The final test fixture cleanup also passed its focused QR test. The release packager verified the exact artifact set before upload, and the VPS verified its content again.
+## Actual inventory check
 
-A private copy of the real database was actually restored into disposable local PostgreSQL 17, migrated twice and compared using hashes of protected records. Conversations, requests, inference budgets, provider attempts and the WhatsApp outbox were preserved. The temporary database and dump are removed after the rehearsal.
+A transaction against the real customer cart retrieved `SHOP-3DB752A98B9B41BF`, Asian Paints Tractor Uno Acrylic Distemper 10 kg, for the original 10 litre request. Its actual catalog photo is available and returns HTTP 200 (`image/jpeg`, 19,030 bytes). No SKU was selected automatically. The transaction was rolled back, and the customer's draft version and hash remained unchanged. No model call or WhatsApp message was needed for this check.
 
-The original deployment preserved all three order snapshots, the spending ledger and owner handling modes. Subsequent live voice attempts and the isolated audio diagnostics retain their actual usage or unknown holds. The $4.50 inference ceiling was not increased or reset. No WhatsApp customer message or bank payment was sent by the deployment diagnostics. The audio incident evidence records the final preservation checks.
+The inventory record itself has an inconsistent selling basis: its name/specification says 10 kg while its selling unit is litre and is unverified. The bot preserves the requested one-container count and excludes this product's unverified price until the shop checks it. Inventory data was not rewritten to manufacture a match or price.
 
-The owner quote editor was inspected at desktop and mobile widths, with no page errors or horizontal overflow. Synthetic receipt recording and quote submission both returned HTTP 200. The invoice remains gated until required checks and customer consent are complete.
+The earlier audio corrections remain included. The measured decoder/provider investigation and historical playback repair are in [AUDIO-INCIDENT.md](AUDIO-INCIDENT.md). No fresh bank settlement or live customer voice-transcription accuracy is claimed by the checkout diagnostics.
 
-An independent QR decoder read the generated request and confirmed ₹10.00, INR, the exact recipient and the 35-character reference. This validates the encoded request, not bank settlement or the recipient account's live acceptance.
+## Evidence and preserved records
 
-Final public checks: welcome audio HTTP 200 (`audio/ogg`, 32,125 bytes), owner login HTTP 302, direct owner API without a JWT HTTP 403, and public simulator HTTP 404. Native readiness returned `ready`.
+- [Checkout test summary](evidence/checkout-test-summary.json) and [full integration results](evidence/checkout-integration-tests.log).
+- [Deployment, actual inventory and preservation proof](evidence/checkout-deployment-proof.json).
+- [Invoice appearance](evidence/checkout-invoice.png), generated using a synthetic fixture with one known-price and one unpriced item. Its displayed paint price is fixture data, not a price verification of the real inventory record.
+- [Root causes and deterministic/agent flow diagram](CHECKOUT-REPAIR.md).
 
-## Backups and recovery
+Hashes confirmed that all three existing orders, advances, amendments, quotes, customer drafts and handling controls, inference budgets and inventory rows were unchanged by activation. The $4.50 inference ceiling and existing unknown usage holds were retained. The deployment did not send a customer WhatsApp test message or perform a bank payment.
 
-A 150-second orchestration timeout and a 30-second cold-start window caused intermediate attempts to return to the working release. Orders and accounting remained intact. The native upgrade now allows a bounded 120-second cold start. The audio correction took a new consistent backup, applied additive migration 33, and passed readiness. A final dashboard update reused that completed backup and passed the same bounded readiness check; environment and audio backend were preserved.
+Final checks: native readiness HTTP 200, welcome audio HTTP 200 (`audio/ogg`, 32,125 bytes), actual paint photo HTTP 200, owner login HTTP 302, direct owner API without a JWT HTTP 403, and public simulator HTTP 404. Public checks used a browser User-Agent because the existing Cloudflare edge rejects Python urllib's default signature; no access-policy change was made.
 
-The latest completed database backup is `/var/backups/shopbot-migration/owner-20261016T060306Z/database.dump`, taken before additive audio migration 33. Its size is 63,370,024 bytes and `pg_restore --list` succeeded before activation. The same private directory retains the environment and previous release pointer. Earlier backups and the original private environment remain available. The verified voice executable `preview-fc1cd867ff4c`, pre-audio release `preview-3edcf01749a1`, and original pre-task release `preview-539dc247a0a0` are retained. The final dashboard artifacts use the same audio backend; their only other server byte difference is a removed trailing space in already-applied migration 23, checked explicitly before activation. Dashboard recovery metadata is in `/var/backups/shopbot-migration/audio-ui-20261016T060958Z/`.
+## Wording review and WhatsApp test
 
-For an executable rollback, atomically point `/opt/shopbot-vps/current` at the reviewed prior release and restart `shopbot-vps.service`, then check native readiness. Keep the additive database in place. Do not automatically restore an older database after new customer traffic, and do not use the legacy-app rollback script for this native cutover.
+All fixed Tamil strings are collected in [TAMIL-ALL-DETERMINISTIC-COPY.md](TAMIL-ALL-DETERMINISTIC-COPY.md), with stable IDs, source locations and blank replacement fields. The page contains 420 fixed replies/labels/templates, plus separate input-alias and model-instruction sections: 562 entries in total. Preserve placeholders when supplying replacements. [TAMIL-COPY-SOURCE.json](TAMIL-COPY-SOURCE.json) is the machine-readable source inventory.
 
-## Owner acceptance still needed
+To resume the existing WhatsApp list, send **சரி பேக் பண்ணுங்க**, check the offered paint photo/pack, and follow the bill and send-to-shop buttons. At the QR choose **கடைல பணம் தர்றேன்** for the demo. Then open [owner Requests](https://shopbot-preview.sagoautomation.tech/owner?view=requests) to check and prepare that order. Do not claim a payment unless an actual receipt exists. Existing WhatsApp test-recipient and service-window restrictions remain in effect.
 
-1. Open the [owner dashboard](https://shopbot-preview.sagoautomation.tech/owner) and select your conversation. The reported voice failure occurred while the assistant was handling that chat; takeover was not its cause.
-2. Send a real Tamil voice list with known and unknown items. Check the recognized counts, photos, spacing and spoken welcome.
-3. Check the bank-resolved recipient name, make one real ₹10 test transfer, and verify the actual receipt in the owner dashboard. Wallet/deep-link compatibility and receipt cannot be proven by offline QR decoding.
-4. Finish an owner quote if needed, approve it as the customer, then test ready/collected status and an amendment before collection. Send thanks, followed by a status question.
+## Backup and recovery
 
-Existing WhatsApp test-recipient restrictions and the 24-hour service-window rules remain in effect. This deployment does not establish unrestricted production onboarding or a measured real-accent recognition rate.
+The fresh consistent database backup is `/var/backups/shopbot-migration/checkout-20261016T115855Z/database.dump` (65,015,208 bytes). `pg_restore --list` passed before activation. This private directory also preserves the original environment, service unit, prior release pointer and verification evidence. The service remained running while the backup was made.
 
-Review [the implementation and flow](IMPLEMENTATION.md), [the actual fixed Tamil phrases](ACTUAL-TAMIL-COPY.md), and [the original phrase checklist](TAMIL-REPLY-REVIEW.md). The standalone Mermaid flow is in `CUSTOMER-FLOW.mmd`.
-
-## Source handoff
-
-Source and evidence are committed in `/home/gk-pc/whatsapp-bot-finish`. The original deployment files are under `/home/gk-pc/shopbot-finish-release`; the audio correction archive and updated portable source bundle are under `/home/gk-pc/shopbot-audio-final-release`.
-
-The runtime source was verified on GitHub branch `codex/finish-customer-ordering-20261015` at `423611b957c77f09ebc3df62d0b74baa8f032b01` using `git ls-remote`. This audio diagnosis/deployment run did not perform that publication. Incident evidence and the final handoff are also saved locally in the source checkout.
+The previous working audio release `preview-5e57206b0419` remains available for a reviewed code rollback, alongside earlier backups. Restore the saved environment and atomically switch the release symlink before restarting the service. Keep the additive database in place; do not restore an old database over subsequent customer orders or payments. Review any new demo-state orders before using older application code.
