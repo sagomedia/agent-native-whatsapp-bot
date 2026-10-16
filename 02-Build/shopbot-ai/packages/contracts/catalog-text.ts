@@ -1,6 +1,7 @@
 import {normalizeFractionNumbers} from './measurements.js';
 export function normalize(text: string): string {
   return normalizeFractionNumbers(text.toLowerCase()).replace(/half[- ]inch/g, '0.5 inch').replace(/one[- ]inch/g, '1 inch').replace(/ten[- ]inch/g, '10 inch').normalize('NFKC').replace(/[^\p{L}\p{M}\p{N}.]+/gu,' ').trim()
+    .replace(/பெயிண்ட்ஸ்|பெயின்ட்ஸ்|பெயின்ட்/gu,'பெயிண்ட்')
     .replace(/தண்ணீர்\s+(?:ஊற்ற|ஊத்துற|ஊற்றும்)\s+(?:ஓஸ்|ஹோஸ்)/gu,'garden hose')
     .replace(/பெயிண்ட்\s+(?:எடுக்கிற\s+|சுரண்டும்\s+)?கத்தி/gu,'scraper')
     .replace(/உப்பு(?:த்)?\s+(?:தாள்|தாளு)(?=\s|$)/gu,'sandpaper')

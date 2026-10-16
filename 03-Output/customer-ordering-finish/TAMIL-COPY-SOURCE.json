@@ -486,6 +486,16 @@
       "raw": "'அரை'"
     },
     {
+      "id": "TA-D73C1621F3",
+      "section": "Customer input phrases and aliases",
+      "file": "packages/contracts/catalog-text.ts",
+      "lines": [
+        4
+      ],
+      "text": "பெயிண்ட்",
+      "raw": "'பெயிண்ட்'"
+    },
+    {
       "id": "TA-338699DC4E",
       "section": "Customer input phrases and aliases",
       "file": "packages/contracts/language.ts",

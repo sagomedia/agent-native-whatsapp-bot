@@ -22,7 +22,7 @@ async function visit(directory){
     if(!node||typeof node!=='object')return;
     const literal=node.type==='StringLiteral'?node.value:node.type==='TemplateLiteral'&&node.quasis.some(q=>tamil.test(q.value.raw))?source.slice(node.start+1,node.end-1):undefined;
     if(typeof literal==='string'&&tamil.test(literal)){
-     const inputAlias=parent?.type==='ObjectProperty'&&parent.key===node;
+     const inputAlias=name==='packages/contracts/catalog-text.ts'||parent?.type==='ObjectProperty'&&parent.key===node;
      const section=name.includes('/adapters/')?'Model instructions and interpretation references':inputAlias?'Customer input phrases and aliases':'Fixed replies, labels and message templates';
      const key=section+'\0'+literal;
      if(seen.has(key))seen.get(key).lines.push(node.loc.start.line);

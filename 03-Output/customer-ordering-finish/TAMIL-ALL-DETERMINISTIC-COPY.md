@@ -1,6 +1,6 @@
 # Tamil copy — complete backend review
 
-Generated from the actual TypeScript source, including inline messages outside the central copy table. 561 unique Tamil literals/templates are listed with every source location. Customer recordings, messages and catalog rows are not read.
+Generated from the actual TypeScript source, including inline messages outside the central copy table. 562 unique Tamil literals/templates are listed with every source location. Customer recordings, messages and catalog rows are not read.
 
 Review the first section for customer-facing wording. Add your preferred wording beneath **Your replacement**; keep the ID and placeholders such as {amount}, {name}, and JavaScript template expressions unchanged. Repeated wording in different modules has separate IDs so all call sites can be updated.
 
@@ -6027,7 +6027,7 @@ Source: [line 11](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/packages/c
 
 _Leave blank to keep the current wording._
 
-## Customer input phrases and aliases (115)
+## Customer input phrases and aliases (116)
 
 ### apps/server/src/services/catalog.ts
 
@@ -6703,6 +6703,22 @@ Source: [line 3](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/apps/server
 
 ```text
 அரை
+```
+
+**Your replacement**
+
+_Leave blank to keep the current wording._
+
+### packages/contracts/catalog-text.ts
+
+#### TA-D73C1621F3
+
+Source: [line 4](/home/gk-pc/whatsapp-bot-finish/02-Build/shopbot-ai/packages/contracts/catalog-text.ts:4)
+
+**Current wording**
+
+```text
+பெயிண்ட்
 ```
 
 **Your replacement**

@@ -47,6 +47,14 @@ test('catalog size filters can offer the same identity with another pack unit wi
  s=await turn(buttons(last(s)).find(b=>b.event.type==='select_product')!.event);assert.equal(s.conversation.draft[0].sku,'PAINT-KG');
 }));
 
+test('duplicated Tamil/English brand names survive common Tamil paint spelling variants before pack checking',()=>fixture(async({pool,turn,set})=>{
+ await pool.query("UPDATE products SET aliases=aliases||$1::jsonb WHERE sku='PAINT-KG'",[JSON.stringify(['ஏசியன் பெயின்ட்ஸ் டிராக்டர் உனோ அக்ரிலிக் டிஸ்டெம்பர்'])]);
+ set({operations:[{kind:'add_item',query:'ஏசியன் பெயிண்ட்ஸ் Asian Paints Tractor Uno Acrylic Distemper 10kg',quantity:1,requestedUnit:'container',packSize:{value:10,unit:'litre'},supportingPhrase:'ஏசியன் பெயிண்ட்ஸ் 10 லிட்டர் டப்பா ஒன்னு'}],next:'review'});
+ const s=await turn('ஏசியன் பெயிண்ட்ஸ் 10 லிட்டர் டப்பா ஒன்னு');const line=s.conversation.draft[0];
+ assert.equal(line.catalogIssue,'pack_unit_mismatch');assert.deepEqual(line.candidates?.map(p=>p.sku),['PAINT-KG']);assert.equal(line.sku,undefined);assert.equal(line.quantity,1);
+ assert.ok(last(s).parts?.flatMap(p=>p.cards).some(c=>c.kind==='product'&&c.product.sku==='PAINT-KG'));
+}));
+
 test('known and missing products progress through photos, invoice, explicit submission, QR and unpaid demo pickup',()=>fixture(async({pool,turn,set,calls})=>{
  set({operations:[{kind:'add_item',query:'H08',quantity:2},{kind:'add_item',query:'unknown unicorn bolt',quantity:1}],next:'review'});
  let s=await turn('two PTFE tape rolls and one unknown unicorn bolt');
