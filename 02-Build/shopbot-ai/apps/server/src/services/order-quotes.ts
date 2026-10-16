@@ -6,6 +6,7 @@ import {digest} from './tools.js';
 import {finalQuotePresentation} from './quote-presentation.js';
 import {materializeVisualReply} from './visual-images.js';
 import {ToolError,type ActorContext} from './context.js';
+import {reserveRequest} from './inventory.js';
 import {sellingBasisIssues} from '../../../../packages/contracts/selling-basis.js';
 
 const count=z.number().positive().max(100).refine(n=>Math.abs(n*1000-Math.round(n*1000))<1e-7);
@@ -49,6 +50,7 @@ export async function acceptOrderQuote(client:PoolClient,ctx:ActorContext,state:
  if(!q||q.conversation_id!==ctx.conversationId||q.actor!==ctx.actor||q.request_id!==state.lastRequestId)throw new ToolError('That quote belongs to another order.','forbidden');
  if(q.state==='accepted')return {accepted:true,replayed:true,totalPaise:Number(q.total_paise)};
  if(q.state!=='offered'||q.expected_revision!==q.effective_revision||['collected','cancelled'].includes(q.fulfillment)||q.acceptance==='rejected'||Date.now()-new Date(q.created_at).getTime()>24*3600000)throw new ToolError('The quote is no longer current. Ask the shop for a new one.');
+ if(q.acceptance==='accepted')await reserveRequest(client,ctx.storeId,q.request_id,q.lines,q.effective_revision+1,ctx.actor);
  await client.query("UPDATE order_quotes SET state='accepted',consent_message_id=$1,accepted_at=now() WHERE id=$2",[sourceMessageId,q.id]);
  await client.query("UPDATE order_requests SET effective_lines=$1::jsonb,effective_total_paise=$2,estimate_complete=true,excluded_line_ids='[]',effective_revision=effective_revision+1 WHERE id=$3",[JSON.stringify(q.lines),q.total_paise,q.request_id]);
  await client.query('UPDATE conversations SET draft=$1::jsonb,version=version+1 WHERE id=$2 AND last_request_id=$3',[JSON.stringify(q.lines),ctx.conversationId,q.request_id]);

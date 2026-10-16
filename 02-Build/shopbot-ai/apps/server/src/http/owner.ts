@@ -1,3 +1,4 @@
+import {reserveRequest,closeRequestStock} from '../services/inventory.js';
 import {ToolError} from '../services/context.js';
 import {verifyManualAdvance,verifyManualRefund} from '../services/upi-advance.js';
 import {decideAmendment} from '../services/order-amendments.js';
@@ -75,7 +76,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
   }
   await registerOwnerCatalog(app,pool,owner.storeId,write,catalogGenerator??(config.catalogAi?new GoogleCatalogGenerator(config.catalogAi.apiKey):undefined));
   const release=runtimeReleaseMetadata();
-  app.get('/api/owner/release',async()=>({...release,features:{visualOrdering:!!config.whatsapp?.visualOrdering,unifiedUnderstanding:process.env.GEMINI_UNIFIED_UNDERSTANDING_ENABLED==='true',imageLists:process.env.GEMINI_HANDWRITTEN_LISTS_ENABLED==='true',processing:!!config.whatsapp?.processEnabled,sending:!!config.whatsapp?.sendEnabled,payments:!!config.whatsapp?.advance,demoPayAtShop:!!config.whatsapp?.advance?.demoPayAtShop,paymentVerification:config.whatsapp?.advance?'owner_checked':'disabled',partialReviews:!!config.whatsapp?.partialReviews,inventoryPolicy:'manual_confirm'}}));
+  app.get('/api/owner/release',async()=>({...release,features:{visualOrdering:!!config.whatsapp?.visualOrdering,unifiedUnderstanding:process.env.GEMINI_UNIFIED_UNDERSTANDING_ENABLED==='true',imageLists:process.env.GEMINI_HANDWRITTEN_LISTS_ENABLED==='true',processing:!!config.whatsapp?.processEnabled,sending:!!config.whatsapp?.sendEnabled,payments:!!config.whatsapp?.advance,demoPayAtShop:!!config.whatsapp?.advance?.demoPayAtShop,paymentVerification:config.whatsapp?.advance?'owner_checked':'disabled',partialReviews:!!config.whatsapp?.partialReviews,inventoryPolicy:'reserve_on_accept'}}));
   app.get<{Params:{id:string}}>('/api/owner/conversations/:id/observations',async(req,reply)=>{
    if(!uuid.safeParse(req.params.id).success)return reply.code(400).send({error:'Invalid conversation'});
    if(!(await pool.query('SELECT id FROM conversations WHERE store_id=$1 AND id=$2',[owner.storeId,req.params.id])).rowCount)return reply.code(404).send({error:'Conversation not found'});
@@ -98,7 +99,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
         JOIN messages m ON m.reply_group_id=g.reply_group_id LEFT JOIN whatsapp_outbox o ON o.message_id=m.id
         WHERE c.store_id=$1 AND c.pending->>'kind'='review' GROUP BY c.id`,[owner.storeId])).rows;
       for(const conversation of conversations){if(conversation.checkout){const delivery=deliveries.find(d=>d.id===conversation.id);conversation.checkout.state=Date.parse(conversation.checkout.expiresAt)<=Date.now()?'expired':delivery?.issue?'delivery_issue':delivery&&delivery.delivered<delivery.total?'invoice_arriving':'awaiting_customer';}}
-      const requests=(await client.query("SELECT r.id,r.conversation_id,r.acceptance,r.payment,r.fulfillment,coalesce(r.effective_total_paise,r.total_paise) AS total_paise,coalesce(r.effective_lines,r.lines) AS lines,r.created_at,r.estimate_complete,r.excluded_line_ids,r.advance_required,r.effective_revision,a.state AS advance_state,a.amount_paise AS advance_amount_paise FROM order_requests r LEFT JOIN order_advances a ON a.request_id=r.id WHERE r.store_id=$1 ORDER BY CASE WHEN r.acceptance='awaiting_approval' OR r.acceptance='accepted' AND r.fulfillment NOT IN ('collected','cancelled') THEN 0 ELSE 1 END,r.created_at DESC LIMIT 100",[owner.storeId])).rows;
+      const requests=(await client.query("SELECT r.id,r.conversation_id,r.acceptance,r.payment,r.fulfillment,coalesce(r.effective_total_paise,r.total_paise) AS total_paise,coalesce(r.effective_lines,r.lines) AS lines,r.created_at,r.estimate_complete,r.excluded_line_ids,r.advance_required,r.effective_revision,r.inventory_state,r.inventory_untracked_line_ids,a.state AS advance_state,a.amount_paise AS advance_amount_paise FROM order_requests r LEFT JOIN order_advances a ON a.request_id=r.id WHERE r.store_id=$1 ORDER BY CASE WHEN r.acceptance='awaiting_approval' OR r.acceptance='accepted' AND r.fulfillment NOT IN ('collected','cancelled') THEN 0 ELSE 1 END,r.created_at DESC LIMIT 100",[owner.storeId])).rows;
       const requestCounts=(await client.query("SELECT count(*) FILTER(WHERE acceptance='awaiting_approval' OR acceptance='accepted' AND fulfillment NOT IN ('collected','cancelled'))::int AS active,count(*) FILTER(WHERE NOT(acceptance='awaiting_approval' OR acceptance='accepted' AND fulfillment NOT IN ('collected','cancelled')))::int AS history FROM order_requests WHERE store_id=$1",[owner.storeId])).rows[0];
       const amendments=(await client.query("SELECT id,request_id,conversation_id,kind,summary,proposed_lines,state,expected_revision,known_subtotal_paise,estimate_complete,created_at FROM order_amendments WHERE store_id=$1 AND state IN ('owner_pending','proposed') ORDER BY created_at LIMIT 100",[owner.storeId])).rows;
       const quotes=(await client.query("SELECT id,request_id,state,expected_revision,total_paise,created_at FROM order_quotes WHERE store_id=$1 AND state='offered' ORDER BY created_at LIMIT 100",[owner.storeId])).rows;
@@ -251,11 +252,13 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     return write('request_decision',request.params.id,async client=>{
       if(input.data.decision==='accepted'){
         const current=(await client.query('SELECT r.*,a.state AS advance_state FROM order_requests r LEFT JOIN order_advances a ON a.request_id=r.id WHERE r.id=$1 AND r.store_id=$2 FOR UPDATE OF r',[request.params.id,owner.storeId])).rows[0];
+        if(!current||current.acceptance!=='awaiting_approval')throw Object.assign(new Error('Request is already decided or unavailable.'),{statusCode:409});
         if(current?.advance_required&&current.advance_state!=='verified')throw Object.assign(new Error('Check the ₹10 advance in your bank/UPI app and record its reference before accepting.'),{statusCode:409});
         if((await client.query("SELECT 1 FROM order_quotes WHERE request_id=$1 AND state='offered'",[request.params.id])).rowCount)throw Object.assign(new Error('Wait for the customer to approve the offered final bill.'),{statusCode:409});
         if(current?.estimate_complete===false)throw Object.assign(new Error('Quote the unresolved items and get the customer’s final-bill approval before accepting.'),{statusCode:409});
         if((await client.query("SELECT 1 FROM order_amendments WHERE request_id=$1 AND state='owner_pending'",[request.params.id])).rowCount)throw Object.assign(new Error('Resolve the pending amendment before accepting the request.'),{statusCode:409});
-      }
+        await reserveRequest(client,owner.storeId,current.id,current.effective_lines??current.lines,current.effective_revision,owner.email,true);
+      }else await closeRequestStock(client,owner.storeId,request.params.id,'release',owner.email);
       const updated=await client.query("UPDATE order_requests SET acceptance=$1,fulfillment=$4 WHERE store_id=$2 AND id=$3 AND acceptance='awaiting_approval' RETURNING *",[input.data.decision,owner.storeId,request.params.id,input.data.decision==='accepted'?'preparing':'cancelled']);
       if(!updated.rowCount)throw Object.assign(new Error('Request is already decided or unavailable. Refresh the list.'),{statusCode:409});
       if(input.data.decision==='rejected')await client.query("UPDATE order_advances SET state='refund_pending',updated_at=now() WHERE request_id=$1 AND state='verified'",[request.params.id]);
@@ -272,8 +275,19 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       if(row.fulfillment===p.status)return {fulfillment:p.status,duplicate:true,...await notifyStatus(client,row,p.notify)};
       if(row.fulfillment!==p.expected||!((['awaiting_approval','preparing'].includes(row.fulfillment)&&['ready_for_pickup','cancelled'].includes(p.status))||(row.fulfillment==='ready_for_pickup'&&['collected','cancelled'].includes(p.status))))throw Object.assign(new Error('Request status changed or that transition is not allowed. Refresh before updating.'),{statusCode:409});
       if(p.status==='cancelled')await client.query("UPDATE order_advances SET state='refund_pending',updated_at=now() WHERE request_id=$1 AND state='verified'",[request.params.id]);
+      if(p.status==='collected'||p.status==='cancelled')await closeRequestStock(client,owner.storeId,row.id,p.status==='collected'?'collect':'release',owner.email);
       const changed=(await client.query('UPDATE order_requests SET fulfillment=$1 WHERE store_id=$2 AND id=$3 RETURNING *',[p.status,owner.storeId,row.id])).rows[0];
       return {fulfillment:p.status,...await notifyStatus(client,changed,p.notify)};
+    });
+  });
+  app.post<{Params:{id:string}}>('/api/owner/requests/:id/inventory/reconcile',async(request,reply)=>{
+    if(!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Invalid order'});
+    const p=z.object({expectedRevision:z.number().int().positive(),checked:z.literal(true)}).strict().safeParse(request.body);
+    if(!p.success)return reply.code(400).send({error:'Confirm the current physical order before reconciling.'});
+    return write('inventory_reconcile',request.params.id,async c=>{
+      const r=(await c.query('SELECT * FROM order_requests WHERE store_id=$1 AND id=$2 FOR UPDATE',[owner.storeId,request.params.id])).rows[0];
+      if(!r||r.acceptance!=='accepted'||['collected','cancelled'].includes(r.fulfillment)||r.effective_revision!==p.data.expectedRevision)throw new ToolError('Refresh this open accepted order before reconciling.');
+      return reserveRequest(c,owner.storeId,r.id,r.effective_lines??r.lines,r.effective_revision,owner.email,true);
     });
   });
   app.post<{Params:{id:string}}>('/api/owner/requests/:id/advance/verify',async(request,reply)=>{

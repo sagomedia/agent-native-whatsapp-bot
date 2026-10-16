@@ -331,6 +331,36 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       ALTER TABLE order_advances ADD COLUMN offered_at timestamptz;
       INSERT INTO schema_migrations(version) VALUES(34);
     `);}
+    const v35=await client.query('SELECT version FROM schema_migrations WHERE version=35');
+    if(!v35.rowCount){await client.query(`
+      ALTER TABLE products ALTER COLUMN stock TYPE numeric(14,3);
+      ALTER TABLE stores DROP CONSTRAINT stores_inventory_policy_check;
+      ALTER TABLE stores ALTER COLUMN inventory_policy SET DEFAULT 'reserve_on_accept';
+      UPDATE stores SET inventory_policy='reserve_on_accept';
+      ALTER TABLE stores ADD CHECK(inventory_policy='reserve_on_accept');
+      ALTER TABLE products ADD COLUMN reserved_stock numeric(14,3) NOT NULL DEFAULT 0 CHECK(reserved_stock>=0);
+      ALTER TABLE products ADD COLUMN inventory_version integer NOT NULL DEFAULT 1;
+      ALTER TABLE products ADD CONSTRAINT products_inventory_available CHECK((stock IS NULL AND reserved_stock=0) OR (stock IS NOT NULL AND stock>=reserved_stock));
+      ALTER TABLE order_requests ADD COLUMN inventory_state text NOT NULL DEFAULT 'legacy' CHECK(inventory_state IN ('legacy','pending','reserved','untracked','consumed','released'));
+      ALTER TABLE order_requests ALTER COLUMN inventory_state SET DEFAULT 'pending';
+      ALTER TABLE order_requests ADD COLUMN inventory_untracked_line_ids jsonb NOT NULL DEFAULT '[]';
+      CREATE TABLE inventory_reservations (
+        store_id uuid NOT NULL,request_id uuid NOT NULL REFERENCES order_requests(id),sku text NOT NULL,
+        quantity numeric(14,3) NOT NULL CHECK(quantity>0),revision integer NOT NULL,
+        state text NOT NULL CHECK(state IN ('active','consumed','released')),
+        created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY(store_id,request_id,sku),FOREIGN KEY(store_id,sku) REFERENCES products(store_id,sku)
+      );
+      CREATE TABLE inventory_movements (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL,sku text NOT NULL,request_id uuid REFERENCES order_requests(id),
+        operation_key text NOT NULL,input_hash text NOT NULL,kind text NOT NULL CHECK(kind IN ('opening','reserve','release','collect','restock','sale','count')),
+        on_hand_before numeric(14,3),on_hand_after numeric(14,3),reserved_before numeric(14,3) NOT NULL,reserved_after numeric(14,3) NOT NULL,
+        actor text NOT NULL,reason text NOT NULL,inventory_version integer NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE(store_id,operation_key),FOREIGN KEY(store_id,sku) REFERENCES products(store_id,sku)
+      );
+      CREATE INDEX inventory_reservations_active ON inventory_reservations(store_id,sku) WHERE state='active';
+      INSERT INTO schema_migrations(version) VALUES(35);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

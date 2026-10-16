@@ -1,3 +1,4 @@
+import {adjustStock,stockActionSchema} from '../services/inventory.js';
 import type {FastifyInstance} from 'fastify';
 import type {Pool,PoolClient} from 'pg';
 import {randomUUID} from 'node:crypto';
@@ -34,7 +35,12 @@ export async function registerOwnerCatalog(app:FastifyInstance,pool:Pool,storeId
    await client.query('COMMIT');return {revision,aiAvailable:!!generator,products:rows.map(p=>({...productFromRow(p),active:p.active,verification:p.merchant_verification,origin:p.catalog_origin,inventoryUpdatedAt:p.inventory_updated_at})),nodes};
   }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
  });
- app.post('/api/owner/catalog/diagnose',async(req,reply)=>{
+ app.post<{Params:{sku:string}}>('/api/owner/catalog/products/:sku/stock',async(req,reply)=>{
+  const p=stockActionSchema.safeParse(req.body);if(!p.success)return reply.code(400).send({error:'Enter a stock action, quantity, reason and current stock version.'});
+  return write('inventory_'+p.data.kind,req.params.sku,c=>adjustStock(c,storeId,req.params.sku,'owner-dashboard',p.data));
+ });
+ app.get<{Params:{sku:string}}>('/api/owner/catalog/products/:sku/stock',async(req)=>({movements:(await pool.query('SELECT id,kind,on_hand_before,on_hand_after,reserved_before,reserved_after,actor,reason,request_id,inventory_version,created_at FROM inventory_movements WHERE store_id=$1 AND sku=$2 ORDER BY created_at DESC,id DESC LIMIT 50',[storeId,req.params.sku])).rows}));
+ app.post('/api/owner/catalog/diagnose' ,async(req,reply)=>{
   const input=z.object({query:z.string().trim().min(1).max(200)}).strict().safeParse(req.body);
   if(!input.success)return reply.code(400).send({error:'Enter a short customer product phrase.'});
   const c=await pool.connect();try{await c.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');

@@ -1,5 +1,6 @@
 import {canonicalMeasurementUnit} from '../../../../packages/contracts/measurements.js';
 import type { PoolClient } from 'pg';
+import {availableStock} from '../../../../packages/contracts/stock-quantity.js';
 import type { Product } from '../../../../packages/contracts/index.js';
 import type { ActorContext } from './context.js';
 import {normalize,tokens,oneEdit} from '../../../../packages/contracts/catalog-text.js';
@@ -14,9 +15,9 @@ export function matches(query: string, values: string[]) {
 }
 const values=(p:Product)=>[p.name,p.unit,p.category??'',...p.aliases];
 export function exactProductMatch(query:string,p:Product){return normalize(query)===normalize(p.sku)||matches(query,values(p));}
-export const productColumns='sku,name,local_names,unit,price_paise,stock,version,aliases,quantity_step,category,image_path,family_id,brand,specifications,keywords,price_status,selling_unit_verified,selling_policy';
+export const productColumns='sku,name,local_names,unit,price_paise,stock,version,aliases,quantity_step,category,image_path,family_id,brand,specifications,keywords,price_status,selling_unit_verified,selling_policy,reserved_stock,inventory_version';
 export function productFromRow(p:any):Product {
- return {...(p.selling_policy?.saleMode||p.selling_policy?.packContents||p.selling_policy?.cutAllowed||p.selling_policy?.continuousLengthAvailable?{sellingPolicy:p.selling_policy}:{}),sku:p.sku,name:p.name,localNames:p.local_names,unit:p.unit,pricePaise:p.price_paise,priceStatus:p.price_status,sellingUnitVerified:p.selling_unit_verified,stock:p.stock,version:p.version,aliases:p.aliases,quantityStep:Number(p.quantity_step),...(p.category?{category:p.category}:{}),...(p.image_path?{imageUrl:p.image_path}:{}),...(p.family_id?{familyId:p.family_id}:{}),...(p.brand?{brand:p.brand}:{}),...(p.specifications&&Object.keys(p.specifications).length?{specifications:p.specifications}:{}),...(p.keywords?.length?{keywords:p.keywords}:{})};
+ return {...(p.selling_policy?.saleMode||p.selling_policy?.packContents||p.selling_policy?.cutAllowed||p.selling_policy?.continuousLengthAvailable?{sellingPolicy:p.selling_policy}:{}),sku:p.sku,name:p.name,localNames:p.local_names,unit:p.unit,pricePaise:p.price_paise,priceStatus:p.price_status,sellingUnitVerified:p.selling_unit_verified,stock:availableStock(p.stock,p.reserved_stock??0),stockOnHand:p.stock===null?null:Number(p.stock),stockReserved:Number(p.reserved_stock??0),inventoryVersion:p.inventory_version??1,version:p.version,aliases:p.aliases,quantityStep:Number(p.quantity_step),...(p.category?{category:p.category}:{}),...(p.image_path?{imageUrl:p.image_path}:{}),...(p.family_id?{familyId:p.family_id}:{}),...(p.brand?{brand:p.brand}:{}),...(p.specifications&&Object.keys(p.specifications).length?{specifications:p.specifications}:{}),...(p.keywords?.length?{keywords:p.keywords}:{})};
 }
 export async function catalogEnabled(client:PoolClient,ctx:ActorContext) {return !!(await client.query('SELECT 1 FROM catalog_profiles WHERE store_id=$1',[ctx.storeId])).rowCount;}
 export async function catalogContext(client:PoolClient,ctx:ActorContext) {

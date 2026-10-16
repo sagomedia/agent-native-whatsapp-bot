@@ -1,3 +1,4 @@
+import {reserveRequest,closeRequestStock} from './inventory.js';
 import {searchProducts} from './catalog.js';
 import {randomUUID} from 'node:crypto';
 import type {PoolClient} from 'pg';
@@ -67,7 +68,7 @@ export async function customerAmendmentAction(client:PoolClient,ctx:ActorContext
  return textPresentation(status==='owner_pending'?customerCopy('amendmentPending',state):say(state,'The proposed amendment was withdrawn. Your order is unchanged.','Change வேண்டாம்.\nஉங்க order அப்படியே இருக்கு.','Change vendaam.\nUnga order appadiye irukku.'));
 }
 export async function decideAmendment(client:PoolClient,storeId:string,amendmentId:string,actor:string,decision:'accepted'|'rejected') {
- const row=(await client.query('SELECT a.*,r.effective_revision,r.fulfillment,r.advance_required FROM order_amendments a JOIN order_requests r ON r.id=a.request_id AND r.store_id=a.store_id WHERE a.id=$1 AND a.store_id=$2 FOR UPDATE OF a,r',[amendmentId,storeId])).rows[0];
+ const row=(await client.query('SELECT a.*,r.effective_revision,r.fulfillment,r.advance_required,r.acceptance,r.inventory_state FROM order_amendments a JOIN order_requests r ON r.id=a.request_id AND r.store_id=a.store_id WHERE a.id=$1 AND a.store_id=$2 FOR UPDATE OF a,r',[amendmentId,storeId])).rows[0];
  if(!row)throw new ToolError('Order amendment not found.');
  if(row.state===decision)return {row,replayed:true};
  if(row.state!=='owner_pending')throw new ToolError('The customer must confirm this amendment before a shop decision.');
@@ -75,6 +76,7 @@ export async function decideAmendment(client:PoolClient,storeId:string,amendment
  if(decision==='accepted'){
   if(['collected','cancelled'].includes(row.fulfillment))throw new ToolError('This order is closed. Discuss a new request with the customer.');
   if(row.kind==='cancel'){
+   await closeRequestStock(client,storeId,row.request_id,'release',actor);
    await client.query("UPDATE order_requests SET fulfillment='cancelled',acceptance=CASE WHEN acceptance='awaiting_approval' THEN 'rejected' ELSE acceptance END,effective_revision=effective_revision+1 WHERE id=$1",[row.request_id]);
    await client.query("UPDATE order_advances SET state='refund_pending',updated_at=now() WHERE request_id=$1 AND state='verified'",[row.request_id]);
   }else{
@@ -83,8 +85,9 @@ export async function decideAmendment(client:PoolClient,storeId:string,amendment
    for(const line of row.proposed_lines as ConversationState['draft']){
     if(line.merchantConfirmed)continue;
     const [product]=line.sku?await searchProducts(client,{storeId} as ActorContext,line.sku):[];
-    if(!product||product.version!==line.productVersion||product.pricePaise!==line.pricePaise||line.quantity===null||product.stock!==null&&product.stock<line.quantity)throw new ToolError('Catalog price or availability changed. Send a fresh quote for customer approval.');
+    if(!product||product.version!==line.productVersion||product.pricePaise!==line.pricePaise||line.quantity===null)throw new ToolError('Catalog price or availability changed. Send a fresh quote for customer approval.');
    }
+   if(row.acceptance==='accepted')await reserveRequest(client,storeId,row.request_id,row.proposed_lines,row.effective_revision+1,actor);
    await client.query('UPDATE order_requests SET effective_lines=$1::jsonb,effective_total_paise=$2,effective_revision=effective_revision+1 WHERE id=$3',[JSON.stringify(row.proposed_lines),row.known_subtotal_paise,row.request_id]);
    await client.query('UPDATE conversations SET draft=$1::jsonb,version=version+1 WHERE id=$2 AND last_request_id=$3',[JSON.stringify(row.proposed_lines),row.conversation_id,row.request_id]);
   }
