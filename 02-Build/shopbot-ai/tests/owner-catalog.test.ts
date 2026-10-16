@@ -96,3 +96,24 @@ test('saved publication revision is immediately visible to the agent diagnostic;
  r=await post(app,'/products',{...product,version,active:true,verified:true,pricePaise:0,priceStatus:'confirm'});assert.equal(r.statusCode,200,r.body);search=await post(app,'/diagnose',{query:'cutting plier'});assert.ok(search.json().products.find((p:any)=>p.sku===product.sku).issues.includes('Shop must confirm price'));
  assert.equal((await post(app,'/products',{...product,version:r.json().version,active:true,verified:true,unit:'litre',specifications:{weight:'10kg'}})).statusCode,400);
 }));
+
+
+test('owner stock routes commit their audit and movement together, replay safely and require current shop access',()=>fixture(async(pool,app)=>{
+ const command={id:randomUUID(),expectedVersion:1,kind:'restock',quantity:2,reason:'Offline receipt 12'};
+ let r=await post(app,'/products/H02/stock',command);assert.equal(r.statusCode,200,r.body);assert.equal(r.json().sku,'H02');assert.equal(r.json().onHand,62);
+ r=await post(app,'/products/H02/stock',command);assert.equal(r.statusCode,200,r.body);assert.equal(r.json().replayed,true);
+ assert.equal((await pool.query("SELECT * FROM inventory_movements WHERE sku='H02' AND kind='restock'")).rowCount,1);
+ const audit=(await pool.query("SELECT * FROM owner_audit WHERE action='inventory_restock' ORDER BY sequence LIMIT 1")).rows[0];assert.equal(audit.target_id,fixtureStore);assert.equal(audit.details.sku,'H02');
+ assert.equal((await post(app,'/products/H02/stock',{...command,id:randomUUID()})).statusCode,409);
+ assert.equal((await post(app,'/products/H02/stock',{...command,id:randomUUID(),expectedVersion:2},{origin:'https://other.test'})).statusCode,403);
+ const history=await app.inject({url:'/api/owner/catalog/products/H02/stock',headers});assert.equal(history.statusCode,200);assert.equal(history.json().movements.length,1);
+}));
+test('message gallery is private, synthetic and read-only against all shop order tables',()=>fixture(async(pool,app)=>{
+ assert.equal((await app.inject({url:'/api/owner/message-gallery',headers:{host:owner.hostname}})).statusCode,403);
+ const tables=['order_requests','messages','whatsapp_actions','order_advances','inventory_movements'];
+ const before=await Promise.all(tables.map(t=>pool.query('SELECT count(*) FROM '+t).then(r=>r.rows[0].count)));
+ const response=await app.inject({url:'/api/owner/message-gallery?language=ta',headers});assert.equal(response.statusCode,200,response.body);assert.equal(response.json().readOnly,true);assert.equal(response.json().synthetic,true);assert.ok(response.json().entries.length>=18);
+ const after=await Promise.all(tables.map(t=>pool.query('SELECT count(*) FROM '+t).then(r=>r.rows[0].count)));assert.deepEqual(after,before);
+ assert.equal((await app.inject({url:'/api/owner/message-gallery/products/H02/image',headers})).statusCode,200);
+ assert.equal((await app.inject({url:'/api/owner/message-gallery/products/SECRET/image',headers})).statusCode,404);
+}));

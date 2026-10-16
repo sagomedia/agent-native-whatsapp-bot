@@ -10,7 +10,7 @@
       "section": "Customer input phrases and aliases",
       "file": "apps/server/src/services/catalog.ts",
       "lines": [
-        57
+        64
       ],
       "text": "எண்ணம்",
       "raw": "'எண்ணம்'"
@@ -20,7 +20,7 @@
       "section": "Customer input phrases and aliases",
       "file": "apps/server/src/services/catalog.ts",
       "lines": [
-        57
+        64
       ],
       "text": "பீஸ்",
       "raw": "'பீஸ்'"
@@ -30,7 +30,7 @@
       "section": "Customer input phrases and aliases",
       "file": "apps/server/src/services/catalog.ts",
       "lines": [
-        57
+        64
       ],
       "text": "பெட்டி",
       "raw": "'பெட்டி'"
@@ -40,7 +40,7 @@
       "section": "Customer input phrases and aliases",
       "file": "apps/server/src/services/catalog.ts",
       "lines": [
-        57
+        64
       ],
       "text": "பெட்டிகள்",
       "raw": "'பெட்டிகள்'"
@@ -50,7 +50,7 @@
       "section": "Customer input phrases and aliases",
       "file": "apps/server/src/services/catalog.ts",
       "lines": [
-        57
+        64
       ],
       "text": "பாக்ஸ்",
       "raw": "'பாக்ஸ்'"
@@ -60,7 +60,7 @@
       "section": "Customer input phrases and aliases",
       "file": "apps/server/src/services/catalog.ts",
       "lines": [
-        57
+        64
       ],
       "text": "பாட்டில்",
       "raw": "'பாட்டில்'"
@@ -70,7 +70,7 @@
       "section": "Customer input phrases and aliases",
       "file": "apps/server/src/services/catalog.ts",
       "lines": [
-        57
+        64
       ],
       "text": "பாட்டில்கள்",
       "raw": "'பாட்டில்கள்'"
@@ -80,7 +80,7 @@
       "section": "Customer input phrases and aliases",
       "file": "apps/server/src/services/catalog.ts",
       "lines": [
-        57
+        64
       ],
       "text": "ரோல்",
       "raw": "'ரோல்'"
@@ -90,7 +90,7 @@
       "section": "Customer input phrases and aliases",
       "file": "apps/server/src/services/catalog.ts",
       "lines": [
-        57
+        64
       ],
       "text": "ரோல்கள்",
       "raw": "'ரோல்கள்'"
@@ -100,7 +100,7 @@
       "section": "Customer input phrases and aliases",
       "file": "apps/server/src/services/catalog.ts",
       "lines": [
-        57
+        64
       ],
       "text": "அடி",
       "raw": "'அடி'"
@@ -110,7 +110,7 @@
       "section": "Customer input phrases and aliases",
       "file": "apps/server/src/services/catalog.ts",
       "lines": [
-        57
+        64
       ],
       "text": "மீட்டர்",
       "raw": "'மீட்டர்'"
@@ -120,7 +120,7 @@
       "section": "Customer input phrases and aliases",
       "file": "apps/server/src/services/catalog.ts",
       "lines": [
-        57
+        64
       ],
       "text": "கிலோ",
       "raw": "'கிலோ'"
@@ -130,7 +130,7 @@
       "section": "Customer input phrases and aliases",
       "file": "apps/server/src/services/catalog.ts",
       "lines": [
-        57
+        64
       ],
       "text": "ஜோடி",
       "raw": "'ஜோடி'"
@@ -140,7 +140,7 @@
       "section": "Customer input phrases and aliases",
       "file": "apps/server/src/services/catalog.ts",
       "lines": [
-        57
+        64
       ],
       "text": "பேக்",
       "raw": "'பேக்'"
@@ -150,7 +150,7 @@
       "section": "Customer input phrases and aliases",
       "file": "apps/server/src/services/catalog.ts",
       "lines": [
-        57
+        64
       ],
       "text": "லிட்டர்",
       "raw": "'லிட்டர்'"
@@ -160,7 +160,7 @@
       "section": "Customer input phrases and aliases",
       "file": "apps/server/src/services/catalog.ts",
       "lines": [
-        57
+        64
       ],
       "text": "கேன்",
       "raw": "'கேன்'"
@@ -170,7 +170,7 @@
       "section": "Customer input phrases and aliases",
       "file": "apps/server/src/services/catalog.ts",
       "lines": [
-        57
+        64
       ],
       "text": "வாளி",
       "raw": "'வாளி'"
@@ -1200,7 +1200,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/http/owner.ts",
       "lines": [
-        177
+        193
       ],
       "text": "கடை உங்கள் பட்டியலைப் பார்க்கிறது.\nஇங்கே பதில் தருவோம்.",
       "raw": "'கடை உங்கள் பட்டியலைப் பார்க்கிறது.\\nஇங்கே பதில் தருவோம்.'"
@@ -1210,7 +1210,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/http/owner.ts",
       "lines": [
-        177
+        193
       ],
       "text": "மீண்டும் உதவத் தயாரா இருக்கோம்.\nபட்டியல் அப்படியே இருக்கு. மாற்றம் சொல்லுங்க அல்லது பட்டியலைக் கேளுங்க.",
       "raw": "'மீண்டும் உதவத் தயாரா இருக்கோம்.\\nபட்டியல் அப்படியே இருக்கு. மாற்றம் சொல்லுங்க அல்லது பட்டியலைக் கேளுங்க.'"
@@ -1220,37 +1220,17 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/http/owner.ts",
       "lines": [
-        186
+        202
       ],
       "text": "மீண்டும் உதவத் தயாராக உள்ளது. இந்தப் புதிய தேர்வுகளுடன் தொடருங்கள்.",
       "raw": "'மீண்டும் உதவத் தயாராக உள்ளது. இந்தப் புதிய தேர்வுகளுடன் தொடருங்கள்.'"
-    },
-    {
-      "id": "TA-831BF1A024",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/http/owner.ts",
-      "lines": [
-        285
-      ],
-      "text": "Order முடிஞ்ச பிறகு ₹10 வந்திருக்கு.\nகடை refund பண்ணணும்.",
-      "raw": "'Order முடிஞ்ச பிறகு ₹10 வந்திருக்கு.\\nகடை refund பண்ணணும்.'"
-    },
-    {
-      "id": "TA-FDC63549F5",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/http/owner.ts",
-      "lines": [
-        295
-      ],
-      "text": "₹10 advance refund complete ஆகியிருக்குனு கடை confirm பண்ணியிருக்கு.",
-      "raw": "'₹10 advance refund complete ஆகியிருக்குனு கடை confirm பண்ணியிருக்கு.'"
     },
     {
       "id": "TA-C7C26E35ED",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/http/owner.ts",
       "lines": [
-        314
+        346
       ],
       "text": "Order cancel ஆகியிருக்கு. Advance refund-ஐ தனியா கடை check பண்ணும்.",
       "raw": "'Order cancel ஆகியிருக்கு. Advance refund-ஐ தனியா கடை check பண்ணும்.'"
@@ -1260,9 +1240,9 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        181,
-        579,
-        692
+        182,
+        581,
+        694
       ],
       "text": "பில் எவ்வளவு",
       "raw": "'பில் எவ்வளவு'"
@@ -1272,39 +1252,19 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        181,
-        579,
-        692
+        182,
+        581,
+        694
       ],
       "text": "பில் காட்டு",
       "raw": "'பில் காட்டு'"
-    },
-    {
-      "id": "TA-2485D49223",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/runtime/conversation.ts",
-      "lines": [
-        243
-      ],
-      "text": "குரல் தெளிவாகப் புரியவில்லை.\nமீண்டும் voice அனுப்புங்க அல்லது text-ல சொல்லுங்க.",
-      "raw": "'குரல் தெளிவாகப் புரியவில்லை.\\nமீண்டும் voice அனுப்புங்க அல்லது text-ல சொல்லுங்க.'"
-    },
-    {
-      "id": "TA-39877CB167",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/runtime/conversation.ts",
-      "lines": [
-        243
-      ],
-      "text": "குரல் செய்தியைச் செயலாக்க முடியவில்லை.\nபட்டியல் அப்படியே இருக்கு.\nமீண்டும் முயலுங்க அல்லது text அனுப்புங்க.",
-      "raw": "'குரல் செய்தியைச் செயலாக்க முடியவில்லை.\\nபட்டியல் அப்படியே இருக்கு.\\nமீண்டும் முயலுங்க அல்லது text அனுப்புங்க.'"
     },
     {
       "id": "TA-39805D0C8A",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        257
+        258
       ],
       "text": "Bill confirm ஆகியிருக்கு.\nகடை order-ஐ check பண்ணி தயார்படுத்தும்.",
       "raw": "'Bill confirm ஆகியிருக்கு.\\nகடை order-ஐ check பண்ணி தயார்படுத்தும்.'"
@@ -1314,7 +1274,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        260
+        261
       ],
       "text": "இந்த order-க்கு advance pending இல்ல. Order status பாருங்க.",
       "raw": "'இந்த order-க்கு advance pending இல்ல. Order status பாருங்க.'"
@@ -1324,7 +1284,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        268
+        269
       ],
       "text": "₹10 advance வந்திருக்குனு கடை confirm பண்ணியிருக்கு.",
       "raw": "'₹10 advance வந்திருக்குனு கடை confirm பண்ணியிருக்கு.'"
@@ -1334,7 +1294,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        268
+        269
       ],
       "text": "₹10 refund complete ஆகியிருக்குனு கடை confirm பண்ணியிருக்கு.",
       "raw": "'₹10 refund complete ஆகியிருக்குனு கடை confirm பண்ணியிருக்கு.'"
@@ -1344,7 +1304,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        268
+        269
       ],
       "text": "இந்த order முடிஞ்சிருக்கு. வந்த ₹10 advance-ஐ கடை refund பண்ணணும்.",
       "raw": "'இந்த order முடிஞ்சிருக்கு. வந்த ₹10 advance-ஐ கடை refund பண்ணணும்.'"
@@ -1354,7 +1314,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        282
+        283
       ],
       "text": "பொருட்களை மாற்றவா, முழு பட்டியலை காலி செய்யவா? நீங்கள் தேர்வு செய்யும் வரை பட்டியல் அப்படியே இருக்கும்.",
       "raw": "'பொருட்களை மாற்றவா, முழு பட்டியலை காலி செய்யவா? நீங்கள் தேர்வு செய்யும் வரை பட்டியல் அப்படியே இருக்கும்.'"
@@ -1364,7 +1324,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        282
+        283
       ],
       "text": "“முழு பட்டியலையும் காலி செய்” என்று கேட்டேன். ${current.draft.length} பொருட்களையும் நீக்கவா? ஆர்டர் அனுப்பவில்லை.",
       "raw": "`“முழு பட்டியலையும் காலி செய்” என்று கேட்டேன். ${current.draft.length} பொருட்களையும் நீக்கவா? ஆர்டர் அனுப்பவில்லை.`"
@@ -1374,7 +1334,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        282
+        283
       ],
       "text": "பொருட்களை மாற்று",
       "raw": "'பொருட்களை மாற்று'"
@@ -1384,7 +1344,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        282
+        283
       ],
       "text": "எல்லாம் நீக்கு",
       "raw": "'எல்லாம் நீக்கு'"
@@ -1394,7 +1354,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        282
+        283
       ],
       "text": "பட்டியல் வை",
       "raw": "'பட்டியல் வை'"
@@ -1404,7 +1364,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        290
+        291
       ],
       "text": "புதிய பட்டியலுக்குக் கேட்டவை:\\n${items}\\n\\nமுந்தைய கோரிக்கை கடையிடம் அப்படியே உள்ளது. பட்டியலைத் தொடங்கிப் பொருட்களைச் சரிபார்க்கலாம். ? என்றால் எண்ணிக்கை சொல்ல வேண்டும்.",
       "raw": "`புதிய பட்டியலுக்குக் கேட்டவை:\\n${items}\\n\\nமுந்தைய கோரிக்கை கடையிடம் அப்படியே உள்ளது. பட்டியலைத் தொடங்கிப் பொருட்களைச் சரிபார்க்கலாம். ? என்றால் எண்ணிக்கை சொல்ல வேண்டும்.`"
@@ -1414,7 +1374,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        290
+        291
       ],
       "text": "பட்டியலைத் தொடங்கு",
       "raw": "'பட்டியலைத் தொடங்கு'"
@@ -1424,8 +1384,8 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        290,
-        452
+        291,
+        453
       ],
       "text": "கடையிடம் பேசு",
       "raw": "'கடையிடம் பேசு'"
@@ -1435,7 +1395,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        298
+        299
       ],
       "text": "கேட்டது: ${item.quantity} ${unitName(item.requestedUnit??'unit',current,item.quantity)}",
       "raw": "`கேட்டது: ${item.quantity} ${unitName(item.requestedUnit??'unit',current,item.quantity)}`"
@@ -1445,7 +1405,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        397
+        398
       ],
       "text": "எந்தப் பொருளை மீண்டும் பார்க்க வேண்டும்? பெயர் அல்லது என்ன வேலைக்குத் தேவை என்று சொல்லுங்கள்.",
       "raw": "'எந்தப் பொருளை மீண்டும் பார்க்க வேண்டும்? பெயர் அல்லது என்ன வேலைக்குத் தேவை என்று சொல்லுங்கள்.'"
@@ -1455,7 +1415,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        406
+        407
       ],
       "text": "அது விலை விவரம் மட்டுமே; பொருள் சேர்க்கவில்லை. “பட்டியலில் சேர்” என்பதைத் தேர்வு செய்யுங்கள் அல்லது பொருளையும் எண்ணிக்கையையும் சொல்லுங்கள்.",
       "raw": "'அது விலை விவரம் மட்டுமே; பொருள் சேர்க்கவில்லை. “பட்டியலில் சேர்” என்பதைத் தேர்வு செய்யுங்கள் அல்லது பொருளையும் எண்ணிக்கையையும் சொல்லுங்கள்.'"
@@ -1465,7 +1425,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        407
+        408
       ],
       "text": "எந்தப் பொருள் வேண்டும்? படத்தில் தேர்வு செய்யுங்கள் அல்லது பெயரைச் சொல்லுங்கள். உங்கள் பட்டியலில் மாற்றம் செய்யவில்லை.",
       "raw": "'எந்தப் பொருள் வேண்டும்? படத்தில் தேர்வு செய்யுங்கள் அல்லது பெயரைச் சொல்லுங்கள். உங்கள் பட்டியலில் மாற்றம் செய்யவில்லை.'"
@@ -1475,7 +1435,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        433
+        434
       ],
       "text": "சரிபார்த்த பொருட்களின் கூட்டுத்தொகை: ${formatMoney(total)}. முழு பில் இன்னும் உறுதி செய்யணும்.",
       "raw": "`சரிபார்த்த பொருட்களின் கூட்டுத்தொகை: ${formatMoney(total)}. முழு பில் இன்னும் உறுதி செய்யணும்.`"
@@ -1485,7 +1445,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        433
+        434
       ],
       "text": "இப்போதைய உத்தேச மொத்தம்: ${formatMoney(total)}.",
       "raw": "`இப்போதைய உத்தேச மொத்தம்: ${formatMoney(total)}.`"
@@ -1495,7 +1455,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        435
+        436
       ],
       "text": "உங்கள் படத்திற்கு பொருத்தமாக இருக்கக்கூடிய பொருட்கள் இவை. பிராண்ட், அளவு மற்றும் வகையைச் சரிபார்த்துத் தேர்வு செய்யுங்கள்.\n\n",
       "raw": "'உங்கள் படத்திற்கு பொருத்தமாக இருக்கக்கூடிய பொருட்கள் இவை. பிராண்ட், அளவு மற்றும் வகையைச் சரிபார்த்துத் தேர்வு செய்யுங்கள்.\\n\\n'"
@@ -1505,7 +1465,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        435
+        436
       ],
       "text": "இந்தப் படத்திற்குச் சரியான பொருத்தத்தை உறுதி செய்ய முடியவில்லை.\n\n",
       "raw": "'இந்தப் படத்திற்குச் சரியான பொருத்தத்தை உறுதி செய்ய முடியவில்லை.\\n\\n'"
@@ -1515,7 +1475,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        450
+        451
       ],
       "text": " முந்தைய பொருட்களும் பட்டியலில் உள்ளன.",
       "raw": "' முந்தைய பொருட்களும் பட்டியலில் உள்ளன.'"
@@ -1525,7 +1485,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        450
+        451
       ],
       "text": "சேர்த்திருக்கிறேன்: ${details}.",
       "raw": "`சேர்த்திருக்கிறேன்: ${details}.`"
@@ -1535,7 +1495,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        452
+        453
       ],
       "text": "மீண்டும் முயல்",
       "raw": "'மீண்டும் முயல்'"
@@ -1545,7 +1505,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        454
+        455
       ],
       "text": "உங்கள் பட்டியலைப் படித்தேன். கடை சரிபார்க்க வேண்டிய வரிகள் உட்பட எல்லாப் பொருட்களையும் சரிபாருங்கள்.",
       "raw": "'உங்கள் பட்டியலைப் படித்தேன். கடை சரிபார்க்க வேண்டிய வரிகள் உட்பட எல்லாப் பொருட்களையும் சரிபாருங்கள்.'"
@@ -1555,7 +1515,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        460
+        461
       ],
       "text": "${lineName(selected,finalState)} தேர்வு செய்யப்பட்டது${selected.quantity!==null?` · ${selected.quantity} ${unitName(selected.unit??'unit',finalState,selected.quantity)}`:''}.",
       "raw": "`${lineName(selected,finalState)} தேர்வு செய்யப்பட்டது${selected.quantity!==null?` · ${selected.quantity} ${unitName(selected.unit??'unit',finalState,selected.quantity)}`:''}.`"
@@ -1565,7 +1525,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        463
+        464
       ],
       "text": "எண்ணிக்கை தேவை",
       "raw": "'எண்ணிக்கை தேவை'"
@@ -1575,7 +1535,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        464
+        465
       ],
       "text": "நீங்கள் சொன்ன ${finalState.draft.length} பொருட்களையும் குறித்துக்கொண்டேன்:\\n${rows.join('\\n')}",
       "raw": "`நீங்கள் சொன்ன ${finalState.draft.length} பொருட்களையும் குறித்துக்கொண்டேன்:\\n${rows.join('\\n')}`"
@@ -1585,7 +1545,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        482
+        483
       ],
       "text": "பொருளைத் தேர்வு செய்",
       "raw": "'பொருளைத் தேர்வு செய்'"
@@ -1595,7 +1555,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        482
+        483
       ],
       "text": "புதிய பட்டியல்",
       "raw": "'புதிய பட்டியல்'"
@@ -1605,7 +1565,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        483
+        484
       ],
       "text": "பட்டியலில் எந்தப் பொருளைச் சொன்னீர்கள்?",
       "raw": "'பட்டியலில் எந்தப் பொருளைச் சொன்னீர்கள்?'"
@@ -1615,7 +1575,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        484
+        485
       ],
       "text": "மற்ற தெளிவான மாற்றங்கள் சேமிக்கப்பட்டன. ",
       "raw": "'மற்ற தெளிவான மாற்றங்கள் சேமிக்கப்பட்டன. '"
@@ -1625,7 +1585,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        484
+        485
       ],
       "text": "கீழே தேர்வு செய்யுங்கள் அல்லது பொருளின் வகையைச் சொல்லுங்கள். பட்டியல் அப்படியே உள்ளது.",
       "raw": "'கீழே தேர்வு செய்யுங்கள் அல்லது பொருளின் வகையைச் சொல்லுங்கள். பட்டியல் அப்படியே உள்ளது.'"
@@ -1635,7 +1595,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        488
+        489
       ],
       "text": "கேட்டது: ${interpretation.transcript.slice(0,250)}",
       "raw": "`கேட்டது: ${interpretation.transcript.slice(0,250)}`"
@@ -1645,7 +1605,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        518
+        520
       ],
       "text": "செயலாக்க நேரம் முடிந்தது. உங்கள் பட்டியல் அப்படியே உள்ளது. மீண்டும் முயலுங்கள் அல்லது கடையிடம் உதவி கேளுங்கள்.",
       "raw": "'செயலாக்க நேரம் முடிந்தது. உங்கள் பட்டியல் அப்படியே உள்ளது. மீண்டும் முயலுங்கள் அல்லது கடையிடம் உதவி கேளுங்கள்.'"
@@ -1655,7 +1615,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        579
+        581
       ],
       "text": "உத்தேச பில்",
       "raw": "'உத்தேச பில்'"
@@ -1983,11 +1943,31 @@
       "raw": "'இது வேணும்'"
     },
     {
+      "id": "TA-BCB2598125",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/message-gallery.ts",
+      "lines": [
+        54
+      ],
+      "text": "மீண்டும் முயல்",
+      "raw": "'மீண்டும் முயல்'"
+    },
+    {
+      "id": "TA-6445C46575",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/message-gallery.ts",
+      "lines": [
+        54
+      ],
+      "text": "கடையிடம் பேசு",
+      "raw": "'கடையிடம் பேசு'"
+    },
+    {
       "id": "TA-2FD5B31E17",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/order-amendments.ts",
       "lines": [
-        20
+        21
       ],
       "text": "Count check பண்ணணும்",
       "raw": "'Count check பண்ணணும்'"
@@ -1997,7 +1977,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/order-amendments.ts",
       "lines": [
-        29
+        30
       ],
       "text": "இந்த order முடிஞ்சிருக்கு. புது order வேணும்னா “new order”னு சொல்லுங்க.",
       "raw": "'இந்த order முடிஞ்சிருக்கு. புது order வேணும்னா “new order”னு சொல்லுங்க.'"
@@ -2007,7 +1987,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/order-amendments.ts",
       "lines": [
-        35
+        36
       ],
       "text": "இந்த order-க்கு ஒரு change இன்னும் pending-ல இருக்கு.\nகடை அதை confirm பண்ணின பிறகு அடுத்த change செய்யலாம்.",
       "raw": "'இந்த order-க்கு ஒரு change இன்னும் pending-ல இருக்கு.\\nகடை அதை confirm பண்ணின பிறகு அடுத்த change செய்யலாம்.'"
@@ -2017,7 +1997,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/order-amendments.ts",
       "lines": [
-        51
+        54
       ],
       "text": "இந்த order-ஐ cancel பண்ணணும்",
       "raw": "'இந்த order-ஐ cancel பண்ணணும்'"
@@ -2027,7 +2007,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/order-amendments.ts",
       "lines": [
-        57
+        60
       ],
       "text": "அனுப்பு",
       "raw": "'அனுப்பு'"
@@ -2037,7 +2017,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/order-amendments.ts",
       "lines": [
-        57
+        60
       ],
       "text": "வேண்டாம்",
       "raw": "'வேண்டாம்'"
@@ -2047,7 +2027,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/order-amendments.ts",
       "lines": [
-        67
+        70
       ],
       "text": "Change வேண்டாம்.\nஉங்க order அப்படியே இருக்கு.",
       "raw": "'Change வேண்டாம்.\\nஉங்க order அப்படியே இருக்கு.'"
@@ -2081,86 +2061,6 @@
       ],
       "text": "கடை check பண்ணணும். விலை இன்னும் confirm ஆகல.",
       "raw": "'கடை check பண்ணணும். விலை இன்னும் confirm ஆகல.'"
-    },
-    {
-      "id": "TA-857E9FEEB7",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/order-quotes.ts",
-      "lines": [
-        44
-      ],
-      "text": "கடை check பண்ணிய bill",
-      "raw": "'கடை check பண்ணிய bill'"
-    },
-    {
-      "id": "TA-23E86DB11F",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/order-quotes.ts",
-      "lines": [
-        44
-      ],
-      "text": "மொத்தம்",
-      "raw": "'மொத்தம்'"
-    },
-    {
-      "id": "TA-83AB3DFACB",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/order-quotes.ts",
-      "lines": [
-        44
-      ],
-      "text": "Advance வந்தது",
-      "raw": "'Advance வந்தது'"
-    },
-    {
-      "id": "TA-7F2DAECD3A",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/order-quotes.ts",
-      "lines": [
-        44
-      ],
-      "text": "இன்னும் செலுத்த வேண்டியது",
-      "raw": "'இன்னும் செலுத்த வேண்டியது'"
-    },
-    {
-      "id": "TA-CEDFE57C9D",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/order-quotes.ts",
-      "lines": [
-        44
-      ],
-      "text": "Advance-ல ${formatMoney(paid-Number(row.total_paise))} மீதி இருக்கு. கடை refund check பண்ணணும்.",
-      "raw": "`Advance-ல ${formatMoney(paid-Number(row.total_paise))} மீதி இருக்கு. கடை refund check பண்ணணும்.`"
-    },
-    {
-      "id": "TA-4AF7AA5BA3",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/order-quotes.ts",
-      "lines": [
-        44
-      ],
-      "text": "இந்த bill சரியா?",
-      "raw": "'இந்த bill சரியா?'"
-    },
-    {
-      "id": "TA-243BF941E9",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/order-quotes.ts",
-      "lines": [
-        45
-      ],
-      "text": "Bill சரி",
-      "raw": "'Bill சரி'"
-    },
-    {
-      "id": "TA-785608F4FB",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/order-quotes.ts",
-      "lines": [
-        45
-      ],
-      "text": "உதவி வேணும்",
-      "raw": "'உதவி வேணும்'"
     },
     {
       "id": "TA-86184385C3",
@@ -2371,6 +2271,188 @@
       ],
       "text": "a|an|mukkal|முக்கால்|kaal|ara|arai|கால்|அரை|one|two|three|four|five|six|seven|eight|nine|ten|twenty|fifty|hundred|oru|onnu|ondru|rendu|moonu|naalu|anju|paththu|pathu|ஒரு|ஒன்று|ஒன்னு|ஒண்ணு|இரண்டு|ரெண்டு|மூன்று|மூணு|நான்கு|நாலு|ஐந்து|அஞ்சு|பத்து|இருபது|ஐம்பது|நூறு",
       "raw": "'a|an|mukkal|முக்கால்|kaal|ara|arai|கால்|அரை|one|two|three|four|five|six|seven|eight|nine|ten|twenty|fifty|hundred|oru|onnu|ondru|rendu|moonu|naalu|anju|paththu|pathu|ஒரு|ஒன்று|ஒன்னு|ஒண்ணு|இரண்டு|ரெண்டு|மூன்று|மூணு|நான்கு|நாலு|ஐந்து|அஞ்சு|பத்து|இருபது|ஐம்பது|நூறு'"
+    },
+    {
+      "id": "TA-5285286867",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/quote-presentation.ts",
+      "lines": [
+        17
+      ],
+      "text": "விலை சேர்க்கல",
+      "raw": "'விலை சேர்க்கல'"
+    },
+    {
+      "id": "TA-8396A3AD4B",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/quote-presentation.ts",
+      "lines": [
+        24
+      ],
+      "text": "முந்தைய தெரிந்த விலை: ${formatMoney(quote.previousTotalPaise)}",
+      "raw": "`முந்தைய தெரிந்த விலை: ${formatMoney(quote.previousTotalPaise)}`"
+    },
+    {
+      "id": "TA-97FE1F32C2",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/quote-presentation.ts",
+      "lines": [
+        24
+      ],
+      "text": "முந்தைய list-க்கு விலை இன்னும் வரல.",
+      "raw": "'முந்தைய list-க்கு விலை இன்னும் வரல.'"
+    },
+    {
+      "id": "TA-E0109611E7",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/quote-presentation.ts",
+      "lines": [
+        24
+      ],
+      "text": "${changes.length} items check பண்ணி update ஆகியிருக்கு. மாற்றம்: ${difference<0?'−':'+'}${formatMoney(Math.abs(difference))}.",
+      "raw": "`${changes.length} items check பண்ணி update ஆகியிருக்கு. மாற்றம்: ${difference<0?'−':'+'}${formatMoney(Math.abs(difference))}.`"
+    },
+    {
+      "id": "TA-6A5A2E6FAE",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/quote-presentation.ts",
+      "lines": [
+        24
+      ],
+      "text": "Items-ம் விலையும் மாறல.",
+      "raw": "'Items-ம் விலையும் மாறல.'"
+    },
+    {
+      "id": "TA-F4B6D2C9DF",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/quote-presentation.ts",
+      "lines": [
+        26
+      ],
+      "text": "வந்த advance: ${formatMoney(paid)}",
+      "raw": "`வந்த advance: ${formatMoney(paid)}`"
+    },
+    {
+      "id": "TA-F94BC3F6D9",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/quote-presentation.ts",
+      "lines": [
+        26
+      ],
+      "text": "இன்னும் தர வேண்டியது: ${formatMoney(balance)}",
+      "raw": "`இன்னும் தர வேண்டியது: ${formatMoney(balance)}`"
+    },
+    {
+      "id": "TA-4D2B1697CE",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/quote-presentation.ts",
+      "lines": [
+        26
+      ],
+      "text": "Advance-ல ${formatMoney(-balance)} மீதி இருக்கு. கடை refund check பண்ணணும்.",
+      "raw": "`Advance-ல ${formatMoney(-balance)} மீதி இருக்கு. கடை refund check பண்ணணும்.`"
+    },
+    {
+      "id": "TA-F0C925E111",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/quote-presentation.ts",
+      "lines": [
+        27
+      ],
+      "text": "Bill சரி",
+      "raw": "'Bill சரி'"
+    },
+    {
+      "id": "TA-3A39A4877A",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/quote-presentation.ts",
+      "lines": [
+        27
+      ],
+      "text": "Bill மாற்றணும்",
+      "raw": "'Bill மாற்றணும்'"
+    },
+    {
+      "id": "TA-640263AFBE",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/quote-presentation.ts",
+      "lines": [
+        30
+      ],
+      "text": "கடை check பண்ணிய bill",
+      "raw": "'கடை check பண்ணிய bill'"
+    },
+    {
+      "id": "TA-8AEEDDDE48",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/quote-presentation.ts",
+      "lines": [
+        30,
+        34,
+        34
+      ],
+      "text": "மொத்தம்",
+      "raw": "'மொத்தம்'"
+    },
+    {
+      "id": "TA-0CCCAEAA6F",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/quote-presentation.ts",
+      "lines": [
+        30
+      ],
+      "text": "இந்த bill சரியா?",
+      "raw": "'இந்த bill சரியா?'"
+    },
+    {
+      "id": "TA-92BA094E8A",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/quote-presentation.ts",
+      "lines": [
+        33
+      ],
+      "text": "கடை Bill ${index+1} / ${lastIndex+1}",
+      "raw": "`கடை Bill ${index+1} / ${lastIndex+1}`"
+    },
+    {
+      "id": "TA-678450F324",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/quote-presentation.ts",
+      "lines": [
+        34
+      ],
+      "text": "மத்த changes-ம் Bill-ல இருக்கு.",
+      "raw": "'மத்த changes-ம் Bill-ல இருக்கு.'"
+    },
+    {
+      "id": "TA-B119999AB2",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/quote-presentation.ts",
+      "lines": [
+        34
+      ],
+      "text": "Bill-ஐ பாருங்க. சரின்னா confirm பண்ணுங்க; இல்லனா மாற்றம் சொல்லலாம்.",
+      "raw": "'Bill-ஐ பாருங்க. சரின்னா confirm பண்ணுங்க; இல்லனா மாற்றம் சொல்லலாம்.'"
+    },
+    {
+      "id": "TA-228CDA90C3",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/quote-presentation.ts",
+      "lines": [
+        34
+      ],
+      "text": "கடை Bill",
+      "raw": "'கடை Bill'"
+    },
+    {
+      "id": "TA-E6225B5B14",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/quote-presentation.ts",
+      "lines": [
+        34
+      ],
+      "text": "கடை Bill · Items, count, விலை சரியா பார்த்து confirm பண்ணுங்க.",
+      "raw": "'கடை Bill · Items, count, விலை சரியா பார்த்து confirm பண்ணுங்க.'"
     },
     {
       "id": "TA-B1869DD9D7",
@@ -2996,6 +3078,16 @@
       "raw": "'₹10 advance வந்திருக்கானு கடை check பண்ணணும்.'"
     },
     {
+      "id": "TA-839168B721",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/request-status.ts",
+      "lines": [
+        21
+      ],
+      "text": "Confirm பண்ணிய Bill: ${formatMoney(request.totalPaise)}",
+      "raw": "`Confirm பண்ணிய Bill: ${formatMoney(request.totalPaise)}`"
+    },
+    {
       "id": "TA-8C6DC01842",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/shopping-actions.ts",
@@ -3150,11 +3242,21 @@
       "raw": "'எந்தப் பொருளை மாற்ற வேண்டும்?'"
     },
     {
+      "id": "TA-36D6F29BA7",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/shopping-flow.ts",
+      "lines": [
+        22
+      ],
+      "text": "இந்த Bill-ல என்ன மாற்றணும்? Item, count அல்லது pack-ஐ voice / text-ல சொல்லுங்க. Change confirm ஆகுற வரைக்கும் பழைய order அப்படியே இருக்கும்.",
+      "raw": "'இந்த Bill-ல என்ன மாற்றணும்? Item, count அல்லது pack-ஐ voice / text-ல சொல்லுங்க. Change confirm ஆகுற வரைக்கும் பழைய order அப்படியே இருக்கும்.'"
+    },
+    {
       "id": "TA-E86A2BD4BA",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/shopping-flow.ts",
       "lines": [
-        28
+        36
       ],
       "text": "${lineName(line,state)} கடை சரிபார்க்கப் பட்டியலில் உள்ளது. அடுத்த பொருளைப் பார்ப்போம்.",
       "raw": "`${lineName(line,state)} கடை சரிபார்க்கப் பட்டியலில் உள்ளது. அடுத்த பொருளைப் பார்ப்போம்.`"
@@ -3164,7 +3266,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/shopping-flow.ts",
       "lines": [
-        37
+        45
       ],
       "text": "அடுத்து என்ன செய்ய வேண்டும்?",
       "raw": "'அடுத்து என்ன செய்ய வேண்டும்?'"
@@ -3174,7 +3276,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/shopping-flow.ts",
       "lines": [
-        37
+        45
       ],
       "text": "மாற்றணும்",
       "raw": "'மாற்றணும்'"
@@ -3184,7 +3286,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/shopping-flow.ts",
       "lines": [
-        37
+        45
       ],
       "text": "புதிய பட்டியல்",
       "raw": "'புதிய பட்டியல்'"
@@ -3194,7 +3296,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/shopping-flow.ts",
       "lines": [
-        37
+        45
       ],
       "text": "பொருட்களைப் பார்",
       "raw": "'பொருட்களைப் பார்'"
@@ -3204,7 +3306,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/shopping-flow.ts",
       "lines": [
-        37
+        45
       ],
       "text": "உதவி வேணும்",
       "raw": "'உதவி வேணும்'"
@@ -3214,7 +3316,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/shopping-flow.ts",
       "lines": [
-        44
+        52
       ],
       "text": "${lineName(line,state)} என்ன மாற்ற வேண்டும்? பெயர், அளவு அல்லது எண்ணிக்கையைச் சொல்லுங்கள். மற்ற பொருட்கள் மாறாது.",
       "raw": "`${lineName(line,state)} என்ன மாற்ற வேண்டும்? பெயர், அளவு அல்லது எண்ணிக்கையைச் சொல்லுங்கள். மற்ற பொருட்கள் மாறாது.`"
@@ -3224,7 +3326,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/shopping-flow.ts",
       "lines": [
-        44
+        52
       ],
       "text": "பொருளை நீக்கு",
       "raw": "'பொருளை நீக்கு'"
@@ -3234,7 +3336,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/shopping-flow.ts",
       "lines": [
-        44
+        52
       ],
       "text": "மாற்ற வேண்டாம்",
       "raw": "'மாற்ற வேண்டாம்'"
@@ -3244,7 +3346,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/shopping-flow.ts",
       "lines": [
-        47
+        55
       ],
       "text": "என்ன பொருள் தேட வேண்டும்?",
       "raw": "'என்ன பொருள் தேட வேண்டும்?'"
@@ -3254,7 +3356,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/shopping-flow.ts",
       "lines": [
-        48
+        56
       ],
       "text": "என்ன வேலைக்கு பொருள் வேண்டும்? சுருக்கமாகச் சொல்லுங்கள். படம் அல்லது குரல் பதிவும் அனுப்பலாம்.",
       "raw": "'என்ன வேலைக்கு பொருள் வேண்டும்? சுருக்கமாகச் சொல்லுங்கள். படம் அல்லது குரல் பதிவும் அனுப்பலாம்.'"
@@ -3264,7 +3366,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/shopping-flow.ts",
       "lines": [
-        51
+        59
       ],
       "text": "உங்கள் பட்டியல் அப்படியே இருக்கிறது. பிறகு தொடரலாம். புதிதாக எதையும் கடைக்கு அனுப்பவில்லை.",
       "raw": "'உங்கள் பட்டியல் அப்படியே இருக்கிறது. பிறகு தொடரலாம். புதிதாக எதையும் கடைக்கு அனுப்பவில்லை.'"
@@ -3274,7 +3376,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/shopping-flow.ts",
       "lines": [
-        56
+        64
       ],
       "text": "பட்டியல் காலி செய்யப்பட்டது. ஆர்டர் அனுப்பவில்லை. இப்போது என்ன வேண்டும்?",
       "raw": "'பட்டியல் காலி செய்யப்பட்டது. ஆர்டர் அனுப்பவில்லை. இப்போது என்ன வேண்டும்?'"
@@ -3284,7 +3386,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/shopping-flow.ts",
       "lines": [
-        62
+        70
       ],
       "text": "முந்தைய ஆர்டர் கடையிடம் இருக்கு. புதிய பட்டியலில் என்ன வேணும்?",
       "raw": "'முந்தைய ஆர்டர் கடையிடம் இருக்கு. புதிய பட்டியலில் என்ன வேணும்?'"
@@ -3294,7 +3396,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/shopping-flow.ts",
       "lines": [
-        62
+        70
       ],
       "text": "புதிய பட்டியல் தொடங்கியாச்சு. என்ன பொருள் வேணும்?",
       "raw": "'புதிய பட்டியல் தொடங்கியாச்சு. என்ன பொருள் வேணும்?'"
@@ -3444,7 +3546,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/tools.ts",
       "lines": [
-        168
+        170
       ],
       "text": "பொருளைத் தேர்வு செய்ய வேண்டும்",
       "raw": "'பொருளைத் தேர்வு செய்ய வேண்டும்'"
@@ -3454,7 +3556,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/tools.ts",
       "lines": [
-        168
+        170
       ],
       "text": "எண்ணிக்கை வேண்டும்",
       "raw": "'எண்ணிக்கை வேண்டும்'"
@@ -3464,7 +3566,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/tools.ts",
       "lines": [
-        168
+        170
       ],
       "text": "விற்பனை அலகு வேண்டும்",
       "raw": "'விற்பனை அலகு வேண்டும்'"
@@ -3474,7 +3576,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/tools.ts",
       "lines": [
-        168
+        170
       ],
       "text": "கடை சரிபார்க்க வேண்டும்",
       "raw": "'கடை சரிபார்க்க வேண்டும்'"
@@ -3484,7 +3586,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/tools.ts",
       "lines": [
-        210
+        212
       ],
       "text": "உத்தேச மொத்தம்: ${formatMoney(knownSubtotalPaise)}.",
       "raw": "`உத்தேச மொத்தம்: ${formatMoney(knownSubtotalPaise)}.`"
@@ -3494,27 +3596,47 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/tools.ts",
       "lines": [
-        210
+        212
       ],
       "text": "தெரிந்த விலைகளின் கூட்டுத்தொகை: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} பொருட்களுக்கு விலை அல்லது எண்ணிக்கை தேவை. சரிபார்க்கப் பட்டியலைக் கடைக்கு அனுப்பலாம்.",
       "raw": "`தெரிந்த விலைகளின் கூட்டுத்தொகை: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} பொருட்களுக்கு விலை அல்லது எண்ணிக்கை தேவை. சரிபார்க்கப் பட்டியலைக் கடைக்கு அனுப்பலாம்.`"
+    },
+    {
+      "id": "TA-84EF71C626",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/tools.ts",
+      "lines": [
+        400
+      ],
+      "text": "${lineName(missingCount,state)} — எத்தனை ${unitName(missingCount.unit??'unit',state)} வேணும்?",
+      "raw": "`${lineName(missingCount,state)} — எத்தனை ${unitName(missingCount.unit??'unit',state)} வேணும்?`"
     },
     {
       "id": "TA-E2AAE6F2ED",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/upi-advance.ts",
       "lines": [
-        47
+        54
       ],
       "text": "${reference} கடைக்கு அனுப்பியாச்சு.",
       "raw": "`${reference} கடைக்கு அனுப்பியாச்சு.`"
+    },
+    {
+      "id": "TA-DCBF32A2AA",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/upi-advance.ts",
+      "lines": [
+        55
+      ],
+      "text": "பெறுபவர்: ${row.payee_name}\\n",
+      "raw": "`பெறுபவர்: ${row.payee_name}\\n`"
     },
     {
       "id": "TA-189DACACEC",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/upi-advance.ts",
       "lines": [
-        49
+        57
       ],
       "text": "Pay பண்ணிட்டேன்",
       "raw": "'Pay பண்ணிட்டேன்'"
@@ -3524,7 +3646,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/upi-advance.ts",
       "lines": [
-        49
+        57
       ],
       "text": "கடைல பணம் தர்றேன்",
       "raw": "'கடைல பணம் தர்றேன்'"
@@ -3565,7 +3687,7 @@
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
         34,
-        198
+        212
       ],
       "text": "கடை சரிபார்க்க வேண்டும்",
       "raw": "'கடை சரிபார்க்க வேண்டும்'"
@@ -3586,7 +3708,7 @@
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
         36,
-        152
+        156
       ],
       "text": "எண்ணிக்கை தேவை",
       "raw": "'எண்ணிக்கை தேவை'"
@@ -3727,50 +3849,10 @@
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
         75,
-        198
+        212
       ],
       "text": "இதை மாற்று",
       "raw": "'இதை மாற்று'"
-    },
-    {
-      "id": "TA-0454419928",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        77
-      ],
-      "text": "சரியான பொருளைத் தேர்வு செய்ய வேண்டும்",
-      "raw": "'சரியான பொருளைத் தேர்வு செய்ய வேண்டும்'"
-    },
-    {
-      "id": "TA-A494AD06D3",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        77
-      ],
-      "text": "கடைல check பண்ண வேண்டிய item",
-      "raw": "'கடைல check பண்ண வேண்டிய item'"
-    },
-    {
-      "id": "TA-1892B8108B",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        77
-      ],
-      "text": "எண்ணிக்கை சொல்ல வேண்டும்",
-      "raw": "'எண்ணிக்கை சொல்ல வேண்டும்'"
-    },
-    {
-      "id": "TA-76A8277502",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        77
-      ],
-      "text": "கேட்ட பொருள் பட்டியலில் உள்ளது",
-      "raw": "'கேட்ட பொருள் பட்டியலில் உள்ளது'"
     },
     {
       "id": "TA-1295DA476A",
@@ -3783,141 +3865,101 @@
       "raw": "'எண்ணிக்கை: சொல்ல வேண்டும்'"
     },
     {
-      "id": "TA-61EA371B9A",
+      "id": "TA-03F6D6C2A4",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        87
+        86
       ],
-      "text": "Photo-வும் quantity-யும் பாருங்க. மாற்றணும்னா voice அல்லது text-ல சொல்லுங்க.",
-      "raw": "'Photo-வும் quantity-யும் பாருங்க. மாற்றணும்னா voice அல்லது text-ல சொல்லுங்க.'"
+      "text": "Product photo-வை பாருங்க.",
+      "raw": "'Product photo-வை பாருங்க.'"
     },
     {
-      "id": "TA-ADF7DF8966",
+      "id": "TA-43E62DDEDF",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        87
+        90
       ],
-      "text": "சரின்னா அடுத்து Bill பார்க்கலாம்.\nகடை check பண்ண வேண்டிய items-ம் order-ல இருக்கும்.\nஅந்த items விலையை இன்னும் சேர்க்க மாட்டேன்.",
-      "raw": "'சரின்னா அடுத்து Bill பார்க்கலாம்.\\nகடை check பண்ண வேண்டிய items-ம் order-ல இருக்கும்.\\nஅந்த items விலையை இன்னும் சேர்க்க மாட்டேன்.'"
+      "text": "Count சொல்லணும்",
+      "raw": "'Count சொல்லணும்'"
     },
     {
-      "id": "TA-A0302F39B7",
+      "id": "TA-60CB9BD2EC",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        88
+        91
       ],
-      "text": "பெயரையும் படத்தையும் உறுதி செய்யுங்கள். அடுத்து எண்ணிக்கை அல்லது விற்பனை அலகைச் சரிபார்ப்போம்.",
-      "raw": "'பெயரையும் படத்தையும் உறுதி செய்யுங்கள். அடுத்து எண்ணிக்கை அல்லது விற்பனை அலகைச் சரிபார்ப்போம்.'"
+      "text": "விலை இன்னும் சேர்க்கல",
+      "raw": "'விலை இன்னும் சேர்க்கல'"
     },
     {
-      "id": "TA-0FF125EE98",
+      "id": "TA-77B9DAEC50",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        89
+        94
       ],
-      "text": "சில பொருட்களை இன்னும் சரிபார்க்க வேண்டும்.",
-      "raw": "'சில பொருட்களை இன்னும் சரிபார்க்க வேண்டும்.'"
+      "text": "தெரிந்த விலை: ${formatMoney(estimate.knownSubtotalPaise)}. ${estimate.excluded.length} items இன்னும் check பண்ணணும்.",
+      "raw": "`தெரிந்த விலை: ${formatMoney(estimate.knownSubtotalPaise)}. ${estimate.excluded.length} items இன்னும் check பண்ணணும்.`"
     },
     {
       "id": "TA-6BABC0CA63",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        90
+        95
       ],
       "text": "Bill காட்டு",
       "raw": "'Bill காட்டு'"
     },
     {
-      "id": "TA-ACA7D0F983",
+      "id": "TA-211F5C82A9",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        92
+        96
       ],
-      "text": "${lineName(l,state)}: எண்ணிக்கை சொல்ல வேண்டும்.",
-      "raw": "`${lineName(l,state)}: எண்ணிக்கை சொல்ல வேண்டும்.`"
+      "text": "Photo காட்டு",
+      "raw": "'Photo காட்டு'"
     },
     {
-      "id": "TA-D94A1B17BC",
+      "id": "TA-B21377DDA4",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        93
+        97
       ],
-      "text": "பொருட்களைப் பாருங்க",
-      "raw": "'பொருட்களைப் பாருங்க'"
+      "text": "உங்க list · ${rows.length} items",
+      "raw": "`உங்க list · ${rows.length} items`"
     },
     {
-      "id": "TA-AA7EF4FE83",
+      "id": "TA-6088C518C6",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        93
+        97
       ],
-      "text": "எல்லா படங்களையும் பாருங்க",
-      "raw": "'எல்லா படங்களையும் பாருங்க'"
-    },
-    {
-      "id": "TA-CAC07265D4",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        93
-      ],
-      "text": "பொருட்கள் ${start+1}–${Math.min(cards.length,start+9)} / ${cards.length}",
-      "raw": "`பொருட்கள் ${start+1}–${Math.min(cards.length,start+9)} / ${cards.length}`"
-    },
-    {
-      "id": "TA-9BD2CD9D65",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        93
-      ],
-      "text": "பக்கமா நகர்த்தி எல்லா படங்களையும் பாருங்க.",
-      "raw": "'பக்கமா நகர்த்தி எல்லா படங்களையும் பாருங்க.'"
-    },
-    {
-      "id": "TA-25371B5844",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        93
-      ],
-      "text": "இந்தப் பொருட்களை உறுதி செய்ததும் பில் பார்க்கலாம். இன்னும் அனுப்பவில்லை.",
-      "raw": "'இந்தப் பொருட்களை உறுதி செய்ததும் பில் பார்க்கலாம். இன்னும் அனுப்பவில்லை.'"
+      "text": "List சரியா பாருங்க. அடுத்து Bill பார்க்கலாம். இன்னும் கடைக்கு அனுப்பல.",
+      "raw": "'List சரியா பாருங்க. அடுத்து Bill பார்க்கலாம். இன்னும் கடைக்கு அனுப்பல.'"
     },
     {
       "id": "TA-C58FB7CABA",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        99
+        103
       ],
       "text": "கடைக்கு அனுப்பு",
       "raw": "'கடைக்கு அனுப்பு'"
-    },
-    {
-      "id": "TA-2A9ED25C07",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        105
-      ],
-      "text": "Check பண்ணணும்",
-      "raw": "'Check பண்ணணும்'"
     },
     {
       "id": "TA-C46E4CA7A7",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        105
+        109
       ],
       "text": "விலை இன்னும் வரல",
       "raw": "'விலை இன்னும் வரல'"
@@ -3927,7 +3969,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        107
+        111
       ],
       "text": "விலை தெரிஞ்ச items மட்டும்",
       "raw": "'விலை தெரிஞ்ச items மட்டும்'"
@@ -3937,7 +3979,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        107
+        111
       ],
       "text": "விலை கடை சொன்னதும் தெரியும்",
       "raw": "'விலை கடை சொன்னதும் தெரியும்'"
@@ -3947,7 +3989,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        108
+        112
       ],
       "text": "பக்கம் ${page} / ${pages}",
       "raw": "`பக்கம் ${page} / ${pages}`"
@@ -3957,7 +3999,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        108
+        112
       ],
       "text": "${estimate.excluded.length} items விலை இன்னும் சேர்க்கல.",
       "raw": "`${estimate.excluded.length} items விலை இன்னும் சேர்க்கல.`"
@@ -3967,7 +4009,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        108
+        112
       ],
       "text": "கடை stock-ஐ check பண்ணி confirm பண்ணும்",
       "raw": "'கடை stock-ஐ check பண்ணி confirm பண்ணும்'"
@@ -3977,7 +4019,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        108
+        112
       ],
       "text": "Order நிலை",
       "raw": "'Order நிலை'"
@@ -3987,7 +4029,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        113
+        117
       ],
       "text": "Order கடைக்கு போயிருக்கு.",
       "raw": "'Order கடைக்கு போயிருக்கு.'"
@@ -3997,7 +4039,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        113
+        117
       ],
       "text": "Bill சரியா பாருங்க. அப்புறம் கடைக்கு அனுப்புங்க.",
       "raw": "'Bill சரியா பாருங்க. அப்புறம் கடைக்கு அனுப்புங்க.'"
@@ -4007,47 +4049,17 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        117
+        121
       ],
       "text": "Order தொடரலாம்",
       "raw": "'Order தொடரலாம்'"
-    },
-    {
-      "id": "TA-FE7FB9AFD4",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        126
-      ],
-      "text": "கடையின் உதவி",
-      "raw": "'கடையின் உதவி'"
-    },
-    {
-      "id": "TA-F51B92710A",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        126
-      ],
-      "text": "கடை பதிலுக்குக் காத்திருக்கிறது",
-      "raw": "'கடை பதிலுக்குக் காத்திருக்கிறது'"
-    },
-    {
-      "id": "TA-D4016D6D37",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        126
-      ],
-      "text": "கடை உதவி கேட்டிருக்கோம். பட்டியல் அப்படியே இருக்கு.",
-      "raw": "'கடை உதவி கேட்டிருக்கோம். பட்டியல் அப்படியே இருக்கு.'"
     },
     {
       "id": "TA-B6D9EA5CC8",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        131
+        135
       ],
       "text": "வகை ${i+1}",
       "raw": "`வகை ${i+1}`"
@@ -4057,7 +4069,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        131
+        135
       ],
       "text": "எந்த வகை வேணும்?",
       "raw": "'எந்த வகை வேணும்?'"
@@ -4067,7 +4079,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        131
+        135
       ],
       "text": "கீழே தேர்வு செய்யுங்க",
       "raw": "'கீழே தேர்வு செய்யுங்க'"
@@ -4077,7 +4089,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        131
+        135
       ],
       "text": "வகையைத் தேர்வு செய்யுங்க. Voice-லும் சொல்லலாம்.",
       "raw": "'வகையைத் தேர்வு செய்யுங்க. Voice-லும் சொல்லலாம்.'"
@@ -4087,7 +4099,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        132
+        136
       ],
       "text": "வகையைப் பார்",
       "raw": "'வகையைப் பார்'"
@@ -4097,7 +4109,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        132
+        136
       ],
       "text": "பக்கமாக நகர்த்தி வகையைத் தேர்வு செய்யுங்க",
       "raw": "'பக்கமாக நகர்த்தி வகையைத் தேர்வு செய்யுங்க'"
@@ -4107,7 +4119,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        138
+        142
       ],
       "text": "அனுப்பும் முன் பட்டியலை மீண்டும் சரிபார்க்க வேண்டும். பொருள், எண்ணிக்கை, கடை விலையைச் சரிபாருங்கள்.",
       "raw": "'அனுப்பும் முன் பட்டியலை மீண்டும் சரிபார்க்க வேண்டும். பொருள், எண்ணிக்கை, கடை விலையைச் சரிபாருங்கள்.'"
@@ -4117,7 +4129,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        143
+        147
       ],
       "text": "பொருள், அளவு, எண்ணிக்கை — என்ன மாற்றணும்?",
       "raw": "'பொருள், அளவு, எண்ணிக்கை — என்ன மாற்றணும்?'"
@@ -4127,7 +4139,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        149
+        153
       ],
       "text": "பம்புக்கு எந்த வகை பைப் வேணும்? பிராண்ட் அல்லது படம் இருந்தா சொல்லுங்க.",
       "raw": "'பம்புக்கு எந்த வகை பைப் வேணும்? பிராண்ட் அல்லது படம் இருந்தா சொல்லுங்க.'"
@@ -4137,27 +4149,28 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        149
+        153
       ],
       "text": "எந்த வகை பைப் வேணும் — கெட்டியான PVC, வளையும் ஹோஸ், அல்லது மோட்டார் தண்ணீர் பைப்?",
       "raw": "'எந்த வகை பைப் வேணும் — கெட்டியான PVC, வளையும் ஹோஸ், அல்லது மோட்டார் தண்ணீர் பைப்?'"
     },
     {
-      "id": "TA-4AAACC6DBB",
+      "id": "TA-67A77069C8",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        154
+        158,
+        175
       ],
-      "text": "நீங்கள் சொன்ன எண்ணிக்கையும் அளவும் பட்டியலில் உள்ளது. இன்னும் கடைப் பொருள் தேர்வு செய்யவில்லை.",
-      "raw": "'நீங்கள் சொன்ன எண்ணிக்கையும் அளவும் பட்டியலில் உள்ளது. இன்னும் கடைப் பொருள் தேர்வு செய்யவில்லை.'"
+      "text": "மத்த items list-ல இருக்கு.",
+      "raw": "'மத்த items list-ல இருக்கு.'"
     },
     {
       "id": "TA-D851A8670B",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        155
+        159
       ],
       "text": "கெட்டியான PVC",
       "raw": "'கெட்டியான PVC'"
@@ -4167,7 +4180,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        155
+        159
       ],
       "text": "வளையும் ஹோஸ்",
       "raw": "'வளையும் ஹோஸ்'"
@@ -4177,7 +4190,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        155
+        159
       ],
       "text": "மோட்டார் பைப்",
       "raw": "'மோட்டார் பைப்'"
@@ -4187,17 +4200,27 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        161
+        165
       ],
       "text": "${lineName(line,state)} — எத்தனை ${unitName(line.unit??'unit',state)} வேணும்?",
       "raw": "`${lineName(line,state)} — எத்தனை ${unitName(line.unit??'unit',state)} வேணும்?`"
+    },
+    {
+      "id": "TA-99F912DEF6",
+      "section": "Fixed replies, labels and message templates",
+      "file": "apps/server/src/services/visual-ordering.ts",
+      "lines": [
+        175
+      ],
+      "text": "எத்தனை ${unitName(product.unit,state)} வேணும்?",
+      "raw": "`எத்தனை ${unitName(product.unit,state)} வேணும்?`"
     },
     {
       "id": "TA-F5B3BD4E73",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        173
+        184
       ],
       "text": "தமிழ்",
       "raw": "'தமிழ்'"
@@ -4207,177 +4230,47 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        173
+        184
       ],
       "text": "பொருள் தேடு",
       "raw": "'பொருள் தேடு'"
-    },
-    {
-      "id": "TA-D3DC0020EF",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        175
-      ],
-      "text": "வணக்கம்",
-      "raw": "'வணக்கம்'"
-    },
-    {
-      "id": "TA-AFF81CF537",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        175
-      ],
-      "text": "உங்கள் பட்டியல்",
-      "raw": "'உங்கள் பட்டியல்'"
-    },
-    {
-      "id": "TA-7E567A95A4",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        175
-      ],
-      "text": "எழுத்து, குரல் பதிவு அல்லது படம்",
-      "raw": "'எழுத்து, குரல் பதிவு அல்லது படம்'"
-    },
-    {
-      "id": "TA-18D4F88357",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        175
-      ],
-      "text": "தேவையானதை அனுப்புங்க.",
-      "raw": "'தேவையானதை அனுப்புங்க.'"
     },
     {
       "id": "TA-E1E9C81BB5",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        186
+        200
       ],
       "text": "${state.draft.length} பொருட்கள் கொண்ட பட்டியல் உள்ளது.\\nதொடரலாம் அல்லது புதிய பட்டியல் தொடங்கலாம்.",
       "raw": "`${state.draft.length} பொருட்கள் கொண்ட பட்டியல் உள்ளது.\\nதொடரலாம் அல்லது புதிய பட்டியல் தொடங்கலாம்.`"
     },
     {
-      "id": "TA-3542C1973C",
+      "id": "TA-40210D3A52",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        187
+        201
       ],
-      "text": "சேமித்த பட்டியல்",
-      "raw": "'சேமித்த பட்டியல்'"
+      "text": "List தொடரு",
+      "raw": "'List தொடரு'"
     },
     {
-      "id": "TA-D702069864",
+      "id": "TA-49521683CD",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        187
+        201
       ],
-      "text": "பட்டியலைத் தொடரு",
-      "raw": "'பட்டியலைத் தொடரு'"
-    },
-    {
-      "id": "TA-C4E8F9A107",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        187
-      ],
-      "text": "புதிய பட்டியல்",
-      "raw": "'புதிய பட்டியல்'"
-    },
-    {
-      "id": "TA-5A34649505",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        192
-      ],
-      "text": "கடை நிறைவேற்ற முடியவில்லை",
-      "raw": "'கடை நிறைவேற்ற முடியவில்லை'"
-    },
-    {
-      "id": "TA-38D163670F",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        192
-      ],
-      "text": "பெற்றுக்கொண்டீர்கள்",
-      "raw": "'பெற்றுக்கொண்டீர்கள்'"
-    },
-    {
-      "id": "TA-8B8F01D1FF",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        192
-      ],
-      "text": "பெற்றுக்கொள்ளத் தயார்",
-      "raw": "'பெற்றுக்கொள்ளத் தயார்'"
-    },
-    {
-      "id": "TA-A9B67FA679",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        192
-      ],
-      "text": "கடை ஏற்றுக்கொண்டது",
-      "raw": "'கடை ஏற்றுக்கொண்டது'"
-    },
-    {
-      "id": "TA-B7331B70DC",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        192
-      ],
-      "text": "கடைக்கு அனுப்பியாச்சு",
-      "raw": "'கடைக்கு அனுப்பியாச்சு'"
-    },
-    {
-      "id": "TA-C2BC64A5DA",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        193
-      ],
-      "text": "உத்தேச தொகை",
-      "raw": "'உத்தேச தொகை'"
-    },
-    {
-      "id": "TA-B649987198",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        193
-      ],
-      "text": "கடை விலை மாறலாம்",
-      "raw": "'கடை விலை மாறலாம்'"
-    },
-    {
-      "id": "TA-05FF542633",
-      "section": "Fixed replies, labels and message templates",
-      "file": "apps/server/src/services/visual-ordering.ts",
-      "lines": [
-        193
-      ],
-      "text": "Pickup, payment பற்றி கடையிடம் கேளுங்கள்",
-      "raw": "'Pickup, payment பற்றி கடையிடம் கேளுங்கள்'"
+      "text": "புது list",
+      "raw": "'புது list'"
     },
     {
       "id": "TA-773F52553F",
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        193
+        206
       ],
       "text": "₹10 QR காட்டு",
       "raw": "'₹10 QR காட்டு'"
@@ -4387,7 +4280,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        197
+        211
       ],
       "text": "மாற்ற வேண்டாம்",
       "raw": "'மாற்ற வேண்டாம்'"
@@ -4397,7 +4290,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        199
+        213
       ],
       "text": "எந்தப் பொருளை மாற்றணும்?",
       "raw": "'எந்தப் பொருளை மாற்றணும்?'"
@@ -4407,7 +4300,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        199
+        213
       ],
       "text": "படத்தில் தேர்வு செய்யுங்க. அல்லது பெயரை text / voice-ல சொல்லுங்க.",
       "raw": "'படத்தில் தேர்வு செய்யுங்க. அல்லது பெயரை text / voice-ல சொல்லுங்க.'"
@@ -4417,8 +4310,8 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/visual-ordering.ts",
       "lines": [
-        199,
-        199
+        213,
+        213
       ],
       "text": "மாற்ற வேண்டிய பொருளைத் தேர்வு செய்",
       "raw": "'மாற்ற வேண்டிய பொருளைத் தேர்வு செய்'"
@@ -4558,7 +4451,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/whatsapp-reply.ts",
       "lines": [
-        42
+        34
       ],
       "text": "தேர்வு",
       "raw": "'தேர்வு'"
@@ -4568,7 +4461,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/whatsapp-reply.ts",
       "lines": [
-        78
+        70
       ],
       "text": "தேர்வு செய்யுங்கள்",
       "raw": "'தேர்வு செய்யுங்கள்'"
@@ -4694,14 +4587,14 @@
       "raw": "'இந்த list சரியா?\\nசரின்னா, அடுத்து ₹10 advance செலுத்தலாம்.'"
     },
     {
-      "id": "TA-A9D4AD5F2B",
+      "id": "TA-27CE2D794C",
       "section": "Fixed replies, labels and message templates",
       "file": "packages/contracts/customer-copy.ts",
       "lines": [
         18
       ],
-      "text": "Order கடைக்கு வந்திருக்கு.\n\n₹10 advance pay பண்ண இந்த QR அல்லது link use பண்ணலாம்:\n{link}\n\nபெறுபவர்: {name}\nUPI ID: {vpa}\n\nஇது demo. இப்போ pay பண்ண வேண்டிய அவசியம் இல்ல.\nகடைல முழு பணமும் தர்றேன்னு கீழே சொல்லலாம்.\nஇன்னும் advance வரல.",
-      "raw": "'Order கடைக்கு வந்திருக்கு.\\n\\n₹10 advance pay பண்ண இந்த QR அல்லது link use பண்ணலாம்:\\n{link}\\n\\nபெறுபவர்: {name}\\nUPI ID: {vpa}\\n\\nஇது demo. இப்போ pay பண்ண வேண்டிய அவசியம் இல்ல.\\nகடைல முழு பணமும் தர்றேன்னு கீழே சொல்லலாம்.\\nஇன்னும் advance வரல.'"
+      "text": "₹10 advance pay பண்ண இந்த QR அல்லது link use பண்ணலாம்:\n{link}\n\nபெறுபவர்: {name}\nUPI ID: {vpa}\n\nஇது demo. இப்போ pay பண்ண வேண்டிய அவசியம் இல்ல.\nகடைல முழு பணமும் தர்றேன்னு கீழே சொல்லலாம்.\nஇன்னும் advance வரல.",
+      "raw": "'₹10 advance pay பண்ண இந்த QR அல்லது link use பண்ணலாம்:\\n{link}\\n\\nபெறுபவர்: {name}\\nUPI ID: {vpa}\\n\\nஇது demo. இப்போ pay பண்ண வேண்டிய அவசியம் இல்ல.\\nகடைல முழு பணமும் தர்றேன்னு கீழே சொல்லலாம்.\\nஇன்னும் advance வரல.'"
     },
     {
       "id": "TA-FBD1851E7B",
@@ -4864,11 +4757,51 @@
       "raw": "'உங்க message-ஐ கடைக்காரருக்கு அனுப்பியிருக்கேன்.\\nஇனி கடையிலிருந்து இங்க பதில் சொல்வாங்க.'"
     },
     {
-      "id": "TA-C293677217",
+      "id": "TA-94A1457E26",
       "section": "Fixed replies, labels and message templates",
       "file": "packages/contracts/customer-copy.ts",
       "lines": [
         35
+      ],
+      "text": "Order முடிஞ்ச பிறகு ₹10 வந்திருக்கு.\nகடை refund பண்ணணும்.",
+      "raw": "'Order முடிஞ்ச பிறகு ₹10 வந்திருக்கு.\\nகடை refund பண்ணணும்.'"
+    },
+    {
+      "id": "TA-DEEF6036EB",
+      "section": "Fixed replies, labels and message templates",
+      "file": "packages/contracts/customer-copy.ts",
+      "lines": [
+        36
+      ],
+      "text": "₹10 advance refund complete ஆகியிருக்குனு கடை confirm பண்ணியிருக்கு.",
+      "raw": "'₹10 advance refund complete ஆகியிருக்குனு கடை confirm பண்ணியிருக்கு.'"
+    },
+    {
+      "id": "TA-88C7D1A761",
+      "section": "Fixed replies, labels and message templates",
+      "file": "packages/contracts/customer-copy.ts",
+      "lines": [
+        37
+      ],
+      "text": "குரல் தெளிவாகப் புரியவில்லை.\nமீண்டும் voice அனுப்புங்க அல்லது text-ல சொல்லுங்க.",
+      "raw": "'குரல் தெளிவாகப் புரியவில்லை.\\nமீண்டும் voice அனுப்புங்க அல்லது text-ல சொல்லுங்க.'"
+    },
+    {
+      "id": "TA-D590EDA273",
+      "section": "Fixed replies, labels and message templates",
+      "file": "packages/contracts/customer-copy.ts",
+      "lines": [
+        38
+      ],
+      "text": "குரல் செய்தியைச் செயலாக்க முடியவில்லை.\nபட்டியல் அப்படியே இருக்கு.\nமீண்டும் முயலுங்க அல்லது text அனுப்புங்க.",
+      "raw": "'குரல் செய்தியைச் செயலாக்க முடியவில்லை.\\nபட்டியல் அப்படியே இருக்கு.\\nமீண்டும் முயலுங்க அல்லது text அனுப்புங்க.'"
+    },
+    {
+      "id": "TA-C293677217",
+      "section": "Fixed replies, labels and message templates",
+      "file": "packages/contracts/customer-copy.ts",
+      "lines": [
+        39
       ],
       "text": "Voice தெளிவா புரியல.\n\nமறுபடியும் voice அனுப்புங்க.\nஇல்ல அந்த item-ஐ text-ல சொல்லுங்க.",
       "raw": "'Voice தெளிவா புரியல.\\n\\nமறுபடியும் voice அனுப்புங்க.\\nஇல்ல அந்த item-ஐ text-ல சொல்லுங்க.'"
@@ -4878,7 +4811,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "packages/contracts/customer-copy.ts",
       "lines": [
-        36
+        40
       ],
       "text": "List மாறியிருக்கு.\nபுது details-ஐ ஒரு தடவை check பண்ணுங்க.",
       "raw": "'List மாறியிருக்கு.\\nபுது details-ஐ ஒரு தடவை check பண்ணுங்க.'"
@@ -5267,14 +5200,14 @@
       "raw": "'விலையை கடை உறுதி செய்ய வேண்டும்'"
     },
     {
-      "id": "TA-D0C6F68421",
+      "id": "TA-6501DD8169",
       "section": "Fixed replies, labels and message templates",
       "file": "packages/contracts/language.ts",
       "lines": [
         93
       ],
-      "text": "பேக் / விற்பனை அலகை கடை உறுதி செய்ய வேண்டும்",
-      "raw": "'பேக் / விற்பனை அலகை கடை உறுதி செய்ய வேண்டும்'"
+      "text": "இந்த pack-ஐ எப்படி தர்றாங்கன்னு கடை check பண்ணும்",
+      "raw": "'இந்த pack-ஐ எப்படி தர்றாங்கன்னு கடை check பண்ணும்'"
     },
     {
       "id": "TA-7E3D63C14D",
@@ -5387,14 +5320,14 @@
       "raw": "'விலை: கடை சொல்ல வேண்டும்'"
     },
     {
-      "id": "TA-F9D27E9CBB",
+      "id": "TA-AA80D3E789",
       "section": "Fixed replies, labels and message templates",
       "file": "packages/contracts/language.ts",
       "lines": [
         118
       ],
-      "text": "இருப்பு: கடை சரிபார்க்க வேண்டும்",
-      "raw": "'இருப்பு: கடை சரிபார்க்க வேண்டும்'"
+      "text": "கிடைக்குமானு கடை check பண்ணும்",
+      "raw": "'கிடைக்குமானு கடை check பண்ணும்'"
     },
     {
       "id": "TA-722A607DE3",
@@ -5407,14 +5340,14 @@
       "raw": "'இப்போது இருப்பு இல்லை'"
     },
     {
-      "id": "TA-B88289219C",
+      "id": "TA-88943C4622",
       "section": "Fixed replies, labels and message templates",
       "file": "packages/contracts/language.ts",
       "lines": [
-        121
+        120
       ],
-      "text": "இருக்கு: ${detail}",
-      "raw": "`இருக்கு: ${detail}`"
+      "text": "கடை list-ல stock இருக்கு",
+      "raw": "'கடை list-ல stock இருக்கு'"
     },
     {
       "id": "TA-9D4821B761",

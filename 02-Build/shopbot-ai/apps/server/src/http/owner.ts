@@ -1,3 +1,4 @@
+import {messageGallery} from '../services/message-gallery.js';
 import {productColumns,productFromRow} from '../services/catalog.js';
 import {reserveRequest,closeRequestStock} from '../services/inventory.js';
 import {ToolError} from '../services/context.js';
@@ -77,7 +78,16 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
   }
   await registerOwnerCatalog(app,pool,owner.storeId,write,catalogGenerator??(config.catalogAi?new GoogleCatalogGenerator(config.catalogAi.apiKey):undefined));
   const release=runtimeReleaseMetadata();
-  app.get('/api/owner/release',async()=>({...release,features:{visualOrdering:!!config.whatsapp?.visualOrdering,unifiedUnderstanding:process.env.GEMINI_UNIFIED_UNDERSTANDING_ENABLED==='true',imageLists:process.env.GEMINI_HANDWRITTEN_LISTS_ENABLED==='true',processing:!!config.whatsapp?.processEnabled,sending:!!config.whatsapp?.sendEnabled,payments:!!config.whatsapp?.advance,demoPayAtShop:!!config.whatsapp?.advance?.demoPayAtShop,paymentVerification:config.whatsapp?.advance?'owner_checked':'disabled',partialReviews:!!config.whatsapp?.partialReviews,inventoryPolicy:'reserve_on_accept'}}));
+  app.get<{Querystring:{language?:string}}>('/api/owner/message-gallery',async(req,reply)=>{
+    const language=z.enum(['ta','ta-Latn','en']).safeParse(req.query.language??'ta');
+    if(!language.success)return reply.code(400).send({error:'Choose Tamil, Tanglish or English.'});
+    return {synthetic:true,readOnly:true,entries:await messageGallery(language.data)};
+  });
+  app.get<{Params:{sku:string}}>('/api/owner/message-gallery/products/:sku/image',async(req,reply)=>{
+    if(!/^H(?:0[1-9]|[12][0-9]|30)$/.test(req.params.sku))return reply.code(404).send();
+    return reply.type('image/jpeg').send(await readFile(resolve('resources/catalog/ksmc-demo/images',req.params.sku+'.jpg')));
+  });
+  app.get('/api/owner/release' ,async()=>({...release,features:{visualOrdering:!!config.whatsapp?.visualOrdering,unifiedUnderstanding:process.env.GEMINI_UNIFIED_UNDERSTANDING_ENABLED==='true',imageLists:process.env.GEMINI_HANDWRITTEN_LISTS_ENABLED==='true',processing:!!config.whatsapp?.processEnabled,sending:!!config.whatsapp?.sendEnabled,payments:!!config.whatsapp?.advance,demoPayAtShop:!!config.whatsapp?.advance?.demoPayAtShop,paymentVerification:config.whatsapp?.advance?'owner_checked':'disabled',partialReviews:!!config.whatsapp?.partialReviews,inventoryPolicy:'reserve_on_accept'}}));
   app.get<{Params:{id:string}}>('/api/owner/conversations/:id/observations',async(req,reply)=>{
    if(!uuid.safeParse(req.params.id).success)return reply.code(400).send({error:'Invalid conversation'});
    if(!(await pool.query('SELECT id FROM conversations WHERE store_id=$1 AND id=$2',[owner.storeId,req.params.id])).rowCount)return reply.code(404).send({error:'Conversation not found'});
@@ -304,7 +314,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     return write('advance_verify',request.params.id,async client=>{
       const result=await verifyManualAdvance(client,owner.storeId,request.params.id,owner.email,p.data.reference);
       const r=(await client.query('SELECT r.*,c.reply_language FROM order_requests r JOIN conversations c ON c.id=r.conversation_id WHERE r.id=$1 AND r.store_id=$2',[request.params.id,owner.storeId])).rows[0];
-      const text=result.refundRequired?say({replyLanguage:r.reply_language},'Your ₹10 arrived after the order closed. The shop needs to arrange a refund.','Order முடிஞ்ச பிறகு ₹10 வந்திருக்கு.\nகடை refund பண்ணணும்.','Order mudinja piragu ₹10 vanthirukku. Kadai refund pannanum.'):customerCopy('advanceReceived',{replyLanguage:r.reply_language},{reference:r.id.replaceAll('-','').slice(0,8).toUpperCase()});
+      const text=result.refundRequired?customerCopy('refundNeeded',{replyLanguage:r.reply_language}):customerCopy('advanceReceived',{replyLanguage:r.reply_language},{reference:r.id.replaceAll('-','').slice(0,8).toUpperCase()});
       return {...result,...await queueOrderNotice(client,owner.storeId,r.id,'advance-verified',textPresentation(text),config.whatsapp,p.data.notify)};
     });
   });
@@ -314,7 +324,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     return write('advance_refund',request.params.id,async client=>{
       const result=await verifyManualRefund(client,owner.storeId,request.params.id,p.data.reference);
       const r=(await client.query('SELECT c.reply_language FROM order_requests r JOIN conversations c ON c.id=r.conversation_id WHERE r.id=$1 AND r.store_id=$2',[request.params.id,owner.storeId])).rows[0];
-      const text=say({replyLanguage:r.reply_language},'Your ₹10 advance refund is recorded as completed by the shop.','₹10 advance refund complete ஆகியிருக்குனு கடை confirm பண்ணியிருக்கு.','₹10 advance refund complete aagiyirukkunnu kadai confirm panniyirukku.');
+      const text=customerCopy('refundComplete',{replyLanguage:r.reply_language});
       return {...result,...await queueOrderNotice(client,owner.storeId,request.params.id,'advance-refunded',textPresentation(text),config.whatsapp,p.data.notify)};
     });
   });

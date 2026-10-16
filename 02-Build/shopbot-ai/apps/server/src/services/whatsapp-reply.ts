@@ -5,16 +5,8 @@ import {formatMoney} from '../../../../packages/contracts/money.js';
 
 export type WhatsAppAction={id:string;label:string;event:SimulatorEvent};
 export type WhatsAppReply={payload:Record<string,unknown>;actions:WhatsAppAction[];format:'text'|'buttons'|'image'|'carousel'|'list'|'audio'};
-// Count Unicode code points but cut only at grapheme boundaries, including Tamil.
-export function fitText(text:string,limit:number):string {
-  if(Array.from(text).length<=limit)return text;
-  let result='';
-  for(const {segment} of new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text)){
-    if(Array.from(result+segment+'…').length>limit)break;
-    result+=segment;
-  }
-  return result+'…';
-}
+export {fitText} from '../../../../packages/contracts/channel-text.js';
+import {fitText,cardMessageText} from '../../../../packages/contracts/channel-text.js';
 export function productMediaUrl(image:string|undefined,hostname:string):string|undefined {
   if(!image)return;
   if(/^\/demo-images\/H\d{2}\.jpg$/.test(image))return `https://${hostname}/catalog-images/${image.split('/').at(-1)}`;
@@ -91,7 +83,7 @@ function renderVisualPart(reply:RichReply,messageId:string,hostname:string):What
  const media=part.cards.map(c=>productMediaUrl(c.kind==='product'?c.product.imageUrl:c.imageUrl,hostname));
  if(!media.every(Boolean))throw new Error('Every visual card must have a usable image');
  const cardButtons=(c:VisualCard)=>c.buttons??part.buttons??[];
- if(part.cards.length===1){const c=part.cards[0],buttons=cardButtons(c).slice(0,3).map(bind),body=fitText(c.caption.includes(part.text)?c.caption:part.text.includes(c.caption)?part.text:[part.text,c.caption].filter(Boolean).join('\n'),1024);
+ if(part.cards.length===1){const c=part.cards[0],buttons=cardButtons(c).slice(0,3).map(bind),body=cardMessageText(part.text,c.caption);
   if(!buttons.length)return {format:'image',actions,payload:{type:'image',image:{link:media[0],caption:body}}};
   return {format:'buttons',actions,payload:{type:'interactive',interactive:{type:'button',header:{type:'image',image:{link:media[0]}},body:{text:body},action:{buttons:buttons.map(b=>({type:'reply',reply:{id:b.id,title:b.label}}))}}}};
  }

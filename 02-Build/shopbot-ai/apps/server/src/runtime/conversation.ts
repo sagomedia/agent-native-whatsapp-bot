@@ -241,7 +241,7 @@ export class ConversationRuntime {
         }
       }
       if(claimed.event.type==='voice'&&interpretation?.transcript)await client.query('UPDATE messages SET text=$1 WHERE id=$2 AND conversation_id=$3',[interpretation.transcript,claimed.id,ctx.conversationId]);
-      if(failure)failure=voiceFailureKind==='unreadable'?say(current,'I could not make out the recording. Please record it again or type your request.','குரல் தெளிவாகப் புரியவில்லை.\nமீண்டும் voice அனுப்புங்க அல்லது text-ல சொல்லுங்க.','Voice theliva puriyala. Marubadi voice anuppunga illa text-la sollunga.'):voiceFailureKind==='processing'?say(current,'Could not process that voice message.\nYour list is kept.\nTry again or send text.','குரல் செய்தியைச் செயலாக்க முடியவில்லை.\nபட்டியல் அப்படியே இருக்கு.\nமீண்டும் முயலுங்க அல்லது text அனுப்புங்க.','Voice message-ai process panna mudiyala.\nList appadiye irukku.\nMarubadi try pannunga illa text anuppunga.'):customerError(failure,current);
+      if(failure)failure=voiceFailureKind==='unreadable'?customerCopy('voiceUnclear',current):voiceFailureKind==='processing'?customerCopy('voiceProcessing',current):customerError(failure,current);
       let replyRequest:import('../../../../packages/contracts/index.js').OrderRequest|null|undefined;
       let message=failure??'';let rich:RichReply={...plainReply(message),...(failure?{stage:'error' as const,clarificationReason:failureReason??(claimed.event.type==='voice'?'voice_processing_failed':'processing_failed')}:{})};
       // The savepoint ensures invalid dependent operations cannot partially mutate the draft.

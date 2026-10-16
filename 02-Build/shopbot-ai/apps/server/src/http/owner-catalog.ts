@@ -37,7 +37,7 @@ export async function registerOwnerCatalog(app:FastifyInstance,pool:Pool,storeId
  });
  app.post<{Params:{sku:string}}>('/api/owner/catalog/products/:sku/stock',async(req,reply)=>{
   const p=stockActionSchema.safeParse(req.body);if(!p.success)return reply.code(400).send({error:'Enter a stock action, quantity, reason and current stock version.'});
-  return write('inventory_'+p.data.kind,req.params.sku,c=>adjustStock(c,storeId,req.params.sku,'owner-dashboard',p.data));
+  return write('inventory_'+p.data.kind,storeId,c=>adjustStock(c,storeId,req.params.sku,'owner-dashboard',p.data));
  });
  app.get<{Params:{sku:string}}>('/api/owner/catalog/products/:sku/stock',async(req)=>({movements:(await pool.query('SELECT id,kind,on_hand_before,on_hand_after,reserved_before,reserved_after,actor,reason,request_id,inventory_version,created_at FROM inventory_movements WHERE store_id=$1 AND sku=$2 ORDER BY created_at DESC,id DESC LIMIT 50',[storeId,req.params.sku])).rows}));
  app.post('/api/owner/catalog/diagnose' ,async(req,reply)=>{

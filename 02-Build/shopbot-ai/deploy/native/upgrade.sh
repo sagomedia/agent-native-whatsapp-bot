@@ -37,6 +37,14 @@ while (( SECONDS < readiness_deadline )); do
   fi
   sleep 1
 done
+# Schema 35 introduces reservations. Older code cannot honor those holds, so
+# failing closed is safer than letting it accept stock already promised.
+inventory_schema=$(runuser -u postgres -- psql -At -d shopbot_vps_preview -c 'SELECT 1 FROM schema_migrations WHERE version>=35 LIMIT 1') || inventory_schema=unknown
+if [[ ! -f "$previous/app/dist/apps/server/src/services/inventory.js" && -n "$inventory_schema" ]]; then
+  systemctl stop shopbot-vps.service
+  echo 'Readiness failed after the inventory migration. Service stopped; previous code cannot honor reservations. Repair this release before reopening. Database and backup retained.' >&2
+  exit 1
+fi
 echo 'Readiness failed; restoring the previous native preview.' >&2
 ln -s "$previous" /opt/shopbot-vps/next-release
 mv -Tf /opt/shopbot-vps/next-release /opt/shopbot-vps/current

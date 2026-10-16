@@ -1,0 +1,12 @@
+import {useEffect,useState} from 'react';
+import type {RichReply} from '../../../packages/contracts/index.js';
+import {VisualReplyView} from './VisualReplyView.js';
+import {Notice} from './owner-ui.js';
+type Entry={id:string;label:string;group:string;note:string;reply:RichReply};
+export function OwnerMessageGallery(){
+ const [language,setLanguage]=useState('ta'),[group,setGroup]=useState(''),[entries,setEntries]=useState<Entry[]>([]),[loading,setLoading]=useState(false),[error,setError]=useState('');
+ useEffect(()=>{const controller=new AbortController();setLoading(true);setError('');fetch('/api/owner/message-gallery?language='+language,{cache:'no-store',signal:controller.signal}).then(async r=>{if(!r.ok)throw Error('Could not load message previews.');return r.json();}).then(data=>{setEntries(data.entries);setLoading(false);}).catch(e=>{if(e.name!=='AbortError'){setError(e.message);setLoading(false);}});return()=>controller.abort();},[language]);
+ return <section className="owner-gallery" aria-label="Customer message review"><p>Review the bot’s current replies with sample products. Buttons are disabled. These previews do not send WhatsApp messages, place orders or record payments.</p><div className="owner-gallery-filters"><label>Language<select value={language} onChange={e=>setLanguage(e.target.value)}><option value="ta">தமிழ்</option><option value="ta-Latn">Tanglish</option><option value="en">English</option></select></label><label>Flow stage<select value={group} onChange={e=>setGroup(e.target.value)}><option value="">All stages</option>{['Shopping','Checkout','After order','Recovery'].map(g=><option key={g}>{g}</option>)}</select></label></div>
+  {error&&<Notice error>{error}</Notice>}{loading?<p role="status">Loading current message previews…</p>:<div className="owner-gallery-list">{entries.filter(e=>!group||e.group===group).map(entry=><article className="owner-gallery-entry" key={entry.id}><header><span>{entry.group}</span><h2>{entry.label}</h2>{entry.note&&<p>{entry.note}</p>}</header><div className="owner-gallery-phone"><VisualReplyView showText reply={entry.reply} disabled productImage={sku=>'/api/owner/message-gallery/products/'+encodeURIComponent(sku)+'/image'} messageImage={url=>'/api/owner/message-images/'+url.split('/').at(-1)}/></div><details><summary>Full accessible text</summary><p className="owner-message-text">{entry.reply.accessibleText??entry.reply.text}</p></details></article>)}</div>}
+ </section>;
+}

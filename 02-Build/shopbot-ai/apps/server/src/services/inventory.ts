@@ -73,7 +73,7 @@ export async function adjustStock(c:PoolClient,storeId:string,sku:string,actor:s
  const p=stockActionSchema.parse(input),key='manual:'+p.id,inputHash=hash({sku,actor,...p});
  await c.query('SELECT id FROM stores WHERE id=$1 FOR UPDATE',[storeId]);
  const previous=(await c.query('SELECT * FROM inventory_movements WHERE store_id=$1 AND operation_key=$2',[storeId,key])).rows[0];
- if(previous){if(previous.input_hash!==inputHash)throw conflict('This stock operation ID has different details.');return {inventoryVersion:previous.inventory_version,replayed:true};}
+ if(previous){if(previous.input_hash!==inputHash)throw conflict('This stock operation ID has different details.');return {sku,inventoryVersion:previous.inventory_version,replayed:true};}
  const row=(await c.query('SELECT * FROM products WHERE store_id=$1 AND sku=$2 FOR UPDATE',[storeId,sku])).rows[0];
  if(!row||row.inventory_version!==p.expectedVersion)throw conflict('Stock changed. Reload before recording this movement.');
  const quantity=stockMilli(p.quantity),reserved=stockMilli(row.reserved_stock);
@@ -82,7 +82,7 @@ export async function adjustStock(c:PoolClient,storeId:string,sku:string,actor:s
  const before=row.stock===null?0n:stockMilli(row.stock),after=p.kind==='count'?quantity:p.kind==='restock'?before+quantity:before-quantity;
  if(after<reserved)throw conflict('This would use stock reserved for customer orders. Reconcile those orders first.');
  await movement(c,storeId,row,key,p.kind,stockDecimal(after),row.reserved_stock,actor,p.reason,null,inputHash);
- return {inventoryVersion:row.inventory_version+1,onHand:Number(stockDecimal(after)),available:Number(stockDecimal(after-reserved)),replayed:false};
+ return {sku,inventoryVersion:row.inventory_version+1,onHand:Number(stockDecimal(after)),available:Number(stockDecimal(after-reserved)),replayed:false};
 }
 
 /** Catalog saves are counts too; never silently overwrite reservations from a stale draft. */

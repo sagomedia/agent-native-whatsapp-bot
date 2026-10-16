@@ -1,3 +1,11 @@
+## Current inventory upgrade (schema 35)
+
+Owner acceptance reserves known available stock. Collection deducts it and cancellation releases it. Existing orders become `legacy`; they are never deducted automatically. Reconcile an existing accepted order from Requests only after checking its physical stock. Unknown counts remain unknown.
+
+Take a fresh private database/environment backup before activation. Do not revert to a pre-inventory application after schema 35: it cannot honor reservations. The upgrade helper stops the service if readiness fails across this boundary. Repair forward, or perform a separately reviewed data reconciliation with workers stopped; never restore an older backup over customer traffic. Payment receipt, approval and fulfillment remain separate facts.
+
+The older sections below document the initial preview and its historical cutovers. Use the current source and release handoff for present features.
+
 # Existing connected VPS: upgrade workflow
 
 The running WhatsApp deployment uses `shopbot-vps.service`, private `/etc/shopbot-vps.env`, PostgreSQL 17 and the `/opt/shopbot-vps/current` symlink. Public webhook/media are on `demo.sagoautomation.tech`; owner access is on `shopbot-preview.sagoautomation.tech/owner`. Do not rerun the first-install script against this existing service.
