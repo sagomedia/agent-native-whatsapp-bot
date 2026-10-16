@@ -14,7 +14,7 @@ export function sellingBasisIssues(product:Basis):string[]{
  if(contents&&family(contents.unit))matches.push({value:contents.value,unit:contents.unit});
  if(measured.has(unit)){
   if(matches.some(m=>family(m.unit)&&family(unit)&&family(m.unit)!==family(unit)))issues.push('Pack weight and volume must agree with the selling unit.');
-  if(matches.some(m=>family(m.unit)===family(unit)&&m.value*scale(m.unit)>1)&&policy?.saleMode!=='measured')issues.push('Confirm measured/loose sale or choose the sealed pack selling unit. Price and stock must use that unit.');
+  if(matches.some(m=>family(m.unit)===family(unit)&&Math.abs(m.value*scale(m.unit)-1)>1e-8)&&policy?.saleMode!=='measured')issues.push('Confirm measured/loose sale or choose the sealed pack selling unit. Price and stock must use that unit.');
   if(policy?.saleMode==='pack')issues.push('A sealed pack needs a count unit such as can, bucket, bottle or pack.');
  }else if(policy?.saleMode==='measured')issues.push('Measured sale needs a selling unit such as litre, kg, metre or foot.');
  if(contents&&family(contents.unit)&&matches.some(m=>family(m.unit)===family(contents.unit)&&Math.abs(m.value*scale(m.unit)-contents.value*scale(contents.unit))>1e-8))issues.push('Product label and recorded pack contents disagree. Confirm the exact variant.');

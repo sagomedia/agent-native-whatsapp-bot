@@ -15,6 +15,7 @@ test('explicit merchant pack contents take priority; pack quantity stays distinc
 test('paint pack versus loose sale needs an explicit basis, and conflicting weight cannot become volume',()=>{
  const paint:Product={...product,name:'Asian Paints 10L',unit:'litre',sellingPolicy:undefined};
  assert.match(sellingBasisIssues(paint).join(' '),/measured\/loose/);
+ assert.match(sellingBasisIssues({...paint,name:'Solvent 500ml'}).join(' '),/measured\/loose/);
  assert.deepEqual(sellingBasisIssues({...paint,sellingPolicy:{saleMode:'measured',cutAllowed:false,continuousLengthAvailable:null}}),[]);
  assert.deepEqual(sellingBasisIssues({...paint,unit:'can',sellingPolicy:{saleMode:'pack',packContents:{value:10,unit:'litre'},cutAllowed:false,continuousLengthAvailable:null}}),[]);
  assert.match(sellingBasisIssues({...paint,name:'Paint 10kg',sellingPolicy:{saleMode:'measured',cutAllowed:false,continuousLengthAvailable:null}}).join(' '),/weight and volume/);

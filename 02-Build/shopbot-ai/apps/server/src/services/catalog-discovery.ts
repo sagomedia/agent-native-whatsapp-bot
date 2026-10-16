@@ -1,7 +1,7 @@
 import type {PoolClient} from 'pg';
 import type {CatalogMap,DiscoveryPlan,DiscoveryResult,DiscoveryFacet,Product} from '../../../../packages/contracts/index.js';
 import {discoveryPlanSchema} from '../../../../packages/contracts/index.js';
-import {normalize,tokens,oneEdit,matches,productColumns,productFromRow} from './catalog.js';
+import {normalize,tokens,oneEdit,matches,productColumns,productForContext} from './catalog.js';
 import {ToolError,type ActorContext} from './context.js';
 
 function bound(client:PoolClient,sql:string,parameters:unknown[]) {
@@ -146,7 +146,7 @@ export async function discoverProducts(client:PoolClient,ctx:ActorContext,query:
  if(plan.familyIds?.some(id=>!nodes.some(n=>n.id===id&&n.kind==='family')))throw new ToolError('Choose product types from this shop’s catalog.');
  if(plan.familyIds&&plan.departmentId&&plan.familyIds.some(id=>!nodes.some(n=>n.id===id&&n.parent_id===plan.departmentId)))throw new ToolError('Those types do not belong to the selected department.');
  if(plan.familyId&&plan.departmentId&&!nodes.some(n=>n.id===plan.familyId&&n.parent_id===plan.departmentId))throw new ToolError('That family does not belong to the selected department.');
- const identified=(await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND active=true AND (lower(sku)=lower($2) OR lower(name)=lower($2) OR EXISTS(SELECT 1 FROM jsonb_array_elements_text(aliases) a WHERE lower(a)=lower($2))) ORDER BY sku LIMIT 2`,[ctx.storeId,query.trim()])).rows.map(productFromRow);
+ const identified=(await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND active=true AND (lower(sku)=lower($2) OR lower(name)=lower($2) OR EXISTS(SELECT 1 FROM jsonb_array_elements_text(aliases) a WHERE lower(a)=lower($2))) ORDER BY sku LIMIT 2`,[ctx.storeId,query.trim()])).rows.map(p=>productForContext(p,ctx));
  const candidate=identified.length===1?identified[0]:undefined;
  const pumpName=/\b(?:pump|pumping|suction|delivery)\b|மோட்டார்|பம்ப்/iu;
  const namedPumpAlias=!!candidate&&pumpName.test(query)&&[candidate.name,...candidate.aliases].some(name=>pumpName.test(name));
@@ -228,7 +228,7 @@ export async function discoverProducts(client:PoolClient,ctx:ActorContext,query:
   if(vals.length<2||key==='family'&&effective.familyId||key==='brand'&&(effective.brand||root?.brand)||key.startsWith('spec:')&&effective.specifications?.[key.slice(5)])continue;
   facets.push({key,label:key==='family'?'product type':key==='brand'?'brand':key.slice(5).replaceAll('_',' '),values:vals.slice(0,3).map(f=>({value:f.value,localNames:key==='family'?nodes.find(n=>n.id===f.value)?.local_names:undefined,label:key==='family'?nodes.find(n=>n.id===f.value)?.label??f.value:f.value,count:f.count}))});
  }
- const candidates=rows.map(productFromRow).filter(p=>supportsCustomerIdentity(query,p,nodes,requestedFamilies)&&(usedWhere!==where||requestedFamilies.includes(p.familyId??'')||!!effective.departmentId||!!effective.familyId||!!effective.familyIds?.includes(p.familyId??'')||hintedFamilies.includes(p.familyId??'')||keywordScore(query,effective,p).match==='keyword_match')),scores=new Map(candidates.map(p=>[p.sku,keywordScore(query,effective,p)]));
+ const candidates=rows.map(p=>productForContext(p,ctx)).filter(p=>supportsCustomerIdentity(query,p,nodes,requestedFamilies)&&(usedWhere!==where||requestedFamilies.includes(p.familyId??'')||!!effective.departmentId||!!effective.familyId||!!effective.familyIds?.includes(p.familyId??'')||hintedFamilies.includes(p.familyId??'')||keywordScore(query,effective,p).match==='keyword_match')),scores=new Map(candidates.map(p=>[p.sku,keywordScore(query,effective,p)]));
  if(root){const found=candidates.find(p=>p.sku===root.sku);if(!found)candidates.unshift(root);scores.set(root.sku,{score:1000,match:'keyword_match',reason:'This catalog item matches the requested identity; check its photo'});}
  if(effective.familyId)for(const p of candidates)if(p.familyId===effective.familyId&&p.sku!==root?.sku)scores.set(p.sku,{...scores.get(p.sku)!,score:scores.get(p.sku)!.score+20,match:'keyword_match',reason:'Matches the chosen product family and filters; check the photo and name'});
  for(const p of candidates)if(intendedFamilies.length&&!intendedFamilies.includes(p.familyId))scores.set(p.sku,{...scores.get(p.sku)!,match:'related',reason:'Related option in this department; it is not an exact match for the requested product type'});

@@ -37,10 +37,12 @@ export async function proposeAmendment(client:PoolClient,ctx:ActorContext,state:
  let lines=request.effective_lines??request.lines;
  if(!cancel){
   z.array(operationSchema).min(1).max(100).parse(operations);
+  const held=(await client.query("SELECT sku,quantity FROM inventory_reservations WHERE store_id=$1 AND request_id=$2 AND state='active'",[ctx.storeId,request.id])).rows;
+  const scratchContext={...ctx,amendmentHolds:Object.fromEntries(held.map(h=>[h.sku,h.quantity]))};
   await client.query('SAVEPOINT amendment_scratch');
   try{
    await client.query('UPDATE conversations SET last_request_id=NULL,draft=$1::jsonb,pending=NULL,editing_line_id=NULL WHERE id=$2',[JSON.stringify(lines),ctx.conversationId]);
-   const result=await tools.invokeInTransaction(client,ctx,{name:'apply_draft_changes',args:{expectedVersion:state.version,operations}},sourceId+':amendment');
+   const result=await tools.invokeInTransaction(client,scratchContext,{name:'apply_draft_changes',args:{expectedVersion:state.version,operations}},sourceId+':amendment');
    lines=structuredClone(result.state!.draft);
   }finally{await client.query('ROLLBACK TO SAVEPOINT amendment_scratch');await client.query('RELEASE SAVEPOINT amendment_scratch');}
   if(!lines.length)throw new ToolError('Use an explicit order cancellation request to remove the entire order.');

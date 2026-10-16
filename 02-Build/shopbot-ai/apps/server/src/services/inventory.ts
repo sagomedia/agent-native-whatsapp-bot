@@ -92,6 +92,7 @@ export async function catalogStock(c:PoolClient,storeId:string,sku:string,value:
  if(row.stock===null&&value===null||row.stock!==null&&value!==null&&stockMilli(row.stock)===stockMilli(value))return;
  if(row.inventory_version>1&&expected!==row.inventory_version)throw conflict('Stock changed while this product was open. Reload the physical count before saving.');
  const reserved=stockMilli(row.reserved_stock);
+ if(value!==null&&stockMilli(value)%stockMilli(row.quantity_step)!==0n)throw conflict('The physical count must use the shop selling increment.');
  if(value===null&&reserved>0n||value!==null&&stockMilli(value)<reserved)throw conflict('The physical count cannot be less than reserved stock.');
  await movement(c,storeId,row,`catalog:${sku}:${version}`,row.inventory_version===1&&row.stock===null?'opening':'count',value===null?null:stockDecimal(stockMilli(value)),row.reserved_stock,actor,'Owner product count');
 }

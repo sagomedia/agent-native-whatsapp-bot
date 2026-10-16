@@ -106,7 +106,7 @@ test('an unpaid demo order appears in owner requests and can be accepted, packed
   const id=s.requests[0].id;
   const post=(path:string,payload:object)=>app.inject({method:'POST',url:'/api/owner/requests/'+id+path,headers,payload});
   assert.equal((await post('/decision',{decision:'accepted'})).statusCode,200);
-  assert.equal((await post('/fulfillment',{expected:'preparing',status:'ready_for_pickup'})).statusCode,200);
+  assert.equal((await post('/fulfillment',{expected:'preparing',status:'ready_for_pickup',packedChecked:true})).statusCode,200);
   s=await turn('status');assert.match(last(s).text,/ready for pickup/i);assert.match(last(s).text,/No advance received/);
   assert.equal((await post('/fulfillment',{expected:'ready_for_pickup',status:'collected'})).statusCode,200);
   const count=s.messages.length;s=await turn('thanks');assert.equal(s.messages.length,count+1);s=await turn('status');assert.match(last(s).text,/collected/i);s=await turn('bill');assert.match(last(s).text,/collected/i);assert.equal(buttons(last(s)).some(b=>b.event.type==='review'||b.event.type==='review_partial'||b.event.type==='confirm'),false);

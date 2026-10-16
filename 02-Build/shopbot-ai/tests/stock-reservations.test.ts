@@ -1,3 +1,6 @@
+import {proposeAmendment} from '../apps/server/src/services/order-amendments.js';
+import {RetailTools,loadState} from '../apps/server/src/services/tools.js';
+import {searchProducts} from '../apps/server/src/services/catalog.js';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -68,4 +71,15 @@ test('inventory rejects stale product facts and incompatible unit increments bef
  await assert.rejects(tx(c=>reserveRequest(c,fixtureStore,id,[{...l,quantity:0.5}],1,'owner')),/increment/);
  await assert.rejects(tx(c=>reserveRequest(c,fixtureStore,id,[{...l,productVersion:2}],1,'owner')),/catalog details/i);
  assert.equal((await pool.query('SELECT * FROM inventory_movements')).rowCount,0);
+}));
+
+test('an amendment can reuse its own hold while other shoppers still see only unreserved stock',()=>fixture(async(pool,tx,order)=>{
+ await product(pool,5);const l=line(3),id=await order([l]);await tx(c=>reserveRequest(c,fixtureStore,id,[l],1,'owner'));
+ await pool.query("UPDATE order_requests SET acceptance='accepted',fulfillment='preparing' WHERE id=$1",[id]);
+ await pool.query('UPDATE conversations SET draft=$1::jsonb,last_request_id=$2 WHERE id=$3',[JSON.stringify([l]),id,fixtureConversation]);
+ const source=randomUUID();await pool.query("INSERT INTO messages(id,conversation_id,direction,text,status) VALUES($1,$2,'inbound','change fixture item to four','processed')",[source,fixtureConversation]);
+ const ctx={storeId:fixtureStore,conversationId:fixtureConversation,actor:'local-simulator',role:'customer' as const};
+ await tx(async c=>{const state=await loadState(c,ctx);await proposeAmendment(c,ctx,state,source,[{kind:'set_quantity',reference:l.id,quantity:4}],new RetailTools(pool));const [p]=await searchProducts(c,ctx,'INV');assert.equal(p.stock,2,'ordinary catalog reads do not include the existing hold');});
+ const amendment=(await pool.query('SELECT * FROM order_amendments')).rows[0];assert.equal(amendment.estimate_complete,true);assert.equal(amendment.proposed_lines[0].quantity,4);assert.equal(amendment.proposed_lines[0].resolution,'matched');
+ assert.equal(productFromRow(await row(pool)).stockReserved,3,'a proposal never changes the current hold');
 }));
