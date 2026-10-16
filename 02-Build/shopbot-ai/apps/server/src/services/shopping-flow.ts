@@ -1,5 +1,5 @@
 import {requestStoreAssistance} from './store-assistance.js';
-import {orderReference} from './visual-ordering.js';
+import {orderReference,visualProductReview} from './visual-ordering.js';
 import {randomUUID} from 'node:crypto';
 import type {PoolClient} from 'pg';
 import type {ConversationState,RichReply,CatalogMap,SimulatorEvent} from '../../../../packages/contracts/index.js';
@@ -17,6 +17,10 @@ export function editListReply(state:ConversationState):RichReply {
 export async function handleShoppingAction(client:PoolClient,ctx:ActorContext,state:ConversationState,event:Extract<SimulatorEvent,{type:'shopping_action'|'edit_item'}>,map?:CatalogMap):Promise<RichReply> {
   if(event.expectedVersion!==state.version)throw new ToolError('Your list changed. Please use the latest choices.','stale_version');
   const reply=(text:string):RichReply=>({version:1,kind:'text',presentation:'text',outboundMessages:1,text});
+  if(event.type==='shopping_action'&&event.action==='view_products'){
+    if(state.pending?.kind!=='products'||state.lastRequestId)throw new ToolError('Use the latest product-photo button.','stale_question');
+    return {...visualProductReview(state),readOnly:true};
+  }
   if(event.type==='shopping_action'&&event.action==='next_item'){
     const pending=state.pending,line=pending?.kind==='question'?state.draft.find(l=>l.id===pending.lineId):undefined;
     const others=state.draft.filter(l=>l.id!==line?.id&&!l.shopCheckDeferred&&(l.resolution!=='matched'||state.requireProductConfirmation&&!productConfirmed(l)));

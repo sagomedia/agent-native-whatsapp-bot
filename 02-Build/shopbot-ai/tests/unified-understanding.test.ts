@@ -146,14 +146,11 @@ test('a fresh recorded list asks pipe type before product and quantity choices',
  let output:any=recordedUnderstanding();const r=runtime(pool,()=>output);let s=await recordedVoice(inbox,r);assert.equal(s.conversation.draft.length,4);
  assert.equal(s.conversation.pending?.kind,'question');assert.match(s.messages.at(-1)!.text,/kind|type|வகை|vagai/);assert.equal(s.conversation.draft[0].sku,undefined);
  const pipe=s.conversation.draft[0];output={...base(),intents:['edit'],requestedItems:[{...item('PVC pipe','1 inch PVC pipe',2),targetLineId:pipe.id}]};s=await text(inbox,r,'PVC pipe');
- for(const sku of ['H01','H13','H22']){
-  const pending=s.conversation.pending;assert.equal(pending?.kind,'products');if(pending?.kind!=='products')throw new Error('No product check');
-  const g=pending.groups.find(g=>g.products.some(p=>p.sku===sku)&&!s.conversation.draft.find(l=>l.id===g.lineId)?.productConfirmation);assert.ok(g,sku);
-  await inbox.ingest({id:randomUUID(),type:'select_product',batchId:pending.id,lineId:g!.lineId,sku});await r.processNext(inbox.context);s=await inbox.snapshot();
- }
+ const pending=s.conversation.pending;assert.equal(pending?.kind,'products');if(pending?.kind!=='products')throw new Error('No pipe choice');
+ const pipeGroup=pending.groups.find(g=>g.products.some(p=>p.sku==='H01'))!;await inbox.ingest({id:randomUUID(),type:'select_product',batchId:pending.id,lineId:pipeGroup.lineId,sku:'H01'});await r.processNext(inbox.context);s=await inbox.snapshot();
  assert.equal(s.conversation.pending?.kind,'question');const question=s.conversation.pending;if(question?.kind==='question')assert.equal(s.conversation.draft.find(l=>l.id===question.lineId)?.sku,'H22');
  assert.match(s.messages.at(-1)!.text,/எத்தனை|How many|eththanai/);assert.equal(s.conversation.draft.find(l=>l.sku==='H13')?.quantity,1);
- s=await text(inbox,r,'two');assert.equal(s.conversation.draft.find(l=>l.sku==='H22')?.quantity,2);assert.ok(cartProgress(s.conversation).join(' ').includes(formatMoney(107000)));assert.equal(s.requests.length,0);
+ s=await text(inbox,r,'two');assert.equal(s.conversation.draft.find(l=>l.sku==='H22')?.quantity,2);assert.equal(s.conversation.pending?.kind,'products');assert.ok(cartProgress(s.conversation).join(' ').includes(formatMoney(107000)));assert.equal(s.requests.length,0);
 }));
 test('restating a total does not increment a cart, while explicit extra does',async()=>fixture(async(pool,inbox)=>{
  let output:any={...base(),requestedItems:[item('one H07','H07')]};const r=runtime(pool,()=>output);let s=await text(inbox,r,'one H07'),id=s.conversation.draft[0].id;

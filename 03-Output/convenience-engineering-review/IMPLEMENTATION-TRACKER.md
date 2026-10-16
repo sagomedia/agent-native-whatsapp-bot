@@ -9,8 +9,8 @@ The user approved implementation of the recommended plan on 16 October 2026, wit
 | Stage | Scope | Status |
 | --- | --- | --- |
 | 1 | Pack/selling/price basis validation and owner preview | Implemented; build/typecheck and 30 focused integration checks passed |
-| 2 | Focused missing-detail questions; native summaries/status; truthful availability; copy cleanup | In progress |
-| 3 | Compact final quote invoice, actual change explanation and bound delivery/approval | Pending |
+| 2 | Focused missing-detail questions; native summaries/status; truthful availability; copy cleanup | Implemented; production build and all 540 integration checks passed |
+| 3 | Compact final quote invoice, actual change explanation and bound delivery/approval | In progress |
 | 4 | Stock ledger/reservations and idempotent order/amendment fulfillment | Pending |
 | 5 | Owner blocker/pick-list UI, stock actions and fact-specific verification | Pending |
 | 6 | Message/state gallery, Tamil copy export, browser/regression checks and release evidence | Pending |
@@ -20,3 +20,5 @@ Each stage receives a focused commit, pushed GitHub checkpoint and a validation 
 Preserve unresolved requests, Tamil mixed with familiar English, photo comparison, estimate images, transaction/quote consent, existing order states, the ₹10 advance and the approved demo pay-at-shop exception. Existing customer data is not rewritten or retroactively deducted.
 
 Stage 1: explicit sealed-pack versus measured-sale policy; shared title/pack/unit validation at catalog publication, cart resolution/submission and owner quotes; owner selling-basis preview. Legacy conflicts stay unpriced without rewriting saved orders. No database migration or payment change. Draft PR: https://github.com/sagomedia/agent-native-whatsapp-bot/pull/9
+
+Stage 2: missing count questions precede product review without defaulting quantities; standard welcome/return/status replies are native text; product review ends with a native cart action outside the gallery; unchanged edits use compact summaries with Photo show; uncertain amount/cutting cases retain a focused photo. Caption copy and availability are truthful and deduplicated. Product-photo replay is read-only and version-bound. All 540 integration tests pass; transcript presentation changed with original invoice facts independently preserved. Hosted stage-1 checks also passed.

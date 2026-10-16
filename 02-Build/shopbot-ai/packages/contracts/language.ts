@@ -90,7 +90,7 @@ export function draftIssueText(line:ConversationState['draft'][number],context:L
   unreadable:['This list line could not be read; correct it or ask the shop','இந்த வரியைப் படிக்க முடியவில்லை; திருத்திச் சொல்லுங்கள் அல்லது கடையிடம் கேளுங்கள்','Intha variyai padikka mudiyala; thiruthi sollunga illa kadaiyila kelunga'],
   budget_unverified:['Shop must confirm a valid amount within this budget','இந்தப் பணத்திற்கு தரக்கூடிய அளவை கடை உறுதி செய்யணும்','Intha panathukku tharakkoodiya alavai kadai confirm pannanum'],
   price_unverified:['Shop must confirm price','விலையை கடை உறுதி செய்ய வேண்டும்','Vilayai kadai confirm pannanum'],
-  selling_unit_unverified:['Shop must verify pack / selling unit','பேக் / விற்பனை அலகை கடை உறுதி செய்ய வேண்டும்','Pack / selling unit-ai kadai confirm pannanum'],
+  selling_unit_unverified:['Shop must verify pack / selling unit','இந்த pack-ஐ எப்படி தர்றாங்கன்னு கடை check பண்ணும்','Pack / selling unit-ai kadai confirm pannanum'],
   amount_unverified:['Product found; shop must verify the amount per selling unit','பொருள் இருக்கு; பீஸ் அளவை கடை உறுதி செய்யணும்','Porul irukku; piece alavai kadai confirm pannanum'],
   cutting_required:['Product found; cutting and its price need shop confirmation','பொருள் இருக்கு; வெட்டித் தருவதையும் விலையையும் கடை உறுதி செய்யணும்','Porul irukku; cut panni tharuvathaiyum vilayaiyum kadai confirm pannanum'],
   continuous_length:['Product found; one continuous length needs shop confirmation','பொருள் இருக்கு; ஒரே நீளமாகக் கிடைப்பதை கடை உறுதி செய்யணும்','Porul irukku; ore neelamaaga kidaippathai kadai confirm pannanum'],
@@ -115,8 +115,7 @@ export function productPriceText(product:Product,context:LanguageContext):string
  return `${formatMoney(product.pricePaise)} / 1 ${unitName(product.unit,context)}`;
 }
 export function productStockText(product:Product,context:LanguageContext):string {
- if(product.stock===null)return say(context,'Stock: shop to check','இருப்பு: கடை சரிபார்க்க வேண்டும்','Stock: kadai check pannanum');
+ if(product.stock===null)return say(context,'Availability: shop to check','கிடைக்குமானு கடை check பண்ணும்','Kidaikkumaanu kadai check pannum');
  if(product.stock===0)return say(context,'Currently out of stock','இப்போது இருப்பு இல்லை','Ippo stock illai');
- const detail=`${product.stock} ${unitName(product.unit,context,product.stock)}`;
- return say(context,`Available: ${detail} recorded`,`இருக்கு: ${detail}`,`Irukku: ${detail}`);
+ return say(context,'Available · shop record','கடை list-ல stock இருக்கு','Kadai list-la stock irukku');
 }

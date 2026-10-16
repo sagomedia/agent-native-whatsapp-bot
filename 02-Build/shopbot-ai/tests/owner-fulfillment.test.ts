@@ -177,9 +177,9 @@ test('staff acknowledges a handoff with a scoped visual receipt, rejects stale c
   assert.equal((await post(randomUUID(),{mode:'owner',revision:c.operator_revision,acknowledge:true})).statusCode,409);
   const ack=await post(c.id,{mode:'owner',revision:c.operator_revision,acknowledge:true});assert.equal(ack.statusCode,200,ack.body);assert.equal(ack.json().customerNotification,'queued');
   assert.equal((await post(c.id,{mode:'owner',revision:c.operator_revision,acknowledge:true})).statusCode,409);
-  const status=(await pool.query('SELECT * FROM whatsapp_outbox WHERE message_id=$1',[ack.json().messageId])).rows[0];assert.equal(status.sender_kind,'system');assert.equal(status.reply_payload.type,'image');assert.match(status.reply_payload.image.caption,/checking your list/);
+  const status=(await pool.query('SELECT * FROM whatsapp_outbox WHERE message_id=$1',[ack.json().messageId])).rows[0];assert.equal(status.sender_kind,'system');assert.equal(status.reply_payload.type,'text');assert.match(status.reply_payload.text.body,/checking your list/);
   assert.equal((await pool.query('SELECT handoff_requested FROM conversations WHERE id=$1',[c.id])).rows[0].handoff_requested,false);assert.equal(await channel.sendNext(),true);
-  const resume=await post(c.id,{mode:'assistant',revision:ack.json().operator_revision,notify:true});assert.equal(resume.statusCode,200,resume.body);assert.equal(resume.json().customerNotification,'queued');assert.equal(await channel.sendNext(),true);assert.match(sent.at(-1).image.caption,/assistant is available again/);
+  const resume=await post(c.id,{mode:'assistant',revision:ack.json().operator_revision,notify:true});assert.equal(resume.statusCode,200,resume.body);assert.equal(resume.json().customerNotification,'queued');assert.equal(await channel.sendNext(),true);assert.match(sent.at(-1).text.body,/assistant is available again/);
   const hold=await post(c.id,{mode:'owner',revision:resume.json().operator_revision});assert.equal(hold.statusCode,200);
   const state=(await pool.query('SELECT * FROM conversations WHERE id=$1',[c.id])).rows[0];
   await channel.runtime.tools.invoke({storeId:fixtureStore,conversationId:c.id,actor:c.actor,role:'customer'},{name:'apply_draft_changes',args:{expectedVersion:state.version,operations:[{kind:'add_item',query:'H08',quantity:1}]}},randomUUID());

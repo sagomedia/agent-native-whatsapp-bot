@@ -22,7 +22,7 @@ function planner(plan:(i:InterpretationInput)=>Interpretation):Interpreter{retur
 async function send(i:SimulatorService,r:ConversationRuntime,e:SimulatorEvent){await i.ingest(e);await r.processNext(i.context);return i.snapshot();}
 const text=(i:SimulatorService,r:ConversationRuntime,t:string)=>send(i,r,{id:randomUUID(),type:'text',text:t});
 const last=(s:Snapshot)=>s.messages.at(-1)!.rich!;
-const cards=(s:Snapshot)=>last(s).parts!.flatMap(p=>p.cards);
+const cards=(s:Snapshot)=>s.messages.filter(m=>m.rich?.groupId===last(s).groupId).flatMap(m=>m.rich?.parts?.flatMap(p=>p.cards)??[]);
 const seed:Operation[]=[{kind:'add_item',query:'H03',quantity:1},{kind:'add_item',query:'H01',quantity:1},{kind:'add_item',query:'H13',quantity:1}];
 const hose=(s:Snapshot)=>s.conversation.draft.find(l=>l.sku==='H13')!;
 
@@ -46,7 +46,7 @@ test('saved 50m dimension plan becomes five pieces with the same photo and other
  const r=new ConversationRuntime(pool,planner(input=>!input.state.draft.length?{next:'review',operations:seed}:{next:'review',operations:[{kind:'resolve_line',lineId:input.state.draft[2].id,query:'garden hose',quantity:1,productMeasures:[{value:50,unit:'m'}],supportingPhrase:'இந்த ஹோஸ் வந்து 50 மீட்டர் வேணும்'}]}),{visualOrdering:true});
  const before=await text(i,r,'three products');const after=await text(i,r,'இல்ல இல்ல இந்த ஹோஸ் வந்து 50 மீட்டர் வேணும்');
  assert.deepEqual(after.conversation.draft.slice(0,2),before.conversation.draft.slice(0,2));assert.equal(hose(after).id,hose(before).id);assert.equal(hose(after).quantity,5);assert.deepEqual(hose(after).requestedAmount,{value:50,unit:'m'});
- const card=cards(after).find(c=>c.kind==='product'&&c.product.sku==='H13')!;assert.equal(card.kind,'product');assert.match(card.caption,/10 மீட்டர் × 5 = 50 மீட்டர்/);assert.equal(after.requests.length,0);assert.equal(after.conversation.productReview,null);
+ assert.equal(cards(after).length,0);assert.match(last(after).text,/50 மீட்டர்/);assert.ok(last(after).parts?.flatMap(p=>p.buttons??[]).some(b=>b.event.type==='shopping_action'&&b.event.action==='view_products'));assert.equal(after.requests.length,0);assert.equal(after.conversation.productReview,null);
  renderWhatsAppReply(last(after),randomUUID(),'test.example');
 }));
 
@@ -135,7 +135,7 @@ test('explicit piece counts after an amount clarification override the old amoun
 test('insufficient stock keeps the photo and names the real stock issue',()=>fixture(async(pool,i)=>{
  await pool.query("UPDATE products SET selling_unit_verified=true,stock=2 WHERE store_id=$1 AND sku='H13'",[demoCatalogStore]);
  const r=new ConversationRuntime(pool,planner(input=>!input.state.draft.length?{next:'review',operations:seed}:{next:'review',operations:[{kind:'set_amount',reference:input.state.draft[2].id,amount:{value:50,unit:'m'},supportingPhrase:'hose 50m'}]}),{visualOrdering:true});
- await text(i,r,'three products');const s=await text(i,r,'hose 50m');assert.equal(hose(s).quantity,5);assert.equal(hose(s).catalogIssue,'insufficient_stock');assert.ok(cards(s).some(c=>c.kind==='product'&&c.product.sku==='H13'));assert.equal(s.requests.length,0);
+ await text(i,r,'three products');const s=await text(i,r,'hose 50m');assert.equal(hose(s).quantity,5);assert.equal(hose(s).catalogIssue,'insufficient_stock');assert.ok(cards(s).some(c=>c.kind==='product'&&c.product.sku==='H13')||last(s).parts?.flatMap(p=>p.buttons??[]).some(b=>b.event.type==='shopping_action'&&b.event.action==='view_products'));assert.equal(s.requests.length,0);
 }));
 
 test('fresh review repairs a legacy amount-as-variant error only against its own previously shown photo',()=>fixture(async(pool,i)=>{

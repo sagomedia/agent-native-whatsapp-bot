@@ -161,7 +161,7 @@ test('voice approval submits the current delivered bill without requiring a butt
 test('per-product change opens that item directly, and new-draft copy does not claim submission',()=>fixture(async(pool,inbox)=>{
   const runtime=new ConversationRuntime(pool,provider(()=>({operations:three,next:'review'})),{visualOrdering:true});
   let s=await text(inbox,runtime,'shopping list');const id=s.conversation.draft[1].id;
-  const card=last(s).parts![0].cards.find(c=>c.kind==='product'&&c.lineId===id)!;
+  const card=s.messages.filter(m=>m.rich?.groupId===last(s).groupId).flatMap(m=>m.rich?.parts?.flatMap(p=>p.cards)??[]).find(c=>c.kind==='product'&&c.lineId===id)!;
   assert.equal(card.buttons![0].event.type,'edit_item');s=await send(inbox,runtime,card.buttons![0].event);
   assert.equal(s.conversation.editingLineId,id);assert.equal(last(s).parts![0].cards[0].kind,'product');
   s=await send(inbox,runtime,{id:randomUUID(),type:'shopping_action',action:'new_list',expectedVersion:s.conversation.version});

@@ -25,7 +25,7 @@ async function send(i:SimulatorService,r:ConversationRuntime,e:SimulatorEvent){a
 const text=(i:SimulatorService,r:ConversationRuntime,value:string)=>send(i,r,{id:randomUUID(),type:'text',text:value});
 async function audio(i:SimulatorService,r:ConversationRuntime){const id=randomUUID(),pcm=Buffer.alloc(32000);for(let n=0;n<16000;n++)pcm.writeInt16LE(Math.round(Math.sin(n*.17)*1500),n*2);await i.ingest({id,type:'voice',mediaId:id},await normalizeVoice({id,mimeType:'audio/wav',data:pcmWav(pcm).toString('base64')}));await r.processNext(i.context);return i.snapshot();}
 const last=(s:Snapshot)=>s.messages.at(-1)!.rich!;
-const cards=(s:Snapshot)=>last(s).parts?.flatMap(p=>p.cards)??[];
+const cards=(s:Snapshot)=>s.messages.filter(m=>m.rich?.groupId===last(s).groupId).flatMap(m=>m.rich?.parts?.flatMap(p=>p.cards)??[]);
 const actions=(s:Snapshot)=>[...last(s).buttons??[],...last(s).parts?.flatMap(p=>[...p.buttons??[],...p.cards.flatMap(c=>c.buttons??[])])??[]];
 
 test('the actual pipe diameter filter retrieves size-stored pipes and excludes other diameters',()=>fixture(async(pool,i)=>{
@@ -34,19 +34,19 @@ test('the actual pipe diameter filter retrieves size-stored pipes and excludes o
 
 test('known stock and price remain visible when a metre conversion needs shop verification',()=>fixture(async(pool,i)=>{
  const r=new ConversationRuntime(pool,provider(()=>({operations:[{kind:'add_item',query:'H13',quantity:null,requestedAmount:{value:20,unit:'m'},supportingPhrase:'hose 20m'}],next:'review'})),{visualOrdering:true});
- const s=await text(i,r,'hose 20m');const card=cards(s).find(c=>c.kind==='product')!;assert.match(card.caption,/30/);assert.match(card.caption,/₹450/);assert.match(card.caption,/20 மீட்டர்/);assert.equal(s.conversation.draft[0].catalogIssue,'amount_unverified');assert.equal(s.requests.length,0);
+ const s=await text(i,r,'hose 20m');const card=cards(s).find(c=>c.kind==='product')!;assert.match(card.caption,/stock|list/i);assert.equal(s.conversation.draft[0].candidates?.[0].stock,30);assert.match(card.caption,/₹450/);assert.match(card.caption,/20 மீட்டர்/);assert.equal(s.conversation.draft[0].catalogIssue,'amount_unverified');assert.equal(s.requests.length,0);
 }));
 
 for(const language of ['ta','en'] as const)test(`${language} uses one instruction language and one unit label`,()=>fixture(async(pool,i)=>{
  await pool.query('UPDATE conversations SET reply_language=$1,reply_language_explicit=true WHERE id=$2',[language,i.context.conversationId]);
- const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});const s=await text(i,r,'one hose');const instruction=cards(s).find(c=>c.kind==='instruction')!;assert.ok(instruction.kind!=='product');
- if(language==='ta'){assert.match(instruction.lines.join(' '),/[\u0b80-\u0bff]/);assert.doesNotMatch(instruction.lines.join(' '),/[\u0900-\u097f\u4e00-\u9fff]/);assert.ok(!/\b(?:inch|m|pieces?)\b/.test(cards(s)[0].caption));assert.match(cards(s)[0].caption,/1 எண்ணம்/);}else{assert.ok(!/[\u0b80-\u0bff]/.test(instruction.lines.join(' ')));assert.match(cards(s)[0].caption,/1 piece/);}
+ const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});const s=await text(i,r,'one hose');const instruction=last(s).text;assert.equal(last(s).parts?.[0].cards.length,0);
+ if(language==='ta'){assert.match(instruction,/[\u0b80-\u0bff]/);assert.doesNotMatch(instruction,/[\u0900-\u097f\u4e00-\u9fff]/);assert.ok(!/\b(?:inch|m|pieces?)\b/.test(cards(s)[0].caption));assert.match(cards(s)[0].caption,/1 எண்ணம்/);}else{assert.ok(!/[\u0b80-\u0bff]/.test(instruction));assert.match(cards(s)[0].caption,/1 piece/);}
  assert.match(cards(s)[0].caption,/450/);
 }));
 
 test('price lookup during product review answers from stock and price without changing the list',()=>fixture(async(pool,i)=>{
  const r=new ConversationRuntime(pool,provider(input=>input.text==='இதன் விலை என்ன?'?{operations:[],next:'price',priceQuery:'H13',priceQuantity:1,clarifyQuestion:'எந்தப் பொருள் வேணும்?'}:hosePlan()),{visualOrdering:true});
- let s=await text(i,r,'one hose');const before=structuredClone(s.conversation);s=await text(i,r,'இதன் விலை என்ன?');assert.deepEqual(s.conversation,before);assert.match(last(s).text,/450/);assert.match(last(s).text,/30/);assert.equal(last(s).readOnly,true);assert.equal(cards(s).length,0);assert.ok(!last(s).text.includes('எந்தப் பொருள் வேணும்'));
+ let s=await text(i,r,'one hose');const before=structuredClone(s.conversation);s=await text(i,r,'இதன் விலை என்ன?');assert.deepEqual(s.conversation,before);assert.match(last(s).text,/450/);assert.match(last(s).text,/stock|list/i);assert.equal(last(s).readOnly,true);assert.equal(cards(s).length,0);assert.ok(!last(s).text.includes('எந்தப் பொருள் வேணும்'));
 }));
 
 for(const phrase of ['send my list to the store','send it to the shop','ஓகே ஆர்டரை பிளேஸ் பண்ணிடலாம்'])test(`spoken finish command: ${phrase}`,()=>fixture(async(pool,i)=>{
@@ -65,7 +65,7 @@ test('text finish opens the bill, then a second command submits the reviewed ord
 }));
 
 test('unknown price blocks sending; explicit shop help retains the list and known stock',()=>fixture(async(pool,i)=>{
- await pool.query("UPDATE products SET price_status='confirm',price_paise=0 WHERE store_id=$1 AND sku='H13'",[demoCatalogStore]);const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});let s=await text(i,r,'one hose');const draft=structuredClone(s.conversation.draft);assert.match(cards(s)[0].caption,/30/);assert.ok(!cards(s)[0].caption.includes('₹0'));
+ await pool.query("UPDATE products SET price_status='confirm',price_paise=0 WHERE store_id=$1 AND sku='H13'",[demoCatalogStore]);const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});let s=await text(i,r,'one hose');const draft=structuredClone(s.conversation.draft);assert.match(cards(s)[0].caption,/stock|list/i);assert.equal(s.conversation.draft[0].candidates?.[0].stock,30);assert.ok(!cards(s)[0].caption.includes('₹0'));
  s=await text(i,r,'send my list to the store');assert.deepEqual(s.conversation.draft,draft);assert.equal(s.requests.length,0);assert.equal(s.conversation.handoffRequested,false);assert.equal((await pool.query('SELECT operator_mode FROM conversations WHERE id=$1',[i.context.conversationId])).rows[0].operator_mode,'assistant');s=await text(i,r,'talk to shop');assert.deepEqual(s.conversation.draft,draft);assert.equal(s.requests.length,0);assert.equal(s.conversation.handoffRequested,true);assert.equal(last(s).handoffRequested,true);
  const c=(await pool.query('SELECT operator_mode,handoff_requested FROM conversations WHERE id=$1',[i.context.conversationId])).rows[0];assert.equal(c.operator_mode,'owner');assert.equal(c.handoff_requested,true);assert.ok((await pool.query("SELECT 1 FROM tool_receipts WHERE conversation_id=$1 AND tool_name='request_store_assistance'",[i.context.conversationId])).rowCount);
 }));

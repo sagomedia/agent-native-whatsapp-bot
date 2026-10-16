@@ -44,7 +44,8 @@ export async function upiAdvanceReply(client:PoolClient,ctx:ActorContext,state:C
  if(options.onlyOnce&&row.offered_at)return null;
  const demo=!!options.demoPayAtShop&&row.demo_pay_at_shop_allowed;
  const reference='Order #'+state.lastRequestId.replaceAll('-','').slice(0,8).toUpperCase();
- const link=`https://${hostname}/pay/${row.id}`,text=say(state,`${reference} sent to the shop.`,`${reference} கடைக்கு அனுப்பியாச்சு.`,`${reference} kadaikku anuppiyaachu.`)+'\n\n'+(row.state==='claimed'?customerCopy('paymentClaimed',state):customerCopy(demo?'demoAdvance':'advance',state,{name:row.payee_name,vpa:row.payee_vpa,link}));
+ const link=`https://${hostname}/pay/${row.id}`;let text=say(state,`${reference} sent to the shop.`,`${reference} கடைக்கு அனுப்பியாச்சு.`,`${reference} kadaikku anuppiyaachu.`)+'\n\n'+(row.state==='claimed'?customerCopy('paymentClaimed',state):customerCopy(demo?'demoAdvance':'advance',state,{name:row.payee_name,vpa:row.payee_vpa,link}));
+ if(row.payee_name===row.payee_vpa)text=text.replace(`Recipient: ${row.payee_name}\n`,'').replace(`பெறுபவர்: ${row.payee_name}\n`,'').replace(`Perubavar: ${row.payee_name}\n`,'');
  const event={id:randomUUID(),type:'payment_claim' as const,requestId:state.lastRequestId,expectedVersion:state.version};
  const buttons:NonNullable<RichReply['buttons']>=row.state==='requested'?[{label:say(state,'I have paid','Pay பண்ணிட்டேன்','Pay pannitten'),event},...(demo?[{label:say(state,'Pay fully at shop','கடைல பணம் தர்றேன்','Kadaiyila panam tharen'),event:{id:randomUUID(),type:'pay_at_shop' as const,requestId:state.lastRequestId,expectedVersion:state.version}}]:[])]:[];
  const card={kind:'instruction' as const,title:say(state,'₹10 order advance','₹10 order advance','₹10 order advance'),lines:[],caption:text,imageUrl:await qrImage(row.upi_uri),buttons};
