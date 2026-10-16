@@ -343,6 +343,7 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       ALTER TABLE products ADD CONSTRAINT products_inventory_available CHECK((stock IS NULL AND reserved_stock=0) OR (stock IS NOT NULL AND stock>=reserved_stock));
       ALTER TABLE order_requests ADD COLUMN inventory_state text NOT NULL DEFAULT 'legacy' CHECK(inventory_state IN ('legacy','pending','reserved','untracked','consumed','released'));
       ALTER TABLE order_requests ALTER COLUMN inventory_state SET DEFAULT 'pending';
+      ALTER TABLE order_requests ADD COLUMN packed_revision integer;
       ALTER TABLE order_requests ADD COLUMN inventory_untracked_line_ids jsonb NOT NULL DEFAULT '[]';
       CREATE TABLE inventory_reservations (
         store_id uuid NOT NULL,request_id uuid NOT NULL REFERENCES order_requests(id),sku text NOT NULL,

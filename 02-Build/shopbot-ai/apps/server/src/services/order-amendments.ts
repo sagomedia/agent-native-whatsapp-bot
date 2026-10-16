@@ -88,7 +88,7 @@ export async function decideAmendment(client:PoolClient,storeId:string,amendment
     if(!product||product.version!==line.productVersion||product.pricePaise!==line.pricePaise||line.quantity===null)throw new ToolError('Catalog price or availability changed. Send a fresh quote for customer approval.');
    }
    if(row.acceptance==='accepted')await reserveRequest(client,storeId,row.request_id,row.proposed_lines,row.effective_revision+1,actor);
-   await client.query('UPDATE order_requests SET effective_lines=$1::jsonb,effective_total_paise=$2,effective_revision=effective_revision+1 WHERE id=$3',[JSON.stringify(row.proposed_lines),row.known_subtotal_paise,row.request_id]);
+   await client.query("UPDATE order_requests SET fulfillment=CASE WHEN fulfillment='ready_for_pickup' THEN 'preparing' ELSE fulfillment END,packed_revision=NULL,effective_lines=$1::jsonb,effective_total_paise=$2,effective_revision=effective_revision+1 WHERE id=$3",[JSON.stringify(row.proposed_lines),row.known_subtotal_paise,row.request_id]);
    await client.query('UPDATE conversations SET draft=$1::jsonb,version=version+1 WHERE id=$2 AND last_request_id=$3',[JSON.stringify(row.proposed_lines),row.conversation_id,row.request_id]);
   }
  }

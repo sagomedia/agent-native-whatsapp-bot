@@ -49,7 +49,7 @@ test('WhatsApp → partial estimate → QR → manual advance check → final qu
   const changed=await post('amendments/'+amendment.id+'/decision',{decision:'accepted',notify:true});assert.equal(changed.statusCode,200,changed.body);await deliver();
   request=(await pool.query('SELECT * FROM order_requests')).rows[0];assert.deepEqual(request.lines,original);assert.equal(request.effective_lines.find((l:any)=>l.sku==='PTFE-TAPE').quantity,3);
   assert.equal((await pool.query('SELECT * FROM order_advances')).rowCount,1);
-  const ready=await post(path+'/fulfillment',{expected:'preparing',status:'ready_for_pickup',notify:true});assert.equal(ready.statusCode,200,ready.body);await deliver();
+  const ready=await post(path+'/fulfillment',{expected:'preparing',status:'ready_for_pickup',packedChecked:true,notify:true});assert.equal(ready.statusCode,200,ready.body);await deliver();
   const collected=await post(path+'/fulfillment',{expected:'ready_for_pickup',status:'collected',notify:true});assert.equal(collected.statusCode,200,collected.body);await deliver();
   const before=sends;await turn({type:'text',text:{body:'thanks 👍'}});assert.equal(sends,before);
   await turn({type:'text',text:{body:'status'}});assert.equal(sends,before+1);assert.match((await pool.query("SELECT text FROM messages WHERE direction='outbound' ORDER BY sequence DESC LIMIT 1")).rows[0].text,/collected/);

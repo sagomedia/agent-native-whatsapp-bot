@@ -1,3 +1,4 @@
+import {productColumns,productFromRow} from '../services/catalog.js';
 import {reserveRequest,closeRequestStock} from '../services/inventory.js';
 import {ToolError} from '../services/context.js';
 import {verifyManualAdvance,verifyManualRefund} from '../services/upi-advance.js';
@@ -99,7 +100,11 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
         JOIN messages m ON m.reply_group_id=g.reply_group_id LEFT JOIN whatsapp_outbox o ON o.message_id=m.id
         WHERE c.store_id=$1 AND c.pending->>'kind'='review' GROUP BY c.id`,[owner.storeId])).rows;
       for(const conversation of conversations){if(conversation.checkout){const delivery=deliveries.find(d=>d.id===conversation.id);conversation.checkout.state=Date.parse(conversation.checkout.expiresAt)<=Date.now()?'expired':delivery?.issue?'delivery_issue':delivery&&delivery.delivered<delivery.total?'invoice_arriving':'awaiting_customer';}}
-      const requests=(await client.query("SELECT r.id,r.conversation_id,r.acceptance,r.payment,r.fulfillment,coalesce(r.effective_total_paise,r.total_paise) AS total_paise,coalesce(r.effective_lines,r.lines) AS lines,r.created_at,r.estimate_complete,r.excluded_line_ids,r.advance_required,r.effective_revision,r.inventory_state,r.inventory_untracked_line_ids,a.state AS advance_state,a.amount_paise AS advance_amount_paise FROM order_requests r LEFT JOIN order_advances a ON a.request_id=r.id WHERE r.store_id=$1 ORDER BY CASE WHEN r.acceptance='awaiting_approval' OR r.acceptance='accepted' AND r.fulfillment NOT IN ('collected','cancelled') THEN 0 ELSE 1 END,r.created_at DESC LIMIT 100",[owner.storeId])).rows;
+      const requests=(await client.query("SELECT r.id,r.conversation_id,r.acceptance,r.payment,r.fulfillment,coalesce(r.effective_total_paise,r.total_paise) AS total_paise,coalesce(r.effective_lines,r.lines) AS lines,r.created_at,r.estimate_complete,r.excluded_line_ids,r.advance_required,r.effective_revision,r.inventory_state,r.inventory_untracked_line_ids,r.packed_revision,a.state AS advance_state,a.amount_paise AS advance_amount_paise FROM order_requests r LEFT JOIN order_advances a ON a.request_id=r.id WHERE r.store_id=$1 ORDER BY CASE WHEN r.acceptance='awaiting_approval' OR r.acceptance='accepted' AND r.fulfillment NOT IN ('collected','cancelled') THEN 0 ELSE 1 END,r.created_at DESC LIMIT 100",[owner.storeId])).rows;
+      const requestSkus=[...new Set(requests.flatMap(r=>(r.lines as OrderRequest['lines']).flatMap(l=>l.sku?[l.sku]:[])))];
+      const stockProducts=requestSkus.length?(await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND sku=ANY($2::text[])`,[owner.storeId,requestSkus])).rows.map(productFromRow):[];
+      const reservations=requests.length?(await client.query("SELECT request_id,sku,quantity FROM inventory_reservations WHERE store_id=$1 AND request_id=ANY($2::uuid[]) AND state='active'",[owner.storeId,requests.map(r=>r.id)])).rows:[];
+      for(const r of requests)r.inventory=stockProducts.filter(p=>(r.lines as OrderRequest['lines']).some(l=>l.sku===p.sku)).map(p=>({sku:p.sku,name:p.name,unit:p.unit,onHand:p.stockOnHand,reserved:p.stockReserved,available:p.stock,held:Number(reservations.find(h=>h.request_id===r.id&&h.sku===p.sku)?.quantity??0),version:p.version,hasPhoto:!!p.imageUrl}));
       const requestCounts=(await client.query("SELECT count(*) FILTER(WHERE acceptance='awaiting_approval' OR acceptance='accepted' AND fulfillment NOT IN ('collected','cancelled'))::int AS active,count(*) FILTER(WHERE NOT(acceptance='awaiting_approval' OR acceptance='accepted' AND fulfillment NOT IN ('collected','cancelled')))::int AS history FROM order_requests WHERE store_id=$1",[owner.storeId])).rows[0];
       const amendments=(await client.query("SELECT id,request_id,conversation_id,kind,summary,proposed_lines,state,expected_revision,known_subtotal_paise,estimate_complete,created_at FROM order_amendments WHERE store_id=$1 AND state IN ('owner_pending','proposed') ORDER BY created_at LIMIT 100",[owner.storeId])).rows;
       const quotes=(await client.query("SELECT id,request_id,state,expected_revision,total_paise,created_at FROM order_quotes WHERE store_id=$1 AND state='offered' ORDER BY created_at LIMIT 100",[owner.storeId])).rows;
@@ -266,18 +271,21 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     });
   });
   app.post<{Params:{id:string}}>('/api/owner/requests/:id/fulfillment',async(request,reply)=>{
-    const parsed=z.object({expected:z.enum(['awaiting_approval','preparing','ready_for_pickup','collected','cancelled']),status:z.enum(['ready_for_pickup','collected','cancelled']),notify:z.boolean().default(false)}).strict().safeParse(request.body);
+    const parsed=z.object({expected:z.enum(['awaiting_approval','preparing','ready_for_pickup','collected','cancelled']),status:z.enum(['ready_for_pickup','collected','cancelled']),packedChecked:z.boolean().optional(),notify:z.boolean().default(false)}).strict().safeParse(request.body);
     if(!parsed.success||!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Invalid fulfillment update'});
     return write('request_fulfillment',request.params.id,async client=>{
       const p=parsed.data,row=(await client.query('SELECT * FROM order_requests WHERE store_id=$1 AND id=$2 FOR UPDATE',[owner.storeId,request.params.id])).rows[0];
       if(!row||row.acceptance!=='accepted')throw Object.assign(new Error('Accept the request before updating pickup status.'),{statusCode:409});
       if(['ready_for_pickup','collected'].includes(p.status)&&((await client.query("SELECT 1 FROM order_quotes WHERE request_id=$1 AND state='offered'",[row.id])).rowCount||(await client.query("SELECT 1 FROM order_amendments WHERE request_id=$1 AND state='owner_pending'",[row.id])).rowCount))throw Object.assign(new Error('Resolve the pending customer quote or amendment before marking ready or collected.'),{statusCode:409});
+      if(p.status==='ready_for_pickup'&&p.packedChecked!==true&&row.packed_revision!==row.effective_revision)throw Object.assign(new Error('Check the physical products, quantities and pack sizes before marking ready.'),{statusCode:409});
+      if(p.status==='collected'&&row.packed_revision!==row.effective_revision)throw Object.assign(new Error('Recheck this order and mark it ready before recording collection.'),{statusCode:409});
+      if(p.status==='ready_for_pickup'&&p.packedChecked===true)await client.query('UPDATE order_requests SET packed_revision=effective_revision WHERE id=$1',[row.id]);
       if(row.fulfillment===p.status)return {fulfillment:p.status,duplicate:true,...await notifyStatus(client,row,p.notify)};
       if(row.fulfillment!==p.expected||!((['awaiting_approval','preparing'].includes(row.fulfillment)&&['ready_for_pickup','cancelled'].includes(p.status))||(row.fulfillment==='ready_for_pickup'&&['collected','cancelled'].includes(p.status))))throw Object.assign(new Error('Request status changed or that transition is not allowed. Refresh before updating.'),{statusCode:409});
       if(p.status==='cancelled')await client.query("UPDATE order_advances SET state='refund_pending',updated_at=now() WHERE request_id=$1 AND state='verified'",[request.params.id]);
       if(p.status==='collected'||p.status==='cancelled')await closeRequestStock(client,owner.storeId,row.id,p.status==='collected'?'collect':'release',owner.email);
       const changed=(await client.query('UPDATE order_requests SET fulfillment=$1 WHERE store_id=$2 AND id=$3 RETURNING *',[p.status,owner.storeId,row.id])).rows[0];
-      return {fulfillment:p.status,...await notifyStatus(client,changed,p.notify)};
+      return {fulfillment:p.status,packedChecked:p.packedChecked??false,...await notifyStatus(client,changed,p.notify)};
     });
   });
   app.post<{Params:{id:string}}>('/api/owner/requests/:id/inventory/reconcile',async(request,reply)=>{

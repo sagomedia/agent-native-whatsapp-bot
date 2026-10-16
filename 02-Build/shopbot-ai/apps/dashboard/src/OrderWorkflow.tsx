@@ -1,18 +1,19 @@
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 import type {DraftLine} from '../../../packages/contracts/index.js';
 import {formatMoney,lineTotal} from '../../../packages/contracts/money.js';
 
-export type WorkflowRequest={id:string;lines:DraftLine[];acceptance:string;fulfillment:string;advance_required?:boolean;advance_state?:string;advance_amount_paise?:number;estimate_complete?:boolean;effective_revision?:number};
+export type WorkflowRequest={id:string;lines:DraftLine[];acceptance:string;fulfillment:string;advance_required?:boolean;advance_state?:string;advance_amount_paise?:number;estimate_complete?:boolean;effective_revision?:number;inventory_state?:string;inventory_untracked_line_ids?:string[];packed_revision?:number|null;inventory?:{sku:string;name:string;unit:string;onHand:number|null;reserved:number;available:number|null;held?:number;version:number;hasPhoto:boolean}[]};
 export type AmendmentSummary={id:string;request_id:string;kind:'change'|'cancel';summary:string;proposed_lines?:DraftLine[];state:string;estimate_complete:boolean};
 type Act=(path:string,body:unknown,success:string)=>Promise<void>;
-export function OrderWorkflow({request:r,amendments,busy,act,notify}:{request:WorkflowRequest;amendments:AmendmentSummary[];busy:boolean;act:Act;notify:boolean}) {
+export function OrderWorkflow({request:r,amendments,busy,act,notify,startQuote=false}:{startQuote?:boolean;request:WorkflowRequest;amendments:AmendmentSummary[];busy:boolean;act:Act;notify:boolean}) {
  const [reference,setReference]=useState(''),[showQuote,setShowQuote]=useState(false),[quoteAmendmentId,setQuoteAmendmentId]=useState<string|undefined>();
  const [lines,setLines]=useState(()=>r.lines.map(line=>({id:line.id,name:line.name,quantity:line.quantity===null?'':String(line.quantity),unit:line.unit??line.requestedUnit??'',saleMode:line.merchantConfirmed?.saleMode??line.candidates?.find(p=>p.sku===line.sku)?.sellingPolicy?.saleMode??'',price:line.pricePaise===undefined||line.catalogIssue==='price_unverified'?'':(line.pricePaise/100).toFixed(2),free:false})));
+ useEffect(()=>{if(startQuote)setShowQuote(true);},[startQuote]);
  const active=!['collected','cancelled'].includes(r.fulfillment)&&r.acceptance!=='rejected';
  const change=(id:string,key:string,value:string|boolean)=>setLines(current=>current.map(line=>line.id===id?{...line,[key]:value}:line));
  const valid=lines.every(line=>line.name.trim()&&line.unit.trim()&&Number(line.quantity)>0&&Number(line.quantity)<=100&&/^\d+(?:\.\d{1,2})?$/.test(line.price)&&(Number(line.price)>0||line.free));
  const pending=amendments.filter(a=>a.request_id===r.id&&a.state==='owner_pending');
- return <div className="owner-workflow">
+ return <div className="owner-workflow" id={'workflow-'+r.id}>
   {r.advance_state==='pay_at_shop'?<div className="owner-workflow-section"><h3>Pay at shop · demo</h3><p>Customer will pay the full amount at pickup. No ₹10 advance has been received.</p></div>:null}
   {r.advance_required?<div className="owner-workflow-section"><h3>₹10 UPI advance</h3><p>{r.advance_state==='verified'?'Received · checked by shop':r.advance_state==='claimed'?'Customer says paid · check your bank/UPI app':r.advance_state==='refund_pending'?'Refund needs your attention':r.advance_state==='refunded'?'Refund recorded by shop':'Awaiting advance'}</p>
    {['requested','claimed'].includes(r.advance_state??'')?<><p>Check that ₹10 reached the configured UPI account before confirming. A screenshot or customer message is not confirmation.</p><label>Bank/UPI transaction reference<input value={reference} onChange={e=>setReference(e.target.value)} maxLength={80} autoComplete="off"/></label><button disabled={busy||reference.trim().length<6} onClick={()=>void act('requests/'+r.id+'/advance/verify',{reference:reference.trim(),notify},'Advance recorded after shop verification.')}>I checked receipt of ₹10</button></>:null}

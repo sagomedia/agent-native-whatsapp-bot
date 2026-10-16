@@ -59,7 +59,7 @@ test('customer photo choice and bound submission continue through owner approval
   const request=async()=>(await pool.query('SELECT * FROM order_requests WHERE id=$1',[submitted.id])).rows[0];
   assert.deepEqual(submitted.lines,review.lines);assert.equal(Number(submitted.total_paise),review.totalPaise);
   assert.equal(submitted.acceptance,'awaiting_approval');assert.equal(submitted.fulfillment,'awaiting_approval');assert.equal(submitted.payment,'not_requested');
-  assert.equal((await post(requestUrl+'/fulfillment',{expected:'awaiting_approval',status:'ready_for_pickup',notify:true})).statusCode,409);
+  assert.equal((await post(requestUrl+'/fulfillment',{expected:'awaiting_approval',status:'ready_for_pickup',packedChecked:true,notify:true})).statusCode,409);
   assert.equal((await pool.query('SELECT * FROM request_notifications')).rowCount,0);
 
   // Another authenticated merchant must not decide this customer's request.
@@ -75,10 +75,11 @@ test('customer photo choice and bound submission continue through owner approval
   assert.equal((await post(requestUrl+'/decision',{decision:'rejected',notify:true})).statusCode,409);
   await turn(channel,tap(await action(pool,{type:'shopping_action',action:'status'})));assert.match(sent.at(-1).interactive.body.text,/preparing/i);
   assert.equal((await post(requestUrl+'/fulfillment',{expected:'preparing',status:'collected',notify:true})).statusCode,409);
-  assert.equal((await post(requestUrl+'/fulfillment',{expected:'awaiting_approval',status:'ready_for_pickup',notify:true})).statusCode,409);
-  assert.equal((await foreign.inject({method:'POST',url:requestUrl+'/fulfillment',headers,payload:{expected:'preparing',status:'ready_for_pickup',notify:true}})).statusCode,409);
+  assert.equal((await post(requestUrl+'/fulfillment',{expected:'awaiting_approval',status:'ready_for_pickup',packedChecked:true,notify:true})).statusCode,409);
+  assert.equal((await foreign.inject({method:'POST',url:requestUrl+'/fulfillment',headers,payload:{expected:'preparing',status:'ready_for_pickup',packedChecked:true,notify:true}})).statusCode,409);
 
-  const readyPayload={expected:'preparing',status:'ready_for_pickup',notify:true};
+  assert.equal((await post(requestUrl+'/fulfillment',{expected:'preparing',status:'ready_for_pickup',notify:true})).statusCode,409,'Physical packing confirmation is required');
+  const readyPayload={expected:'preparing',status:'ready_for_pickup',packedChecked:true,notify:true};
   const ready=await post(requestUrl+'/fulfillment',readyPayload);assert.equal(ready.statusCode,200,ready.body);assert.equal(ready.json().customerNotification,'queued');
   const repeated=await post(requestUrl+'/fulfillment',readyPayload);assert.equal(repeated.statusCode,200,repeated.body);assert.equal(repeated.json().duplicate,true);assert.equal(repeated.json().messageId,ready.json().messageId);
   assert.equal((await pool.query('SELECT * FROM request_notifications WHERE request_id=$1',[submitted.id])).rowCount,2);
@@ -102,7 +103,7 @@ test('customer photo choice and bound submission continue through owner approval
   assert.equal(collected.statusCode,200,collected.body);assert.equal(collected.json().customerNotification,'not_sent');
   assert.equal(await channel.sendNext(),false);assert.equal(sent.length,sendsBefore);
   const final=await request();assert.equal(final.fulfillment,'collected');assert.equal(final.payment,'not_requested');assert.deepEqual(final.lines,review.lines);assert.equal(final.total_paise,submitted.total_paise);
-  assert.equal((await post(requestUrl+'/fulfillment',{expected:'collected',status:'ready_for_pickup',notify:true})).statusCode,409);
+  assert.equal((await post(requestUrl+'/fulfillment',{expected:'collected',status:'ready_for_pickup',packedChecked:true,notify:true})).statusCode,409);
   assert.equal((await pool.query('SELECT * FROM order_requests')).rowCount,1);assert.equal((await pool.query('SELECT * FROM provider_attempts')).rowCount,0);
  }finally{for(const app of apps)await app.close();await pool.end();await admin.query(`DROP SCHEMA "${schema}" CASCADE`);await admin.end();}
 });
@@ -134,7 +135,7 @@ test('owner controls and newer statuses invalidate queued notifications; explici
   const accepted=await post(url+'/decision',{decision:'accepted',notify:true});assert.equal(accepted.statusCode,200,accepted.body);
   const acceptanceId=accepted.json().messageId;assert.ok(acceptanceId);assert.equal(await delivery(acceptanceId),'queued');
   await control('owner');assert.equal(await delivery(acceptanceId),'cancelled');
-  const readyPayload={expected:'preparing',status:'ready_for_pickup',notify:true};
+  const readyPayload={expected:'preparing',status:'ready_for_pickup',packedChecked:true,notify:true};
   const ready=await post(url+'/fulfillment',readyPayload);assert.equal(ready.statusCode,200,ready.body);
   const firstReadyId=ready.json().messageId;assert.ok(firstReadyId);assert.equal(await delivery(firstReadyId),'queued');
   await control('assistant');assert.equal(await delivery(firstReadyId),'cancelled');
