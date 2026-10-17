@@ -8,6 +8,8 @@
   "include": [
     "apps/server/**/*.ts",
     "packages/**/*.ts",
-    "profiles/**/*.ts"
+    "profiles/**/*.ts",
+    "scripts/import-bulk-catalog.ts",
+    "scripts/catalog-capacity.ts"
   ]
 }

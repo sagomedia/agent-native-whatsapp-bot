@@ -43,7 +43,9 @@ npm run typecheck
 node --import tsx --test tests/reviewed-catalog-assembly.test.ts
 ```
 
-These checks cover deterministic source accounting, duplicate exclusions, unresolved rows, explicit split overrides, image holds and byte deduplication, immutable inputs, overwrite/path refusal, unconfirmed commercial defaults, malformed maps, and acceptance by the v2 package reader. They do **not** establish real Tamil voice understanding, validate merchant facts, capture a real bank inventory, or test delivery through live WhatsApp. Those remain separate evidence-gathering steps before any customer-facing activation.
+These checks cover deterministic source accounting, duplicate exclusions, unresolved rows, explicit split overrides, image holds and byte deduplication, immutable inputs, overwrite/path refusal, unconfirmed commercial defaults, malformed maps, and acceptance by the v2 package reader. They do **not** establish real Tamil voice understanding, validate merchant facts, confirm shop inventory, or test delivery through live WhatsApp. Those remain separate evidence-gathering steps before any customer-facing activation.
+
+The production build also emits `dist/scripts/import-bulk-catalog.js` and `dist/scripts/catalog-capacity.js`; `deploy/native/package-release.py` refuses to package a build missing either file. After `npm run build`, the compiled CLI smoke tests run these emitted JavaScript entrypoints directly with a minimal environment. The bulk smoke test uses `--offline` and a disposable one-row package; the capacity smoke test supplies no settings and checks its sanitized fail-closed response. Neither test requires a database or makes network calls.
 
 ## Returned 300-row handoff
 
