@@ -1,3 +1,4 @@
+import {canAddToOrder,orderListChoice,askOrderItems} from '../services/order-list-choice.js';
 import {acceptOrderQuote} from '../services/order-quotes.js';
 import {actionDeliveryReady} from '../services/review-delivery.js';
 import {acknowledgementOnly,amendmentIntent,explicitNewOrder,cancellationIntent,proposeAmendment,customerAmendmentAction,amendmentReviewReply} from '../services/order-amendments.js';
@@ -226,7 +227,10 @@ export class ConversationRuntime {
         const action=claimed.displayedActions.find(a=>['confirm_amendment','confirm_order_quote'].includes(a.type)&&'expectedVersion' in a&&a.expectedVersion===current.version&&actionable.some(row=>row.type===a.type&&row.id===('amendmentId' in a?a.amendmentId:'quoteId' in a?a.quoteId:undefined)));
         if(action){claimed.event=action;interpretation={operations:[],next:'continue'};}
       }
-      const postOrderChange=!!current.lastRequestId&&!explicitNewOrder(turnText)&&(amendmentIntent(turnText)||!!interpretation?.operations.some(op=>!['add_item','set_fulfillment'].includes(op.kind)));
+      let postOrderChange=!!current.lastRequestId&&!explicitNewOrder(turnText)&&(amendmentIntent(turnText)||!!interpretation?.operations.some(op=>!['add_item','set_fulfillment'].includes(op.kind)));
+      const requestedItems=interpretation?.operations.length&&interpretation.operations.every(op=>op.kind==='add_item');
+      const chosenExisting=claimed.memory?.purpose==='list_choice'&&claimed.memory.orderTarget==='existing'&&claimed.memory.sourceVersion===current.version;
+      if(current.visualOrdering&&current.lastRequestId&&requestedItems)postOrderChange=!!chosenExisting&&!explicitNewOrder(turnText);
       if(!failure&&['text','voice'].includes(claimed.event.type)&&current.lastRequestId&&!current.pending&&(acknowledgementOnly(turnText)||interpretation?.conversation==='unrelated'&&interpretation.understanding?.intents.every(i=>['unrelated','thanks'].includes(i)))&&!interpretation?.operations.length&&!requestedLanguage){
         const proposed=await client.query("SELECT id FROM order_amendments WHERE conversation_id=$1 AND state='proposed' LIMIT 1",[ctx.conversationId]);
         if(!proposed.rowCount){await client.query("UPDATE messages SET status='processed',reply_decision=$3,claim_token=NULL,lease_until=NULL WHERE id=$1 AND claim_token=$2",[claimed.id,claimed.token,acknowledgementOnly(turnText)?'acknowledgement_only':'unrelated']);return;}
@@ -234,7 +238,7 @@ export class ConversationRuntime {
 
       if(current.lastRequestId&&!postOrderChange&&interpretation?.operations.length&&interpretation.operations.every(op=>op.kind==='add_item')){
         const items=interpretation.operations as NonNullable<AssistantMemory['newList']>;
-        if(items.length>1||explicitNewOrder(turnText))newListProposal=items;
+        if(current.visualOrdering||items.length>1||explicitNewOrder(turnText))newListProposal=items;
         else{
           const first=items[0];
           interpretation={operations:[],next:'assist',transcript:interpretation.transcript,assistance:{rootQuery:first.query,queries:[first.query],search:first.search,...(first.quantity!==null?{quantity:first.quantity}:{}),requestedUnit:first.requestedUnit}};
@@ -268,6 +272,8 @@ export class ConversationRuntime {
           const paymentState=await claimUpiAdvance(client,ctx,current.lastRequestId);
           const paymentText=['verified','refund_pending','refunded'].includes(paymentState)?say(current,paymentState==='verified'?'The shop has already verified your ₹10 advance.':paymentState==='refunded'?'The shop has recorded your ₹10 refund.':'Your advance was received for a closed order. The shop needs to arrange its refund.',paymentState==='verified'?'₹10 advance வந்திருக்குனு கடை confirm பண்ணியிருக்கு.':paymentState==='refunded'?'₹10 refund complete ஆகியிருக்குனு கடை confirm பண்ணியிருக்கு.':'இந்த order முடிஞ்சிருக்கு. வந்த ₹10 advance-ஐ கடை refund பண்ணணும்.','Advance status-ai kadai confirm panniyirukku.'):customerCopy('paymentClaimed',current);
           rich={...plainReply(paymentState==='pay_at_shop'?customerCopy('demoPayAtShop',current):paymentText),readOnly:true};message=rich.text;
+        } else if(!failure&&current.visualOrdering&&current.lastRequestId&&interpretation?.conversation==='greeting'&&!interpretation.operations.length){
+          rich=orderListChoice(current,await canAddToOrder(client,ctx,current),claimed.memory?.purpose==='list_choice'?claimed.memory.newList?.length:undefined);message=rich.text;
         } else if(!failure&&current.lastRequestId&&(postOrderChange||cancellationIntent(turnText))){
           if(!interpretation?.operations.length&&!cancellationIntent(turnText))rich={...plainReply(customerCopy('amendmentTarget',current)),readOnly:true};
           else rich=await proposeAmendment(client,ctx,current,claimed.id,interpretation?.operations??[],this.tools,cancellationIntent(turnText));
@@ -284,6 +290,11 @@ export class ConversationRuntime {
         } else if(!failure&&current.visualOrdering&&current.draft.length&&!current.lastRequestId&&!deterministic&&interpretation?.operations.length===0&&interpretation?.conversation==='greeting'){
           rich=returningReply(current);message=rich.text;
         } else if(!failure&&newListProposal){
+          if(current.visualOrdering){
+            await client.query('UPDATE conversations SET version=version+1 WHERE id=$1',[ctx.conversationId]);current.version++;
+            await saveAssistantMemory(client,ctx,{purpose:'list_choice',orderTarget:'choose',sourceMessageId:claimed.id,newList:newListProposal,queries:newListProposal.slice(0,3).map(item=>item.query),lineId:null,sourceVersion:current.version,observations:[]});
+            rich=orderListChoice(current,await canAddToOrder(client,ctx,current),newListProposal.length);
+          }else{
           const observations:CatalogObservation[]=[];
           for(const [index,item] of newListProposal.slice(0,3).entries())observations.push(...await observeCatalog(client,ctx,this.tools,[item.query],`${claimed.id}:new-list-options:${index}`,item.search));
           await saveAssistantMemory(client,ctx,{purpose:'discovery',queries:newListProposal.map(item=>item.query).slice(0,3),lineId:null,sourceVersion:current.version,observations,newList:newListProposal});
@@ -299,13 +310,26 @@ export class ConversationRuntime {
             return {...card,quantityLabel:item?.quantity?say(current,`Requested: ${item.quantity} ${item.requestedUnit??'units'}`,`கேட்டது: ${item.quantity} ${unitName(item.requestedUnit??'unit',current,item.quantity)}`,`Kettathu: ${item.quantity} ${unitName(item.requestedUnit??'unit',current,item.quantity)}`):undefined,...(!item?{label:rich.buttons![0].label,action:rich.buttons![0].event}:{} )};
           });
           rich={...rich,...(cards?.length?{kind:'product_choices' as const,cards,presentation:cards.length===1?'single_product' as const:cards.every(c=>c.product.imageUrl)?'carousel_preview' as const:'list' as const}:{}),text:(question?question+'\n':'')+rich.text};
+          }
           message=rich.text;
         } else if(!failure&&(claimed.event.type==='edit_item'||claimed.event.type==='shopping_action'&&!['status','handoff','finish_order'].includes(claimed.event.action)||social==='handoff'&&!deterministic||(claimed.event.type==='text'&&canonicalShortcut(claimed.event.text)==='edit my list'||claimed.event.type==='voice'&&canonicalShortcut(interpretation?.transcript??'')==='edit my list'))) {
           const event=claimed.event.type==='edit_item'||claimed.event.type==='shopping_action'?claimed.event:{id:claimed.id,type:'shopping_action' as const,action:social==='handoff'?'handoff' as const:'edit_list' as const,expectedVersion:claimed.state.version};
-          const proposed=event.type==='shopping_action'&&event.action==='new_list'&&current.lastRequestId&&claimed.memory?.sourceVersion===current.version?claimed.memory.newList:undefined;
+          const choice=event.type==='shopping_action'&&['new_list','continue_list'].includes(event.action)&&current.lastRequestId&&claimed.memory?.purpose==='list_choice';
+          if(choice&&(claimed.memory!.sourceVersion!==current.version||claimed.bindingId!==claimed.memory!.id||!claimed.displayedActions.some(action=>digest(action)===digest(event))))throw new ToolError('Use the latest list choices. Your request is saved.','stale_question');
+          const proposed=event.type==='shopping_action'&&(event.action==='new_list'||choice&&event.action==='continue_list')&&current.lastRequestId&&claimed.memory?.sourceVersion===current.version?claimed.memory.newList:undefined;
           if(proposed&&(!claimed.memory||claimed.bindingId!==claimed.memory.id||!claimed.displayedActions.some(action=>digest(action)===digest(event))))throw new ToolError('Use the latest new-list button.','stale_question');
           if(event.type==='shopping_action'&&['next_item','view_products','edit_quote'].includes(event.action)&&!claimed.displayedActions.some(action=>digest(action)===digest(event)))throw new ToolError('Use the displayed next-item button.','stale_question');
           if(event.type==='shopping_action'&&event.action==='confirm_clear'&&!claimed.displayedActions.some(action=>digest(action)===digest(event)))throw new ToolError('Use the current clear-list confirmation. Your list is unchanged.','stale_confirmation');
+          if(event.type==='shopping_action'&&event.action==='continue_list'&&current.visualOrdering&&current.lastRequestId){
+            if(!await canAddToOrder(client,ctx,current))rich=orderListChoice(current,false,proposed?.length);
+            else if(proposed&&claimed.memory?.sourceMessageId){
+              rich=await proposeAmendment(client,ctx,current,claimed.memory.sourceMessageId,proposed,this.tools);
+              await saveAssistantMemory(client,ctx,null);
+            }else{
+              await saveAssistantMemory(client,ctx,{purpose:'list_choice',orderTarget:'existing',queries:['existing order'],lineId:null,sourceVersion:current.version,observations:[]});
+              rich=askOrderItems(current);
+            }
+          }else{
           rich=await handleShoppingAction(client,ctx,current,event,claimed.catalogMap);
           if(event.type==='shopping_action'&&event.action==='continue_list'){const next=await this.tools.invokeInTransaction(client,ctx,{name:'preview_order',args:{expectedVersion:current.version}},claimed.id+':continue');rich=presentReply(next,next.state!);}
           if(proposed){
@@ -313,6 +337,7 @@ export class ConversationRuntime {
             const changed=await this.tools.invokeInTransaction(client,ctx,{name:'apply_draft_changes',args:{expectedVersion:state.version,operations:proposed}},claimed.id+':new-list');
             const reviewed=await this.tools.invokeInTransaction(client,ctx,{name:'preview_order',args:{expectedVersion:changed.state!.version}},claimed.id+':new-list-preview');
             rich=presentReply(reviewed,reviewed.state!);
+          }
           }
           message=rich.text;
         } else if(!failure) {
@@ -456,15 +481,6 @@ export class ConversationRuntime {
       if(finalState.visualOrdering&&interpretation?.shopQuestions?.length)rich.contextLines=[shopAnswers(finalState,interpretation.shopQuestions),...rich.contextLines??[]];
       if(!failure&&!interpretation?.operations.length&&(interpretation?.next==='price'||deterministic?.name==='search_products'||deterministic?.name==='discover_products'))rich.readOnly=true;
       const unclearTarget=!failure&&interpretation?.understanding?.unresolved.includes('cart_target')&&!finalState.lastRequestId;
-      if(finalState.visualOrdering&&!failure&&!rich.readOnly&&!rich.handoffRequested&&!finalState.lastRequestId&&!clearConfirmation){
-        const selected=claimed.event.type==='select_product'?finalState.draft.find(l=>l.id===(claimed.event as Extract<SimulatorEvent,{type:'select_product'}>).lineId):undefined;
-        if(selected)rich.contextLines=[say(finalState,`Selected: ${lineName(selected,finalState)}${selected.quantity!==null?` · ${selected.quantity} ${unitName(selected.unit??'unit',finalState,selected.quantity)}`:''}.`,`${lineName(selected,finalState)} தேர்வு செய்யப்பட்டது${selected.quantity!==null?` · ${selected.quantity} ${unitName(selected.unit??'unit',finalState,selected.quantity)}`:''}.`,`${lineName(selected,finalState)} choose panniyachu${selected.quantity!==null?` · ${selected.quantity} ${unitName(selected.unit??'unit',finalState,selected.quantity)}`:''}.`),...rich.contextLines??[]];
-        const newBulkList=!claimed.state.draft.length&&finalState.draft.length>1&&interpretation?.operations.some(op=>op.kind==='add_item');
-        if(newBulkList){
-          const rows=finalState.draft.map(line=>`${lineName(line,finalState)} — ${line.quantity===null?say(finalState,'count needed','எண்ணிக்கை தேவை','Count venum'):line.quantity}`);
-          rich.contextLines=[say(finalState,`Noted all ${finalState.draft.length} requested items:\n${rows.join('\n')}`,`நீங்கள் சொன்ன ${finalState.draft.length} பொருட்களையும் குறித்துக்கொண்டேன்:\n${rows.join('\n')}`,`Neenga sonna ${finalState.draft.length} porutkalaiyum kurichchukkitten:\n${rows.join('\n')}`),...rich.contextLines??[]];
-        }
-      }
       if(unclearTarget){
         // The current turn's identity question supersedes an unrelated old
         // quantity question. A bare number must not answer that stale prompt.
@@ -735,6 +751,7 @@ export class ConversationRuntime {
       const item=identified.operations[0],exploring=!claim.state.lastRequestId&&claim.memory?.purpose==='discovery'&&claim.memory.sourceVersion===claim.state.version;
       identified={operations:[],next:'assist',transcript:identified.transcript,assistance:{rootQuery:item.query,queries:[item.query],search:item.search,...discoverySelection(item,identified.transcript??'',exploring?claim.memory:null),question:identified.clarifyQuestion}};
     }
+    if(claim.state.visualOrdering&&claim.state.lastRequestId&&identified.operations.some(op=>op.kind==='add_item'))return identified;
     const newList=mediaRecommendations&&claim.state.lastRequestId&&identified.operations.length>1&&identified.operations.every(op=>op.kind==='add_item')?identified.operations as NonNullable<AssistantMemory['newList']>:undefined;
     if(this.provider.unifiedUnderstanding&&(await this.pool.query('SELECT count(*)::int AS calls FROM provider_attempts WHERE message_id=$1',[claim.id])).rows[0].calls>=2)return identified;
     if(identified.next!=='assist'&&!newList||!(mediaRecommendations||(this.options.discoveryStages??(!!this.provider.freeQuota&&claim.event.type==='text'))))return identified;
