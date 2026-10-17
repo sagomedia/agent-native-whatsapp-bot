@@ -35,6 +35,8 @@ Observed results:
 | Local restore | PASS — actual dump/restore, 25 table snapshots, reported schema 36; `restore-final.json`. See capacity/release notes for exact populated/empty-table scope. |
 | VPS storage, backup, and restore preflight | PASS — disk/root filesystem expanded to 30 GiB; ready cloud snapshot and private database backups retained. Actual dump restored on target host; 40 retained table snapshots unchanged after migration; previous executable ready on schema 36 and clean shutdown. Channels/providers disabled during compatibility test. |
 | Required schema migrations on the intended host | PASS — live schema 36, verified artifact provenance and HTTP readiness. Existing 39-product checksum unchanged; owner authentication required; environment hash unchanged. |
+| Actual returned catalog retrieval | PASS — 609/609 SQL/written-alias checks on 297 identities; no speech or model calls. `real-catalog-retrieval-result.json`. |
+| Target-shop draft intake and owner pagination | PASS — 297 staged, 3 excluded, 0 failed/pending; 12 pages ≤25 rows. Five decoder timeouts cleared with the bounded bulk-only deadline. All 226 earlier proposals, existing 39 products and environment preserved. `deployment-result.json`. |
 
 For a fuller catalog evaluation, use one versioned gold set at 13, 300, and 3,000 products and retain per-family results and failure categories. Do not convert the focused fixtures or synthetic distractors into a broad accuracy claim. The 98% candidate-recall and sub-500 ms local p95 figures in the plan are proposed gates, not measured results or confirmed targets.
 

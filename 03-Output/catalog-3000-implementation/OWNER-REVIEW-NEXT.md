@@ -1,6 +1,6 @@
 # Catalog owner review
 
-Open [Products](https://shopbot-preview.sagoautomation.tech/owner?view=products) → **Review unpublished drafts**. Filter source batch `reviewed-300-pass2-20261017`.
+Open [Products](https://shopbot-preview.sagoautomation.tech/owner?view=catalog) → **Review unpublished drafts**. Filter source batch `reviewed-300-pass2-20261017`.
 
 All 297 targets are research drafts. Confirm the sellable product, unit/increment and actual shop price/stock state before publication. Prices stay unconfirmed and stock stays unknown until you supply the shop facts. Check for existing shop equivalents before publishing a new canonical code; the import does not fuzzy-merge the existing 39 products.
 

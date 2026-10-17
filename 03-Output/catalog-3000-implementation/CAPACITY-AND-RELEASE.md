@@ -32,3 +32,7 @@ A separate target-host rehearsal restored the actual merchant dump into a tempor
 ## Recovery that preserves subsequent transactions
 
 Stop new intake and pause the affected catalog rollout. A staged-only import is recovered by resolving/rejecting its drafts or retrying the identical batch; nothing has been published. A changed source requires a new batch ID. Published corrections must be forward, version-checked owner edits/proposals against the current catalog, preserving newer stock and order snapshots. Never restore a pre-release whole database over live traffic. Code rollback switches the executable while retaining the current database; it does not undo catalog facts. Automatic revision-wide catalog rollback remains deferred until tested against later committed orders/payments/stock movements.
+
+## Completed target intake measurement
+
+After all 297 drafts staged, the read-only report measured 291 retained original/normalized photo pairs (54,866,582 / 19,250,439 logical bytes) and 20,172,386,304 filesystem bytes available. A sample of the 291 normalized images projects 4,750,189,852 additional bytes for 3,000 products plus a 3,146,145,792-byte reserve. Status: projected space available. This is the stated storage planning envelope, not 3,000-product CPU, memory, recognition, restore retention or traffic acceptance. The six currently published products missing photos are excluded from photo-backfill growth and require separate budgeting. See `deployment-result.json` for the exact assumptions and unknowns.
