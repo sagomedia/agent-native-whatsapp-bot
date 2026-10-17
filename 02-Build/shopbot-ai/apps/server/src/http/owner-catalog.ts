@@ -2,13 +2,14 @@ import {adjustStock,stockActionSchema} from '../services/inventory.js';
 import type {FastifyInstance} from 'fastify';
 import type {Pool,PoolClient} from 'pg';
 import {randomUUID} from 'node:crypto';
-import {loadSuggestionPhoto} from '../services/catalog-photos.js';
+import {loadSuggestionPhoto,saveCatalogPhoto} from '../services/catalog-photos.js';
 import {z} from 'zod';
 import {imageUploadSchema,normalizeImage} from '../services/image-media.js';
 import {catalogDraftDetailsSchema,generateCatalogDraft,type CatalogGenerator} from '../services/catalog-assistant.js';
 import {discoverProducts,getCatalogMap} from '../services/catalog-discovery.js';
-import {productColumns,productFromRow} from '../services/catalog.js';
-import {createProposalSchema,updateProposalSchema,publishProposalSchema,createProposal,updateProposal,listProposals,prepareProposalAsset,addProposalAsset,publishProposal,rejectProposal} from '../services/catalog-proposals.js';
+import {productPageSchema,proposalPageSchema,ownerProductPage,ownerProposalPage,selectedOwnerProduct,selectedOwnerProposal} from './owner-catalog-pages.js';
+import {bulkCatalogStatus} from '../services/catalog-bulk.js';
+import {createProposalSchema,updateProposalSchema,publishProposalSchema,createProposal,updateProposal,prepareProposalAsset,addProposalAsset,publishProposal,rejectProposal} from '../services/catalog-proposals.js';
 
 type Write=(action:string,target:string,run:(client:PoolClient)=>Promise<unknown>)=>Promise<unknown>;
 import {ownerProductSchema,saveCatalogProduct} from '../services/catalog-products.js';
@@ -16,7 +17,12 @@ export {ownerProductSchema} from '../services/catalog-products.js';
 const words=z.array(z.string().trim().min(1).max(120)).max(40);
 const names=z.object({ta:z.string().trim().max(160).optional(),'ta-Latn':z.string().trim().max(160).optional()}).strict();
 export async function registerOwnerCatalog(app:FastifyInstance,pool:Pool,storeId:string,write:Write,generator?:CatalogGenerator){
- app.get('/api/owner/catalog/proposals',async()=>{const c=await pool.connect();try{return {proposals:await listProposals(c,storeId,'draft',200),limit:200}}finally{c.release();}});
+ async function read<T>(run:(c:PoolClient)=>Promise<T>){const c=await pool.connect();try{await c.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');const result=await run(c);await c.query('COMMIT');return result;}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}}
+ app.get('/api/owner/catalog/proposals',async(req,reply)=>{const parsed=proposalPageSchema.safeParse(req.query);if(!parsed.success)return reply.code(400).send({error:'Check the draft search and page size (1–100).'});return read(c=>ownerProposalPage(c,storeId,parsed.data));});
+ app.get<{Params:{id:string}}>('/api/owner/catalog/proposals/:id',async(req,reply)=>{if(!z.uuid().safeParse(req.params.id).success)return reply.code(404).send({error:'Draft not found.'});return read(async c=>({proposal:await selectedOwnerProposal(c,storeId,req.params.id)}));});
+ app.get<{Params:{sku:string}}>('/api/owner/catalog/products/:sku',async req=>read(async c=>({product:await selectedOwnerProduct(c,storeId,req.params.sku)})));
+ app.get('/api/owner/catalog/intake',async()=>({batches:(await pool.query('SELECT b.batch_id,b.source_hash,b.created_at,(SELECT count(*)::int FROM catalog_intake_items i WHERE i.store_id=b.store_id AND i.batch_id=b.batch_id) AS total FROM catalog_intake_batches b WHERE b.store_id=$1 ORDER BY b.created_at DESC,b.batch_id LIMIT 25',[storeId])).rows,limit:25}));
+ app.get<{Params:{batch:string};Querystring:{cursor?:string;limit?:string}}>('/api/owner/catalog/intake/:batch',async(req,reply)=>{const parsed=z.object({cursor:z.string().max(100).default(''),limit:z.coerce.number().int().min(1).max(100).default(25)}).strict().safeParse(req.query);if(!parsed.success)return reply.code(400).send({error:'Check the intake page size (1–100).'});if(!(await pool.query('SELECT 1 FROM catalog_intake_batches WHERE store_id=$1 AND batch_id=$2',[storeId,req.params.batch])).rowCount)return reply.code(404).send({error:'Import batch not found in this shop.'});return bulkCatalogStatus(pool,storeId,req.params.batch,parsed.data.cursor,parsed.data.limit);});
  app.post('/api/owner/catalog/proposals',async(req,reply)=>{const p=createProposalSchema.safeParse(req.body);if(!p.success)return reply.code(400).send({error:'Check the draft fields.'});return write('catalog_draft',p.data.id,c=>createProposal(c,storeId,'owner-dashboard',p.data));});
  app.post('/api/owner/catalog/proposals/update',async(req,reply)=>{const p=updateProposalSchema.safeParse(req.body);if(!p.success)return reply.code(400).send({error:'Check the draft and its version.'});return write('catalog_draft_edit',p.data.id,c=>updateProposal(c,storeId,p.data));});
  app.post('/api/owner/catalog/proposals/photo',{bodyLimit:2904000},async(req,reply)=>{let prepared;try{prepared=await prepareProposalAsset(req.body);}catch{return reply.code(400).send({error:'Choose a valid draft and JPG, PNG or WebP photo under 2 MB.'});}return write('catalog_draft_photo',prepared.input.proposalId,c=>addProposalAsset(c,storeId,prepared.input,prepared.media));});
@@ -27,14 +33,7 @@ export async function registerOwnerCatalog(app:FastifyInstance,pool:Pool,storeId
  });
  app.post('/api/owner/catalog/proposals/publish',async(req,reply)=>{const p=publishProposalSchema.safeParse(req.body);if(!p.success)return reply.code(400).send({error:'Complete the product fields and merchant confirmations.'});return write('catalog_publish',p.data.id,c=>publishProposal(c,storeId,p.data));});
  app.post('/api/owner/catalog/proposals/reject',async(req,reply)=>{const p=z.object({id:z.uuid(),version:z.number().int().positive()}).strict().safeParse(req.body);if(!p.success)return reply.code(400).send({error:'Reload the draft before rejecting it.'});return write('catalog_reject',p.data.id,c=>rejectProposal(c,storeId,p.data.id,p.data.version));});
- app.get('/api/owner/catalog',async()=>{
-  const client=await pool.connect();try{await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
-   const rows=(await client.query(`SELECT ${productColumns},active,catalog_origin,inventory_updated_at,merchant_verification FROM products WHERE store_id=$1 ORDER BY name,sku`,[storeId])).rows;
-   const nodes=(await client.query('SELECT id,parent_id,kind,label,local_names,aliases FROM catalog_nodes WHERE store_id=$1 ORDER BY kind,label',[storeId])).rows;
-   const revision=(await client.query('SELECT catalog_revision FROM stores WHERE id=$1',[storeId])).rows[0].catalog_revision;
-   await client.query('COMMIT');return {revision,aiAvailable:!!generator,products:rows.map(p=>({...productFromRow(p),active:p.active,verification:p.merchant_verification,origin:p.catalog_origin,inventoryUpdatedAt:p.inventory_updated_at})),nodes};
-  }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
- });
+ app.get('/api/owner/catalog',async(req,reply)=>{const parsed=productPageSchema.safeParse(req.query);if(!parsed.success)return reply.code(400).send({error:'Check the product search, filters and page size (1–100).'});return read(async c=>{const page=await ownerProductPage(c,storeId,parsed.data);const nodes=(await c.query('SELECT id,parent_id,kind,label,local_names,aliases FROM catalog_nodes WHERE store_id=$1 ORDER BY kind,label',[storeId])).rows;return {...page,aiAvailable:!!generator,nodes};});});
  app.post<{Params:{sku:string}}>('/api/owner/catalog/products/:sku/stock',async(req,reply)=>{
   const p=stockActionSchema.safeParse(req.body);if(!p.success)return reply.code(400).send({error:'Enter a stock action, quantity, reason and current stock version.'});
   return write('inventory_'+p.data.kind,storeId,c=>adjustStock(c,storeId,req.params.sku,'owner-dashboard',p.data));
@@ -90,12 +89,13 @@ export async function registerOwnerCatalog(app:FastifyInstance,pool:Pool,storeId
   const version=Number(req.headers['x-product-version']);if(!Number.isInteger(version)||version<1)return reply.code(400).send({error:'Reload the product before adding a photo.'});
   // Validate access before decoding; normalized photos are versioned immutable public assets.
   if(!(await pool.query('SELECT 1 FROM products WHERE store_id=$1 AND sku=$2 AND version=$3',[storeId,req.params.sku,version])).rowCount)return reply.code(409).send({error:'Product changed. Reload before adding a photo.'});
-  const media=await normalizeImage(parsed.data),assetId=randomUUID();
+  const media=await normalizeImage(parsed.data);
   return write('catalog_photo',storeId,async c=>{
+   const assetId=await saveCatalogPhoto(c,storeId,media);
    const path='/catalog-images/custom/'+assetId+'.jpg';
    const row=await c.query("UPDATE products SET image_path=$1,active=false,merchant_verification=jsonb_set(merchant_verification,'{photo}','false'),inventory_updated_at=now(),version=version+1 WHERE store_id=$2 AND sku=$3 AND version=$4 RETURNING version",[path,storeId,req.params.sku,version]);
    if(!row.rowCount)throw Object.assign(new Error('Product changed. Reload before adding a photo.'),{statusCode:409});
-   await c.query('INSERT INTO catalog_photos(id,store_id,image,width,height) VALUES($1,$2,$3,$4,$5)',[assetId,storeId,media.image,media.width,media.height]);return {sku:req.params.sku,version:row.rows[0].version,imageUrl:path,active:false};
+   return {sku:req.params.sku,version:row.rows[0].version,imageUrl:path,active:false};
   });
  });
 }
