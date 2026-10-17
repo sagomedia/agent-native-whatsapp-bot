@@ -24,7 +24,8 @@
     "pilot:evidence": "tsx scripts/pilot-evidence.ts",
     "release:restore-rehearsal": "tsx scripts/rehearse-restore.ts",
     "catalog:bulk": "tsx scripts/import-bulk-catalog.ts",
-    "catalog:capacity": "tsx scripts/catalog-capacity.ts"
+    "catalog:capacity": "tsx scripts/catalog-capacity.ts",
+    "catalog:scale-eval": "tsx scripts/evaluate-catalog-scale.ts"
   },
   "dependencies": {
     "@fastify/static": "10.1.5",

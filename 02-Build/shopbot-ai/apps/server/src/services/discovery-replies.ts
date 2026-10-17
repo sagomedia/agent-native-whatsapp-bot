@@ -1,3 +1,4 @@
+import {discoveryFacetChoices} from './discovery-facet-actions.js';
 import {say,facetLabel,localName,safeQuestion,unitName} from '../../../../packages/contracts/language.js';
 import {randomUUID} from 'node:crypto';
 import type {ConversationState,DiscoveryResult,RichReply,SimulatorEvent} from '../../../../packages/contracts/index.js';
@@ -15,6 +16,6 @@ export function discoveryPresentation(result:DiscoveryResult,state:ConversationS
   if(/^(?:paint|பெயிண்ட்|பெயின்ட்)$/i.test(result.query.trim()))text+=say(state,' What are you painting—walls, wood or metal?',' சுவர், மரம் அல்லது உலோகத்தில் எதில் பெயிண்ட் செய்ய வேண்டும்?',' Suvar, maram illa metal-la ethukku paint venum?');
  }
  const cards=result.products.map(product=>({product,quantityLabel:selection?.quantity?say(state,`Requested: ${selection.quantity} ${selection.unit??'units'}`,`கேட்டது: ${selection.quantity} ${unitName(selection.unit??'unit',state,selection.quantity)}`,`Kettathu: ${selection.quantity} ${unitName(selection.unit??'unit',state,selection.quantity)}`):undefined,detailLabel:[product.brand,...Object.values(product.specifications??{})].filter(Boolean).join(' · '),matchLabel:result.rankings.find(r=>r.sku===product.sku)?.match==='related'?say(state,'Related option · please check','தொடர்புடைய பொருள் · சரிபார்க்கவும்','Thodarbudaiya porul · check pannunga'):undefined,label:lineId?say(state,'Use for this item','இந்தப் பொருளை பயன்படுத்து','Intha porulai use pannu'):say(state,'Choose this','இது வேணும்','Ithai choose pannu'),action:lineId?{id:randomUUID(),type:'select_candidate' as const,questionId:state.pending!.id,lineId,sku:product.sku}:{id:randomUUID(),type:'choose_product' as const,sku:product.sku,expectedVersion:state.version}}));
- const buttons=facet&&memoryId&&!lineId?facet.values.map(v=>({label:localName(v.label,v.localNames,state),event:{id:randomUUID(),type:'refine_discovery' as const,memoryId,facet:facet.key,value:v.value} as SimulatorEvent})):undefined;
+ const buttons=facet&&memoryId&&!lineId?discoveryFacetChoices(facet,state).map(v=>({label:v.label,event:{id:randomUUID(),type:'refine_discovery' as const,memoryId,facet:facet.key,value:v.value} as SimulatorEvent})):undefined;
  return {version:1,kind:cards.length?'product_choices':'text',text,cards,buttons,presentation:cards.length===1?'single_product':cards.length&&cards.every(c=>c.product.imageUrl)?'carousel_preview':cards.length?'list':'text',outboundMessages:1};
 }

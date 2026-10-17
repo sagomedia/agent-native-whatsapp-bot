@@ -212,7 +212,7 @@ export class RetailTools {
       return {state,estimate:{knownSubtotalPaise,complete,missingLineIds,lines},message:say(state,complete?`Estimated total: ${formatMoney(knownSubtotalPaise)}.`:`Known-price subtotal: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} item(s) still need a price or quantity. You can send the list to the store for checking.`,complete?`உத்தேச மொத்தம்: ${formatMoney(knownSubtotalPaise)}.`:`தெரிந்த விலைகளின் கூட்டுத்தொகை: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} பொருட்களுக்கு விலை அல்லது எண்ணிக்கை தேவை. சரிபார்க்கப் பட்டியலைக் கடைக்கு அனுப்பலாம்.`,complete?`Estimate moththam: ${formatMoney(knownSubtotalPaise)}.`:`Therintha vilaikal subtotal: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} porutkalukku vilai illa count venum. List-ai kadaikku check panna anuppalaam.`)};
     }
     if(call.name==='request_store_assistance')return requestStoreAssistance(client,ctx,state,call.args.expectedVersion);
-    if(call.name==='get_catalog_map')return {catalogMap:await getCatalogMap(client,ctx,call.args.departmentId),message:'Store departments and product families.'};
+    if(call.name==='get_catalog_map')return {catalogMap:await getCatalogMap(client,ctx,call.args.departmentId,call.args),message:'Store departments and product families.'};
     if(call.name==='discover_products'){const discovery=await discoverProducts(client,ctx,call.args.query,call.args.search);return {discovery,products:discovery.products,totalCount:discovery.totalCount,message:'Check these catalog suggestions.'};}
     if(call.name==='search_products') {
       const products=await searchProducts(client,ctx,call.args.query);

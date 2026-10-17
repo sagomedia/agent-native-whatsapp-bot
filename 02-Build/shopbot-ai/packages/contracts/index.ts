@@ -33,7 +33,7 @@ export type Interpretation = z.infer<typeof interpretationSchema>;
 export type Operation = z.infer<typeof operationSchema>;
 export const toolCallSchema = z.discriminatedUnion('name', [
   z.object({ name: z.literal('search_products'), args: z.object({ query, quantity: quantity.optional(), requestedUnit: query.optional() }).strict() }).strict(),
-  z.object({name:z.literal('get_catalog_map'),args:z.object({departmentId:query.optional()}).strict()}).strict(),
+  z.object({name:z.literal('get_catalog_map'),args:z.object({departmentId:query.optional(),search:query.optional(),departmentAfter:query.optional(),familyAfter:query.optional()}).strict()}).strict(),
   z.object({name:z.literal('discover_products'),args:z.object({query,search:discoveryPlanSchema.optional()}).strict()}).strict(),
   z.object({name:z.literal('estimate_order'),args:z.object({expectedVersion:z.number().int().min(0)}).strict()}).strict(),
   z.object({name:z.literal('request_store_assistance'),args:z.object({expectedVersion:z.number().int().min(0)}).strict()}).strict(),

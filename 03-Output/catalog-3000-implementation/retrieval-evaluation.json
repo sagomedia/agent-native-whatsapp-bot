@@ -1,0 +1,157 @@
+{
+  "fixture": "synthetic catalog-scale-v1",
+  "providerCalls": 0,
+  "scope": "isolated PostgreSQL retrieval only",
+  "scales": [
+    {
+      "productCount": 13,
+      "exactName": {
+        "passed": 13,
+        "total": 13
+      },
+      "exactSku": {
+        "passed": 13,
+        "total": 13
+      },
+      "scenarios": [
+        {
+          "name": "pack spelling and exact model preserved",
+          "pass": true
+        },
+        {
+          "name": "wrong magnitude unavailable",
+          "pass": true
+        },
+        {
+          "name": "litre request cannot satisfy kg filter",
+          "pass": true
+        },
+        {
+          "name": "brand conflict is never silently overridden",
+          "pass": true
+        },
+        {
+          "name": "rare late brand remains reachable",
+          "pass": true
+        },
+        {
+          "name": "absent product remains unlisted",
+          "pass": true
+        },
+        {
+          "name": "duplicate exact name remains ambiguous",
+          "pass": true
+        }
+      ],
+      "sqlDiscoveryMs": {
+        "median": 6.44,
+        "p95": 20.87,
+        "max": 34.07
+      },
+      "providerCalls": 0,
+      "misses": []
+    },
+    {
+      "productCount": 300,
+      "exactName": {
+        "passed": 300,
+        "total": 300
+      },
+      "exactSku": {
+        "passed": 300,
+        "total": 300
+      },
+      "scenarios": [
+        {
+          "name": "pack spelling and exact model preserved",
+          "pass": true
+        },
+        {
+          "name": "wrong magnitude unavailable",
+          "pass": true
+        },
+        {
+          "name": "litre request cannot satisfy kg filter",
+          "pass": true
+        },
+        {
+          "name": "brand conflict is never silently overridden",
+          "pass": true
+        },
+        {
+          "name": "rare late brand remains reachable",
+          "pass": true
+        },
+        {
+          "name": "absent product remains unlisted",
+          "pass": true
+        },
+        {
+          "name": "duplicate exact name remains ambiguous",
+          "pass": true
+        }
+      ],
+      "sqlDiscoveryMs": {
+        "median": 17.41,
+        "p95": 21.05,
+        "max": 31.73
+      },
+      "providerCalls": 0,
+      "misses": []
+    },
+    {
+      "productCount": 3000,
+      "exactName": {
+        "passed": 300,
+        "total": 300
+      },
+      "exactSku": {
+        "passed": 300,
+        "total": 300
+      },
+      "scenarios": [
+        {
+          "name": "pack spelling and exact model preserved",
+          "pass": true
+        },
+        {
+          "name": "wrong magnitude unavailable",
+          "pass": true
+        },
+        {
+          "name": "litre request cannot satisfy kg filter",
+          "pass": true
+        },
+        {
+          "name": "brand conflict is never silently overridden",
+          "pass": true
+        },
+        {
+          "name": "rare late brand remains reachable",
+          "pass": true
+        },
+        {
+          "name": "absent product remains unlisted",
+          "pass": true
+        },
+        {
+          "name": "duplicate exact name remains ambiguous",
+          "pass": true
+        }
+      ],
+      "sqlDiscoveryMs": {
+        "median": 25.91,
+        "p95": 33.21,
+        "max": 42.72
+      },
+      "providerCalls": 0,
+      "misses": []
+    }
+  ],
+  "failures": [],
+  "limitations": [
+    "Synthetic text identities and typed SQL constraints; not held-out Tamil/Tanglish speech or OCR accuracy.",
+    "No merchant facts, source-family reconciliation, WhatsApp delivery, concurrency, or production latency validation.",
+    "Candidate scores are ordering weights, not confidence probabilities."
+  ]
+}

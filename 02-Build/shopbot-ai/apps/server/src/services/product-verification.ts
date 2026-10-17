@@ -1,3 +1,4 @@
+import {discoveryFacetChoices} from './discovery-facet-actions.js';
 import {say,lineName,unitName,facetLabel,localName,safeQuestion} from '../../../../packages/contracts/language.js';
 import {randomUUID} from 'node:crypto';
 import type {ConversationState,DraftLine,Product,ProductCheck,ProductCard,RichReply} from '../../../../packages/contracts/index.js';
@@ -66,7 +67,7 @@ ${check.groups.some(g=>g.discovery?.noExactMatch)?'Ivai exact match-nu confirm p
   }
   const narrowing=check.groups.find(g=>g.discovery?.facets.length);
   const facet=narrowing?.discovery?.facets[0];
-  const filters=facet&&narrowing?facet.values.map(v=>({label:localName(v.label,v.localNames,state),event:{id:randomUUID(),type:'refine_search' as const,batchId:check.id,lineId:narrowing.lineId,facet:facet.key,value:v.value}})):[];
+  const filters=facet&&narrowing?discoveryFacetChoices(facet,state).map(v=>({label:v.label,event:{id:randomUUID(),type:'refine_search' as const,batchId:check.id,lineId:narrowing.lineId,facet:facet.key,value:v.value}})):[];
   const identified=check.groups.every(g=>g.products.length===1&&!g.discovery?.noExactMatch);
   const bulk=identified?[{label:check.groups.length===1&&check.remaining?say(state,'This item is right','இந்தப் பொருள் சரி','Intha porul sari'):say(state,'All correct','அனைத்தும் சரி','Ellaam sari'),event:{id:randomUUID(),type:'confirm_products' as const,batchId:check.id}}]:[];
   const buttons=identified?[...bulk,{label:say(state,'Change an item','மாற்றணும்','Porulai maathu'),event:{id:randomUUID(),type:'shopping_action' as const,action:'edit_list' as const,expectedVersion:state.version}},{label:say(state,'Talk to shop','உதவி வேணும்','Kadaiyila pesu'),event:{id:randomUUID(),type:'shopping_action' as const,action:'handoff' as const,expectedVersion:state.version}}]:filters.slice(0,3);
