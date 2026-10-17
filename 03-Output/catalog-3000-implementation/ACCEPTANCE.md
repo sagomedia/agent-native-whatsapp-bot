@@ -2,7 +2,7 @@
 
 This checklist records reproducible local gates and the separate evidence still needed for a real pilot. A command or fixture passing is not evidence that a 3,000-item merchant catalog, real Tamil voice, payment capture, or live WhatsApp is ready. Proposed targets in the plan and evaluation matrix remain proposals until root confirms the measured result and acceptance threshold.
 
-Root verified the following local results on 17 October 2026. Evidence logs are retained under `/home/gk-pc/shopbot-catalog-review/catalog-3000-implementation/`. No live catalog import, host migration or deployment was performed.
+Root verified the following local results on 17 October 2026. Evidence logs are retained under `/home/gk-pc/shopbot-catalog-review/catalog-3000-implementation/`. The local observations below are followed by the completed target-host release and draft-intake results in `DEPLOYMENT-RESULT.md`; merchant approval and real-device acceptance remain separate.
 
 ## Automated local gates
 
@@ -33,8 +33,8 @@ Observed results:
 | Catalog preparation checks | PASS — 4 Python tests; `python-final.log`. |
 | Owner browser rehearsal | PASS — 3,000 products + drafts, largest product page 25; desktop/390px layout and dirty/stale/response-race checks; `browser-scale.log`, screenshots inspected. |
 | Local restore | PASS — actual dump/restore, 25 table snapshots, reported schema 36; `restore-final.json`. See capacity/release notes for exact populated/empty-table scope. |
-| VPS storage, backup, and restore preflight | BLOCKED — about 295 MiB free on 97%-used root volume; database and backup paths share it. Target-host restore and executable rollback remain pending. |
-| Required schema migrations on the intended host | PENDING — migration 36 passed isolated tests and local restore; not applied to VPS. |
+| VPS storage, backup, and restore preflight | PASS — disk/root filesystem expanded to 30 GiB; ready cloud snapshot and private database backups retained. Actual dump restored on target host; 40 retained table snapshots unchanged after migration; previous executable ready on schema 36 and clean shutdown. Channels/providers disabled during compatibility test. |
+| Required schema migrations on the intended host | PASS — live schema 36, verified artifact provenance and HTTP readiness. Existing 39-product checksum unchanged; owner authentication required; environment hash unchanged. |
 
 For a fuller catalog evaluation, use one versioned gold set at 13, 300, and 3,000 products and retain per-family results and failure categories. Do not convert the focused fixtures or synthetic distractors into a broad accuracy claim. The 98% candidate-recall and sub-500 ms local p95 figures in the plan are proposed gates, not measured results or confirmed targets.
 
@@ -55,7 +55,7 @@ The optional local restore rehearsal requires `DATABASE_URL` to name a disposabl
 npm run release:restore-rehearsal -- /tmp/catalog-3000-restore.json
 ```
 
-Review the generated file and confirm its reported database version against the actual migration version before accepting it. This rehearsal uses temporary databases in the named disposable container. It does not establish that the target VPS backup can be restored or that the prior executable can safely run against the migrated schema; those remain root-confirmed release checks.
+Review the generated file and confirm its reported database version against the actual migration version before accepting it. This local command uses temporary databases in the named disposable container. The separate completed target-host restore and previous-executable check are recorded in `DEPLOYMENT-RESULT.md`.
 
 ## Rollback and transaction preservation
 
@@ -63,7 +63,7 @@ A catalog rollback must be scoped to the affected catalog package, batch, or rev
 
 The existing `02-Build/shopbot-ai/deploy/native/rollback.sh` switches services and explicitly retains the new preview files and database. It is not a catalog-data rollback or a database-schema downgrade. Record the tested code/catalog recovery paths separately:
 
-- Code rollback procedure and schema compatibility: local prior pickup SQL passes against schema 36; previous executable and target-host rehearsal pending.
+- Code rollback procedure and schema compatibility: local prior pickup SQL and actual previous executable pass against schema 36; target-host restored data matches. No live rollback was required.
 - Catalog-revision rollback/recovery procedure: version-checked forward repair and draft rejection/retry documented in `CAPACITY-AND-RELEASE.md`; automatic revision-wide rollback deferred.
 - Proof that subsequent committed transactions remain intact: transaction regression suite passes; no automatic revision rollback or live rollback was performed.
 
@@ -75,7 +75,7 @@ These are separate from automated retrieval and transaction fixture results:
 - **Merchant facts:** have the merchant confirm actual sellable variants, names, units, prices, stock policy/counts, and exact product photos. Draft/demo/synthetic facts are not approval. `[pending merchant sign-off]`
 - **Bank capture:** choose and configure the real provider/account, complete provider sandbox verification, and verify a real capture through signed provider evidence before claiming live payment acceptance. The synthetic HMAC/payment fixtures do not perform bank capture. `[pending provider/account and capture evidence]`
 - **Live WhatsApp:** verify delivery and replies on the authorized pilot number and a real phone, with fresh conversations and human review. Simulator and HTTP fixture tests do not prove live WhatsApp connectivity or delivery. `[pending live evidence]`
-- **Target-host release:** complete the root-owned capacity/storage preflight, backup/restore check, migration review, and executable rollback compatibility check before activation. `[pending root confirmation]`
+- **Target-host release:** storage expansion, private backup/restore, schema migration, executable compatibility and activation checks completed. The remaining gates above concern merchant facts and real services; see `DEPLOYMENT-RESULT.md`.
 
 ## Source paths
 
