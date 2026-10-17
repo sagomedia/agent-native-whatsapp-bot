@@ -7,7 +7,7 @@ The owner explicitly authorized moving all current drafts into active Products a
 - The operator previews every current draft in the owner’s shop, then applies the saved ID/version snapshot with explicit owner authorization.
 - Newly published products become searchable by the customer bot. All five merchant verification flags remain false; selling units are not falsely verified. Source names, aliases, category, pack details and provenance are retained.
 - Unknown prices remain `confirm`; unknown stock remains `null`. A missing price is shown as **Price to confirm**, not ₹0 or free.
-- All source photos stay private review references. This operation does not publish research or generated images as exact customer photos.
+- The initial operation kept all source photos private. The owner subsequently requested visible images for the demo; [REFERENCE-PHOTOS.md](REFERENCE-PHOTOS.md) describes the follow-up that publishes eligible normalized copies as labelled reference images while originals and known exclusions remain private.
 - Existing products and edit proposals are never overwritten by this bulk operation. Invalid, changed or colliding drafts are reported individually. Successful rows survive an interrupted run; replaying the same snapshot does not duplicate them.
 - Each publication creates an owner audit record linked to the snapshot and source. No publication capability is exposed to the inventory MCP or AI tools. The ordinary verified publication path remains strict.
 

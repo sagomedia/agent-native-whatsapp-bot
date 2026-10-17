@@ -55,7 +55,7 @@ export class WhatsAppChannel {
       for(const action of rendered.actions)await client.query('INSERT INTO whatsapp_actions(id,message_id,conversation_id,event,label,source_version,operator_revision,binding_id) VALUES($1,$2,$3,$4::jsonb,$5,$6,$7,$8)',[action.id,messageId,ctx.conversationId,JSON.stringify(action.event),action.label,state.version,revision,conversationBinding(state,memory)]);
     }});
   }
-  async catalogPhoto(id:string){return catalogPhoto(this.pool,this.config.storeId,id);}
+  async catalogPhoto(id:string,kind:'custom'|'reference'='custom'){return catalogPhoto(this.pool,this.config.storeId,id,true,kind);}
   async hasCatalogImage(filename:string){return !!(await this.pool.query('SELECT 1 FROM products WHERE store_id=$1 AND active=true AND image_path=$2',[this.config.storeId,'/demo-images/'+filename])).rowCount;}
   async setup(){
     const c=this.config;

@@ -110,6 +110,9 @@ export function measurementText(value:string,context:LanguageContext):string {
   return amount+' '+unitName(unit,context);
  });
 }
+export function referencePhotoLabel(product:Pick<Product,'imageReference'|'imageUrl'>,context:LanguageContext):string|undefined {
+ if(product.imageReference||/^\/catalog-images\/reference\/[a-f0-9-]{36}\.jpg$/.test(product.imageUrl??''))return say(context,'Reference photo','Reference படம்','Reference photo');
+}
 export function productPriceText(product:Product,context:LanguageContext):string {
  if(product.priceStatus==='confirm'||product.pricePaise===0&&product.priceStatus!=='free')return say(context,'Price: shop to confirm','விலை: கடை சொல்ல வேண்டும்','Vilai: kadai sollanum');
  return `${formatMoney(product.pricePaise)} / 1 ${unitName(product.unit,context)}`;

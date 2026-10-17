@@ -27,7 +27,7 @@ export async function createApp(config: Config, pool: Pool, nativeTest?:Interpre
   if(config.whatsapp){
     const hookPath=config.whatsapp.path??whatsappPath;
     app.addHook('onRequest',async(req,reply)=>{
-      const publicCatalog=req.method==='GET'&&/^\/catalog-images\/(?:H\d{2}\.jpg|custom\/[a-f0-9-]{36}\.jpg|messages\/[a-f0-9]{64}\.png)$/.test(req.url.split('?')[0]);
+      const publicCatalog=req.method==='GET'&&/^\/catalog-images\/(?:H\d{2}\.jpg|(?:custom|reference)\/[a-f0-9-]{36}\.jpg|messages\/[a-f0-9]{64}\.png)$/.test(req.url.split('?')[0]);
       const publicPayment=req.method==='GET'&&/^\/pay\/[a-f0-9-]{36}$/.test(req.url.split('?')[0]);
       const publicAudio=req.method==='GET'&&/^\/welcome-audio\/[a-f0-9]{64}\.ogg$/.test(req.url.split('?')[0]);
       const publicPrivacy=config.whatsapp!.privacyPublished&&req.url.split('?')[0]==='/privacy'&&req.method==='GET';

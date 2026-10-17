@@ -11,6 +11,8 @@ import {discoverProducts} from '../apps/server/src/services/catalog-discovery.js
 import {SimulatorService} from '../apps/server/src/services/simulator.js';
 import {RetailTools} from '../apps/server/src/services/tools.js';
 import {productMediaUrl} from '../apps/server/src/services/whatsapp-reply.js';
+import {saveCatalogPhoto,catalogPhoto,loadSuggestionPhoto} from '../apps/server/src/services/catalog-photos.js';
+import {productFromRow} from '../apps/server/src/services/catalog.js';
 import {renderVisualImage} from '../apps/server/src/services/visual-images.js';
 const owner={hostname:'catalog-owner.example.test',issuer:'https://test.cloudflareaccess.com',audience:'catalog-owner-application',email:'owner@example.test',storeId:fixtureStore};
 const wa={hostname:'catalog-api.example.test',storeId:fixtureStore,appId:'123456789',wabaId:'987654321',phoneId:'123987654',appSecret:'test',verifyToken:'test',accessToken:'synthetic-not-a-key',graphVersion:'v25.0',recipients:['919000000001'],defaultReplyLanguage:'ta' as const,processEnabled:false,sendEnabled:false};
@@ -116,4 +118,35 @@ test('message gallery is private, synthetic and read-only against all shop order
  const after=await Promise.all(tables.map(t=>pool.query('SELECT count(*) FROM '+t).then(r=>r.rows[0].count)));assert.deepEqual(after,before);
  assert.equal((await app.inject({url:'/api/owner/message-gallery/products/H02/image',headers})).statusCode,200);
  assert.equal((await app.inject({url:'/api/owner/message-gallery/products/SECRET/image',headers})).statusCode,404);
+}));
+
+
+test('published reference photos retain store, namespace and active guards; owners can review hidden references',async()=>fixture(async(pool,app)=>{
+ const bytes=await readFile('resources/catalog/ksmc-demo/images/H19.jpg'),client=await pool.connect();
+ let id:string;try{id=await saveCatalogPhoto(client,fixtureStore,{image:bytes,width:256,height:256});}finally{client.release();}
+ const path='/catalog-images/reference/'+id+'.jpg',custom='/catalog-images/custom/'+id+'.jpg';
+ await pool.query("UPDATE products SET image_path=$1,active=true WHERE store_id=$2 AND sku='H19'",[path,fixtureStore]);
+ const row=(await pool.query("SELECT * FROM products WHERE store_id=$1 AND sku='H19'",[fixtureStore])).rows[0];
+ assert.equal(productFromRow(row).imageReference,true);
+ assert.equal(productFromRow({...row,image_path:'/demo-images/H19.jpg'}).imageReference,undefined);
+ assert.equal(productMediaUrl(path,wa.hostname),'https://'+wa.hostname+path);
+ let r=await app.inject({url:path,headers:{host:wa.hostname}});assert.equal(r.statusCode,200,r.body);assert.ok(r.rawPayload.equals(bytes));assert.equal(r.headers['cache-control'],'no-store');
+ assert.equal((await app.inject({url:custom,headers:{host:wa.hostname}})).statusCode,404);
+ assert.equal(await catalogPhoto(pool,fixtureStore,id),undefined);
+ assert.ok((await catalogPhoto(pool,fixtureStore,id,true,'reference'))?.equals(bytes));
+ assert.equal(await catalogPhoto(pool,randomUUID(),id,true,'reference'),undefined);
+ assert.equal((await app.inject({url:path,headers:{host:'other-shop.test'}})).statusCode,404);
+ assert.equal((await app.inject({url:path,headers:{host:owner.hostname}})).statusCode,404);
+ assert.equal((await app.inject({url:'/catalog-images/reference/'+randomUUID()+'.jpg',headers:{host:wa.hostname}})).statusCode,404);
+ assert.equal((await app.inject({url:'/catalog-images/reference/not-an-id.jpg',headers:{host:wa.hostname}})).statusCode,404);
+ const ownerUrl='/api/owner/products/H19/image';
+ assert.equal((await app.inject({url:ownerUrl,headers:{host:owner.hostname}})).statusCode,403);
+ assert.equal((await app.inject({url:ownerUrl,headers})).statusCode,200);
+ await pool.query("UPDATE products SET active=false WHERE store_id=$1 AND sku='H19'",[fixtureStore]);
+ assert.equal((await app.inject({url:path,headers:{host:wa.hostname}})).statusCode,404);
+ assert.equal((await app.inject({url:ownerUrl,headers})).statusCode,200);
+ assert.ok((await loadSuggestionPhoto(pool,fixtureStore,'H19',row.version))?.image.equals(bytes));
+ await pool.query("UPDATE products SET image_path=$1,active=true WHERE store_id=$2 AND sku='H19'",[custom,fixtureStore]);
+ assert.equal((await app.inject({url:path,headers:{host:wa.hostname}})).statusCode,404);
+ assert.equal((await app.inject({url:custom,headers:{host:wa.hostname}})).statusCode,200);
 }));

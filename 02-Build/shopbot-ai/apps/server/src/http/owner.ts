@@ -47,7 +47,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     const host=request.headers.host?.toLowerCase();
     const local=host!==undefined&&/^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
     const publicOwner=host===owner.hostname;
-    if(config.whatsapp&&host===config.whatsapp.hostname&&request.method==='GET'&&/^\/catalog-images\/(?:H\d{2}\.jpg|custom\/[a-f0-9-]{36}\.jpg|messages\/[a-f0-9]{64}\.png)$/.test(request.url.split('?')[0]))return;
+    if(config.whatsapp&&host===config.whatsapp.hostname&&request.method==='GET'&&/^\/catalog-images\/(?:H\d{2}\.jpg|(?:custom|reference)\/[a-f0-9-]{36}\.jpg|messages\/[a-f0-9]{64}\.png)$/.test(request.url.split('?')[0]))return;
     if(config.whatsapp&&host===config.whatsapp.hostname&&request.method==='GET'&&(/^\/pay\/[a-f0-9-]{36}$/.test(request.url.split('?')[0])||/^\/welcome-audio\/[a-f0-9]{64}\.ogg$/.test(request.url.split('?')[0])))return;
     if(config.whatsapp?.privacyPublished&&host===config.whatsapp.hostname&&request.url.split('?')[0]==='/privacy'&&request.method==='GET')return;
     if(config.whatsapp&&host===config.whatsapp.hostname&&request.url.split('?')[0]===(config.whatsapp.path??'/webhooks/whatsapp')&&['GET','POST'].includes(request.method))return;
@@ -153,8 +153,8 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
   });
   app.get<{Params:{sku:string}}>('/api/owner/products/:sku/image',async(request,reply)=>{
     const row=(await pool.query('SELECT image_path FROM products WHERE store_id=$1 AND sku=$2',[owner.storeId,request.params.sku])).rows[0];
-    const custom=/^\/catalog-images\/custom\/([a-f0-9-]{36})\.jpg$/.exec(row?.image_path??'');
-    if(custom){const bytes=await catalogPhoto(pool,owner.storeId,custom[1],false);return bytes?reply.type('image/jpeg').send(bytes):reply.code(404).send({error:'Photo not found'});}
+    const custom=/^\/catalog-images\/(custom|reference)\/([a-f0-9-]{36})\.jpg$/.exec(row?.image_path??'');
+    if(custom){const bytes=await catalogPhoto(pool,owner.storeId,custom[2],false,custom[1] as 'custom'|'reference');return bytes?reply.type('image/jpeg').send(bytes):reply.code(404).send({error:'Photo not found'});}
     if(!row||!/^\/demo-images\/H\d{2}\.jpg$/.test(row.image_path??''))return reply.code(404).send({error:'Photo not found'});
     try{return reply.type('image/jpeg').send(await readFile(resolve('resources/catalog/ksmc-demo/images',row.image_path.split('/').at(-1))));}catch{return reply.code(404).send({error:'Photo not found'});}
   });

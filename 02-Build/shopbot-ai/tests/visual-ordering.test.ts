@@ -182,3 +182,16 @@ for(const stage of ['products','bill'])test(`shop handoff during ${stage} delive
  const state=(await pool.query('SELECT operator_mode,handoff_requested,jsonb_array_length(draft) AS lines FROM conversations WHERE id=$1',[first.conversation_id])).rows[0];assert.equal(state.operator_mode,'owner');assert.equal(state.handoff_requested,true);assert.equal(state.lines,1);
  assert.equal(await channel.sendNext(),true);assert.equal((await pool.query('SELECT state FROM whatsapp_outbox WHERE message_id=$1',[ack.id])).rows[0].state,'accepted');assert.equal((await pool.query('SELECT count(*)::int AS n FROM order_requests')).rows[0].n,0);
 }));
+
+
+test('reference product captions retain their label and pending price before channel rendering',()=>{
+ for(const [language,label,pending] of [['en','Reference photo','Price: shop to confirm'],['ta','Reference படம்','விலை: கடை சொல்ல வேண்டும்'],['ta-Latn','Reference photo','Vilai: kadai sollanum']] as const){
+  const state:ConversationState={visualOrdering:true,replyLanguage:language,version:0,draft:[],pending:null,fulfillment:'pickup',lastRequestId:null};
+  const product:Product={sku:'REF',name:'Cutting wheel',unit:'piece',pricePaise:0,priceStatus:'confirm',stock:null,version:1,aliases:[],quantityStep:1,imageUrl:'/catalog-images/reference/'+randomUUID()+'.jpg',imageReference:true,brand:'Brand details '.repeat(30),specifications:{size:'Large size '.repeat(30)}};
+  const action:SimulatorEvent={id:randomUUID(),type:'choose_product',sku:product.sku,expectedVersion:0};
+  const rich=visualReply({version:1,stage:'identify',kind:'product_choices',text:'Choose product',presentation:'carousel_preview',outboundMessages:1,cards:[{product,label:'Choose this',action}]},state);
+  const priced=visualReply({version:1,stage:'identify',kind:'product_choices',text:'Choose product',presentation:'carousel_preview',outboundMessages:1,cards:[{product:{...product,pricePaise:12500,priceStatus:'priced'},label:'Choose this',action}]},state);assert.ok(priced.parts![0].cards[0].caption.includes('₹125.00'));
+  const card=rich.parts![0].cards[0];assert.equal(card.kind,'product');assert.ok(card.caption.startsWith('Cutting wheel'));assert.ok(card.caption.includes(pending));assert.ok(card.caption.endsWith(label));assert.ok(Array.from(card.caption).length<=160);assert.equal(card.buttons![0].event,action);
+  const payload=renderWhatsAppReply(rich,randomUUID(),'example.test').payload as any;assert.ok(payload.interactive.body.text.endsWith(label));
+ }
+});

@@ -12,6 +12,7 @@ const products=Array.from({length:3000},(_,i)=>({sku:'SCALE-'+String(i+1).padSta
 const summary={total:3000,conflicts:1,issues:1500,missingPhoto:3000,pendingPrice:3000,unknownStock:1500};
 const drafts=products.map((p,i)=>({id:'00000000-0000-4000-8000-'+String(i+1).padStart(12,'0'),name:'Draft '+p.name,sku:p.sku,batch_id:'scale-source',client_item_id:p.sku,conflict:i===2999,issueCount:i%2}));
 products.at(-1).referencePhotos=[{id:'00000000-0000-4000-8000-000000003000',proposalId:drafts.at(-1).id,matchKind:'unconfirmed'}];
+products[0].imageReference=true;products[0].imageUrl='/catalog-images/reference/00000000-0000-4000-8000-000000000001.jpg';
 let searchDelay=0,detailDelay=0,failPublish=false,lastPublish;
 await page.route('**/api/**',async route=>{
  const req=route.request(),url=new URL(req.url()),path=url.pathname,json=body=>route.fulfill({json:body});
@@ -32,6 +33,7 @@ const base=process.env.OWNER_UI_URL??'http://127.0.0.1:5179';
 try{
  await page.goto(base+'/owner?view=catalog');await page.getByText('3000 matching of 3000 shop products · 25 loaded',{exact:true}).first().waitFor();assert.equal(await page.locator('.owner-product-row').count(),25);assert.ok(imageReads.length<=25,'Only the loaded page can request thumbnails');assert.equal(await page.locator('.owner-product-row img[loading="lazy"]').count(),25);
  assert.ok((await page.locator('.owner-product-row').first().innerText()).includes('Price to confirm'));assert.ok((await page.locator('.owner-product-row').first().innerText()).includes('Pending review'));assert.ok(!(await page.locator('.owner-product-row').first().innerText()).includes('₹10'));
+ assert.ok((await page.locator('.owner-product-row').first().innerText()).includes('Reference photo'));
  await page.getByRole('button',{name:'Next',exact:true}).click();await page.locator('.owner-product-row').first().filter({hasText:'0026'}).waitFor();assert.equal(await page.locator('.owner-product-row').count(),25);await page.getByRole('button',{name:'First page',exact:true}).click();await page.locator('.owner-product-row').first().filter({hasText:'0001'}).waitFor();
  await page.getByLabel('Find a product',{exact:true}).fill('SCALE-3000');await page.locator('.owner-product-row').filter({hasText:'3000'}).waitFor();assert.equal(await page.locator('.owner-product-row').count(),1);await page.locator('.owner-product-row').click();await page.getByLabel('Product name',{exact:true}).waitFor();assert.equal(await page.getByLabel('Product name',{exact:true}).inputValue(),'Shop pipe variant 3000');
  await page.getByLabel('Product name',{exact:true}).fill('Owner unsaved fact');await page.getByLabel('Find a product',{exact:true}).fill('SCALE-0001');await page.locator('.owner-product-row').filter({hasText:'0001'}).waitFor();assert.equal(await page.getByLabel('Product name',{exact:true}).inputValue(),'Owner unsaved fact');await page.locator('.owner-product-row').click();await page.getByRole('dialog').waitFor();await page.getByRole('button',{name:'Keep working',exact:true}).click();assert.equal(await page.getByLabel('Product name',{exact:true}).inputValue(),'Owner unsaved fact');

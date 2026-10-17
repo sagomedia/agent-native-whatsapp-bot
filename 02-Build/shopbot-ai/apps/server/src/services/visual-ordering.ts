@@ -1,9 +1,11 @@
+import {productPhotoCaption} from '../../../../packages/contracts/channel-text.js';
+import type {Product} from '../../../../packages/contracts/index.js';
 import {customerCopy} from '../../../../packages/contracts/customer-copy.js';
 import {estimateLines,estimateText} from './order-estimate.js';
 import {textPresentation} from './message-presentation.js';
 import {randomUUID,createHash} from 'node:crypto';
 import type {ConversationState,RichReply,ReplyPart,VisualCard,ProductCheck,OrderRequest} from '../../../../packages/contracts/index.js';
-import {say,lineName,unitName,productName,safeQuestion,localName,draftIssueText,requestedAmountText,measurementText,productPriceText,productStockText} from '../../../../packages/contracts/language.js';
+import {say,lineName,unitName,productName,safeQuestion,localName,draftIssueText,requestedAmountText,measurementText,productPriceText,productStockText,referencePhotoLabel} from '../../../../packages/contracts/language.js';
 import {formatMoney,lineTotal} from '../../../../packages/contracts/money.js';
 import {productIdentity} from './product-confirmation.js';
 import {counterLine,productCheckCoversDraft} from './counter-state.js';
@@ -54,7 +56,7 @@ export function visualProductReview(state:ConversationState,compact=false):RichR
    const product=meaning.products.find(p=>p.familyId===a.familyId),family=meaning.discovery?.facets.find(f=>f.key==='family')?.values.find(v=>v.value===a.familyId);
    const select:Button={label:say(state,'This type','இந்த வகை','Intha vagai'),event:{id:randomUUID(),type:'refine_search',batchId:check.id,lineId:line.id,facet:'family',value:a.familyId}};
    const caption=family?localName(family.label,family.localNames,state):a.query;
-   return product?{kind:'product',lineId:line.id,product,caption:productCaption(productName(product,state),[caption,product.specifications?.size]),buttons:[select]}:instruction(caption,[say(state,'Shop needs to check this type','இந்த வகையை கடை சரிபார்க்கணும்','Intha vagai kadai check pannanum')],caption,[select]);
+   return product?{kind:'product',lineId:line.id,product,caption:productCaption(product,state,[caption,product.specifications?.size]),buttons:[select]}:instruction(caption,[say(state,'Shop needs to check this type','இந்த வகையை கடை சரிபார்க்கணும்','Intha vagai kadai check pannanum')],caption,[select]);
   });
   return reply('identify',[part(cards,question)],'product_meaning');
  }
@@ -66,7 +68,7 @@ export function visualProductReview(state:ConversationState,compact=false):RichR
  if(ambiguous){
   const line=state.draft.find(l=>l.id===ambiguous.lineId)!;
   const alternative=line.packUnitAlternative&&!line.packUnitAlternative.acceptedSku;
-  const choices:VisualCard[]=ambiguous.products.slice(0,3).map(product=>({kind:'product',lineId:line.id,product,caption:productCaption(productName(product,state),[product.brand,measurementText(product.specifications?.size??product.specifications?.weight??'',state),productPriceText(product,state),productStockText(product,state)]),buttons:[{label:alternative?say(state,'Use this pack','இந்த pack வேணும்','Intha pack venum'):say(state,'Choose this','இது வேணும்','Ithu venum'),event:{id:randomUUID(),type:'select_product',batchId:check.id,lineId:line.id,sku:product.sku}}]}));
+  const choices:VisualCard[]=ambiguous.products.slice(0,3).map(product=>({kind:'product',lineId:line.id,product,caption:productCaption(product,state,[product.brand,measurementText(product.specifications?.size??product.specifications?.weight??'',state),productPriceText(product,state),productStockText(product,state)]),buttons:[{label:alternative?say(state,'Use this pack','இந்த pack வேணும்','Intha pack venum'):say(state,'Choose this','இது வேணும்','Ithu venum'),event:{id:randomUUID(),type:'select_product',batchId:check.id,lineId:line.id,sku:product.sku}}]}));
   const question=alternative?say(state,`You asked for ${line.packUnitAlternative!.requested.value} ${line.packUnitAlternative!.requested.unit}. This product is in the catalog with a different pack unit. Check the photo and pack label. Would you like this pack?`,`${line.packUnitAlternative!.requested.value} ${unitName(line.packUnitAlternative!.requested.unit,state)} கேட்டீங்க.\nஇந்த பெயர்ல கடைல இருக்குற pack-ஐ காட்டுறேன்.\nPhoto-வும் pack அளவும் பாருங்க. இது வேணுமா?`,`${line.packUnitAlternative!.requested.value} ${line.packUnitAlternative!.requested.unit} ketteenga. Intha peyarla kadaiyila irukkura pack-ai kaatturen. Photo-vum pack size-um paarunga. Ithu venumaa?`):say(state,`Which ${lineName(line,state)} do you need?`,`${lineName(line,state)} — எது வேணும்?`,`${lineName(line,state)} — ethu venum?`);
   return reply('identify',[part(choices,question)],alternative?'pack_unit_alternative':'product_or_specification');
  }
@@ -78,7 +80,7 @@ export function visualProductReview(state:ConversationState,compact=false):RichR
   const content=catalogContent(product),amount=line.requestedAmount;
   const count=line.quantity===null?line.requestedQuantity!==undefined?`${line.requestedQuantity} ${unitName(line.requestedUnit??'unit',state,line.requestedQuantity)}`:amount?requestedAmountText(line,state):say(state,'Count: to check','எண்ணிக்கை: சொல்ல வேண்டும்','Count: sollanum'):`${line.quantity} ${unitName(product.unit,state,line.quantity)}`;
   const conversion=amount&&content&&line.quantity!==null&&!['metre','foot','litre','kg'].includes(product.unit)?`${content.value} ${content.unit} × ${line.quantity} = ${amount.value} ${amount.unit}`:undefined;
-  return [{kind:'product',lineId:line.id,product,caption:productCaption(productName(product,state),[product.brand?fitText(product.brand,24):'',measurementText(size??'',state),count,budgetText(line,state),conversion?measurementText(conversion,state):undefined,productPriceText(product,state),productStockText(product,state),draftIssueText(line,state)],index+1),buttons:[edit]}];
+  return [{kind:'product',lineId:line.id,product,caption:productCaption(product,state,[product.brand?fitText(product.brand,24):'',measurementText(size??'',state),count,budgetText(line,state),conversion?measurementText(conversion,state):undefined,productPriceText(product,state),productStockText(product,state),draftIssueText(line,state)],index+1),buttons:[edit]}];
  });
  const estimate=estimateLines(state.draft);
  const total=estimate.excluded.length?say(state,`Known subtotal: ${formatMoney(estimate.knownSubtotalPaise)} · ${estimate.excluded.length} prices pending`,`தெரிஞ்ச விலை ${formatMoney(estimate.knownSubtotalPaise)} · ${estimate.excluded.length} விலை pending`,`Therinja vilai ${formatMoney(estimate.knownSubtotalPaise)} · ${estimate.excluded.length} vilai pending`):say(state,`Estimate ${formatMoney(estimate.knownSubtotalPaise)}`,`Estimate ${formatMoney(estimate.knownSubtotalPaise)}`,`Estimate ${formatMoney(estimate.knownSubtotalPaise)}`);
@@ -148,7 +150,7 @@ export function visualReply(base:RichReply,state:ConversationState,request?:Orde
  }
  if(state.editingLineId){
   const selected=state.draft.find(l=>l.id===state.editingLineId),product=selected?.candidates?.find(p=>p.sku===selected.sku);
-  if(product){const question=say(state,'What should change: product, size or count?','பொருள், அளவு, எண்ணிக்கை — என்ன மாற்றணும்?','Porul, size, count — enna maathanum?');return {...reply('correction',[part([{kind:'product',lineId:selected!.id,product,caption:productCaption(productName(product,state),[product.specifications?.size,question]),buttons:base.buttons?.slice(0,3)}],question)],'selected_item_change'),replyLanguage:state.replyLanguage};}
+  if(product){const question=say(state,'What should change: product, size or count?','பொருள், அளவு, எண்ணிக்கை — என்ன மாற்றணும்?','Porul, size, count — enna maathanum?');return {...reply('correction',[part([{kind:'product',lineId:selected!.id,product,caption:productCaption(product,state,[product.specifications?.size,question]),buttons:base.buttons?.slice(0,3)}],question)],'selected_item_change'),replyLanguage:state.replyLanguage};}
  }
  const questionId=state.pending?.kind==='question'?state.pending.lineId:undefined;
  const line=plan.purpose==='clarification'?plan.line:state.draft.find(l=>l.id===questionId);
@@ -169,7 +171,7 @@ export function visualReply(base:RichReply,state:ConversationState,request?:Orde
   if(!product)return nativeReply({...base,text:prompt,stage:'quantity',clarificationReason:line.requestedAmount?'requested_amount_conversion':'purchase_count'},state);
   const needsCount=line.resolution==='needs_quantity'&&line.quantity===null&&line.requestedQuantity===undefined&&!line.requestedAmount;
   if(!needsCount){
-   const card:VisualCard={kind:'product',lineId:line.id,product,caption:productCaption(productName(product,state),[measurementText(details,state),requestedAmountText(line,state),productPriceText(product,state),productStockText(product,state),prompt]),buttons:base.buttons?.slice(0,3)};
+   const card:VisualCard={kind:'product',lineId:line.id,product,caption:productCaption(product,state,[measurementText(details,state),requestedAmountText(line,state),productPriceText(product,state),productStockText(product,state),prompt]),buttons:base.buttons?.slice(0,3)};
    return withContext({...reply('quantity',[part([card],prompt,base.buttons?.slice(0,3))],line.requestedAmount?'requested_amount_conversion':'purchase_count'),replyLanguage:state.replyLanguage},base.contextLines);
   }
   const step=product.quantityStep||1;
@@ -178,7 +180,7 @@ export function visualReply(base:RichReply,state:ConversationState,request?:Orde
   return nativeReply({...base,text,stage:'quantity',clarificationReason:'purchase_count',contextLines:base.contextLines?.slice(0,1),buttons:quantityButtons},state);
  }
  if(base.cards?.length){
-  const cards:VisualCard[]=base.cards.slice(0,3).map(c=>({kind:'product',product:c.product,caption:productCaption(productName(c.product,state),[c.product.brand,measurementText(c.product.specifications?.size??'',state),productPriceText(c.product,state),productStockText(c.product,state),c.matchLabel,c.quantityLabel]),buttons:[...(c.action?[{label:c.label,event:c.action}]:[]),...(base.buttons??[]).filter(b=>!(b.event.type==='shopping_action'&&b.event.action==='handoff'))].slice(0,3)}));
+  const cards:VisualCard[]=base.cards.slice(0,3).map(c=>({kind:'product',product:c.product,caption:productCaption(c.product,state,[c.product.brand,measurementText(c.product.specifications?.size??'',state),productPriceText(c.product,state),productStockText(c.product,state),c.matchLabel,c.quantityLabel]),buttons:[...(c.action?[{label:c.label,event:c.action}]:[]),...(base.buttons??[]).filter(b=>!(b.event.type==='shopping_action'&&b.event.action==='handoff'))].slice(0,3)}));
   return withContext({...reply('identify',[part(cards,base.text)],'product_or_specification'),replyLanguage:state.replyLanguage},base.contextLines);
  }
  const welcomeTurn=!state.draft.length&&!state.lastRequestId&&(!base.text||/^(?:Hi[!, ]|Hello[!, ]|வணக்கம்|Vanakkam)/i.test(base.text));
@@ -216,8 +218,11 @@ function visualEditPicker(state:ConversationState):RichReply {
  return reply('correction',parts,'correction_target');
 }
 
-function productCaption(name:string,details:(string|undefined)[],index?:number):string {
- const suffix=[...new Set(details.filter((d):d is string=>!!d&&!name.toLowerCase().includes(d.toLowerCase())))].join('\n'),prefix=index?`${index}. `:'';
+function productCaption(product:Product,state:ConversationState,details:(string|undefined)[],index?:number):string {
+ const name=productName(product,state);
+ const requiredPrice=referencePhotoLabel(product,state)||product.priceStatus==='confirm'||product.pricePaise===0&&product.priceStatus!=='free'?productPriceText(product,state):undefined;
+ const suffix=[...new Set([requiredPrice,...details].filter((d):d is string=>!!d&&!name.toLowerCase().includes(d.toLowerCase())))].join('\n'),prefix=index?`${index}. `:'';
  const available=Math.max(20,160-Array.from(suffix).length-prefix.length-1);
- return prefix+fitText(name,available)+(suffix?'\n'+suffix:'');
+ const caption=prefix+fitText(name,available)+(suffix?'\n'+suffix:'');
+ return referencePhotoLabel(product,state)?productPhotoCaption(caption,product,state):caption;
 }
