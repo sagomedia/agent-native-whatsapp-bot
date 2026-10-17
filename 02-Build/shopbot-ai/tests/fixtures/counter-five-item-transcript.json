@@ -1,7 +1,7 @@
 [
   {
     "stage": "identify",
-    "text": "Noted all 5 requested items:\n1 inch pipe — 1\n0.75 inch pipe — 1\nWall scraper 4 inch — 1\nRatchet PVC Pipe Cutter 42 mm — 1\nWhite paint 10 litre — 1\n1 inch pipe: Which kind of pipe do you mean: rigid PVC, a flexible hose, or a pump delivery/suction pipe?\n1 inch\n1 piece\nYour other items are kept.",
+    "text": "1 inch pipe · 1 piece: Which type of pipe do you need?",
     "cards": [],
     "actions": [
       {
@@ -58,7 +58,7 @@
   },
   {
     "stage": "identify",
-    "text": "Selected: 1 inch PVC Heavy Pipe Local · 1 piece.\n0.75 inch pipe: Which kind of pipe do you mean: rigid PVC, a flexible hose, or a pump delivery/suction pipe?\n0.75 inch\n1 piece\nYour other items are kept.",
+    "text": "0.75 inch pipe · 1 piece: Which type of pipe do you need?",
     "cards": [],
     "actions": [
       {
@@ -80,8 +80,17 @@
   },
   {
     "stage": "products",
-    "text": "Check the product photos.",
+    "text": "5 items",
     "cards": [
+      {
+        "kind": "instruction",
+        "caption": "Swipe to check → Then tap Show bill.",
+        "title": "5 items",
+        "lines": [
+          "Check every item",
+          "Estimate ₹2,040.00"
+        ]
+      },
       {
         "kind": "product",
         "caption": "1. 1 inch PVC Heavy Pipe Local\nLocal Heavy\n1 piece\n₹245.00 / 1 piece\nAvailable · shop record",
@@ -115,33 +124,6 @@
     ],
     "actions": [
       {
-        "label": "Change this",
-        "type": "edit_item"
-      },
-      {
-        "label": "Change this",
-        "type": "edit_item"
-      },
-      {
-        "label": "Change this",
-        "type": "edit_item"
-      },
-      {
-        "label": "Change this",
-        "type": "edit_item"
-      },
-      {
-        "label": "Change this",
-        "type": "edit_item"
-      }
-    ]
-  },
-  {
-    "stage": "products",
-    "text": "Your list · 5 items\n\n1. 1 inch PVC Heavy Pipe Local — 1 piece · ₹245.00\n\n2. 0.75 inch PVC Pipe Local — 1 piece · ₹180.00\n\n3. Wall scraper 4 inch — 1 piece · ₹65.00\n\n4. Ratchet PVC Pipe Cutter 42 mm — 1 piece · ₹350.00\n\n5. White paint 10 litre — 1 can · ₹1,200.00\n\nEstimate: ₹2,040.00\n\nCheck the list, then view the bill. Nothing is sent yet.",
-    "cards": [],
-    "actions": [
-      {
         "label": "Correct, show bill",
         "type": "confirm_products"
       },
@@ -149,19 +131,58 @@
         "label": "Change items",
         "type": "shopping_action",
         "action": "edit_list"
+      },
+      {
+        "label": "Correct, show bill",
+        "type": "confirm_products"
+      },
+      {
+        "label": "Change this",
+        "type": "edit_item"
+      },
+      {
+        "label": "Correct, show bill",
+        "type": "confirm_products"
+      },
+      {
+        "label": "Change this",
+        "type": "edit_item"
+      },
+      {
+        "label": "Correct, show bill",
+        "type": "confirm_products"
+      },
+      {
+        "label": "Change this",
+        "type": "edit_item"
+      },
+      {
+        "label": "Correct, show bill",
+        "type": "confirm_products"
+      },
+      {
+        "label": "Change this",
+        "type": "edit_item"
+      },
+      {
+        "label": "Correct, show bill",
+        "type": "confirm_products"
+      },
+      {
+        "label": "Change this",
+        "type": "edit_item"
       }
     ]
   },
   {
     "stage": "bill",
-    "text": "Estimated invoice 1 / 1\n\nEstimated total: ₹2,040.00\n\nCheck the bill, then send the order to the shop.",
+    "text": "Estimated total: ₹2,040.00",
     "cards": [
       {
         "kind": "bill",
         "caption": "Estimated invoice 1 / 1",
         "title": "Estimated invoice",
         "lines": [
-          "Page 1 / 1",
           "Final availability is checked by the shop"
         ],
         "billRows": [
