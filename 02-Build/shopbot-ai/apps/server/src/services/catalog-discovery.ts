@@ -3,6 +3,7 @@ import type {CatalogMap,DiscoveryPlan,DiscoveryResult,DiscoveryFacet,Product} fr
 import {discoveryPlanSchema} from '../../../../packages/contracts/index.js';
 import {normalize,tokens,oneEdit,matches,productColumns,productForContext} from './catalog.js';
 import {ToolError,type ActorContext} from './context.js';
+import {canonicalMeasurementUnit,normalizeFractionNumbers} from '../../../../packages/contracts/measurements.js';
 
 function bound(client:PoolClient,sql:string,parameters:unknown[]) {
  const ids=[...new Set([...sql.matchAll(/\$(\d+)/g)].map(m=>Number(m[1])))].sort((a,b)=>a-b);
@@ -23,6 +24,19 @@ export async function getCatalogMap(client:PoolClient,ctx:ActorContext,departmen
 }
 function unique(a:string[]){return [...new Set(a.map(s=>s.trim()).filter(Boolean))];}
 function namedObjectPhrase(query:string){return query.split(/\s+(?:for|with|on)\s+/i,1)[0].trim();}
+// Pack spellings are search evidence, not different product nouns. Keep the
+// value/unit pair for eligibility while searching the remaining identity words.
+const packMeasurePattern=/(?<![\p{L}\p{N}.])(\d+(?:\.\d+)?)\s*(lit(?:re|er)s?|ltrs?|lt|l|ml|kilograms?|kilos?|kgs?|g|லிட்டர்|லிட்டரு|கிலோ|கிராம்)(?![\p{L}\p{N}])/giu;
+function withoutPackMeasures(text:string){return normalizeFractionNumbers(text).replace(packMeasurePattern,' ').replace(/\s+/g,' ').trim();}
+function packMeasures(text:string){return [...normalizeFractionNumbers(text).matchAll(packMeasurePattern)].map(m=>({value:Number(m[1]),unit:canonicalMeasurementUnit(m[2])}));}
+function matchesPackMeasures(query:string,product:Product){
+ const requested=packMeasures(namedObjectPhrase(query));
+ if(!requested.length)return true;
+ const actual=packMeasures([product.name,...Object.entries(product.specifications??{}).filter(([key])=>['size','pack_size','pack_volume','volume','capacity','weight','pack_weight'].includes(key)).map(([,value])=>value)].join(' '));
+ const contents=product.sellingPolicy?.packContents;
+ if(contents)actual.push({value:contents.value,unit:canonicalMeasurementUnit(contents.unit)});
+ return requested.every(r=>actual.some(a=>a.value===r.value&&a.unit===r.unit));
+}
 // "Pipe" describes several physically different goods. A search hint or a
 // broad family alias such as "water pipe" cannot decide between rigid PVC,
 // flexible watering hose, and a pump delivery/suction pipe. Keep the request
@@ -50,7 +64,7 @@ function sameObjectHead(a:string,b:string):boolean {
 // The customer's named object is an eligibility constraint. Search expansions
 // may find that object, but cannot change it into a related tool or accessory.
 function namedFamilies(query:string,nodes:{id:string;kind:string;label:string;aliases:string[]}[],plan:DiscoveryPlan) {
- const words=tokens(namedObjectPhrase(query)).filter(t=>!/^\d/.test(t));
+ const words=tokens(withoutPackMeasures(namedObjectPhrase(query))).filter(t=>!/^\d/.test(t));
  const families=nodes.filter(n=>n.kind==='family');
  const phrases=families.flatMap(n=>[n.label,...n.aliases].map(alias=>({id:n.id,words:tokens(alias).filter(t=>!/^\d/.test(t))})));
  // The product head must match a curated noun, including its normalized plural.
@@ -74,7 +88,7 @@ function namedFamilies(query:string,nodes:{id:string;kind:string;label:string;al
  return unique([...explicit,...byHead]);
 }
 function unsupportedNamedObject(query:string,nodes:{kind:string;label:string;aliases:string[]}[]) {
- const words=tokens(namedObjectPhrase(query)).filter(t=>!/^\d/.test(t)&&!['inch','inches','mm','cm','piece','pieces','box','boxes'].includes(t));
+ const words=tokens(withoutPackMeasures(namedObjectPhrase(query))).filter(t=>!/^\d/.test(t)&&!['inch','inches','mm','cm','piece','pieces','box','boxes'].includes(t));
  if(!words.length)return false;
  const head=words.at(-1)!;
  // An unknown product head is not permission to show tools from an AI-suggested
@@ -86,7 +100,7 @@ function customerIdentityWords(query:string) {
  // Clauses after these prepositions describe a job or accessory. They do not
  // change the item being requested. Generic nouns do not identify a SKU.
  const generic=new Set(['tool','tools','item','items','product','products','some','need','want','a','an','the','and','or','one','two','x','of','my','me','show','please','inch','inches','mm','cm']);
- return tokens(namedObjectPhrase(query)).filter(t=>!/\d/.test(t)&&!generic.has(t));
+ return tokens(withoutPackMeasures(namedObjectPhrase(query))).filter(t=>!/\d/.test(t)&&!generic.has(t));
 }
 function supportsCustomerIdentity(query:string,product:Product,nodes:{id:string;kind:string;label:string;aliases:string[]}[],requestedFamilies:string[]) {
  const words=customerIdentityWords(query).filter(word=>!tokens(product.unit).some(unit=>word===unit||word===unit+'s'));
@@ -113,11 +127,11 @@ function specKeys(key:string){return key==='diameter'?['diameter','size']:['capa
 function specMatches(product:Product,key:string,value:string){return specKeys(key).some(k=>normalizedSpec(product.specifications?.[k]??'')===normalizedSpec(value));}
 function keywordScore(query:string,plan:DiscoveryPlan,product:Product) {
  const source=[product.name,...product.aliases,...(product.keywords??[])],words=unique(source.flatMap(tokens));
- const needles=tokens(query).filter(t=>!/^\d/.test(t));
+ const needles=tokens(withoutPackMeasures(query)).filter(t=>!/^\d/.test(t));
  const covered=needles.filter(t=>words.some(w=>w===t||oneEdit(t,w)));
  let score=covered.length*35+(normalize(query)===normalize(product.name)?100:0);
- for(const hint of plan.keywords)for(const word of tokens(hint))if(words.some(w=>w===word||oneEdit(word,w)))score+=4;
- const hintMatches=plan.keywords.filter(h=>{const ts=tokens(h).filter(t=>!/^\d/.test(t));return ts.length>0&&ts.every(t=>words.some(w=>w===t||oneEdit(t,w)));});
+ for(const hint of plan.keywords)for(const word of tokens(withoutPackMeasures(hint)))if(words.some(w=>w===word||oneEdit(word,w)))score+=4;
+ const hintMatches=plan.keywords.filter(h=>{const ts=tokens(withoutPackMeasures(h)).filter(t=>!/^\d/.test(t));return ts.length>0&&ts.every(t=>words.some(w=>w===t||oneEdit(t,w)));});
  score+=hintMatches.length*45;
  const matched=needles.length>0&&covered.length===needles.length||hintMatches.length>0;
  return {score,match:matched?'keyword_match' as const:'related' as const,reason:matched?'Matches your search words':'Related to the category or job; check that this is what you meant'};
@@ -146,24 +160,29 @@ export async function discoverProducts(client:PoolClient,ctx:ActorContext,query:
  if(plan.familyIds?.some(id=>!nodes.some(n=>n.id===id&&n.kind==='family')))throw new ToolError('Choose product types from this shop’s catalog.');
  if(plan.familyIds&&plan.departmentId&&plan.familyIds.some(id=>!nodes.some(n=>n.id===id&&n.parent_id===plan.departmentId)))throw new ToolError('Those types do not belong to the selected department.');
  if(plan.familyId&&plan.departmentId&&!nodes.some(n=>n.id===plan.familyId&&n.parent_id===plan.departmentId))throw new ToolError('That family does not belong to the selected department.');
- const identified=(await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND active=true AND (lower(sku)=lower($2) OR lower(name)=lower($2) OR EXISTS(SELECT 1 FROM jsonb_array_elements_text(aliases) a WHERE lower(a)=lower($2))) ORDER BY sku LIMIT 2`,[ctx.storeId,query.trim()])).rows.map(p=>productForContext(p,ctx));
+ // Aliases may be shared by many variants. Only the strongest matching tier
+ // participates in uniqueness: exact SKU, then exact name, then exact alias.
+ const identified=(await client.query(`SELECT ${productColumns} FROM (
+  SELECT ${productColumns},dense_rank() OVER(ORDER BY CASE WHEN lower(sku)=lower($2) THEN 0 WHEN lower(name)=lower($2) THEN 1 ELSE 2 END) AS identity_rank
+  FROM products WHERE store_id=$1 AND active=true AND (lower(sku)=lower($2) OR lower(name)=lower($2) OR EXISTS(SELECT 1 FROM jsonb_array_elements_text(aliases) a WHERE lower(a)=lower($2)))
+ ) identified WHERE identity_rank=1 ORDER BY sku LIMIT 2`,[ctx.storeId,query.trim()])).rows.map(p=>productForContext(p,ctx));
  const candidate=identified.length===1?identified[0]:undefined;
  const pumpName=/\b(?:pump|pumping|suction|delivery)\b|மோட்டார்|பம்ப்/iu;
  const namedPumpAlias=!!candidate&&pumpName.test(query)&&[candidate.name,...candidate.aliases].some(name=>pumpName.test(name));
  const namedCatalogProduct=!!candidate&&(normalize(candidate.sku)===normalize(query)||normalize(candidate.name)===normalize(query)||namedPumpAlias);
  const requestedFamilies=namedCatalogProduct?[]:namedFamilies(query,nodes,plan);
  if(needsPipeType(query)&&!namedCatalogProduct)return {query,plan,products:[],rankings:[],totalCount:0,retrievedCount:0,facets:[],noExactMatch:true};
- const root=candidate&&(!plan.selectedSkus||plan.selectedSkus.includes(candidate.sku))&&(!plan.familyId||candidate.familyId===plan.familyId)&&(!plan.familyIds||plan.familyIds.includes(candidate.familyId??''))&&(!plan.departmentId||nodes.some(n=>n.id===candidate.familyId&&n.parent_id===plan.departmentId))&&(!plan.brand||normalize(candidate.brand??'')===normalize(plan.brand))&&Object.entries(plan.specifications??{}).every(([key,value])=>specMatches(candidate,key,value))?candidate:undefined;
+ const root=candidate&&matchesPackMeasures(query,candidate)&&(!plan.selectedSkus||plan.selectedSkus.includes(candidate.sku))&&(!plan.familyId||candidate.familyId===plan.familyId)&&(!plan.familyIds||plan.familyIds.includes(candidate.familyId??''))&&(!plan.departmentId||nodes.some(n=>n.id===candidate.familyId&&n.parent_id===plan.departmentId))&&(!plan.brand||normalize(candidate.brand??'')===normalize(plan.brand))&&Object.entries(plan.specifications??{}).every(([key,value])=>specMatches(candidate,key,value))?candidate:undefined;
  if(requestedFamilies.length&&(plan.familyId&&!requestedFamilies.includes(plan.familyId)||plan.familyIds&&!plan.familyIds.some(id=>requestedFamilies.includes(id))))return {query,plan,products:[],rankings:[],totalCount:0,retrievedCount:0,facets:[],noExactMatch:true};
  if(!requestedFamilies.length&&!root&&unsupportedNamedObject(query,nodes)){
-  const head=tokens(objectPhrase).filter(t=>!/^\d/.test(t)&&!['inch','inches','mm','cm','piece','pieces','box','boxes'].includes(t)).at(-1)!;
+  const head=tokens(withoutPackMeasures(objectPhrase)).filter(t=>!/^\d/.test(t)&&!['inch','inches','mm','cm','piece','pieces','box','boxes'].includes(t)).at(-1)!;
   const hasNamedProduct=(await client.query("SELECT 1 FROM products WHERE store_id=$1 AND active=true AND (search_vector @@ plainto_tsquery('simple',$2) OR lower(unit)=lower($2)) LIMIT 1",[ctx.storeId,head])).rowCount;
   if(!hasNamedProduct)return {query,plan,products:[],rankings:[],totalCount:0,retrievedCount:0,facets:[],noExactMatch:true};
  }
  // An identified product still gets meaningful peers, constrained to its family,
  // catalog unit and exact stored specifications. No arbitrary filler images.
  const effective:DiscoveryPlan=root?{...plan,keywords:unique([root.name,...plan.keywords]).slice(0,8),familyId:root.familyId??plan.familyId,specifications:root.specifications??plan.specifications}:objectPhrase!==query?{...plan,keywords:unique([objectPhrase,...plan.keywords]).slice(0,8)}:plan;
- const hints=unique([root?.name??query,...effective.keywords]).slice(0,9),parameters:unknown[]=[ctx.storeId];
+ const hints=unique([root?.name??query,...effective.keywords].flatMap(h=>[h,withoutPackMeasures(h)])).slice(0,12),parameters:unknown[]=[ctx.storeId];
  const add=(v:unknown)=>{parameters.push(v);return '$'+parameters.length;};
  const constraints=['p.store_id=$1','p.active=true'];
  // The recommendation stage's explicit selection is a display boundary. An
@@ -228,7 +247,7 @@ export async function discoverProducts(client:PoolClient,ctx:ActorContext,query:
   if(vals.length<2||key==='family'&&effective.familyId||key==='brand'&&(effective.brand||root?.brand)||key.startsWith('spec:')&&effective.specifications?.[key.slice(5)])continue;
   facets.push({key,label:key==='family'?'product type':key==='brand'?'brand':key.slice(5).replaceAll('_',' '),values:vals.slice(0,3).map(f=>({value:f.value,localNames:key==='family'?nodes.find(n=>n.id===f.value)?.local_names:undefined,label:key==='family'?nodes.find(n=>n.id===f.value)?.label??f.value:f.value,count:f.count}))});
  }
- const candidates=rows.map(p=>productForContext(p,ctx)).filter(p=>supportsCustomerIdentity(query,p,nodes,requestedFamilies)&&(usedWhere!==where||requestedFamilies.includes(p.familyId??'')||!!effective.departmentId||!!effective.familyId||!!effective.familyIds?.includes(p.familyId??'')||hintedFamilies.includes(p.familyId??'')||keywordScore(query,effective,p).match==='keyword_match')),scores=new Map(candidates.map(p=>[p.sku,keywordScore(query,effective,p)]));
+ const candidates=rows.map(p=>productForContext(p,ctx)).filter(p=>matchesPackMeasures(query,p)&&supportsCustomerIdentity(query,p,nodes,requestedFamilies)&&(usedWhere!==where||requestedFamilies.includes(p.familyId??'')||!!effective.departmentId||!!effective.familyId||!!effective.familyIds?.includes(p.familyId??'')||hintedFamilies.includes(p.familyId??'')||keywordScore(query,effective,p).match==='keyword_match')),scores=new Map(candidates.map(p=>[p.sku,keywordScore(query,effective,p)]));
  if(root){const found=candidates.find(p=>p.sku===root.sku);if(!found)candidates.unshift(root);scores.set(root.sku,{score:1000,match:'keyword_match',reason:'This catalog item matches the requested identity; check its photo'});}
  if(effective.familyId)for(const p of candidates)if(p.familyId===effective.familyId&&p.sku!==root?.sku)scores.set(p.sku,{...scores.get(p.sku)!,score:scores.get(p.sku)!.score+20,match:'keyword_match',reason:'Matches the chosen product family and filters; check the photo and name'});
  for(const p of candidates)if(intendedFamilies.length&&!intendedFamilies.includes(p.familyId))scores.set(p.sku,{...scores.get(p.sku)!,match:'related',reason:'Related option in this department; it is not an exact match for the requested product type'});
