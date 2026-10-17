@@ -29,6 +29,7 @@ export type WhatsAppFetch=typeof fetch;
 
 export class WhatsAppChannel {
   readonly runtime:ConversationRuntime;
+  private readonly planningConversations=new Set<string>();
   constructor(private pool:Pool,readonly config:WhatsAppConfig,private request:WhatsAppFetch=fetch,private provider?:Interpreter){
     if(config.aiEnabled&&(!provider||provider.mode!=='live'||!provider.freeQuota&&(!config.paidEnabled||!config.budgetMicrousd||config.budgetMicrousd>5000000)))throw new Error('WhatsApp AI requires the configured free-tier or explicitly budgeted interpreter');
     if(!config.aiEnabled&&provider)throw new Error('WhatsApp AI has not been enabled');
@@ -165,10 +166,11 @@ export class WhatsAppChannel {
   }
   async verified(){await this.pool.query('UPDATE whatsapp_channels SET verified_at=now() WHERE phone_id=$1',[this.config.phoneId]);}
   async processMediaNext(){
+    if(!this.config.processEnabled||!this.config.mediaEnabled)return false;
     const client=await this.pool.connect();let row:any;
     try{
       await client.query('BEGIN');
-      row=(await client.query(`SELECT a.*,m.conversation_id,c.actor,c.operator_revision FROM whatsapp_media a JOIN messages m ON m.id=a.message_id JOIN conversations c ON c.id=m.conversation_id JOIN whatsapp_conversations w ON w.conversation_id=c.id WHERE c.store_id=$1 AND w.phone_id=$2 AND (a.state='pending' OR a.state='fetching' AND a.lease_until<=now()) ORDER BY m.sequence LIMIT 1 FOR UPDATE OF a SKIP LOCKED`,[this.config.storeId,this.config.phoneId])).rows[0];
+      row=(await client.query(`SELECT a.*,m.conversation_id,c.actor,c.operator_revision FROM whatsapp_media a JOIN messages m ON m.id=a.message_id JOIN conversations c ON c.id=m.conversation_id JOIN whatsapp_conversations w ON w.conversation_id=c.id WHERE c.store_id=$1 AND w.phone_id=$2 AND (a.state='pending' OR a.state='fetching' AND a.lease_until<=now()) AND m.id=(SELECT head.id FROM messages head WHERE head.conversation_id=c.id AND head.status IN ('pending','processing') ORDER BY head.sequence LIMIT 1) ORDER BY m.sequence LIMIT 1 FOR UPDATE OF a SKIP LOCKED`,[this.config.storeId,this.config.phoneId])).rows[0];
       if(row)row.claimLease=(await client.query("UPDATE whatsapp_media SET state='fetching',lease_until=now()+interval '120 seconds' WHERE message_id=$1 RETURNING lease_until::text AS lease",[row.message_id])).rows[0].lease;
       await client.query('COMMIT');
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
@@ -236,17 +238,30 @@ export class WhatsAppChannel {
     try{await client.query('BEGIN');const result=await savePricingAnalytics(client,{storeId:c.storeId,phoneId:c.phoneId,accountTimezone:c.accountTimezone,rateCard:c.pricingRateCard},{wabaId:c.wabaId,businessPhone:c.businessPhoneNumber,currency:c.accountCurrency,start:range.start,end},JSON.parse(text));await client.query('COMMIT');return result;}
     catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
   }
-  async processNext(){
+  async processNext(options:{skipMedia?:boolean}={}){
     if(!this.config.processEnabled)return false;
     if(this.config.typingEnabled&&this.config.sendEnabled){
       const c=this.config;
       const indicated=await this.pool.query(`WITH candidate AS (SELECT m.id,i.provider_id FROM messages m JOIN conversations v ON m.conversation_id=v.id JOIN whatsapp_conversations w ON v.id=w.conversation_id JOIN whatsapp_inbound i ON i.message_id=m.id JOIN stores s ON v.store_id=s.id WHERE s.id=$1 AND w.phone_id=$2 AND w.recipient=ANY($3::text[]) AND NOT s.operator_paused AND v.operator_mode='assistant' AND w.last_inbound_at>now()-interval '24 hours' AND m.status='pending' AND m.typing_indicated_at IS NULL AND (m.not_before IS NULL OR m.not_before<=now()) AND m.id=(SELECT oldest.id FROM messages oldest WHERE oldest.conversation_id=v.id AND oldest.status='pending' ORDER BY oldest.sequence LIMIT 1) ORDER BY m.sequence LIMIT 1 FOR UPDATE OF m SKIP LOCKED) UPDATE messages m SET typing_indicated_at=now() FROM candidate c WHERE m.id=c.id RETURNING c.provider_id`,[c.storeId,c.phoneId,c.recipients]);
       for(const row of indicated.rows.slice(0,1)){try{await this.request(`https://graph.facebook.com/${c.graphVersion}/${c.phoneId}/messages`,{method:'POST',headers:{authorization:'Bearer '+c.accessToken,'content-type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',status:'read',message_id:row.provider_id,typing_indicator:{type:'text'}}),signal:AbortSignal.timeout(1500)});}catch{}}
     }
-    await this.processMediaNext();
-    const row=(await this.pool.query(`SELECT c.id,c.actor FROM whatsapp_conversations w JOIN conversations c ON c.id=w.conversation_id JOIN stores s ON s.id=c.store_id JOIN messages m ON m.conversation_id=c.id
-      WHERE w.phone_id=$1 AND c.store_id=$2 AND NOT s.operator_paused AND c.operator_mode='assistant' AND (m.status='pending' OR m.status='processing' AND m.lease_until<=now()) AND (m.not_before IS NULL OR m.not_before<=now()) AND NOT EXISTS(SELECT 1 FROM whatsapp_media a WHERE a.message_id=m.id AND a.state IN ('pending','fetching')) ORDER BY m.sequence LIMIT 1`,[this.config.phoneId,this.config.storeId])).rows[0];
-    return row?this.runtime.processNext({storeId:this.config.storeId,conversationId:row.id,actor:row.actor,role:'customer'}):false;
+    if(!options.skipMedia)await this.processMediaNext();
+    // Select only each conversation's oldest unfinished message. A delayed or
+    // undecoded first message must never let a later turn overtake it. Excluding
+    // active leases lets other chats advance while a provider call is in flight.
+    // The bounded candidate batch handles simultaneous local selectors; runtime
+    // locking and claim tokens still protect competing processes and restarts.
+    const candidates=(await this.pool.query(`SELECT c.id,c.actor FROM whatsapp_conversations w JOIN conversations c ON c.id=w.conversation_id JOIN stores s ON s.id=c.store_id
+      JOIN LATERAL (SELECT id,sequence,not_before,status,lease_until FROM messages WHERE conversation_id=c.id AND status IN ('pending','processing') ORDER BY sequence LIMIT 1) m ON true
+      WHERE w.phone_id=$1 AND c.store_id=$2 AND NOT s.operator_paused AND c.operator_mode='assistant' AND NOT(c.id=ANY($3::uuid[]))
+      AND NOT EXISTS(SELECT 1 FROM messages active WHERE active.conversation_id=c.id AND active.status='processing' AND active.lease_until>now())
+      AND (m.status='pending' OR m.lease_until<=now()) AND (m.not_before IS NULL OR m.not_before<=now())
+      AND NOT EXISTS(SELECT 1 FROM whatsapp_media a WHERE a.message_id=m.id AND a.state IN ('pending','fetching')) ORDER BY m.sequence LIMIT 10`,[this.config.phoneId,this.config.storeId,[...this.planningConversations]])).rows;
+    const row=candidates.find(candidate=>!this.planningConversations.has(candidate.id));
+    if(!row)return false;
+    this.planningConversations.add(row.id);
+    try{return await this.runtime.processNext({storeId:this.config.storeId,conversationId:row.id,actor:row.actor,role:'customer'});}
+    finally{this.planningConversations.delete(row.id);}
   }
   async sendNext(){
     const c=this.config;
@@ -264,7 +279,7 @@ export class WhatsAppChannel {
       // a later confirmation while the earlier invoice pages are still in flight.
       const row=(await client.query(`SELECT o.*,m.text,w.recipient,w.last_inbound_at,c.operator_mode,c.operator_revision AS current_revision,s.operator_paused
         FROM whatsapp_outbox o JOIN whatsapp_conversations w ON w.conversation_id=o.conversation_id JOIN conversations c ON c.id=w.conversation_id JOIN stores s ON s.id=c.store_id JOIN messages m ON m.id=o.message_id
-        WHERE w.phone_id=$1 AND c.store_id=$2 AND o.state='queued' AND o.next_attempt_at<=now() AND NOT EXISTS(SELECT 1 FROM messages prior JOIN whatsapp_outbox po ON po.message_id=prior.id WHERE prior.reply_group_id=m.reply_group_id AND prior.part_index<m.part_index AND po.state NOT IN ('delivered','read')) AND
+        WHERE w.phone_id=$1 AND c.store_id=$2 AND o.state='queued' AND o.next_attempt_at<=now() AND NOT EXISTS(SELECT 1 FROM messages earlier JOIN whatsapp_outbox pending ON pending.message_id=earlier.id WHERE earlier.conversation_id=m.conversation_id AND earlier.sequence<m.sequence AND pending.operator_revision=o.operator_revision AND pending.state IN ('queued','sending','unknown')) AND NOT EXISTS(SELECT 1 FROM messages prior JOIN whatsapp_outbox po ON po.message_id=prior.id WHERE prior.reply_group_id=m.reply_group_id AND prior.part_index<m.part_index AND po.state NOT IN ('delivered','read')) AND
         (o.sender_kind='owner' AND c.operator_mode='owner' OR o.sender_kind='system' OR o.sender_kind='assistant' AND NOT s.operator_paused AND c.operator_mode='assistant') ORDER BY m.sequence LIMIT 1 FOR UPDATE OF o,c SKIP LOCKED`,[c.phoneId,c.storeId])).rows[0];
       if(!row){await client.query('COMMIT');return false;}
       if(row.sender_kind==='assistant'&&(row.operator_paused||row.operator_mode==='owner')){await client.query('COMMIT');return false;}
