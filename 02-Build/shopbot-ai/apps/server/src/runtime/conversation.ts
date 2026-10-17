@@ -1,4 +1,4 @@
-import {canAddToOrder,orderListChoice,askOrderItems} from '../services/order-list-choice.js';
+import {canAddToOrder,orderListChoice,askOrderItems,refreshOrderListChoice} from '../services/order-list-choice.js';
 import {acceptOrderQuote} from '../services/order-quotes.js';
 import {actionDeliveryReady} from '../services/review-delivery.js';
 import {acknowledgementOnly,amendmentIntent,explicitNewOrder,cancellationIntent,proposeAmendment,customerAmendmentAction,amendmentReviewReply} from '../services/order-amendments.js';
@@ -273,7 +273,7 @@ export class ConversationRuntime {
           const paymentText=['verified','refund_pending','refunded'].includes(paymentState)?say(current,paymentState==='verified'?'The shop has already verified your ₹10 advance.':paymentState==='refunded'?'The shop has recorded your ₹10 refund.':'Your advance was received for a closed order. The shop needs to arrange its refund.',paymentState==='verified'?'₹10 advance வந்திருக்குனு கடை confirm பண்ணியிருக்கு.':paymentState==='refunded'?'₹10 refund complete ஆகியிருக்குனு கடை confirm பண்ணியிருக்கு.':'இந்த order முடிஞ்சிருக்கு. வந்த ₹10 advance-ஐ கடை refund பண்ணணும்.','Advance status-ai kadai confirm panniyirukku.'):customerCopy('paymentClaimed',current);
           rich={...plainReply(paymentState==='pay_at_shop'?customerCopy('demoPayAtShop',current):paymentText),readOnly:true};message=rich.text;
         } else if(!failure&&current.visualOrdering&&current.lastRequestId&&interpretation?.conversation==='greeting'&&!interpretation.operations.length){
-          rich=orderListChoice(current,await canAddToOrder(client,ctx,current),claimed.memory?.purpose==='list_choice'?claimed.memory.newList?.length:undefined);message=rich.text;
+          rich=claimed.memory?.purpose==='list_choice'&&claimed.memory.sourceVersion!==current.version?await refreshOrderListChoice(client,ctx,current,claimed.memory):orderListChoice(current,await canAddToOrder(client,ctx,current),claimed.memory?.purpose==='list_choice'?claimed.memory.newList?.length:undefined);message=rich.text;
         } else if(!failure&&current.lastRequestId&&(postOrderChange||cancellationIntent(turnText))){
           if(!interpretation?.operations.length&&!cancellationIntent(turnText))rich={...plainReply(customerCopy('amendmentTarget',current)),readOnly:true};
           else rich=await proposeAmendment(client,ctx,current,claimed.id,interpretation?.operations??[],this.tools,cancellationIntent(turnText));
@@ -469,6 +469,7 @@ export class ConversationRuntime {
       } catch(error) {
         await client.query('ROLLBACK TO SAVEPOINT turn_actions');
         message=customerError(error instanceof Error?error.message:'Action failed. Your draft is retained.',current,error instanceof ToolError?error.code:undefined);rich={...plainReply(message),stage:'error',clarificationReason:error instanceof ToolError?error.code:'action_failed'};
+        if(current.visualOrdering&&current.lastRequestId&&error instanceof ToolError&&error.code==='stale_question'&&claimed.memory?.purpose==='list_choice')rich=await refreshOrderListChoice(client,ctx,current,claimed.memory);
         if(current.visualOrdering&&error instanceof ToolError&&['stale_confirmation','review_incomplete'].includes(error.code)){const kept=await loadState(client,ctx);if(kept.draft.length&&!kept.lastRequestId){const renewed=await this.tools.invokeInTransaction(client,ctx,{name:'preview_order',args:{expectedVersion:kept.version}},claimed.id+':fresh-review');rich=presentReply(renewed,renewed.state!);}}
       }
       const finalState=await loadState(client,ctx);

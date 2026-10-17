@@ -1241,8 +1241,8 @@
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
         183,
-        601,
-        714
+        602,
+        715
       ],
       "text": "பில் எவ்வளவு",
       "raw": "'பில் எவ்வளவு'"
@@ -1253,8 +1253,8 @@
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
         183,
-        601,
-        714
+        602,
+        715
       ],
       "text": "பில் காட்டு",
       "raw": "'பில் காட்டு'"
@@ -1395,7 +1395,7 @@
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
         306,
-        482
+        483
       ],
       "text": "கடையிடம் பேசு",
       "raw": "'கடையிடம் பேசு'"
@@ -1485,7 +1485,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        480
+        481
       ],
       "text": " முந்தைய பொருட்களும் பட்டியலில் உள்ளன.",
       "raw": "' முந்தைய பொருட்களும் பட்டியலில் உள்ளன.'"
@@ -1495,7 +1495,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        480
+        481
       ],
       "text": "சேர்த்திருக்கிறேன்: ${details}.",
       "raw": "`சேர்த்திருக்கிறேன்: ${details}.`"
@@ -1505,7 +1505,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        482
+        483
       ],
       "text": "மீண்டும் முயல்",
       "raw": "'மீண்டும் முயல்'"
@@ -1515,7 +1515,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        484
+        485
       ],
       "text": "உங்கள் பட்டியலைப் படித்தேன். கடை சரிபார்க்க வேண்டிய வரிகள் உட்பட எல்லாப் பொருட்களையும் சரிபாருங்கள்.",
       "raw": "'உங்கள் பட்டியலைப் படித்தேன். கடை சரிபார்க்க வேண்டிய வரிகள் உட்பட எல்லாப் பொருட்களையும் சரிபாருங்கள்.'"
@@ -1525,7 +1525,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        503
+        504
       ],
       "text": "பொருளைத் தேர்வு செய்",
       "raw": "'பொருளைத் தேர்வு செய்'"
@@ -1535,7 +1535,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        503
+        504
       ],
       "text": "புதிய பட்டியல்",
       "raw": "'புதிய பட்டியல்'"
@@ -1545,7 +1545,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        504
+        505
       ],
       "text": "பட்டியலில் எந்தப் பொருளைச் சொன்னீர்கள்?",
       "raw": "'பட்டியலில் எந்தப் பொருளைச் சொன்னீர்கள்?'"
@@ -1555,7 +1555,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        505
+        506
       ],
       "text": "மற்ற தெளிவான மாற்றங்கள் சேமிக்கப்பட்டன. ",
       "raw": "'மற்ற தெளிவான மாற்றங்கள் சேமிக்கப்பட்டன. '"
@@ -1565,7 +1565,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        505
+        506
       ],
       "text": "கீழே தேர்வு செய்யுங்கள் அல்லது பொருளின் வகையைச் சொல்லுங்கள். பட்டியல் அப்படியே உள்ளது.",
       "raw": "'கீழே தேர்வு செய்யுங்கள் அல்லது பொருளின் வகையைச் சொல்லுங்கள். பட்டியல் அப்படியே உள்ளது.'"
@@ -1575,7 +1575,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        509
+        510
       ],
       "text": "கேட்டது: ${interpretation.transcript.slice(0,250)}",
       "raw": "`கேட்டது: ${interpretation.transcript.slice(0,250)}`"
@@ -1585,7 +1585,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        540
+        541
       ],
       "text": "செயலாக்க நேரம் முடிந்தது. உங்கள் பட்டியல் அப்படியே உள்ளது. மீண்டும் முயலுங்கள் அல்லது கடையிடம் உதவி கேளுங்கள்.",
       "raw": "'செயலாக்க நேரம் முடிந்தது. உங்கள் பட்டியல் அப்படியே உள்ளது. மீண்டும் முயலுங்கள் அல்லது கடையிடம் உதவி கேளுங்கள்.'"
@@ -1595,7 +1595,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/runtime/conversation.ts",
       "lines": [
-        601
+        602
       ],
       "text": "உத்தேச பில்",
       "raw": "'உத்தேச பில்'"
@@ -2047,7 +2047,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/order-list-choice.ts",
       "lines": [
-        13
+        14
       ],
       "text": "${count} items குறிச்சுக்கிட்டேன்.",
       "raw": "`${count} items குறிச்சுக்கிட்டேன்.`"
@@ -2057,7 +2057,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/order-list-choice.ts",
       "lines": [
-        14
+        15
       ],
       "text": "புது list வேணுமா, இந்த order-ல சேர்க்கணுமா?",
       "raw": "'புது list வேணுமா, இந்த order-ல சேர்க்கணுமா?'"
@@ -2067,7 +2067,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/order-list-choice.ts",
       "lines": [
-        14
+        15
       ],
       "text": "இந்த order முடிஞ்சிருக்கு. புது list தொடங்கலாமா?",
       "raw": "'இந்த order முடிஞ்சிருக்கு. புது list தொடங்கலாமா?'"
@@ -2077,7 +2077,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/order-list-choice.ts",
       "lines": [
-        15
+        16
       ],
       "text": "புது list",
       "raw": "'புது list'"
@@ -2087,7 +2087,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/order-list-choice.ts",
       "lines": [
-        15
+        16
       ],
       "text": "இந்த order-ல சேர்",
       "raw": "'இந்த order-ல சேர்'"
@@ -2097,7 +2097,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/order-list-choice.ts",
       "lines": [
-        18
+        19
       ],
       "text": "இந்த order-ல என்ன சேர்க்கணும்? Text அல்லது voice-ல சொல்லுங்க.",
       "raw": "'இந்த order-ல என்ன சேர்க்கணும்? Text அல்லது voice-ல சொல்லுங்க.'"
@@ -4350,7 +4350,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/whatsapp-channel.ts",
       "lines": [
-        47
+        48
       ],
       "text": "உங்கள் பட்டியல் உள்ளது. ஒரே செய்தியில் காட்ட விவரங்கள் அதிகமாக உள்ளன. மாற்ற அல்லது நீக்க வேண்டிய பொருளைச் சொல்லுங்கள்; பிறகு பட்டியலை மீண்டும் பார்க்கலாம்.",
       "raw": "'உங்கள் பட்டியல் உள்ளது. ஒரே செய்தியில் காட்ட விவரங்கள் அதிகமாக உள்ளன. மாற்ற அல்லது நீக்க வேண்டிய பொருளைச் சொல்லுங்கள்; பிறகு பட்டியலை மீண்டும் பார்க்கலாம்.'"
@@ -4360,7 +4360,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/whatsapp-channel.ts",
       "lines": [
-        133
+        135
       ],
       "text": "உங்கள் தகவல் சேமிக்கப்பட்டது. இந்த உரையாடலை இப்போது கடை கவனிக்கிறது; இங்கே பதில் தரும். கடை மீண்டும் ஒப்படைத்ததும் உதவியாளர் தொடரும்.",
       "raw": "'உங்கள் தகவல் சேமிக்கப்பட்டது. இந்த உரையாடலை இப்போது கடை கவனிக்கிறது; இங்கே பதில் தரும். கடை மீண்டும் ஒப்படைத்ததும் உதவியாளர் தொடரும்.'"
@@ -4370,7 +4370,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/whatsapp-channel.ts",
       "lines": [
-        139
+        141
       ],
       "text": "இந்தத் தேர்வு காலாவதியானது. தற்போதைய படங்களில் தேர்வு செய்யுங்கள் அல்லது பட்டியலைப் பாருங்கள். பட்டியல் மாறவில்லை.",
       "raw": "'இந்தத் தேர்வு காலாவதியானது. தற்போதைய படங்களில் தேர்வு செய்யுங்கள் அல்லது பட்டியலைப் பாருங்கள். பட்டியல் மாறவில்லை.'"
@@ -4380,7 +4380,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/whatsapp-channel.ts",
       "lines": [
-        139
+        141
       ],
       "text": "உங்கள் கோரிக்கையை எழுதுங்கள் அல்லது பொருள் பொத்தான்களைப் பயன்படுத்துங்கள்.",
       "raw": "'உங்கள் கோரிக்கையை எழுதுங்கள் அல்லது பொருள் பொத்தான்களைப் பயன்படுத்துங்கள்.'"
@@ -4390,7 +4390,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/whatsapp-channel.ts",
       "lines": [
-        140
+        142
       ],
       "text": "Bill முழுசா இன்னும் வந்து சேரல. கொஞ்சம் wait பண்ணிட்டு, latest bill-ல கடைக்கு அனுப்பு அழுத்துங்க. Order இன்னும் அனுப்பல.",
       "raw": "'Bill முழுசா இன்னும் வந்து சேரல. கொஞ்சம் wait பண்ணிட்டு, latest bill-ல கடைக்கு அனுப்பு அழுத்துங்க. Order இன்னும் அனுப்பல.'"
@@ -4400,7 +4400,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/whatsapp-channel.ts",
       "lines": [
-        141
+        143
       ],
       "text": "கோரிக்கை நிலை",
       "raw": "'கோரிக்கை நிலை'"
@@ -4410,7 +4410,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/whatsapp-channel.ts",
       "lines": [
-        141
+        143
       ],
       "text": "பட்டியலைப் பார்",
       "raw": "'பட்டியலைப் பார்'"
@@ -4420,7 +4420,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/whatsapp-channel.ts",
       "lines": [
-        192
+        196
       ],
       "text": "30 seconds-க்குள்ள voice அனுப்புங்க. உங்க list அப்படியே இருக்கு.",
       "raw": "'30 seconds-க்குள்ள voice அனுப்புங்க. உங்க list அப்படியே இருக்கு.'"
@@ -4430,7 +4430,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/whatsapp-channel.ts",
       "lines": [
-        192
+        196
       ],
       "text": "Voice process பண்ண நேரம் ஆகிடுச்சு. உங்க list அப்படியே இருக்கு. சின்ன voice அல்லது text அனுப்புங்க.",
       "raw": "'Voice process பண்ண நேரம் ஆகிடுச்சு. உங்க list அப்படியே இருக்கு. சின்ன voice அல்லது text அனுப்புங்க.'"
@@ -4440,7 +4440,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/whatsapp-channel.ts",
       "lines": [
-        192
+        196
       ],
       "text": "Voice-ஐ open பண்ண முடியல. உங்க list அப்படியே இருக்கு.",
       "raw": "'Voice-ஐ open பண்ண முடியல. உங்க list அப்படியே இருக்கு.'"
@@ -4450,7 +4450,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/whatsapp-channel.ts",
       "lines": [
-        192
+        196
       ],
       "text": "அந்தப் படத்தைத் திறக்க முடியவில்லை; உங்கள் பட்டியல் உள்ளது.",
       "raw": "'அந்தப் படத்தைத் திறக்க முடியவில்லை; உங்கள் பட்டியல் உள்ளது.'"
@@ -4460,7 +4460,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/whatsapp-channel.ts",
       "lines": [
-        194
+        198
       ],
       "text": "பொருட்களைப் பார்",
       "raw": "'பொருட்களைப் பார்'"
@@ -4470,7 +4470,7 @@
       "section": "Fixed replies, labels and message templates",
       "file": "apps/server/src/services/whatsapp-channel.ts",
       "lines": [
-        194
+        198
       ],
       "text": "கடையிடம் பேசு",
       "raw": "'கடையிடம் பேசு'"

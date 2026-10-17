@@ -5,7 +5,7 @@ Parent implementation: PR #9. This follow-up retains the current inventory, quot
 
 ## Returning customer
 
-A greeting with a submitted order offers New list / Add to this order. A new single-item or multi-item text/voice request offers the same explicit choice before any order mutation. The original parsed request stays in persisted conversation memory, even when catalog prices change. New list applies it once using the current catalog; Add to this order creates the existing amendment review and waits for consent. An owner-closed order cannot be amended. Choosing the existing order before sending items remembers that target for the next request. Fresh list-choice versions reject stale buttons. No order is assumed collected merely because time has passed.
+A greeting with a submitted order offers New list / Add to this order. A new single-item or multi-item text/voice request offers the same explicit choice before any order mutation. The original parsed request stays in persisted conversation memory, even when catalog prices change. New list applies it once using the current catalog; Add to this order creates the existing amendment review and waits for consent. An owner-closed order cannot be amended. Choosing the existing order before sending items remembers that target for the next request. Fresh list-choice versions reject stale buttons. A shop-quote revision while the choice is on screen re-asks with fresh buttons and retains the voice request; this is covered through the real WhatsApp webhook/outbox path as well as the simulator. No order is assumed collected merely because time has passed.
 
 ## Product review
 

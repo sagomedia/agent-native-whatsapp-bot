@@ -39,9 +39,9 @@ test('known stock and price remain visible when a metre conversion needs shop ve
 
 for(const language of ['ta','en'] as const)test(`${language} uses one instruction language and one unit label`,()=>fixture(async(pool,i)=>{
  await pool.query('UPDATE conversations SET reply_language=$1,reply_language_explicit=true WHERE id=$2',[language,i.context.conversationId]);
- const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});const s=await text(i,r,'one hose');const instruction=last(s).text;assert.equal(last(s).parts?.[0].cards.length,0);
- if(language==='ta'){assert.match(instruction,/[\u0b80-\u0bff]/);assert.doesNotMatch(instruction,/[\u0900-\u097f\u4e00-\u9fff]/);assert.ok(!/\b(?:inch|m|pieces?)\b/.test(cards(s)[0].caption));assert.match(cards(s)[0].caption,/1 எண்ணம்/);}else{assert.ok(!/[\u0b80-\u0bff]/.test(instruction));assert.match(cards(s)[0].caption,/1 piece/);}
- assert.match(cards(s)[0].caption,/450/);
+ const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});const s=await text(i,r,'one hose');const instruction=cards(s).find(c=>c.kind==='instruction')!.caption;const product=cards(s).find(c=>c.kind==='product')!;assert.equal(last(s).parts?.length,1);assert.equal(last(s).parts?.[0].cards.length,2);
+ if(language==='ta'){assert.match(instruction,/[\u0b80-\u0bff]/);assert.doesNotMatch(instruction,/[\u0900-\u097f\u4e00-\u9fff]/);assert.ok(!/\b(?:inch|m|pieces?)\b/.test(product.caption));assert.match(product.caption,/1 எண்ணம்/);}else{assert.ok(!/[\u0b80-\u0bff]/.test(instruction));assert.match(product.caption,/1 piece/);}
+ assert.match(product.caption,/450/);
 }));
 
 test('price lookup during product review answers from stock and price without changing the list',()=>fixture(async(pool,i)=>{
@@ -65,7 +65,7 @@ test('text finish opens the bill, then a second command submits the reviewed ord
 }));
 
 test('unknown price blocks sending; explicit shop help retains the list and known stock',()=>fixture(async(pool,i)=>{
- await pool.query("UPDATE products SET price_status='confirm',price_paise=0 WHERE store_id=$1 AND sku='H13'",[demoCatalogStore]);const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});let s=await text(i,r,'one hose');const draft=structuredClone(s.conversation.draft);assert.match(cards(s)[0].caption,/stock|list/i);assert.equal(s.conversation.draft[0].candidates?.[0].stock,30);assert.ok(!cards(s)[0].caption.includes('₹0'));
+ await pool.query("UPDATE products SET price_status='confirm',price_paise=0 WHERE store_id=$1 AND sku='H13'",[demoCatalogStore]);const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});let s=await text(i,r,'one hose');const draft=structuredClone(s.conversation.draft),product=cards(s).find(c=>c.kind==='product')!;assert.match(product.caption,/stock|list/i);assert.equal(s.conversation.draft[0].candidates?.[0].stock,30);assert.ok(!product.caption.includes('₹0'));
  s=await text(i,r,'send my list to the store');assert.deepEqual(s.conversation.draft,draft);assert.equal(s.requests.length,0);assert.equal(s.conversation.handoffRequested,false);assert.equal((await pool.query('SELECT operator_mode FROM conversations WHERE id=$1',[i.context.conversationId])).rows[0].operator_mode,'assistant');s=await text(i,r,'talk to shop');assert.deepEqual(s.conversation.draft,draft);assert.equal(s.requests.length,0);assert.equal(s.conversation.handoffRequested,true);assert.equal(last(s).handoffRequested,true);
  const c=(await pool.query('SELECT operator_mode,handoff_requested FROM conversations WHERE id=$1',[i.context.conversationId])).rows[0];assert.equal(c.operator_mode,'owner');assert.equal(c.handoff_requested,true);assert.ok((await pool.query("SELECT 1 FROM tool_receipts WHERE conversation_id=$1 AND tool_name='request_store_assistance'",[i.context.conversationId])).rowCount);
 }));

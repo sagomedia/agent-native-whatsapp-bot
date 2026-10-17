@@ -67,3 +67,11 @@ test('the live understanding compiler keeps a same-product request separate unti
 test('an oversized deferred request cannot create an unreadable choice or clear the previous order',()=>fixture(async(pool,inbox,runtime,plan)=>{
  const before=await inbox.snapshot();plan(Array.from({length:51},()=>({kind:'add_item' as const,query:'H19',quantity:1})));const s=await text(inbox,runtime,'a very long shopping list');assert.deepEqual(s.conversation.draft,before.conversation.draft);assert.equal(s.conversation.version,before.conversation.version);assert.equal(s.conversation.lastRequestId,before.conversation.lastRequestId);assert.match(last(s).text,/50/);assert.equal((await pool.query('SELECT assistant_memory FROM conversations WHERE id=$1',[inbox.context.conversationId])).rows[0].assistant_memory,null);
 }));
+
+
+for(const resume of ['greeting','old_button'])test(`a shop revision during list choice retains the request through ${resume}`,()=>fixture(async(pool,inbox,runtime,plan)=>{
+ plan([{kind:'add_item',query:'H19',quantity:2}]);let s=await text(inbox,runtime,'two pipe cutters');const old=action(s,'shopping_action','new_list'),order=s.conversation.lastRequestId;
+ await pool.query('UPDATE conversations SET version=version+1 WHERE id=$1',[inbox.context.conversationId]);
+ s=resume==='greeting'?await text(inbox,runtime,'hi'):await send(inbox,runtime,old);assert.equal(last(s).clarificationReason,'order_list_choice');assert.equal(s.conversation.lastRequestId,order);assert.equal(s.conversation.draft[0].sku,'H08');
+ s=await send(inbox,runtime,action(s,'shopping_action','new_list'));assert.equal(s.conversation.lastRequestId,null);assert.equal(s.conversation.draft[0].sku,'H19');assert.equal(s.conversation.draft[0].quantity,2);assert.equal(s.requests.length,1);
+}));
