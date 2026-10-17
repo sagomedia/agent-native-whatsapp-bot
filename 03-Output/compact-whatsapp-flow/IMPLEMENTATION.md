@@ -22,4 +22,4 @@ Keep eight actual rows per image, reduce vertical padding and remove a repeated 
 - One/five/eight/nine/ten/eighteen/twenty/fifty-product photo groups, every stable line ID retained, final-group approval only, delivery receipts still required.
 - Three-language native payloads, pending-price accessibility, eight-row invoice image review and production build/full regression.
 
-Deployment and final test evidence will be recorded after the checks finish. This file is not a claim that a new release is live.
+Release and validation checkpoints are recorded on issue #10 and PR #11, including the exact deployed source and artifact hash. This design file alone does not assert deployment.

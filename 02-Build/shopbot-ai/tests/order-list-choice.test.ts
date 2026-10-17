@@ -1,3 +1,4 @@
+import {understandingToInterpretation} from '../apps/server/src/adapters/turn-understanding.js';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -53,4 +54,16 @@ test('an order closed after the choice cannot be amended and the saved request c
 
 test('a replaced list-choice button cannot apply a newer saved request',()=>fixture(async(_pool,inbox,runtime,plan)=>{
  plan([{kind:'add_item',query:'H19',quantity:2}]);let s=await text(inbox,runtime,'two pipe cutters');const old=action(s,'shopping_action','new_list'),request=s.conversation.lastRequestId;plan([{kind:'add_item',query:'H29',quantity:1}]);s=await text(inbox,runtime,'one pair of gloves');s=await send(inbox,runtime,old);assert.equal(s.conversation.lastRequestId,request);assert.equal(s.conversation.draft[0].sku,'H08');assert.equal(s.requests.length,1);
+}));
+
+
+test('the live understanding compiler keeps a same-product request separate until the list choice',()=>fixture(async(_pool,inbox,runtime,plan)=>{
+ const before=await inbox.snapshot(),phrase='two rolls of Teflon Thread Seal Tape';
+ const compiled=understandingToInterpretation({schemaVersion:2,inputKind:'text',intents:['add'],requestedItems:[{ordinal:0,sourceText:phrase,query:'Teflon Thread Seal Tape',purchaseCount:2,unresolved:[]}],proposedEdits:[],shopQuestions:[],unresolved:[]},{text:phrase,state:before.conversation},false);
+ assert.equal(compiled.operations[0].kind,'add_item');plan(compiled.operations);let s=await text(inbox,runtime,phrase);assert.equal(last(s).clarificationReason,'order_list_choice');assert.equal(s.conversation.draft[0].quantity,1);
+ s=await send(inbox,runtime,action(s,'shopping_action','new_list'));assert.equal(s.conversation.draft.length,1);assert.equal(s.conversation.draft[0].sku,'H08');assert.equal(s.conversation.draft[0].quantity,2);assert.equal(s.requests[0].lines[0].quantity,1);
+}));
+
+test('an oversized deferred request cannot create an unreadable choice or clear the previous order',()=>fixture(async(pool,inbox,runtime,plan)=>{
+ const before=await inbox.snapshot();plan(Array.from({length:51},()=>({kind:'add_item' as const,query:'H19',quantity:1})));const s=await text(inbox,runtime,'a very long shopping list');assert.deepEqual(s.conversation.draft,before.conversation.draft);assert.equal(s.conversation.version,before.conversation.version);assert.equal(s.conversation.lastRequestId,before.conversation.lastRequestId);assert.match(last(s).text,/50/);assert.equal((await pool.query('SELECT assistant_memory FROM conversations WHERE id=$1',[inbox.context.conversationId])).rows[0].assistant_memory,null);
 }));

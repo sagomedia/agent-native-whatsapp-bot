@@ -291,9 +291,13 @@ export class ConversationRuntime {
           rich=returningReply(current);message=rich.text;
         } else if(!failure&&newListProposal){
           if(current.visualOrdering){
+            const limit=this.options.maxDraftLines??50;
+            if(newListProposal.length>limit)rich={...plainReply(say(current,`Send at most ${limit} items per list. Your earlier order is kept.`,`ஒரு list-ல ${limit} items வரைக்கும் சொல்லுங்க. முந்தைய order அப்படியே இருக்கு.`,`Oru list-la ${limit} items varaikkum sollunga. Munthaya order appadiye irukku.`)),readOnly:true,stage:'error',clarificationReason:'draft_limit'};
+            else{
             await client.query('UPDATE conversations SET version=version+1 WHERE id=$1',[ctx.conversationId]);current.version++;
             await saveAssistantMemory(client,ctx,{purpose:'list_choice',orderTarget:'choose',sourceMessageId:claimed.id,newList:newListProposal,queries:newListProposal.slice(0,3).map(item=>item.query),lineId:null,sourceVersion:current.version,observations:[]});
             rich=orderListChoice(current,await canAddToOrder(client,ctx,current),newListProposal.length);
+            }
           }else{
           const observations:CatalogObservation[]=[];
           for(const [index,item] of newListProposal.slice(0,3).entries())observations.push(...await observeCatalog(client,ctx,this.tools,[item.query],`${claimed.id}:new-list-options:${index}`,item.search));
