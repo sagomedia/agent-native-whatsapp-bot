@@ -109,7 +109,7 @@ export async function stageBulkCatalog(pool:Pool,storeId:string,actor:string,dir
    if(entry.imageError)throw new Error(entry.imageError);
    // Decoder runs outside the store lock; only one source image is in memory.
    let prepared:Awaited<ReturnType<typeof prepareProposalAsset>>|undefined;
-   if(entry.image){const bytes=await readBulkImage(bundle.root,entry.image);if(createHash('sha256').update(bytes).digest('hex')!==entry.imageHash)throw fail('Image changed after validation.');prepared=await prepareProposalAsset({proposalId:randomUUID(),version:1,photo:{id:randomUUID(),mimeType:entry.image.mimeType,data:bytes.toString('base64'),caption:''},matchKind:entry.image.matchKind});}
+   if(entry.image){const bytes=await readBulkImage(bundle.root,entry.image);if(createHash('sha256').update(bytes).digest('hex')!==entry.imageHash)throw fail('Image changed after validation.');prepared=await prepareProposalAsset({proposalId:randomUUID(),version:1,photo:{id:randomUUID(),mimeType:entry.image.mimeType,data:bytes.toString('base64'),caption:''},matchKind:entry.image.matchKind},{processingTimeoutMs:30000});}
    await catalogWrite(pool,storeId,actor,'catalog_bulk_stage',storeId,async c=>{
     const item=(await c.query('SELECT * FROM catalog_intake_items WHERE store_id=$1 AND batch_id=$2 AND source_sku=$3 FOR UPDATE',[storeId,batchId,entry.sourceSku])).rows[0];if(item.input_hash!==entry.inputHash)throw fail('Source item changed.');if(item.state==='staged')return {replayed:true};
     const prior=await existingProduct(c,storeId,entry),conflict=productConflict(entry,prior)??await sourceConflict(c,storeId,batchId,entry);if(conflict)throw fail(conflict);
