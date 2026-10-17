@@ -46,17 +46,19 @@ function invoiceSvg(card:Exclude<VisualCard,{kind:'product'}>):string {
  content+=draw('Item / pack',72,y,22,muted)+draw('Qty',724,y,22,muted,'end')+draw('Rate',868,y,22,muted,'end')+draw('Amount',1008,y,22,muted,'end');
  y+=18;content+=`<path d="M56 ${y}H1024" stroke="${rule}"/>`;
  for(const row of card.billRows??[]){
-  const top=y+38,name=wrapPixels(row.name,470,25),pack=wrapPixels(row.packSize,470,20),quantity=wrapPixels(row.count,174,22);
+  const identity=(value:string)=>value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{M}\p{N}]/gu,'');
+  const packLabel=row.packSize&&identity(row.name).includes(identity(row.packSize))?'':row.packSize;
+  const top=y+29,name=wrapPixels(row.name,470,25),pack=wrapPixels(packLabel,470,20),quantity=wrapPixels(row.count,174,22);
   let baseline=top;
-  for(const line of name){content+=draw(line,72,baseline,25);baseline+=35;}
-  for(const line of pack){content+=draw(line,72,baseline,20,muted);baseline+=29;}
-  for(const [index,line] of quantity.entries())content+=draw(line,724,top+index*31,22,ink,'end');
+  for(const line of name){content+=draw(line,72,baseline,25);baseline+=32;}
+  for(const line of pack){content+=draw(line,72,baseline,20,muted);baseline+=25;}
+  for(const [index,line] of quantity.entries())content+=draw(line,724,top+index*28,22,ink,'end');
   content+=draw(row.unitPrice,868,top,22,row.unitPrice==='—'?muted:ink,'end');
   const amount=row.unitPrice==='—'?'—':row.total;
   // Keep narrow money columns clear even for the largest supported quantities.
   const moneySize=textWidth(amount,24)>128?Math.max(15,24*128/textWidth(amount,24)):24;
   content+=draw(amount,1008,top,moneySize,amount==='—'?muted:ink,'end');
-  y=Math.max(baseline,top+quantity.length*31)+20;content+=`<path d="M56 ${y}H1024" stroke="${rule}"/>`;
+  y=Math.max(baseline,top+quantity.length*28)+14;content+=`<path d="M56 ${y}H1024" stroke="${rule}"/>`;
  }
  y+=38;
  for(const paragraph of card.lines){for(const line of wrapPixels(paragraph,920,20)){content+=draw(line,72,y,20,muted);y+=29;}}
@@ -73,6 +75,19 @@ export function visualSvg(card:Exclude<VisualCard,{kind:'product'}>):string {
  const rows=card.billRows??[];
  if(rows.length>INVOICE_ROWS_PER_PAGE)throw new Error('An invoice image holds at most eight rows');
  if(card.billRows)return invoiceSvg(card);
+ if(card.reviewGuide){
+  let y=54,content='';
+  for(const line of wrapPixels(card.storeName??'Shop',560,26)){content+=text(line,40,y,26,'#506358');y+=34;}
+  y+=28;content+=text(card.title,40,y,42);y+=56;
+  for(const [i,paragraph] of card.lines.entries()){
+   for(const line of wrapPixels(paragraph,560,i===0?36:28)){content+=text(line,40,y,i===0?36:28,i===0?'#172b22':'#506358');y+=i===0?48:38;}
+   y+=12;
+  }
+  y+=20;content+=`<path d="M420 ${y}h164m-26-24 26 24-26 24" fill="none" stroke="#167846" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const height=y+48;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="${height}" viewBox="0 0 640 ${height}" role="img" aria-label="${escape(card.title)}"><rect width="640" height="${height}" fill="#fbfcf8"/>${content}</svg>`;
+ }
+
  let y=card.storeName?156:76,content='<rect x="28" y="28" width="10" height="52" rx="4" fill="#167846"/>';
  if(card.storeName){content+='<path d="M40 44h36l-4-16H44zM44 48v24h28V48M55 72V56h10v16" fill="none" stroke="#167846" stroke-width="3"/>';for(const [i,line] of wrapPixels(card.storeName,488,28).slice(0,2).entries())content+=text(line,96,48+i*34,28,'#506358');content+='<path d="M40 94h560" stroke="#ccd8cd"/>'; }
  for(const line of wrapPixels(card.title,532,54)){content+=text(line,56,y,54);y+=68;}
@@ -97,9 +112,9 @@ export function visualSvg(card:Exclude<VisualCard,{kind:'product'}>):string {
 }
 const renderCache=new Map<string,string>();
 export function renderVisualImage(card:Exclude<VisualCard,{kind:'product'}>,directory=visualMediaDir()):string {
- const key=createHash('sha256').update(JSON.stringify({title:card.title,invoiceType:card.invoiceType,footer:card.footer,lines:card.lines,billRows:card.billRows,total:card.total,reference:card.reference,storeName:card.storeName})).digest('hex');
+ const key=createHash('sha256').update(JSON.stringify({title:card.title,reviewGuide:card.reviewGuide,invoiceType:card.invoiceType,footer:card.footer,lines:card.lines,billRows:card.billRows,total:card.total,reference:card.reference,storeName:card.storeName})).digest('hex');
  const cached=renderCache.get(directory+'|'+key);if(cached&&existsSync(join(directory,cached.split('/').at(-1)!)))return cached;
- const svg=visualSvg(card),hash=createHash('sha256').update('visual-v5\0'+svg).digest('hex'),filename=hash+'.png';
+ const svg=visualSvg(card),hash=createHash('sha256').update('visual-v6\0'+svg).digest('hex'),filename=hash+'.png';
  mkdirSync(directory,{recursive:true});const path=join(directory,filename);
  if(!existsSync(path)){
   const fontFiles=['NotoSansTamil-Regular.ttf','NotoSans-Regular.ttf'].map(name=>resolve('resources/fonts',name));

@@ -1,3 +1,4 @@
+import {orderListChoice} from './order-list-choice.js';
 import {presentReply,plainReply} from './replies.js';
 import {say} from '../../../../packages/contracts/language.js';
 import {readFile} from 'node:fs/promises';
@@ -20,7 +21,8 @@ export function messageGallery(language:ReplyLanguage):Promise<GalleryEntry[]> {
 async function build(language:ReplyLanguage){
  const pack=JSON.parse(await readFile('resources/catalog/ksmc-demo/catalog.json','utf8'));
  if(pack.demoOnly!==true)throw new Error('Gallery requires synthetic demo fixtures.');
- const products:Product[]=pack.products.filter((p:Product)=>['H01','H02','H21'].includes(p.sku)).map((p:Product)=>({...p,quantityStep:1,priceStatus:'priced',sellingUnitVerified:true,imageUrl:'/demo-images/'+p.sku+'.jpg'}));
+ const allProducts:Product[]=pack.products.map((p:Product)=>({...p,quantityStep:1,priceStatus:'priced',sellingUnitVerified:true,imageUrl:'/demo-images/'+p.sku+'.jpg'}));
+ const products=allProducts.filter(p=>['H01','H02','H21'].includes(p.sku));
  const pipe=products.find(p=>p.sku==='H02')!,seal=products.find(p=>p.sku==='H21')!;
  const line=(p:Product,quantity:number|null):DraftLine=>({id:randomUUID(),sku:p.sku,name:p.name,quantity,unit:p.unit,pricePaise:p.pricePaise,productVersion:p.version,candidates:[p],resolution:quantity===null?'needs_quantity':'matched'});
  const lines=[line(pipe,2),line(seal,1)],unknown:DraftLine={id:randomUUID(),name:'White wall paint · 10L can',quantity:1,unit:'can',resolution:'unavailable',shopCheckDeferred:true};
@@ -34,14 +36,16 @@ async function build(language:ReplyLanguage){
  const choiceState:ConversationState={...state,draft:[choiceLine],pending:{kind:'question',id:randomUUID(),lineId:choiceLine.id,version:1}};
  add('compare','Compare product photos','Shopping',visualReply(presentReply({state:choiceState,message:''},choiceState),choiceState));
  const review={...state,pending:{kind:'products',id:randomUUID(),version:1,expiresAt:new Date(Date.now()+3600000).toISOString(),groups:lines.map(l=>({lineId:l.id,products:l.candidates!})),remaining:0}} as ConversationState;
- add('cart','Product review & outside action','Shopping',visualProductReview(review));
+ add('cart','Product review in one carousel','Shopping',visualProductReview(review),'Guide and bill action share the photo carousel; no duplicate cart message.');
  add('compact-cart','Compact cart after an unchanged edit','Shopping',visualProductReview(review,true));
  add('missing-price','Unlisted item kept without a price','Checkout',visualBill({...state,draft:[...lines,unknown]}),'Known subtotal excludes the unpriced item.');
  add('estimate','Complete estimate invoice','Checkout',visualBill(state));
+ add('eight-item-estimate','Eight-item estimate invoice','Checkout',visualBill({...state,draft:allProducts.filter(p=>['H01','H04','H08','H13','H19','H21','H24','H29'].includes(p.sku)).map((p,i)=>line(p,i===0?2:1))}),'Eight actual demo products on one image; quantities and pack labels stay visible.');
  const quoted=lines.map(l=>({...l,merchantConfirmed:{actor:'sample-owner',at:'2026-10-16T00:00:00.000Z',free:false}}));
  add('final-quote','Changed shop bill & customer approval','Checkout',finalQuotePresentation(language,{id:randomUUID(),requestId:randomUUID(),version:1,lines:quoted.map((l,i)=>({...l,pricePaise:l.pricePaise!+(i===1?1000:0)})),totalPaise:82500,previousLines:lines,previousTotalPaise:81500,advancePaise:0,storeName:'Sample shop'}));
  const requestId=randomUUID(),request={id:requestId,acceptance:'awaiting_approval',payment:'pending',fulfillment:'awaiting_approval',totalPaise:81500,lines} as OrderRequest;
  const submitted={...state,lastRequestId:requestId};
+ add('order-list-choice','New list or existing order','Recovery',orderListChoice(submitted,true,2),'A saved voice/text request is applied after the explicit choice.');
  for(const demo of [true,false]){
   const sample={id:randomUUID(),state:'requested',payee_name:'SAMPLE ONLY - DO NOT PAY',payee_vpa:'preview.only@invalid',upi_uri:upiUri({name:'SAMPLE ONLY - DO NOT PAY',vpa:'preview.only@invalid'},'SAMPLEONLY')};
   add(demo?'demo-qr':'advance-qr',demo?'₹10 QR · demo pay-at-shop option':'₹10 QR · standard advance','Checkout',await upiAdvancePresentation(submitted,sample,'preview.example.test',demo),'Sample QR only. Invalid recipient; do not pay. This preview cannot send messages or create orders.');

@@ -162,7 +162,7 @@ test('per-product change opens that item directly, and new-draft copy does not c
   const runtime=new ConversationRuntime(pool,provider(()=>({operations:three,next:'review'})),{visualOrdering:true});
   let s=await text(inbox,runtime,'shopping list');const id=s.conversation.draft[1].id;
   const card=s.messages.filter(m=>m.rich?.groupId===last(s).groupId).flatMap(m=>m.rich?.parts?.flatMap(p=>p.cards)??[]).find(c=>c.kind==='product'&&c.lineId===id)!;
-  assert.equal(card.buttons![0].event.type,'edit_item');s=await send(inbox,runtime,card.buttons![0].event);
+  const edit=card.buttons!.find(b=>b.event.type==='edit_item');assert.ok(edit);s=await send(inbox,runtime,edit.event);
   assert.equal(s.conversation.editingLineId,id);assert.equal(last(s).parts![0].cards[0].kind,'product');
   s=await send(inbox,runtime,{id:randomUUID(),type:'shopping_action',action:'new_list',expectedVersion:s.conversation.version});
   assert.equal(s.conversation.draft.length,0);assert.equal(s.requests.length,0);assert.doesNotMatch(last(s).text,/previous.*shop|முந்தைய|Munthaya/i);
