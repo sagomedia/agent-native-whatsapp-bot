@@ -22,7 +22,9 @@
     "release:manifest": "tsx scripts/release-manifest.ts",
     "preview:owner": "tsx scripts/owner-rehearsal.ts",
     "pilot:evidence": "tsx scripts/pilot-evidence.ts",
-    "release:restore-rehearsal": "tsx scripts/rehearse-restore.ts"
+    "release:restore-rehearsal": "tsx scripts/rehearse-restore.ts",
+    "catalog:bulk": "tsx scripts/import-bulk-catalog.ts",
+    "catalog:capacity": "tsx scripts/catalog-capacity.ts"
   },
   "dependencies": {
     "@fastify/static": "10.1.5",

@@ -3,6 +3,7 @@ import type {Pool,PoolClient} from 'pg';
 import {z} from 'zod';
 import {ownerProductSchema,saveCatalogProduct} from './catalog-products.js';
 import {imageUploadSchema,normalizeImage,type ImageMedia} from './image-media.js';
+import {saveCatalogPhoto} from './catalog-photos.js';
 
 // Missing shop facts remain missing in drafts. The draft contract cannot carry
 // active/verified flags or grant publication rights to an AI client.
@@ -56,7 +57,7 @@ export async function publishProposal(c:PoolClient,storeId:string,input:unknown)
  if(p.assetId){asset=(await c.query('SELECT * FROM catalog_proposal_assets WHERE store_id=$1 AND proposal_id=$2 AND id=$3',[storeId,p.id,p.assetId])).rows[0];if(!asset||asset.match_kind!=='exact')throw fail('Only an exact product photo from this draft can be published.',400);}
  else if(!row.base_sku&&!p.withoutPhoto)throw fail('Choose an exact photo or explicitly publish without a photo.',400);
  const saved=await saveCatalogProduct(c,storeId,p.product);
- if(asset){const id=randomUUID();await c.query('INSERT INTO catalog_photos(id,store_id,image,width,height) VALUES($1,$2,$3,$4,$5)',[id,storeId,asset.image,asset.width,asset.height]);await c.query('UPDATE products SET image_path=$1 WHERE store_id=$2 AND sku=$3',['/catalog-images/custom/'+id+'.jpg',storeId,saved.sku]);}
+ if(asset){const id=await saveCatalogPhoto(c,storeId,asset);await c.query('UPDATE products SET image_path=$1 WHERE store_id=$2 AND sku=$3',['/catalog-images/custom/'+id+'.jpg',storeId,saved.sku]);}
  else if(p.withoutPhoto)await c.query('UPDATE products SET image_path=NULL WHERE store_id=$1 AND sku=$2',[storeId,saved.sku]);
  await c.query("UPDATE catalog_proposals SET state='published',published_sku=$1,version=version+1,updated_at=now() WHERE store_id=$2 AND id=$3",[saved.sku,storeId,p.id]);
  const revision=(await c.query('SELECT catalog_revision FROM stores WHERE id=$1',[storeId])).rows[0].catalog_revision;

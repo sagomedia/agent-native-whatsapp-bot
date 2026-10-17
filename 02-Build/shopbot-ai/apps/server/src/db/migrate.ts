@@ -362,6 +362,36 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       CREATE INDEX inventory_reservations_active ON inventory_reservations(store_id,sku) WHERE state='active';
       INSERT INTO schema_migrations(version) VALUES(35);
     `);}
+    const v36=await client.query('SELECT version FROM schema_migrations WHERE version=36');
+    if(!v36.rowCount){await client.query(`
+      CREATE TABLE catalog_intake_batches (
+        store_id uuid NOT NULL REFERENCES stores(id),batch_id text NOT NULL CHECK(length(batch_id) BETWEEN 1 AND 100),
+        source_hash text NOT NULL CHECK(source_hash ~ '^[a-f0-9]{64}$'),manifest jsonb NOT NULL CHECK(jsonb_typeof(manifest)='object'),
+        created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY(store_id,batch_id)
+      );
+      CREATE TABLE catalog_intake_items (
+        store_id uuid NOT NULL,batch_id text NOT NULL,source_sku text NOT NULL CHECK(length(source_sku) BETWEEN 1 AND 100),
+        canonical_sku text CHECK(canonical_sku IS NULL OR length(canonical_sku) BETWEEN 1 AND 64),
+        input_hash text NOT NULL CHECK(input_hash ~ '^[a-f0-9]{64}$'),
+        state text NOT NULL CHECK(state IN ('pending','staged','failed','excluded','conflict')),
+        proposal_id uuid REFERENCES catalog_proposals(id),proposal_version integer CHECK(proposal_version IS NULL OR proposal_version>0),error text,
+        updated_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(store_id,batch_id,source_sku),
+        FOREIGN KEY(store_id,batch_id) REFERENCES catalog_intake_batches(store_id,batch_id)
+      );
+      CREATE INDEX catalog_intake_items_state ON catalog_intake_items(store_id,batch_id,state,source_sku);
+      CREATE INDEX catalog_proposals_canonical_pending ON catalog_proposals(store_id,(details->>'sku')) WHERE state='draft';
+      CREATE INDEX products_owner_name ON products(store_id,name,sku);
+      CREATE INDEX products_owner_brand_name ON products(store_id,brand,name,sku);
+      CREATE INDEX products_owner_family_name ON products(store_id,family_id,name,sku);
+      CREATE INDEX products_owner_updated ON products(store_id,(coalesce(inventory_updated_at,'epoch'::timestamptz)) DESC,sku);
+      CREATE INDEX catalog_proposals_owner_state ON catalog_proposals(store_id,state,created_at,id);
+      CREATE INDEX messages_unfinished_conversation_sequence ON messages(conversation_id,sequence) WHERE status IN ('pending','processing');
+      CREATE INDEX messages_conversation_sequence ON messages(conversation_id,sequence);
+      ALTER TABLE catalog_photos ADD COLUMN content_hash text CHECK(content_hash IS NULL OR content_hash ~ '^[a-f0-9]{64}$');
+      CREATE INDEX catalog_photos_content ON catalog_photos(store_id,content_hash) WHERE content_hash IS NOT NULL;
+      INSERT INTO schema_migrations(version) VALUES(36);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

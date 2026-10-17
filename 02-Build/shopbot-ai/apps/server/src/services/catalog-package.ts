@@ -55,3 +55,6 @@ export async function importCatalogPackage(pool:Pool,storeId:string,actor:string
  }
  return {batchId:bundle.batchId,sourceHash:bundle.hash,staged:results.filter(r=>!r.error).length,replayed:results.filter(r=>r.replayed&&!r.error).length,failed:results.filter(r=>r.error).length,published:0,results};
 }
+
+// Bulk v2 intake is separate so the original strict 100-item contract stays compatible.
+export {readBulkCatalogPackage,dryRunBulkCatalog,stageBulkCatalog,bulkCatalogStatus} from './catalog-bulk.js';
