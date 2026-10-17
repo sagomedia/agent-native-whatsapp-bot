@@ -36,6 +36,25 @@ test('owner search filters/counts cover the catalog rather than the loaded page 
  await pool.query("UPDATE products SET name='Literal %_ product' WHERE store_id=$1 AND sku='PAGE-3000'",[fixtureStore]);assert.equal((await get(app,{q:'%_'})).json().total,1);
  for(const sort of ['sku','updated']){const expected=(await pool.query(`SELECT sku FROM products WHERE store_id=$1 ORDER BY ${sort==='sku'?'sku':'inventory_updated_at DESC,sku'}`,[fixtureStore])).rows.map(r=>r.sku);const actual:string[]=[];let cursor='';do{const r=await get(app,{sort,limit:'100',...(cursor?{cursor}:{})});assert.equal(r.statusCode,200,r.body);actual.push(...r.json().products.map((p:any)=>p.sku));cursor=r.json().nextCursor;}while(cursor);assert.deepEqual(actual,expected);}
 }));
+test('pending review follows merchant confirmations and selected source photos stay bounded and owner-only',()=>fixture(async(pool,app)=>{
+ const confirmed={identity:true,photo:true,sellingUnit:true,price:true,stock:true};
+ await pool.query('UPDATE products SET merchant_verification=$2 WHERE store_id=$1',[fixtureStore,JSON.stringify(confirmed)]);
+ await pool.query("UPDATE products SET merchant_verification=merchant_verification||'{\"photo\":false}'::jsonb WHERE store_id=$1 AND sku='PAGE-0001'",[fixtureStore]);
+ const page=(await get(app,{exception:'pending_review'})).json();assert.equal(page.total,1);assert.equal(page.summary.pendingReview,1);assert.equal(page.products[0].sku,'PAGE-0001');assert.equal(page.products[0].verification.photo,false);assert.ok(!('referencePhotos' in page.products[0]));
+ const proposal=randomUUID(),foreign=randomUUID(),foreignProposal=randomUUID();
+ await pool.query("INSERT INTO stores(id,name,synthetic) VALUES($1,'Other','true')",[foreign]);
+ for(const [id,store] of [[proposal,fixtureStore],[foreignProposal,foreign]])await pool.query("INSERT INTO catalog_proposals(id,store_id,batch_id,client_item_id,input_hash,details,provenance,actor,state,published_sku) VALUES($1,$2,'source','photo',repeat('a',64),'{}','{}','test','published','PAGE-0001')",[id,store]);
+ const privateImage=Buffer.from('source photo bytes');
+ const ownIds:string[]=[];
+ for(let i=0;i<8;i++){
+  const id=randomUUID(),isOwn=i<7;if(isOwn)ownIds.push(id);
+  await pool.query("INSERT INTO catalog_proposal_assets(id,store_id,proposal_id,original,mime_type,sha256,image,width,height,match_kind) VALUES($1,$2,$3,$4,'image/png',$5,$4,1,1,'unconfirmed')",[id,isOwn?fixtureStore:foreign,isOwn?proposal:foreignProposal,privateImage,String(i).padStart(64,'0')]);
+ }
+ const detail=await app.inject({url:'/api/owner/catalog/products/PAGE-0001'});assert.equal(detail.statusCode,200,detail.body);
+ const product=detail.json().product;assert.equal(product.imageUrl,undefined);assert.equal(product.referencePhotos.length,5);
+ for(const asset of product.referencePhotos){assert.equal(asset.proposalId,proposal);assert.equal(asset.matchKind,'unconfirmed');assert.ok(ownIds.includes(asset.id));assert.ok(!('image' in asset));assert.ok(!('original' in asset));}
+ const ref=product.referencePhotos[0],photo=await app.inject({url:'/api/owner/catalog/proposals/'+ref.proposalId+'/photos/'+ref.id});assert.equal(photo.statusCode,200);assert.equal(photo.headers['cache-control'],'private, no-store');
+}));
 test('a catalog revision change invalidates an old traversal and stale independently loaded edits cannot overwrite facts or stock',()=>fixture(async(pool,app)=>{
  const page=(await get(app)).json(),selected=(await app.inject({url:'/api/owner/catalog/products/PAGE-0001'})).json().product;
  await pool.query("UPDATE products SET price_paise=250,version=version+1,name='Current merchant name' WHERE store_id=$1 AND sku='PAGE-0001'",[fixtureStore]);

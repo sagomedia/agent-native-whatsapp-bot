@@ -10,6 +10,7 @@
     "packages/**/*.ts",
     "profiles/**/*.ts",
     "scripts/import-bulk-catalog.ts",
-    "scripts/catalog-capacity.ts"
+    "scripts/catalog-capacity.ts",
+    "scripts/promote-catalog-review-later.ts"
   ]
 }

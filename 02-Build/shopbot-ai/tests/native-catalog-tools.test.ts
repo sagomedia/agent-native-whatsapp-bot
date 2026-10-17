@@ -54,3 +54,11 @@ test('compiled capacity CLI fails closed with a sanitized message when explicit 
   assert.match(error.message,/explicit DATABASE_URL, STORE_ID, CAPACITY_PATH/);
   assert.equal(Object.hasOwn(minimalEnv,'DATABASE_URL'),false);
 });
+
+test('compiled review-later CLI loads without development tools, documents preview, and requires explicit settings/authorization',()=>{
+  const cli=join(repository,'dist/scripts/promote-catalog-review-later.js');
+  assert.ok(existsSync(cli),'Run npm run build before the compiled review-later CLI tests.');
+  const help=runCompiled(cli,['--help']);assert.ifError(help.error);assert.equal(help.status,0,help.stderr);assert.match(help.stdout,/Preview is read-only/);assert.match(help.stdout,/--owner-authorized/);
+  const noSettings=runCompiled(cli,['--snapshot=/tmp/no-write-fixture.json']);assert.ifError(noSettings.error);assert.equal(noSettings.status,1);assert.equal(noSettings.stdout,'');assert.match(JSON.parse(noSettings.stderr).message,/Explicit DATABASE_URL and SHOPBOT_CATALOG_STORE_ID/);
+  const noAuthority=runCompiled(cli,['--snapshot=/tmp/no-write-fixture.json','--apply']);assert.equal(noAuthority.status,1);assert.match(JSON.parse(noAuthority.stderr).message,/requires both --apply and --owner-authorized/);
+});

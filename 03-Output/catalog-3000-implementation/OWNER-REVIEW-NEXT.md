@@ -1,3 +1,5 @@
+> Superseded workflow: the owner authorized bulk publication with review afterwards on 17 October. See [REVIEW-LATER.md](REVIEW-LATER.md). The questions below remain useful for later fact checks; they are no longer a per-item publication prerequisite for this authorized batch.
+
 # Catalog owner review
 
 Open [Products](https://shopbot-preview.sagoautomation.tech/owner?view=catalog) → **Review unpublished drafts**. Filter source batch `reviewed-300-pass2-20261017`.

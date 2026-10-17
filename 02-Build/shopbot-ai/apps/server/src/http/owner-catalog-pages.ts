@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {productColumns,productFromRow} from '../services/catalog.js';
 
 const pageFields={q:z.string().trim().max(200).default(''),limit:z.coerce.number().int().min(1).max(100).default(25),cursor:z.string().max(4000).optional()};
-export const productPageSchema=z.object({...pageFields,visibility:z.enum(['','visible','draft']).default(''),stock:z.enum(['','out','unknown']).default(''),family:z.string().max(80).default(''),brand:z.string().max(120).default(''),exception:z.enum(['','missing_photo','pending_price','review_conflicts']).default(''),sort:z.enum(['name','sku','updated']).default('name')}).strict();
+export const productPageSchema=z.object({...pageFields,visibility:z.enum(['','visible','draft']).default(''),stock:z.enum(['','out','unknown']).default(''),family:z.string().max(80).default(''),brand:z.string().max(120).default(''),exception:z.enum(['','missing_photo','pending_price','pending_review','review_conflicts']).default(''),sort:z.enum(['name','sku','updated']).default('name')}).strict();
 export const proposalPageSchema=z.object({...pageFields,batch:z.string().max(100).default(''),exception:z.enum(['','conflicts','issues','missing_photo','pending_price','unknown_stock']).default('')}).strict();
 const invalid=(message:string,statusCode=400)=>Object.assign(new Error(message),{statusCode});
 const signature=(input:Record<string,unknown>)=>createHash('sha256').update(JSON.stringify({...input,cursor:undefined})).digest('hex');
@@ -15,7 +15,12 @@ function readCursor(cursor:string|undefined,scope:string,query:string,revision:n
 }
 function nextCursor(scope:string,query:string,revision:number,key:string,id:string){return Buffer.from(JSON.stringify({v:1,scope,query,revision,key,id})).toString('base64url');}
 const ownerRow=(p:any)=>({...productFromRow(p),active:p.active,verification:p.merchant_verification,origin:p.catalog_origin,inventoryUpdatedAt:p.inventory_updated_at});
-export async function selectedOwnerProduct(c:PoolClient,storeId:string,sku:string){const row=(await c.query(`SELECT ${productColumns},active,catalog_origin,inventory_updated_at,merchant_verification FROM products WHERE store_id=$1 AND sku=$2`,[storeId,sku])).rows[0];if(!row)throw invalid('Product not found in this shop.',404);return ownerRow(row);}
+export async function selectedOwnerProduct(c:PoolClient,storeId:string,sku:string){
+ const row=(await c.query(`SELECT ${productColumns},active,catalog_origin,inventory_updated_at,merchant_verification FROM products WHERE store_id=$1 AND sku=$2`,[storeId,sku])).rows[0];if(!row)throw invalid('Product not found in this shop.',404);
+ // Source photos remain private review evidence and never become a customer image URL.
+ const referencePhotos=(await c.query(`SELECT a.id,p.id AS "proposalId",a.match_kind AS "matchKind" FROM catalog_proposals p JOIN catalog_proposal_assets a ON a.store_id=p.store_id AND a.proposal_id=p.id WHERE p.store_id=$1 AND p.published_sku=$2 AND p.state='published' ORDER BY p.updated_at DESC,p.id,a.created_at,a.id LIMIT 5`,[storeId,sku])).rows;
+ return {...ownerRow(row),referencePhotos};
+}
 export async function ownerProductPage(c:PoolClient,storeId:string,input:z.infer<typeof productPageSchema>){
  const revision=(await c.query('SELECT catalog_revision FROM stores WHERE id=$1',[storeId])).rows[0].catalog_revision;
  const scope=storeId+':products',query=signature(input),cursor=readCursor(input.cursor,scope,query,revision);
@@ -28,12 +33,14 @@ export async function ownerProductPage(c:PoolClient,storeId:string,input:z.infer
  if(input.stock==='out')where.push('stock IS NOT NULL AND stock-reserved_stock<=0');
  if(input.family)where.push(`family_id=${bind(input.family)}`);
  if(input.brand)where.push(`brand=${bind(input.brand)}`);
+ const pendingReview=`NOT merchant_verification @> '{"identity":true,"photo":true,"sellingUnit":true,"price":true,"stock":true}'::jsonb`;
  const conflicts=`EXISTS(SELECT 1 FROM catalog_proposals cp WHERE cp.store_id=products.store_id AND cp.state='draft' AND cp.base_sku=products.sku AND cp.base_version<>products.version)`;
  if(input.exception==='missing_photo')where.push("(image_path IS NULL OR image_path='')");
  if(input.exception==='pending_price')where.push("price_status='confirm'");
+ if(input.exception==='pending_review')where.push(pendingReview);
  if(input.exception==='review_conflicts')where.push(conflicts);
  const condition=where.join(' AND ');
- const summary=(await c.query(`SELECT count(*)::int AS total,count(*) FILTER(WHERE image_path IS NULL OR image_path='')::int AS "missingPhoto",count(*) FILTER(WHERE price_status='confirm')::int AS "pendingPrice",count(*) FILTER(WHERE stock IS NULL)::int AS "unknownStock",count(*) FILTER(WHERE ${conflicts})::int AS "reviewConflicts" FROM products WHERE ${condition}`,values)).rows[0];
+ const summary=(await c.query(`SELECT count(*)::int AS total,count(*) FILTER(WHERE image_path IS NULL OR image_path='')::int AS "missingPhoto",count(*) FILTER(WHERE price_status='confirm')::int AS "pendingPrice",count(*) FILTER(WHERE stock IS NULL)::int AS "unknownStock",count(*) FILTER(WHERE ${pendingReview})::int AS "pendingReview",count(*) FILTER(WHERE ${conflicts})::int AS "reviewConflicts" FROM products WHERE ${condition}`,values)).rows[0];
  const totalStore=(await c.query('SELECT count(*)::int AS total FROM products WHERE store_id=$1',[storeId])).rows[0].total;
  const key=input.sort==='updated'?"coalesce(inventory_updated_at,'epoch'::timestamptz)":input.sort==='sku'?'sku':'name';const direction=input.sort==='updated'?'DESC':'ASC',comparison=input.sort==='updated'?'<':'>';
  if(cursor){const p=bind(cursor.key),id=bind(cursor.id);where.push(`(${key} ${comparison} ${p}${input.sort==='updated'?'::timestamptz':''} OR (${key}=${p}${input.sort==='updated'?'::timestamptz':''} AND sku>${id}))`);}

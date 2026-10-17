@@ -10,13 +10,24 @@ export const ownerProductSchema=z.object({sku:z.string().regex(/^(?:[A-Za-z0-9][
 
 const invalid=(message:string)=>Object.assign(new Error(message),{statusCode:400});
 export async function saveCatalogProduct(c:PoolClient,storeId:string,input:unknown){
+ return saveProduct(c,storeId,input,false);
+}
+
+/** Trusted owner/operator path only. Never expose this through draft/MCP tools. */
+export async function saveReviewLaterCatalogProduct(c:PoolClient,storeId:string,input:unknown){
+ const p=ownerProductSchema.parse(input);
+ if(p.version!==0)throw invalid('Review later only creates new products.');
+ return saveProduct(c,storeId,{...p,active:true,verified:false,verification:{identity:false,photo:false,sellingUnit:false,price:false,stock:false}},true);
+}
+
+async function saveProduct(c:PoolClient,storeId:string,input:unknown,reviewLater:boolean){
  const p=ownerProductSchema.parse(input);
  if(p.version>0&&!p.sku)throw invalid('Reload the product before editing.');
  if(!p.sku)p.sku='SHOP-'+(p.createId??randomUUID()).replaceAll('-','').slice(0,16).toUpperCase();
- if(p.active&&(!p.verified||!p.verification||!Object.values(p.verification).every(Boolean)))throw invalid('Confirm identity, photo, selling unit, price status and stock status before publishing.');
+ if(!reviewLater&&p.active&&(!p.verified||!p.verification||!Object.values(p.verification).every(Boolean)))throw invalid('Confirm identity, photo, selling unit, price status and stock status before publishing.');
  const priceStatus=p.priceStatus??(p.pricePaise>0?'priced':'confirm');
  if(priceStatus==='free'&&p.pricePaise!==0||priceStatus==='priced'&&p.pricePaise===0)throw invalid('Choose price to confirm or explicitly confirm this item is free.');
- const issues=sellingBasisIssues(p);if(p.active&&issues.length)throw invalid(issues.join(' '));
+ const issues=sellingBasisIssues(p);if(!reviewLater&&p.active&&issues.length)throw invalid(issues.join(' '));
    if(p.newType&&p.familyId)throw Object.assign(new Error('Choose one product type.'),{statusCode:400});
    if(!p.familyId){
     let departmentId=p.newType?.departmentId??'owner-general';
