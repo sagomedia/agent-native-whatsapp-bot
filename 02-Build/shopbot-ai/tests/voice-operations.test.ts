@@ -32,9 +32,9 @@ test('the actual pipe diameter filter retrieves size-stored pipes and excludes o
  const c=await pool.connect();try{const d=await discoverProducts(c,i.context,'1 inch PVC pipe',{familyId:'pvc-pipes',keywords:['pvc pipe','water pipe'],specifications:{diameter:'1 inch'}});assert.ok(d.products.some(p=>p.sku==='H01'));assert.ok(d.products.some(p=>p.sku==='H02'));assert.ok(!d.products.some(p=>p.sku==='H03'));assert.equal(d.noExactMatch,false);}finally{c.release();}
 }));
 
-test('known stock and price remain visible when a metre conversion needs shop verification',()=>fixture(async(pool,i)=>{
+test('known stock stays retained while compact cards show price and the requested metre conversion',()=>fixture(async(pool,i)=>{
  const r=new ConversationRuntime(pool,provider(()=>({operations:[{kind:'add_item',query:'H13',quantity:null,requestedAmount:{value:20,unit:'m'},supportingPhrase:'hose 20m'}],next:'review'})),{visualOrdering:true});
- const s=await text(i,r,'hose 20m');const card=cards(s).find(c=>c.kind==='product')!;assert.match(card.caption,/stock|list/i);assert.equal(s.conversation.draft[0].candidates?.[0].stock,30);assert.match(card.caption,/₹450/);assert.match(card.caption,/20 மீட்டர்/);assert.equal(s.conversation.draft[0].catalogIssue,'amount_unverified');assert.equal(s.requests.length,0);
+ const s=await text(i,r,'hose 20m');const card=cards(s).find(c=>c.kind==='product')!;assert.equal(s.conversation.draft[0].candidates?.[0].stock,30);assert.match(card.caption,/₹450/);assert.match(card.caption,/20 மீட்டர்/);assert.equal(s.conversation.draft[0].catalogIssue,'amount_unverified');assert.equal(s.requests.length,0);
 }));
 
 for(const language of ['ta','en'] as const)test(`${language} uses one instruction language and one unit label`,()=>fixture(async(pool,i)=>{
@@ -64,8 +64,8 @@ test('text finish opens the bill, then a second command submits the reviewed ord
  const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});await text(i,r,'one hose');let s=await text(i,r,'send my order to the store');assert.equal(s.requests.length,0);assert.equal(last(s).stage,'bill');s=await text(i,r,'send my order to the store');assert.equal(s.requests.length,1);assert.equal(last(s).stage,'submitted');
 }));
 
-test('unknown price blocks sending; explicit shop help retains the list and known stock',()=>fixture(async(pool,i)=>{
- await pool.query("UPDATE products SET price_status='confirm',price_paise=0 WHERE store_id=$1 AND sku='H13'",[demoCatalogStore]);const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});let s=await text(i,r,'one hose');const draft=structuredClone(s.conversation.draft),product=cards(s).find(c=>c.kind==='product')!;assert.match(product.caption,/stock|list/i);assert.equal(s.conversation.draft[0].candidates?.[0].stock,30);assert.ok(!product.caption.includes('₹0'));
+test('unknown price blocks sending; compact copy retains known stock and explicit shop help',()=>fixture(async(pool,i)=>{
+ await pool.query("UPDATE products SET price_status='confirm',price_paise=0 WHERE store_id=$1 AND sku='H13'",[demoCatalogStore]);const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});let s=await text(i,r,'one hose');const draft=structuredClone(s.conversation.draft),product=cards(s).find(c=>c.kind==='product')!;assert.equal(s.conversation.draft[0].candidates?.[0].stock,30);assert.ok(!product.caption.includes('₹0'));
  s=await text(i,r,'send my list to the store');assert.deepEqual(s.conversation.draft,draft);assert.equal(s.requests.length,0);assert.equal(s.conversation.handoffRequested,false);assert.equal((await pool.query('SELECT operator_mode FROM conversations WHERE id=$1',[i.context.conversationId])).rows[0].operator_mode,'assistant');s=await text(i,r,'talk to shop');assert.deepEqual(s.conversation.draft,draft);assert.equal(s.requests.length,0);assert.equal(s.conversation.handoffRequested,true);assert.equal(last(s).handoffRequested,true);
  const c=(await pool.query('SELECT operator_mode,handoff_requested FROM conversations WHERE id=$1',[i.context.conversationId])).rows[0];assert.equal(c.operator_mode,'owner');assert.equal(c.handoff_requested,true);assert.ok((await pool.query("SELECT 1 FROM tool_receipts WHERE conversation_id=$1 AND tool_name='request_store_assistance'",[i.context.conversationId])).rowCount);
 }));

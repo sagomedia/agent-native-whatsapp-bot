@@ -53,7 +53,7 @@ test('unspecified water and pumping pipes retain quantity without inventing a PV
   assert.equal(visible.stage,'identify');
   assert.match(visible.text,/Which kind of pipe/);
   assert.equal(visible.parts,undefined);
-  assert.match(visible.text,/2/);
+  assert.equal(result.state!.draft[0].quantity,2,'the known count stays in the cart without repeating it in a category question');
   assert.match(visible.text,/1 inch/);
   assert.ok(!JSON.stringify(visible).includes('H13'));
   assert.equal((await pool.query('SELECT count(*)::int AS count FROM order_requests WHERE conversation_id=$1',[conversationId])).rows[0].count,0);

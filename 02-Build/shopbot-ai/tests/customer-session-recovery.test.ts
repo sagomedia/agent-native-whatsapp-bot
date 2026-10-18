@@ -48,7 +48,8 @@ test('ambiguous spoken tube asks product type, keeps other items, and completes 
   let s=await voice(inbox,runtime);
   assert.equal(s.conversation.replyLanguage,'ta');assert.equal(s.conversation.draft.length,3);
   assert.equal(last(s).clarificationReason,'product_meaning');assert.equal(s.conversation.draft[0].sku,undefined);
-  assert.deepEqual(last(s).parts![0].cards.flatMap(c=>c.kind==='product'?[c.product.familyId]:[]),['pvc-pipes','hose']);
+  assert.equal(last(s).parts![0].cards.length,0,'a category clarification uses short native choices rather than repeating product photos');
+  assert.deepEqual(actions(last(s)).filter(b=>b.event.type==='refine_search').map(b=>b.event.type==='refine_search'?b.event.value:undefined),['pvc-pipes','hose']);
   const hose=actions(last(s)).find(b=>b.event.type==='refine_search'&&b.event.value==='hose')!;
   const ids=s.conversation.draft.map(l=>l.id);
   s=await send(inbox,runtime,hose.event);

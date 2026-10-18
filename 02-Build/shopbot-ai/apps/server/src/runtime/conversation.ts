@@ -6,7 +6,8 @@ import {upiAdvanceReply,claimUpiAdvance,chooseDemoPayAtShop,paymentClaimText,dem
 import {customerCopy} from '../../../../packages/contracts/customer-copy.js';
 import {discoverProducts as lookupGroundedProducts} from '../services/catalog-discovery.js';
 import {validateCurrentTurn,submissionIntent,namedRemovalsExplicit} from '../services/current-turn.js';
-import {bindExplicitCorrection} from '../services/shopping-corrections.js';
+import {bindExplicitCorrection,compileKeepOnly,keepTargetCandidates} from '../services/shopping-corrections.js';
+import {understandingToInterpretation} from '../adapters/turn-understanding.js';
 import {validateProductMeaningEvidence} from '../services/product-meaning.js';
 import {reviewDeliveryReady} from '../services/review-delivery.js';
 import {inferenceTiming,providerCallTimeout,processingLeaseSeconds} from '../services/inference-timing.js';
@@ -48,6 +49,21 @@ function quantityAnswer(state:ConversationState,lineId:string,amount:{quantity:n
 }
 type Claimed = { deadlineAt:number; id:string; token:string; event:SimulatorEvent; bindingId:string|null; state:ConversationState; catalog:Product[];catalogMap?:import('../../../../packages/contracts/index.js').CatalogMap;memory:AssistantMemory|null;displayedActions:SimulatorEvent[];displayedProducts:{event:SimulatorEvent;product:Product;delivered?:boolean}[] };
 class DeferredRecommendation extends Error {}
+function correctionDescription(claim:Claimed,interpretation:Interpretation|undefined,description:string){
+ const saved=claim.memory?.purpose==='cart_correction'&&claim.memory.sourceVersion===claim.state.version?claim.memory.correction:undefined;
+ return saved&&interpretation?.understanding?.keepOnly&&digest(interpretation.understanding.keepOnly)===digest(saved.understanding.keepOnly)?saved.description:description;
+}
+function resumeKeepCorrection(claim:Claimed,selection?:{targetIndex:number;lineId:string}):Interpretation {
+ const memory=claim.memory,goal=memory?.correction;
+ if(memory?.purpose!=='cart_correction'||memory.sourceVersion!==claim.state.version||!goal?.understanding.keepOnly)throw new ToolError('Use the latest keep-item question. Your list is kept.','stale_question');
+ const pending=compileKeepOnly(goal.understanding.keepOnly,claim.state,goal.description,goal.selections);
+ if(selection&&(selection.targetIndex!==pending.targetIndex||!pending.choices?.some(line=>line.id===selection.lineId)))throw new ToolError('Choose one of the offered keep-item choices.','stale_question');
+ const selections=selection?[...goal.selections.filter(s=>s.targetIndex!==selection.targetIndex),selection]:goal.selections;
+ const understanding={...goal.understanding,inputKind:'text' as const,transcript:undefined,observedText:undefined,unresolved:goal.understanding.unresolved.filter(reason=>reason!=='keep_only_target')};
+ const result=understandingToInterpretation(understanding,{text:goal.description,state:claim.state,keepSelections:selections},false);
+ goal.selections=selections;
+ return result;
+}
 // A repeated generic noun is not evidence that a previous brand or size was
 // withdrawn. Keep the more specific request unless the customer changes it.
 function retainRefinementIdentity(op:Interpretation['operations'][number],state:ConversationState,text:string,map?:Claimed['catalogMap']) {
@@ -132,7 +148,13 @@ export class ConversationRuntime {
       if(retry.expectedVersion!==claimed.state.version||!claimed.displayedActions.some(a=>digest(a)===digest(retry)))failure='That retry belongs to an earlier question. Please send your current request again.';
       else claimed.event={id:retry.id,type:'voice',mediaId:retry.mediaId};
     }
-    if(!failure)try {deterministic=this.knownAction(claimed);} catch(error) {failure=error instanceof Error?error.message:'Invalid callback';}
+    if(!failure)try {
+      if(claimed.event.type==='resolve_keep_target'){
+        const event=claimed.event;
+        if(event.expectedVersion!==claimed.state.version||claimed.memory?.purpose!=='cart_correction'||claimed.memory.id!==event.memoryId||claimed.bindingId!==claimed.memory.id||!claimed.displayedActions.some(action=>digest(action)===digest(event)))throw new ToolError('Use the latest keep-item choices. Your list is kept.','stale_question');
+        interpretation=resumeKeepCorrection(claimed,{targetIndex:event.targetIndex,lineId:event.lineId});
+      }else deterministic=this.knownAction(claimed);
+    } catch(error) {failure=error instanceof Error?error.message:'Invalid callback';}
     const quoteRecheck=claimed.event.type==='text'&&isRecheck(claimed.event.text)&&claimed.memory?.purpose==='quote'&&claimed.memory.sourceVersion===claimed.state.version;
     if(quoteRecheck)interpretation={operations:[],next:'price',priceQuery:claimed.memory!.queries[0],priceQuantity:claimed.memory!.quoteQuantity,priceUnit:claimed.memory!.quoteUnit};
     if(!deterministic&&claimed.event.type==='text'&&submissionIntent(claimed.event.text))deterministic=this.knownAction({...claimed,event:{...claimed.event,text:'send it'}});
@@ -199,7 +221,7 @@ export class ConversationRuntime {
       const proposal=interpretation.operations[0];
       interpretation={operations:[],next:'assist',transcript:interpretation.transcript,assistance:{rootQuery:proposal.query,queries:[proposal.query],search:proposal.search,...discoverySelection(proposal,claimed.event.type==='text'?claimed.event.text:claimed.event.type==='image'?interpretation.understanding?.observedText??'':interpretation.transcript??'',claimed.memory),question:interpretation.clarifyQuestion}};
     }
-    if(claimed.state.visualOrdering&&interpretation?.operations.length)try{interpretation={...interpretation,operations:protectQuantityEvidence(validateProductMeaningEvidence(interpretation.operations,claimed.event.type==='text'?claimed.event.text:claimed.event.type==='image'?interpretation.understanding?.observedText??'':interpretation.transcript??''),claimed.event.type==='text'?claimed.event.text:claimed.event.type==='image'?interpretation.understanding?.observedText??'':interpretation.transcript??'')};}catch(error){failure=error instanceof Error?error.message:'Product meaning could not be validated.';}
+    if(claimed.state.visualOrdering&&interpretation?.operations.length)try{const evidence=correctionDescription(claimed,interpretation,claimed.event.type==='text'?claimed.event.text:claimed.event.type==='image'?interpretation.understanding?.observedText??'':interpretation.transcript??'');interpretation={...interpretation,operations:protectQuantityEvidence(validateProductMeaningEvidence(interpretation.operations,evidence),evidence)};}catch(error){failure=error instanceof Error?error.message:'Product meaning could not be validated.';}
     if(claimed.event.type==='voice'&&interpretation?.transcript&&interpretation.operations.length===0&&interpretation.next==='continue')requestedLanguage=languageRequest(interpretation.transcript);
     if(claimed.state.visualOrdering&&!failure&&!claimed.state.lastRequestId&&claimed.state.draft.length&&interpretation?.understanding?.intents.includes('cancel')&&!interpretation.operations.length&&!negatedSpokenClear(interpretation.transcript??(claimed.event.type==='text'?claimed.event.text:''))){
       // Unsent-list cancellation proposes choices; it is neither deletion nor
@@ -399,7 +421,7 @@ export class ConversationRuntime {
             if(interpretation.next==='price') result=await invoke({name:'search_products',args:{query:interpretation.priceQuery!,quantity:interpretation.priceQuantity,requestedUnit:interpretation.priceUnit}});
             else {
               let state=current;
-              if(state.editingLineId&&interpretation.operations.length){
+              if(state.editingLineId&&interpretation.operations.length&&!interpretation.understanding?.keepOnly){
                 const lineId=state.editingLineId;
                 interpretation={...interpretation,operations:interpretation.operations.map(op=>{
                   if(op.kind==='add_item')return {kind:'resolve_line' as const,lineId,query:op.query,...(op.quantity!==null?{quantity:op.quantity}:{}),requestedUnit:op.requestedUnit,search:op.search,packSize:op.packSize,productMeasures:op.productMeasures,productIntent:op.productIntent,requestedAmount:op.requestedAmount,supportingPhrase:op.supportingPhrase};
@@ -407,7 +429,12 @@ export class ConversationRuntime {
                   throw new ToolError('Please change only the selected item. Your other items are unchanged.');
                 })};
               }
-              const description=claimed.event.type==='text'?claimed.event.text:claimed.event.type==='image'?interpretation.understanding?.observedText??'':interpretation.transcript??'';
+              const description=correctionDescription(claimed,interpretation,claimed.event.type==='text'?claimed.event.text:claimed.event.type==='image'?interpretation.understanding?.observedText??'':interpretation.transcript??'');
+              if(interpretation.understanding?.keepOnly){
+                const compiled=compileKeepOnly(interpretation.understanding.keepOnly,state,description,claimed.memory?.correction?.selections);
+                const removes=interpretation.operations.filter(op=>op.kind==='remove_item');
+                if(compiled.question&&interpretation.operations.length||!compiled.question&&digest(removes)!==digest(compiled.operations))throw new ToolError('The linked keep correction needs current targets. Your list is kept.','correction_target');
+              }
               interpretation={...interpretation,operations:bindExplicitCorrection(interpretation.operations,state,description)};
               interpretation={...interpretation,operations:interpretation.operations.map(op=>retainRefinementIdentity(op,state,description,claimed.catalogMap))};
               if((state.pending?.kind==='question'||state.pending?.kind==='products')&&interpretation.operations.some(op=>op.kind==='remove_item')){
@@ -485,7 +512,20 @@ export class ConversationRuntime {
       if(interpretation?.understanding?.inputKind==='handwritten_list'){rich={...rich,contextLines:[say(finalState,'I read your list. Please check every item, including lines marked for shop checking.','உங்கள் பட்டியலைப் படித்தேன். கடை சரிபார்க்க வேண்டிய வரிகள் உட்பட எல்லாப் பொருட்களையும் சரிபாருங்கள்.','Unga list-ai padithen. Kadai check panna vendiya varigal utpada ella porutkalaiyum check pannunga.'),...rich.contextLines??[]]};}
       if(finalState.visualOrdering&&interpretation?.shopQuestions?.length)rich.contextLines=[shopAnswers(finalState,interpretation.shopQuestions),...rich.contextLines??[]];
       if(!failure&&!interpretation?.operations.length&&(interpretation?.next==='price'||deterministic?.name==='search_products'||deterministic?.name==='discover_products'))rich.readOnly=true;
-      const unclearTarget=!failure&&interpretation?.understanding?.unresolved.includes('cart_target')&&!finalState.lastRequestId;
+      const unclearKeep=!failure&&interpretation?.understanding?.keepOnly&&interpretation.understanding.unresolved.includes('keep_only_target')&&!finalState.lastRequestId;
+      if(unclearKeep){
+        const description=correctionDescription(claimed,interpretation,interpretation?.transcript??(claimed.event.type==='text'?claimed.event.text:''));
+        const sameGoal=claimed.memory?.purpose==='cart_correction'&&claimed.memory.sourceVersion===finalState.version&&digest(claimed.memory.correction?.understanding.keepOnly)===digest(interpretation!.understanding!.keepOnly);
+        const selections=sameGoal?claimed.memory!.correction!.selections:[];
+        const pending=compileKeepOnly(interpretation!.understanding!.keepOnly!,finalState,description,selections);
+        // This is a declarative goal, not a deferred tool batch. Every answer
+        // recompiles it against the same version and current exact line IDs.
+        await client.query('UPDATE conversations SET pending=NULL,product_review=NULL,editing_line_id=NULL WHERE id=$1',[ctx.conversationId]);
+        finalState.pending=null;finalState.productReview=null;finalState.editingLineId=null;
+        const memoryId=await saveAssistantMemory(client,ctx,{purpose:'cart_correction',queries:interpretation!.understanding!.keepOnly!.targets.slice(0,3).map(target=>target.query),lineId:null,sourceVersion:finalState.version,observations:[],correction:{description,understanding:interpretation!.understanding!,selections}});
+        rich={...plainReply(pending.question??interpretation!.clarifyQuestion!),stage:'identify',clarificationReason:'keep_only_target',buttons:pending.choices?.slice(0,10).map(line=>({label:`${finalState.draft.findIndex(item=>item.id===line.id)+1}. ${line.quantity??'?'} × ${lineName(line,finalState)}`,event:{id:randomUUID(),type:'resolve_keep_target' as const,memoryId:memoryId!,targetIndex:pending.targetIndex!,lineId:line.id,expectedVersion:finalState.version}}))};
+      }
+      const unclearTarget=!unclearKeep&&!failure&&interpretation?.understanding?.unresolved.includes('cart_target')&&!finalState.lastRequestId;
       if(unclearTarget){
         // The current turn's identity question supersedes an unrelated old
         // quantity question. A bare number must not answer that stale prompt.
@@ -505,7 +545,7 @@ export class ConversationRuntime {
         const question=safeQuestion(interpretation?.clarifyQuestion,finalState,interpretation?.transcript??(claimed.event.type==='text'?claimed.event.text:''))??say(finalState,'Which item on your list did you mean?','பட்டியலில் எந்தப் பொருளைச் சொன்னீர்கள்?','List-la entha porulai sonneenga?');
         rich={...plainReply((digest(finalState.draft)!==digest(claimed.state.draft)?say(finalState,'Other clear changes are saved. ','மற்ற தெளிவான மாற்றங்கள் சேமிக்கப்பட்டன. ','Maththa thelivaana maaththangal save aachu. '):'')+question+' '+say(finalState,'Choose the item below or describe its type. Your list is kept.','கீழே தேர்வு செய்யுங்கள் அல்லது பொருளின் வகையைச் சொல்லுங்கள். பட்டியல் அப்படியே உள்ளது.','Keezhe choose pannunga illa type sollunga. List appadiye irukku.')),stage:'identify',clarificationReason:'intent_clarification',buttons:choices};
       }
-      rich=unclearTarget||clearConfirmation?{...rich,replyLanguage:finalState.replyLanguage??'en'}:shoppingActions({...rich,replyLanguage:finalState.replyLanguage??'en'},finalState,claimed.catalogMap);
+      rich=unclearKeep||unclearTarget||clearConfirmation?{...rich,replyLanguage:finalState.replyLanguage??'en'}:shoppingActions({...rich,replyLanguage:finalState.replyLanguage??'en'},finalState,claimed.catalogMap);
       if(claimed.catalogMap)rich={...rich,storeName:claimed.catalogMap.store.name};
       if(interpretation?.understanding?.unresolved.includes('validation_recovery')&&interpretation.transcript)rich.contextLines=[say(finalState,`Heard: ${interpretation.transcript.slice(0,250)}`,`கேட்டது: ${interpretation.transcript.slice(0,250)}`,`Kettathu: ${interpretation.transcript.slice(0,250)}`),...rich.contextLines??[]];
       if(replyRequest?.advanceRequired&&this.options.advance&&!rich.readOnly)rich=await upiAdvanceReply(client,ctx,finalState,this.options.advance.hostname,{demoPayAtShop:this.options.advance.demoPayAtShop,onlyOnce:true})??rich;
@@ -721,6 +761,17 @@ export class ConversationRuntime {
     let identified=await this.callProvider(ctx,claim,input,'identify');
     if(voice){transcript=this.provider.unifiedUnderstanding?identified.transcript:transcript;if(!transcript)throw new ToolError('No clear speech was recognized. Record again or type your request.','voice_unreadable');identified={...identified,transcript};text=transcript;}
     if(image&&identified.understanding?.inputKind==='handwritten_list')text=identified.understanding.observedText??text;
+    if(identified.understanding?.keepOnlyAnswer){
+      const goal=claim.memory?.purpose==='cart_correction'&&claim.memory.sourceVersion===claim.state.version?claim.memory.correction:undefined;
+      if(!goal?.understanding.keepOnly)throw new ToolError('Use the latest keep-item question.','stale_question');
+      const pending=compileKeepOnly(goal.understanding.keepOnly,claim.state,goal.description,goal.selections);
+      const answer=identified.understanding.keepOnlyAnswer;
+      const matches=keepTargetCandidates(answer,claim.state).filter(line=>pending.choices?.some(choice=>choice.id===line.id));
+      const selection=matches.length===1&&(!answer.targetLineId||answer.targetLineId===matches[0].id)?{targetIndex:pending.targetIndex!,lineId:matches[0].id}:undefined;
+      identified={...resumeKeepCorrection(claim,selection),...(voice?{transcript}:{})};
+    }
+    text=correctionDescription(claim,identified,text);
+
     if(claim.state.visualOrdering&&(!image||identified.understanding?.inputKind==='handwritten_list'))identified=normalizeAmountEdits(identified,text,claim.state);
     if(claim.state.visualOrdering&&(!image||identified.understanding?.inputKind==='handwritten_list')&&identified.operations.length){
       let feedback:string|undefined;

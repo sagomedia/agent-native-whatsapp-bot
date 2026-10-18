@@ -4,11 +4,11 @@ import {sameUnit} from './catalog.js';
 import {quantityReply} from './shopping-language.js';
 
 type Measure={value:number;unit:string;role?:'size'|'diameter'|'length'|'width'|'height'|'thickness'};
-const countWords='a|an|mukkal|முக்கால்|kaal|ara|arai|கால்|அரை|one|two|three|four|five|six|seven|eight|nine|ten|twenty|fifty|hundred|oru|onnu|ondru|rendu|moonu|naalu|anju|paththu|pathu|ஒரு|ஒன்று|ஒன்னு|ஒண்ணு|இரண்டு|ரெண்டு|மூன்று|மூணு|நான்கு|நாலு|ஐந்து|அஞ்சு|பத்து|இருபது|ஐம்பது|நூறு';
+const countWords='a|an|mukkal|முக்கால்|kaal|ara|arai|கால்|அரை|one|two|three|four|five|six|seven|eight|nine|ten|twenty|fifty|hundred|oru|onnu|ondru|rendu|moonu|naalu|anju|paththu|pathu|ஒரு|ஒன்று|ஒன்னு|ஒண்ணு|ஒன்ன|ஒண்ண|இரண்டு|ரெண்டு|மூன்று|மூணு|நான்கு|நாலு|ஐந்து|அஞ்சு|பத்து|இருபது|ஐம்பது|நூறு';
 const measures=new RegExp('(?<![\\p{L}\\p{N}./])('+measurementNumberPattern+'|'+countWords+')\\s*[- ]?\\s*('+measurementUnitPattern+')(?=\\s|$|[^\\p{L}])','giu');
 const measureUnit=canonicalMeasurementUnit;
 export const physicalMeasure=(measure:Measure)=>['inch','mm','cm','m','foot'].includes(measureUnit(measure.unit));
-function number(s:string){return (/^[\d½¼¾⅛⅜⅝⅞]/.test(s)?measurementNumber(s):undefined)??({a:1,an:1,mukkal:.75,'முக்கால்':.75,kaal:.25,ara:.5,arai:.5,'கால்':.25,'அரை':.5,'ஒண்ணு':1,'மூணு':3,fifty:50,hundred:100,'இருபது':20,'ஐம்பது':50,'நூறு':100} as Record<string,number>)[s.toLowerCase()]??quantityReply(s)?.quantity;}
+function number(s:string){return (/^[\d½¼¾⅛⅜⅝⅞]/.test(s)?measurementNumber(s):undefined)??({a:1,an:1,mukkal:.75,'முக்கால்':.75,kaal:.25,ara:.5,arai:.5,'கால்':.25,'அரை':.5,'ஒண்ணு':1,'ஒன்ன':1,'ஒண்ண':1,'மூணு':3,fifty:50,hundred:100,'இருபது':20,'ஐம்பது':50,'நூறு':100} as Record<string,number>)[s.toLowerCase()]??quantityReply(s)?.quantity;}
 export function spokenMeasures(text:string):Measure[]{return [...text.matchAll(measures)].flatMap(m=>{const value=number(m[1]);return value?[{value,unit:measureUnit(m[2])}]:[];});}
 export function explicitPurchaseCount(phrase:string):number|undefined {
  const remainder=phrase.replace(measures,' '),re=new RegExp('(?:^|[^\\p{L}\\p{N}.])(\\d+(?:\\.\\d+)?|'+countWords+')(?=$|[^\\p{L}\\p{N}.])','giu');

@@ -21,7 +21,7 @@ const evidence = {sourceUncertainty:z.array(z.string().trim().min(1).max(40)).ma
 export const operationSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('add_item'), query, quantity: quantity.nullable(), ...evidence, requestedUnit: query.optional(), search:discoveryPlanSchema.optional() }).strict(),
   z.object({ kind: z.literal('set_quantity'), reference: query, quantity, supportingPhrase:query.optional() }).strict(),
-  z.object({ kind: z.literal('remove_item'), reference: query, supportingPhrase:query.optional() }).strict(),
+  z.object({ kind: z.literal('remove_item'), reference: query, supportingPhrase:z.string().trim().min(1).max(500).optional() }).strict(),
   z.object({ kind: z.literal('resolve_line'), lineId: z.uuid(), query: query.optional(), quantity: quantity.optional(), ...evidence, requestedUnit: query.optional(), search:discoveryPlanSchema.optional() }).strict(),
   z.object({ kind: z.literal('set_fulfillment'), method: z.literal('pickup') }).strict(),
   z.object({kind:z.literal('increment_quantity'),reference:query,delta:quantity,supportingPhrase:query}).strict(),
@@ -46,6 +46,7 @@ export const toolCallSchema = z.discriminatedUnion('name', [
 ]);
 export type ToolCall = z.infer<typeof toolCallSchema>;
 export const eventSchema = z.discriminatedUnion('type', [
+  z.object({id:z.uuid(),type:z.literal('resolve_keep_target'),memoryId:z.uuid(),targetIndex:z.number().int().min(0).max(49),lineId:z.uuid(),expectedVersion:z.number().int().min(0)}).strict(),
   z.object({id:z.uuid(),type:z.literal('voice'),mediaId:z.uuid()}).strict(),
   z.object({id:z.uuid(),type:z.literal('retry_voice'),mediaId:z.uuid(),expectedVersion:z.number().int().min(0)}).strict(),
   z.object({id:z.uuid(),type:z.literal('image'),mediaId:z.uuid(),caption:z.string().trim().max(1000).default('')}).strict(),
@@ -75,7 +76,7 @@ export const eventSchema = z.discriminatedUnion('type', [
   z.object({id:z.uuid(),type:z.literal('confirm_products'),batchId:z.uuid()}).strict(),
 ]);
 export type SimulatorEvent = z.infer<typeof eventSchema>;
-export type Product = {sellingPolicy?:import('zod').infer<typeof import('./selling-units.js').sellingPolicySchema>; sku: string; name: string; localNames?:import('./language.js').LocalNames; unit: string; pricePaise: number;priceStatus?:'priced'|'confirm'|'free';sellingUnitVerified?:boolean; stock: number | null; stockOnHand?:number|null;stockReserved?:number;inventoryVersion?:number; version: number; aliases: string[]; quantityStep: number; category?:string; imageUrl?:string;imageReference?:boolean;familyId?:string;brand?:string;specifications?:Record<string,string>;keywords?:string[] };
+export type Product = {indicativePrice?:import('./indicative-prices.js').IndicativePrice;sellingPolicy?:import('zod').infer<typeof import('./selling-units.js').sellingPolicySchema>; sku: string; name: string; localNames?:import('./language.js').LocalNames; unit: string; pricePaise: number;priceStatus?:'priced'|'confirm'|'free';sellingUnitVerified?:boolean; stock: number | null; stockOnHand?:number|null;stockReserved?:number;inventoryVersion?:number; version: number; aliases: string[]; quantityStep: number; category?:string; imageUrl?:string;imageReference?:boolean;familyId?:string;brand?:string;specifications?:Record<string,string>;keywords?:string[] };
 export type DraftLine = {merchantConfirmed?:{actor:string;at:string;free:boolean;saleMode?:'pack'|'measured'};budgetCountDerived?:true;sourceUncertainty?:string[];requestedBudgetPaise?:number; id: string; query?: string; sku?: string; quantity: number | null; name: string; unit?: string; pricePaise?: number; productVersion?: number; requestedUnit?:string; requestedQuantity?:number;packSize?:{value:number;unit:string};productMeasures?:{value:number;unit:string;role?:'size'|'diameter'|'length'|'width'|'height'|'thickness'}[];productIntent?:ProductIntent;requestedAmount?:{value:number;unit:string};amountMode?:'total'|'continuous';supportingPhrase?:string;quantityEvidenceVersion?:1;packUnitAlternative?:{requested:{value:number;unit:string};acceptedSku?:string};catalogIssue?:'pack_unit_mismatch'|'price_unverified'|'selling_unit_unverified'|'out_of_stock'|'amount_unverified'|'cutting_required'|'continuous_length'|'insufficient_stock'|'budget_unverified'|'unreadable'; discovery?:DiscoveryResult;shopCheckDeferred?:true;productConfirmation?:{sku:string;version:number;identityHash:string}; resolution: 'matched' | 'needs_choice' | 'needs_quantity' | 'needs_unit' | 'unavailable'; candidates?: Product[] };
 export type ProductCheck={kind:'products';id:string;version:number;expiresAt:string;groups:{lineId:string;products:Product[];discovery?:DiscoveryResult}[];remaining:number;completeReview?:true;listHash?:string};
 export type Pending = { kind: 'question'; id: string; lineId: string; version: number } | ProductCheck | { kind: 'review'; id: string; version: number; hash: string; expiresAt: string; lines: DraftLine[]; totalPaise: number; fulfillment: 'pickup';excludedLineIds?:string[];advanceRequired?:boolean };

@@ -1,0 +1,65 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import type {ConversationState,DraftLine,Product} from '../packages/contracts/index.js';
+import {estimateLines,estimatePendingSummary,estimateTotalText} from '../apps/server/src/services/order-estimate.js';
+import {visualBill,visualProductReview,visualReply} from '../apps/server/src/services/visual-ordering.js';
+import {renderWhatsAppReply} from '../apps/server/src/services/whatsapp-reply.js';
+import {finalQuotePresentation} from '../apps/server/src/services/quote-presentation.js';
+import {indicativeLineEstimate,indicativeEstimate} from '../apps/server/src/services/order-estimate.js';
+
+const product:Product={sku:'TAPE',name:'PTFE tape',unit:'roll',pricePaise:2000,stock:20,version:1,aliases:[],quantityStep:1,imageUrl:'/demo-images/H08.jpg',sellingUnitVerified:true};
+const line=(p:Product,quantity:number|null=1):DraftLine=>({id:randomUUID(),sku:p.sku,name:p.name,query:p.name,quantity,resolution:quantity===null?'needs_quantity':'matched',pricePaise:p.pricePaise,unit:p.unit,productVersion:p.version,candidates:[p]});
+function state(draft:DraftLine[]):ConversationState{return {version:5,replyLanguage:'ta',visualOrdering:true,allowPartialReview:true,draft,pending:null,fulfillment:'pickup',lastRequestId:null};}
+
+test('a wholly unpriced cart never presents a zero estimate or repeats a full bill beside its image',()=>{
+ const unknown={...product,pricePaise:0,priceStatus:'confirm' as const};
+ const s=state(Array.from({length:8},(_,n)=>line({...unknown,sku:'UNKNOWN'+n,name:'பொருள் '+n},n+1)));
+ s.pending={kind:'products',id:randomUUID(),version:s.version,expiresAt:new Date(Date.now()+60000).toISOString(),remaining:8,groups:s.draft.map(l=>({lineId:l.id,products:l.candidates!}))};
+ const review=visualProductReview(s),guide=review.parts![0].cards[0];
+ assert.equal(guide.kind,'instruction');if(guide.kind!=='instruction')return;
+ assert.doesNotMatch(guide.lines.join('\n'),/₹0/);
+ assert.match(guide.lines.join('\n'),/8 விலை/);
+ const bill=visualBill(s),card=bill.parts![0].cards[0];
+ assert.equal(bill.parts!.length,1);assert.equal(card.kind,'bill');if(card.kind!=='bill')return;
+ assert.equal(card.billRows!.length,8);assert.ok(card.billRows!.every(row=>row.unitPrice==='—'));
+ assert.doesNotMatch(card.total!,/₹0/);assert.match(card.total!,/கடையில்/);
+ assert.ok(bill.accessibleText!.includes('பொருள் 7'));
+ assert.ok(!bill.parts![0].text.includes('பொருள் 7'),'only the invoice contains the full item list');
+ const rendered=renderWhatsAppReply({...bill,parts:[{...bill.parts![0],cards:[{...card,imageUrl:'/catalog-images/messages/'+'a'.repeat(64)+'.png'}]}]},randomUUID(),'shop.example.test');
+ assert.equal(rendered.format,'image');assert.ok(!JSON.stringify(rendered.payload).includes('பொருள் 7'));
+});
+
+test('an excluded count or identity is not mislabeled as only an unknown price',()=>{
+ const quantity=line(product,null),missing:DraftLine={id:randomUUID(),name:'unknown pipe',query:'unknown pipe',quantity:2,resolution:'unavailable'};
+ const unknown=line({...product,sku:'UNKNOWN',pricePaise:0,priceStatus:'confirm'}),s=state([line(product,2),quantity,missing,unknown]);
+ assert.equal(estimateLines(s.draft).knownSubtotalPaise,4000);
+ const summary=estimatePendingSummary(s)!;
+ assert.match(summary,/1 எண்ணிக்கை/);assert.match(summary,/1 பொருள்/);assert.match(summary,/1 விலை/);
+ assert.match(estimateTotalText(s),/₹40.00/);
+ const card=visualBill(s).parts![0].cards[0];assert.equal(card.kind,'bill');if(card.kind!=='bill')return;
+ assert.match(card.lines.join('\n'),/எண்ணிக்கை/);assert.match(card.lines.join('\n'),/பொருள் தேர்வு/);
+ assert.doesNotMatch(card.lines.join('\n'),/3.*விலை/);
+});
+
+test('pipe category clarification asks one question with three versioned choices',()=>{
+ const l:DraftLine={id:randomUUID(),name:'pipe',query:'pipe',quantity:2,resolution:'unavailable'},s=state([l]);
+ const questionId=randomUUID();s.pending={kind:'question',id:questionId,lineId:l.id,version:s.version};
+ const reply=visualReply({version:1,kind:'text',text:'A lengthy internal explanation about two pipes',presentation:'text',outboundMessages:1,contextLines:['Other items have these issues']},s);
+ assert.equal(reply.text,'எந்த வகை பைப் வேணும்?');assert.equal(reply.parts,undefined);
+ assert.equal(reply.buttons!.length,3);
+ for(const button of reply.buttons!){assert.equal(button.event.type,'choose_pipe_type');if(button.event.type==='choose_pipe_type'){assert.equal(button.event.lineId,l.id);assert.equal(button.event.expectedVersion,s.version);assert.equal(button.event.questionId,questionId);}}
+ assert.deepEqual(reply.buttons!.map(b=>b.event.type==='choose_pipe_type'?b.event.pipeType:undefined),['pvc','hose','pump']);
+});
+
+test('indicative invoice amounts stay approximate and cannot satisfy final shop quote checks',()=>{
+ const p:Product={...product,pricePaise:0,priceStatus:'confirm',indicativePrice:{pricePaise:35000,lowPaise:25000,highPaise:50000,unit:'roll',currency:'INR',asOf:'2026-10-18',source:'model-low-indicative',basis:'category_estimate',generation:{model:'gpt-6',requestedModel:'gpt-6-luna',effort:'low',inputHash:'a'.repeat(64),proposalHash:'b'.repeat(64)}}};
+ const approximate=line(p,2),s=state([line(product),approximate]);
+ assert.equal(estimateLines(s.draft).knownSubtotalPaise,2000);assert.equal(estimateLines(s.draft).complete,false);
+ assert.equal(indicativeEstimate(s.draft).subtotalPaise,72000);assert.equal(indicativeLineEstimate(approximate)!.totalPaise,70000);
+ const card=visualBill(s).parts![0].cards[0];assert.equal(card.kind,'bill');if(card.kind!=='bill')return;
+ assert.equal(card.billRows![1].unitPrice,'~₹350.00');assert.equal(card.billRows![1].total,'~₹700.00');
+ assert.match(card.total!,/சுமார்: ₹720.00/);assert.match(card.footer!,/உத்தேச விலை/);
+ assert.throws(()=>finalQuotePresentation('ta',{id:randomUUID(),requestId:randomUUID(),version:1,lines:s.draft,totalPaise:72000,previousLines:[],previousTotalPaise:0,advancePaise:0}),/final quote/);
+ for(const bad of [{...approximate,quantity:null},{...approximate,unit:'box'},{...approximate,resolution:'needs_unit' as const},{...approximate,requestedAmount:{value:10,unit:'metre'}}])assert.equal(indicativeLineEstimate(bad),undefined);
+});

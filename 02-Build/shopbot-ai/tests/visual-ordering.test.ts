@@ -185,7 +185,7 @@ for(const stage of ['products','bill'])test(`shop handoff during ${stage} delive
 
 
 test('reference product captions retain their label and pending price before channel rendering',()=>{
- for(const [language,label,pending] of [['en','Reference photo','Price: shop to confirm'],['ta','Reference படம்','விலை: கடை சொல்ல வேண்டும்'],['ta-Latn','Reference photo','Vilai: kadai sollanum']] as const){
+ for(const [language,label,pending] of [['en','Reference photo','Price: shop to confirm'],['ta','Reference படம்','கடையில் சரிபார்த்து சொல்லப்படும்'],['ta-Latn','Reference photo','Vilai: kadai sollanum']] as const){
   const state:ConversationState={visualOrdering:true,replyLanguage:language,version:0,draft:[],pending:null,fulfillment:'pickup',lastRequestId:null};
   const product:Product={sku:'REF',name:'Cutting wheel',unit:'piece',pricePaise:0,priceStatus:'confirm',stock:null,version:1,aliases:[],quantityStep:1,imageUrl:'/catalog-images/reference/'+randomUUID()+'.jpg',imageReference:true,brand:'Brand details '.repeat(30),specifications:{size:'Large size '.repeat(30)}};
   const action:SimulatorEvent={id:randomUUID(),type:'choose_product',sku:product.sku,expectedVersion:0};

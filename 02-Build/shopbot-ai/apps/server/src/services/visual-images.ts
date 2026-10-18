@@ -4,6 +4,8 @@ import {createHash} from 'node:crypto';
 import {mkdirSync,existsSync,writeFileSync,readFileSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import type {VisualCard,RichReply} from '../../../../packages/contracts/index.js';
+import {measurementText,productName,referencePhotoLabel,say} from '../../../../packages/contracts/language.js';
+import {buildProductCaption,productPhotoCaption} from '../../../../packages/contracts/channel-text.js';
 
 export const visualMediaDir=()=>resolve(process.env.VISUAL_MEDIA_DIR??'data/visual-images');
 const escape=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]!));
@@ -128,8 +130,20 @@ export function renderVisualImage(card:Exclude<VisualCard,{kind:'product'}>,dire
 }
 export function materializeVisualReply(reply:RichReply,directory=visualMediaDir()):RichReply {
  if(!reply.parts)return reply;
- return {...reply,parts:reply.parts.map(part=>({...part,cards:part.cards.map(card=>card.kind==='product'?(card.product.imageUrl?card:{...card,product:{...card.product,imageUrl:renderVisualImage({kind:'instruction',title:card.product.name,lines:['Catalog photo unavailable',card.product.specifications?.size??''],caption:card.caption},directory)}}):{...card,imageUrl:card.imageUrl??renderVisualImage({...card,storeName:reply.storeName},directory)})}))};
+ const language=reply.replyLanguage??'en';
+ return {...reply,parts:reply.parts.map(part=>({...part,cards:part.cards.map(card=>{
+  if(card.kind!=='product')return {...card,imageUrl:card.imageUrl??renderVisualImage({...card,storeName:reply.storeName},directory)};
+  if(card.product.imageUrl)return card;
+  const missing=say(language,'Photo unavailable','படம் இல்லை','Padam illai');
+  const name=productName(card.product,language),size=measurementText(card.product.specifications?.size??card.product.specifications?.weight??'',language);
+  const reference=referencePhotoLabel(card.product,language);
+  const bounded=buildProductCaption(card.product,language,card.caption.split('\n'),undefined,160-Array.from(missing).length-1);
+  const caption=card.caption.includes(missing)?productPhotoCaption(card.caption,card.product,language):reference?bounded.slice(0,-reference.length).trimEnd()+'\n'+missing+'\n'+reference:bounded+'\n'+missing;
+  // The placeholder describes this exact SKU and never borrows another photo.
+  return {...card,caption,product:{...card.product,imageUrl:renderVisualImage({kind:'instruction',title:name,lines:[...(!name.includes(size)&&size?[size]:[]),missing],caption:card.caption},directory)}};
+ })}))};
 }
+
 export function readVisualImage(hash:string):Buffer|undefined {
  if(!/^[a-f0-9]{64}\.png$/.test(hash))return;
  const path=join(visualMediaDir(),hash);return existsSync(path)?readFileSync(path):undefined;

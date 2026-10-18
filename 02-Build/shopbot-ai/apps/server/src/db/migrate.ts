@@ -392,6 +392,45 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       CREATE INDEX catalog_photos_content ON catalog_photos(store_id,content_hash) WHERE content_hash IS NOT NULL;
       INSERT INTO schema_migrations(version) VALUES(36);
     `);}
+    const v37=await client.query('SELECT version FROM schema_migrations WHERE version=37');
+    if(!v37.rowCount){await client.query(`
+      ALTER TABLE products ADD COLUMN indicative_price jsonb;
+      ALTER TABLE products ADD CONSTRAINT products_indicative_price_check CHECK(indicative_price IS NULL OR coalesce(CASE WHEN
+        jsonb_typeof(indicative_price)='object'
+        AND indicative_price ?& ARRAY['pricePaise','lowPaise','highPaise','unit','currency','asOf','source','generation']
+        AND jsonb_typeof(indicative_price->'pricePaise')='number'
+        AND jsonb_typeof(indicative_price->'lowPaise')='number'
+        AND jsonb_typeof(indicative_price->'highPaise')='number'
+        AND jsonb_typeof(indicative_price->'generation')='object'
+      THEN (indicative_price->>'pricePaise')::numeric BETWEEN 1 AND 2147483647
+        AND (indicative_price->>'lowPaise')::numeric BETWEEN 1 AND (indicative_price->>'pricePaise')::numeric
+        AND (indicative_price->>'highPaise')::numeric BETWEEN (indicative_price->>'pricePaise')::numeric AND 2147483647
+        AND trunc((indicative_price->>'pricePaise')::numeric)=(indicative_price->>'pricePaise')::numeric
+        AND trunc((indicative_price->>'lowPaise')::numeric)=(indicative_price->>'lowPaise')::numeric
+        AND trunc((indicative_price->>'highPaise')::numeric)=(indicative_price->>'highPaise')::numeric
+        AND indicative_price->>'unit' IN ('piece','box','pack','pair','roll','bottle','can','tin','bucket','metre','foot','kg','litre')
+        AND indicative_price->>'currency'='INR'
+        AND indicative_price->>'source'='model-low-indicative'
+        AND indicative_price->>'asOf' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+        AND indicative_price->'generation' ?& ARRAY['model','effort','inputHash','proposalHash']
+        AND length(indicative_price->'generation'->>'model') BETWEEN 1 AND 100
+        AND indicative_price->'generation'->>'effort'='low'
+        AND indicative_price->'generation'->>'inputHash' ~ '^[a-f0-9]{64}$'
+        AND indicative_price->'generation'->>'proposalHash' ~ '^[a-f0-9]{64}$'
+      ELSE false END,false));
+      CREATE FUNCTION clear_stale_indicative_price() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        IF NEW.name IS DISTINCT FROM OLD.name OR NEW.unit IS DISTINCT FROM OLD.unit
+          OR NEW.brand IS DISTINCT FROM OLD.brand OR NEW.specifications IS DISTINCT FROM OLD.specifications
+          OR NEW.selling_policy IS DISTINCT FROM OLD.selling_policy OR NEW.quantity_step IS DISTINCT FROM OLD.quantity_step
+          OR NEW.price_paise IS DISTINCT FROM OLD.price_paise OR NEW.price_status IS DISTINCT FROM OLD.price_status
+        THEN NEW.indicative_price=NULL; END IF;
+        RETURN NEW;
+      END $$;
+      CREATE TRIGGER products_clear_indicative_price BEFORE UPDATE ON products
+        FOR EACH ROW WHEN (OLD.indicative_price IS NOT NULL) EXECUTE FUNCTION clear_stale_indicative_price();
+      INSERT INTO schema_migrations(version) VALUES(37);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

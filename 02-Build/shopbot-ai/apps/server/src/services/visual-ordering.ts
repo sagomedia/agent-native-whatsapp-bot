@@ -1,7 +1,7 @@
-import {productPhotoCaption} from '../../../../packages/contracts/channel-text.js';
+import {buildProductCaption} from '../../../../packages/contracts/channel-text.js';
 import type {Product} from '../../../../packages/contracts/index.js';
 import {customerCopy} from '../../../../packages/contracts/customer-copy.js';
-import {estimateLines,estimateText} from './order-estimate.js';
+import {estimateLines,estimateText,estimatePendingSummary,estimateTotalText,indicativeLineEstimate,indicativeEstimate} from './order-estimate.js';
 import {textPresentation} from './message-presentation.js';
 import {randomUUID,createHash} from 'node:crypto';
 import type {ConversationState,RichReply,ReplyPart,VisualCard,ProductCheck,OrderRequest} from '../../../../packages/contracts/index.js';
@@ -58,7 +58,11 @@ export function visualProductReview(state:ConversationState,compact=false):RichR
    const caption=family?localName(family.label,family.localNames,state):a.query;
    return product?{kind:'product',lineId:line.id,product,caption:productCaption(product,state,[caption,product.specifications?.size]),buttons:[select]}:instruction(caption,[say(state,'Shop needs to check this type','இந்த வகையை கடை சரிபார்க்கணும்','Intha vagai kadai check pannanum')],caption,[select]);
   });
-  return reply('identify',[part(cards,question)],'product_meaning');
+  const buttons=cards.map((card,index)=>{
+   const alternative=intent.alternatives![index],family=meaning.discovery?.facets.find(f=>f.key==='family')?.values.find(v=>v.value===alternative.familyId);
+   return {...card.buttons![0],label:family?localName(family.label,family.localNames,state):alternative.query};
+  });
+  return reply('identify',[part([],question,buttons)],'product_meaning');
  }
  const ambiguous=check.groups.find(g=>g.products.length>1||!state.draft.find(l=>l.id===g.lineId)?.sku),missing=state.draft.filter(l=>!l.sku&&!l.candidates?.length||l.resolution==='unavailable');
  const identified=productCheckCoversDraft(state,check);
@@ -80,10 +84,10 @@ export function visualProductReview(state:ConversationState,compact=false):RichR
   const content=catalogContent(product),amount=line.requestedAmount;
   const count=line.quantity===null?line.requestedQuantity!==undefined?`${line.requestedQuantity} ${unitName(line.requestedUnit??'unit',state,line.requestedQuantity)}`:amount?requestedAmountText(line,state):say(state,'Count: to check','எண்ணிக்கை: சொல்ல வேண்டும்','Count: sollanum'):`${line.quantity} ${unitName(product.unit,state,line.quantity)}`;
   const conversion=amount&&content&&line.quantity!==null&&!['metre','foot','litre','kg'].includes(product.unit)?`${content.value} ${content.unit} × ${line.quantity} = ${amount.value} ${amount.unit}`:undefined;
-  return [{kind:'product',lineId:line.id,product,caption:productCaption(product,state,[product.brand?fitText(product.brand,24):'',measurementText(size??'',state),count,budgetText(line,state),conversion?measurementText(conversion,state):undefined,productPriceText(product,state),productStockText(product,state),draftIssueText(line,state)],index+1),buttons:[edit]}];
+  return [{kind:'product',lineId:line.id,product,caption:productCaption(product,state,[count,measurementText(size??'',state),budgetText(line,state),conversion?measurementText(conversion,state):undefined],index+1),buttons:[edit]}];
  });
  const estimate=estimateLines(state.draft);
- const total=estimate.excluded.length?say(state,`Known subtotal: ${formatMoney(estimate.knownSubtotalPaise)} · ${estimate.excluded.length} prices pending`,`தெரிஞ்ச விலை ${formatMoney(estimate.knownSubtotalPaise)} · ${estimate.excluded.length} விலை pending`,`Therinja vilai ${formatMoney(estimate.knownSubtotalPaise)} · ${estimate.excluded.length} vilai pending`):say(state,`Estimate ${formatMoney(estimate.knownSubtotalPaise)}`,`Estimate ${formatMoney(estimate.knownSubtotalPaise)}`,`Estimate ${formatMoney(estimate.knownSubtotalPaise)}`);
+ const total=[estimateTotalText(state),estimatePendingSummary(state)].filter(Boolean).join('\n');
  const estimateButton:Button={label:say(state,'Show estimate','Bill காட்டு','Bill kaattu'),event:{id:randomUUID(),type:'review_partial',expectedVersion:state.version}};
  const primary=confirmShown?approve:state.allowPartialReview?estimateButton:undefined;
  const title=say(state,`${state.draft.length} items`,`${state.draft.length} items`,`${state.draft.length} items`);
@@ -105,22 +109,22 @@ export function visualProductReview(state:ConversationState,compact=false):RichR
  return reply(missing.length?'shop_check':'products',parts,missing.length?missing.find(l=>l.catalogIssue)?.catalogIssue??'catalog_missing':undefined);
 }
 export function visualBill(state:ConversationState,request?:OrderRequest):RichReply {
- const lines=request?.lines??state.draft,estimate=estimateLines(lines);
+ const lines=request?.lines??state.draft,estimate=estimateLines(lines),display=indicativeEstimate(lines);
  const buttons:Button[]=request?[]:state.pending?.kind==='review'?[{label:say(state,'Send order to shop','கடைக்கு அனுப்பு','Order kadaikku anuppu'),event:{id:randomUUID(),type:'confirm',reviewId:state.pending.id}},change(state)]:[];
  const cards:Exclude<VisualCard,{kind:'product'}>[]=[],pages=Math.ceil(lines.length/INVOICE_ROWS_PER_PAGE);
  for(let offset=0;offset<lines.length;offset+=INVOICE_ROWS_PER_PAGE){
   const page=offset/INVOICE_ROWS_PER_PAGE+1,final=page===pages;
   const rows=lines.slice(offset,offset+INVOICE_ROWS_PER_PAGE).map(line=>{
-   const product=line.candidates?.find(p=>p.sku===line.sku),pack=line.packSize??(product?catalogPack(product):undefined),priced=estimate.priced.includes(line);
-   return {name:lineName(line,state),packSize:measurementText(pack?`${pack.value} ${pack.unit}`:product?.specifications?.size??'',state)+(line.requestedAmount?` · ${requestedAmountText(line,state)}`:''),count:line.quantity===null?line.requestedQuantity!==undefined?`${line.requestedQuantity} ${unitName(line.requestedUnit??'unit',state,line.requestedQuantity)}`:'—':`${line.quantity} ${unitName(line.requestedUnit??line.unit??'unit',state,line.quantity)}`,unitPrice:priced?formatMoney(line.pricePaise!):'—',total:priced?formatMoney(lineTotal(line.pricePaise!,line.quantity!)):say(state,'Price pending','விலை இன்னும் வரல','Vilai innum varala')};
+   const product=line.candidates?.find(p=>p.sku===line.sku),pack=line.packSize??(product?catalogPack(product):undefined),priced=estimate.priced.includes(line),indicative=indicativeLineEstimate(line);
+   return {name:lineName(line,state),packSize:measurementText(pack?`${pack.value} ${pack.unit}`:product?.specifications?.size??'',state)+(line.requestedAmount?` · ${requestedAmountText(line,state)}`:''),count:line.quantity===null?line.requestedQuantity!==undefined?`${line.requestedQuantity} ${unitName(line.requestedUnit??'unit',state,line.requestedQuantity)}`:'—':`${line.quantity} ${unitName(line.requestedUnit??line.unit??'unit',state,line.quantity)}`,unitPrice:priced?formatMoney(line.pricePaise!):indicative?'~'+formatMoney(indicative.pricePaise):'—',total:priced?formatMoney(lineTotal(line.pricePaise!,line.quantity!)):indicative?'~'+formatMoney(indicative.totalPaise):say(state,'Price pending','விலை இன்னும் வரல','Vilai innum varala')};
   });
-  const total=estimate.priced.length?say(state,`${estimate.complete?'Estimated total':'Known subtotal'}: ${formatMoney(estimate.knownSubtotalPaise)}`,`${estimate.complete?'Estimate':'தெரிஞ்ச விலை'}: ${formatMoney(estimate.knownSubtotalPaise)}`,`${estimate.complete?'Estimate':'Therinja vilai'}: ${formatMoney(estimate.knownSubtotalPaise)}`):say(state,'Prices need a shop quote','விலை கடை சொன்னதும் தெரியும்','Vilai kadai sonnathum theriyum');
-  cards.push({kind:request?'status':'bill',title:say(state,'Estimated invoice','Estimate Bill','Estimate Bill'),reference:request?orderReference(request.id):state.pending?.kind==='review'?'Estimate #'+state.pending.id.slice(0,8).toUpperCase():undefined,lines:[...(pages>1?[say(state,`Page ${page} / ${pages}`,`பக்கம் ${page} / ${pages}`,`Page ${page} / ${pages}`)]:[]),estimate.excluded.length?say(state,`${estimate.excluded.length} items await a quote; their prices are excluded.`,`${estimate.excluded.length} items விலை இன்னும் சேர்க்கல.`,`${estimate.excluded.length} items vilai innum serkkala.`):say(state,'Final availability is checked by the shop','கடை stock-ஐ check பண்ணி confirm பண்ணும்','Kadai stock-ai check panni confirm pannum')],billRows:rows,total:final?total:undefined,caption:say(state,`Estimated invoice ${page} / ${pages}`,`Estimate Bill ${page} / ${pages}`,`Estimate Bill ${page} / ${pages}`),buttons:request?[{label:say(state,'Order status','Order நிலை','Order status'),event:{id:randomUUID(),type:'shopping_action',action:'status',expectedVersion:state.version}}]:final?buttons:[change(state)]});
+  const total=estimateTotalText(state,lines),pending=estimatePendingSummary(state,lines);
+  cards.push({kind:request?'status':'bill',title:say(state,'Estimated invoice','Estimate Bill','Estimate Bill'),reference:request?orderReference(request.id):state.pending?.kind==='review'?'Estimate #'+state.pending.id.slice(0,8).toUpperCase():undefined,lines:[...(pages>1?[say(state,`Page ${page} / ${pages}`,`பக்கம் ${page} / ${pages}`,`Page ${page} / ${pages}`)]:[]),pending??say(state,'Final availability is checked by the shop','கடை stock-ஐ check பண்ணி confirm பண்ணும்','Kadai stock-ai check panni confirm pannum')],...(display.indicative.length?{footer:say(state,'Indicative prices (~) · the shop confirms the final bill.','~ உத்தேச விலை · இறுதி விலையை கடை உறுதி செய்யும்.','~ Uththesa vilai · final vilaiyai kadai confirm pannum.')} :{}),billRows:rows,total:final?total:undefined,caption:say(state,`Estimated invoice ${page} / ${pages}`,`Estimate Bill ${page} / ${pages}`,`Estimate Bill ${page} / ${pages}`),buttons:request?[{label:say(state,'Order status','Order நிலை','Order status'),event:{id:randomUUID(),type:'shopping_action',action:'status',expectedVersion:state.version}}]:final?buttons:[change(state)]});
  }
  const text=estimateText(state,lines,false,!request);
  // Each page is one native image. Consent travels with the final invoice page;
  // earlier pages must be delivered before its buttons become available.
- const parts=cards.map((card,index)=>part([card],[pages>1?card.caption:undefined,index===cards.length-1?card.total:undefined,index===cards.length-1&&estimate.excluded.length?say(state,`${estimate.excluded.length} item prices pending; excluded above.`,`${estimate.excluded.length} items விலை இன்னும் சேர்க்கல.`,`${estimate.excluded.length} items vilai innum serkkala.`):undefined].filter(Boolean).join('\n')||card.caption));
+ const parts=cards.map((card,index)=>part([card],[pages>1?card.caption:undefined,index===cards.length-1?card.total:undefined].filter(Boolean).join('\n')||card.caption));
  return {...reply(request?'submitted':'bill',parts),text,accessibleText:text,kind:request?'text':'order_review'};
 }
 export function visualEstimate(state:ConversationState,lines:ConversationState['draft']):RichReply {
@@ -132,7 +136,7 @@ export function visualEstimate(state:ConversationState,lines:ConversationState['
 export function visualReply(base:RichReply,state:ConversationState,request?:OrderRequest|null):RichReply {
  const plan=planReply(base,state,request);
  if(!state.visualOrdering||plan.purpose==='read_only')return base;
- if(plan.purpose==='error'||base.clarificationReason==='intent_clarification')return nativeReply(base,state);
+ if(plan.purpose==='error'||base.clarificationReason==='intent_clarification'||base.clarificationReason==='keep_only_target')return nativeReply(base,state);
  if(base.handoffRequested)return nativeReply({...base,stage:'status',handoffRequested:true},state);
  if(request){return {...(base.stage==='submitted'?visualBill(state,request):visualStatus(state,request)),replyLanguage:state.replyLanguage};}
  if(base.stage==='returning')return base;
@@ -157,11 +161,10 @@ export function visualReply(base:RichReply,state:ConversationState,request?:Orde
  if(line&&!line.sku&&line.productIntent?.kind!=='ambiguous'&&needsPipeType(line.query??line.name)&&!(base.stage==='identify'&&base.cards?.length)){
   const pump=/\bpump(?:ing)?\b|\bsuction\b|\bmotor\b|பம்ப்|மோட்டார்/i.test(line.query??line.name);
   const prompt=pump?say(state,'Which kind of pipe for the pump do you need? A brand or photo will help the shop identify it.','பம்புக்கு எந்த வகை பைப் வேணும்? பிராண்ட் அல்லது படம் இருந்தா சொல்லுங்க.','Pump-ku entha vagai pipe venum? Brand illa photo iruntha sollunga.'):say(state,'Which type of pipe do you need?','எந்த வகை பைப் வேணும்?','Entha vagai pipe venum?');
-  const label=lineName(line,state);
-  const count=line.quantity===null?'':`${line.quantity} ${unitName(line.requestedUnit??line.unit??'unit',state,line.quantity)}`;
-  const namedPrompt=[label,count].filter(Boolean).join(' · ')+': '+prompt;
+  const size=line.productMeasures?.map(m=>measurementText(`${m.value} ${m.unit}`,state)).join(' × ');
+  const question=size?`${size} ${say(state,'pipe','பைப்','pipe')} — ${prompt}`:prompt;
   const choices:Button[]=!pump&&state.pending?.kind==='question'?(['pvc','hose','pump'] as const).map(pipeType=>({label:{pvc:say(state,'Rigid PVC','கெட்டியான PVC','Rigid PVC'),hose:say(state,'Flexible hose','வளையும் ஹோஸ்','Flexible hose'),pump:say(state,'Pump pipe','மோட்டார் பைப்','Pump pipe')}[pipeType],event:{id:randomUUID(),type:'choose_pipe_type',lineId:line.id,questionId:state.pending!.id,pipeType,expectedVersion:state.version}})):[shop(state)];
-  return nativeReply({...base,text:namedPrompt,contextLines:undefined,stage:'identify',clarificationReason:'product_or_specification',buttons:choices},state);
+  return nativeReply({...base,text:question,contextLines:undefined,stage:'identify',clarificationReason:'product_or_specification',buttons:choices},state);
  }
  if(line&&!(base.stage==='identify'&&base.cards?.length)&&(line.resolution==='needs_quantity'||line.resolution==='needs_unit')){
   const product=line.candidates?.find(p=>p.sku===line.sku);
@@ -219,10 +222,5 @@ function visualEditPicker(state:ConversationState):RichReply {
 }
 
 function productCaption(product:Product,state:ConversationState,details:(string|undefined)[],index?:number):string {
- const name=productName(product,state);
- const requiredPrice=referencePhotoLabel(product,state)||product.priceStatus==='confirm'||product.pricePaise===0&&product.priceStatus!=='free'?productPriceText(product,state):undefined;
- const suffix=[...new Set([requiredPrice,...details].filter((d):d is string=>!!d&&!name.toLowerCase().includes(d.toLowerCase())))].join('\n'),prefix=index?`${index}. `:'';
- const available=Math.max(20,160-Array.from(suffix).length-prefix.length-1);
- const caption=prefix+fitText(name,available)+(suffix?'\n'+suffix:'');
- return referencePhotoLabel(product,state)?productPhotoCaption(caption,product,state):caption;
+ return buildProductCaption(product,state,details,index);
 }

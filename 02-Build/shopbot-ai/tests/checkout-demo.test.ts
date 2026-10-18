@@ -63,9 +63,9 @@ test('known and missing products progress through photos, invoice, explicit subm
  s=await turn(approve);assert.equal(last(s).stage,'bill');assert.equal(s.requests.length,0);
  assert.match(last(s).accessibleText!,/unknown unicorn bolt/);assert.match(last(s).text,/₹40/);assert.ok(s.messages.filter(m=>m.rich?.groupId===last(s).groupId).flatMap(m=>m.rich?.parts?.flatMap(p=>p.cards)??[]).some(c=>c.kind==='bill'&&c.billRows?.some(row=>row.unitPrice==='—')));
  const confirm=buttons(last(s)).find(b=>b.event.type==='confirm')!.event;s=await turn(confirm);assert.equal(s.requests.length,1);
- const qr=last(s),pay=buttons(qr).find(b=>b.event.type==='pay_at_shop')!.event;assert.ok(qr.parts?.[0].cards[0].kind!=='product'&&qr.parts?.[0].cards[0].imageUrl);assert.match(qr.text,/No advance has been received yet/);
+ const qr=last(s),pay=buttons(qr).find(b=>b.event.type==='pay_at_shop')!.event;assert.ok(qr.parts?.[0].cards[0].kind!=='product'&&qr.parts?.[0].cards[0].imageUrl);assert.match(qr.text,/no advance received yet/i);
  assert.ok(renderWhatsAppReply(qr,randomUUID(),advance.hostname).actions.some(a=>a.event.type==='pay_at_shop'));
- const before=calls();s=await turn(pay);assert.equal(calls(),before);assert.match(last(s).text,/pay the full amount at the shop/i);assert.doesNotMatch(last(s).text,/advance received/i);
+ const before=calls();s=await turn(pay);assert.equal(calls(),before);assert.match(last(s).text,/pay fully at the shop/i);assert.match(last(s).text,/no ₹10 advance received/i);
  const order=(await pool.query('SELECT advance_required,payment,acceptance,fulfillment,lines FROM order_requests')).rows[0];assert.equal(order.advance_required,false);assert.equal(order.payment,'not_requested');assert.equal(order.acceptance,'awaiting_approval');assert.equal(order.lines.length,2);
  const payment=(await pool.query('SELECT state,transaction_reference,verified_at,offered_at FROM order_advances')).rows[0];assert.equal(payment.state,'pay_at_shop');assert.equal(payment.verified_at,null);assert.equal(payment.transaction_reference,null);assert.ok(payment.offered_at);
  s=await turn('status');assert.match(last(s).text,/No advance received/);assert.equal(buttons(last(s)).some(b=>b.event.type==='payment_claim'),false);

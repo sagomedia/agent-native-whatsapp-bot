@@ -9,6 +9,7 @@ import {latestCatalogRead} from './owner-catalog-loading.js';
 import {stockLabel} from './owner-model.js';
 import {useOwnerUrl,navigateOwner,Notice,EmptyState,ProductPhoto,ConfirmDialog,OwnerLink} from './owner-ui.js';
 import {formatMoney} from '../../../packages/contracts/money.js';
+import {indicativePriceFor} from '../../../packages/contracts/language.js';
 
 type Row=Product&{active:boolean;origin:string;inventoryUpdatedAt:string|null;verification?:Verification;referencePhotos?:{id:string;proposalId:string;matchKind:string}[]};
 type Node={id:string;parent_id:string|null;kind:'department'|'family';label:string;local_names?:{ta?:string}};
@@ -19,7 +20,7 @@ type Suggestion={name:string;localNames:{ta:string;'ta-Latn':string};aliases:str
 type Form={inventoryVersion?:number;saleMode:''|'pack'|'measured';packValue:string;packUnit:string;cutAllowed:boolean;continuousLength:string;verification:Verification;sku:string;createId:string;version:number;name:string;ta:string;latin:string;brand:string;unit:string;price:string;priceStatus:string;stock:string;quantityStep:string;aliases:string;keywords:string;specs:{key:string;value:string}[];familyId:string;newType:NewType|null;active:boolean;verified:boolean};
 const units=SELLING_UNITS;
 const pendingReview=(verification?:Verification)=>!verification||(['identity','photo','sellingUnit','price','stock'] as const).some(key=>verification[key]!==true);
-const priceLabel=(product:Product)=>product.priceStatus==='confirm'?'Price to confirm':formatMoney(product.pricePaise);
+const priceLabel=(product:Product)=>{const indicative=indicativePriceFor(product);return indicative?'Approx. '+formatMoney(indicative.pricePaise):product.priceStatus==='confirm'?'Price to confirm':formatMoney(product.pricePaise);};
 const blank=():Form=>({sku:'',createId:crypto.randomUUID(),version:0,verification:unchecked(),saleMode:'',packValue:'',packUnit:'',cutAllowed:false,continuousLength:'',name:'',ta:'',latin:'',brand:'',unit:'',price:'',priceStatus:'confirm',stock:'',quantityStep:'1',aliases:'',keywords:'',specs:[],familyId:'',newType:null,active:false,verified:false});
 const words=(s:string)=>s.split(/[\n,]/).map(x=>x.trim()).filter(Boolean);
 async function request(path:string,body?:unknown,headers:Record<string,string>={}){const r=await fetch('/api/owner/catalog'+path,body===undefined?{cache:'no-store'}:{method:'POST',headers:{'content-type':'application/json','x-shopbot-owner':'1',...headers},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw new Error(data.error??data.message??'Could not save this product.');return data;}

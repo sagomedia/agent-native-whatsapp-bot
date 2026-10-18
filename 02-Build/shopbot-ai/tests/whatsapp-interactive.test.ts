@@ -160,7 +160,7 @@ test('an oversized review preserves the draft but invalidates undisplayed consen
 
 
 test('reference photos preserve localized labels, product identity, pending price and actions in legacy and ordered visual replies',()=>{
- for(const [language,label,pending] of [['en','Reference photo','Price: shop to confirm'],['ta','Reference படம்','விலை: கடை சொல்ல வேண்டும்'],['ta-Latn','Reference photo','Vilai: kadai sollanum']] as const){
+ for(const [language,label,pending] of [['en','Reference photo','Price: shop to confirm'],['ta','Reference படம்','கடையில் சரிபார்த்து சொல்லப்படும்'],['ta-Latn','Reference photo','Vilai: kadai sollanum']] as const){
   const rich={...reply(2),replyLanguage:language,text:'Request context '.repeat(140)};
   for(const card of rich.cards!){card.product={...card.product,name:'Premium 4 inch cutting wheel',imageUrl:'/catalog-images/reference/'+randomUUID()+'.jpg',imageReference:true,pricePaise:0,priceStatus:'confirm'};card.requestLabel='Requested product '.repeat(30);card.detailLabel='Related item '.repeat(30);}
   const legacy=renderWhatsAppReply(rich,randomUUID(),cfg.hostname);

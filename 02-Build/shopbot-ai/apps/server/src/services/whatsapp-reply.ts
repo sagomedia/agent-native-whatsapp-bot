@@ -1,12 +1,11 @@
 import {createHash} from 'node:crypto';
 import type {RichReply,SimulatorEvent,ProductCard,VisualCard} from '../../../../packages/contracts/index.js';
-import {productName,unitName,say,productPriceText,referencePhotoLabel} from '../../../../packages/contracts/language.js';
-import {formatMoney} from '../../../../packages/contracts/money.js';
+import {productName,say,productPriceText,referencePhotoLabel} from '../../../../packages/contracts/language.js';
 
 export type WhatsAppAction={id:string;label:string;event:SimulatorEvent};
 export type WhatsAppReply={payload:Record<string,unknown>;actions:WhatsAppAction[];format:'text'|'buttons'|'image'|'carousel'|'list'|'audio'};
 export {fitText} from '../../../../packages/contracts/channel-text.js';
-import {fitText,cardMessageText,productPhotoCaption} from '../../../../packages/contracts/channel-text.js';
+import {fitText,cardMessageText,productPhotoCaption,buildProductCaption} from '../../../../packages/contracts/channel-text.js';
 export function productMediaUrl(image:string|undefined,hostname:string):string|undefined {
   if(!image)return;
   if(/^\/demo-images\/H\d{2}\.jpg$/.test(image))return `https://${hostname}/catalog-images/${image.split('/').at(-1)}`;
@@ -15,15 +14,7 @@ export function productMediaUrl(image:string|undefined,hostname:string):string|u
   try{const url=new URL(image);if(url.protocol==='https:'&&!url.username&&!url.password)return url.href;}catch{}
 }
 export function cardText(card:ProductCard,reply:RichReply):string {
-  const language=reply.replyLanguage??'en';
-  const price=card.product.priceStatus==='confirm'||card.product.pricePaise===0&&card.product.priceStatus!=='free'?productPriceText(card.product,language):`${formatMoney(card.product.pricePaise)} / ${unitName(card.product.unit,language)}`;
-  const reference=referencePhotoLabel(card.product,language),limit=160-(reference?Array.from(reference).length+1:0);
-  const detail=[card.matchLabel,card.quantityLabel??card.detailLabel].filter(Boolean).join(' · ').replace(/\s+/g,' ');
-  const last=fitText(detail,45),reserved=Array.from(price).length+(last?Array.from(last).length+1:0)+1;
-  // The photograph's catalog identity must survive caption truncation. Request
-  // context follows it and can be shortened; it never replaces the product name.
-  const name=fitText([productName(card.product,language),card.requestLabel].filter(Boolean).join(' · ').replace(/\s+/g,' '),Math.max(20,limit-reserved));
-  return productPhotoCaption([name,price,last||undefined].filter(Boolean).join('\n'),card.product,language);
+  return buildProductCaption(card.product,reply.replyLanguage??'en',[card.matchLabel,card.quantityLabel??card.detailLabel,card.requestLabel]);
 }
 export function renderWhatsAppReply(reply:RichReply,messageId:string,hostname:string):WhatsAppReply {
   if(reply.audio){if(!/^\/welcome-audio\/[a-f0-9]{64}\.ogg$/.test(reply.audio.url))throw new Error('Invalid welcome audio');return {format:'audio',actions:[],payload:{type:'audio',audio:{link:`https://${hostname}${reply.audio.url}`,voice:true}}};}
@@ -68,7 +59,7 @@ export function renderWhatsAppReply(reply:RichReply,messageId:string,hostname:st
   const options=rawOptions.map(b=>bind(b.label,b.event));
   if(options.length>10)throw new Error('A WhatsApp list may contain at most ten choices');
   if((options.length>0&&choiceCards.length>0)||options.length>3){
-    return {format:'list',actions,payload:{type:'interactive',interactive:{type:'list',body:{text:body},action:{button:say(reply.replyLanguage??'en','Choose an option','தேர்வு செய்யுங்கள்','Choose'),sections:[{rows:options.map((b,index)=>{const card=choiceCards.find(c=>c.action===rawOptions[index].event);return {id:b.id,title:fitText(`${index+1}. ${b.label}`,24),...(card?{description:fitText(`${formatMoney(card.product.pricePaise)} / ${card.product.unit}`,72)}:{})};})}]}}}};
+    return {format:'list',actions,payload:{type:'interactive',interactive:{type:'list',body:{text:body},action:{button:say(reply.replyLanguage??'en','Choose an option','தேர்வு செய்யுங்கள்','Choose'),sections:[{rows:options.map((b,index)=>{const card=choiceCards.find(c=>c.action===rawOptions[index].event);return {id:b.id,title:fitText(`${index+1}. ${b.label}`,24),...(card?{description:fitText(productPriceText(card.product,reply.replyLanguage??'en'),72)}:{})};})}]}}}};
   }
   if(options.length)return {format:'buttons',actions,payload:{type:'interactive',interactive:{type:'button',body:{text:body},action:{buttons:options.map(b=>({type:'reply',reply:{id:b.id,title:b.label}}))}}}};
   return {format:'text',actions,payload:{type:'text',text:{preview_url:false,body:fitText(reply.text,4096)}}};

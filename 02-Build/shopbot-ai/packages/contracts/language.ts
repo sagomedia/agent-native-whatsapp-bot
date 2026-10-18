@@ -1,6 +1,8 @@
 import type {ConversationState,Product} from './index.js';
 import {canonicalMeasurementUnit,measurementNumber,measurementNumberPattern,measurementUnitPattern,normalizeFractionNumbers,spokenNumberValues} from './measurements.js';
 import {formatMoney} from './money.js';
+import {indicativePriceFor} from './indicative-prices.js';
+export {indicativePriceFor} from './indicative-prices.js';
 
 export type ReplyLanguage='ta'|'ta-Latn'|'en';
 export type LocalNames=Partial<Record<ReplyLanguage,string>>;
@@ -89,7 +91,7 @@ export function draftIssueText(line:ConversationState['draft'][number],context:L
  const reasons:Record<string,[string,string,string]>={
   unreadable:['This list line could not be read; correct it or ask the shop','இந்த வரியைப் படிக்க முடியவில்லை; திருத்திச் சொல்லுங்கள் அல்லது கடையிடம் கேளுங்கள்','Intha variyai padikka mudiyala; thiruthi sollunga illa kadaiyila kelunga'],
   budget_unverified:['Shop must confirm a valid amount within this budget','இந்தப் பணத்திற்கு தரக்கூடிய அளவை கடை உறுதி செய்யணும்','Intha panathukku tharakkoodiya alavai kadai confirm pannanum'],
-  price_unverified:['Shop must confirm price','விலையை கடை உறுதி செய்ய வேண்டும்','Vilayai kadai confirm pannanum'],
+  price_unverified:['Shop must confirm price','கடையில் சரிபார்த்து சொல்லப்படும்','Vilayai kadai confirm pannanum'],
   selling_unit_unverified:['Shop must verify pack / selling unit','இந்த pack-ஐ எப்படி தர்றாங்கன்னு கடை check பண்ணும்','Pack / selling unit-ai kadai confirm pannanum'],
   amount_unverified:['Product found; shop must verify the amount per selling unit','பொருள் இருக்கு; பீஸ் அளவை கடை உறுதி செய்யணும்','Porul irukku; piece alavai kadai confirm pannanum'],
   cutting_required:['Product found; cutting and its price need shop confirmation','பொருள் இருக்கு; வெட்டித் தருவதையும் விலையையும் கடை உறுதி செய்யணும்','Porul irukku; cut panni tharuvathaiyum vilayaiyum kadai confirm pannanum'],
@@ -113,8 +115,13 @@ export function measurementText(value:string,context:LanguageContext):string {
 export function referencePhotoLabel(product:Pick<Product,'imageReference'|'imageUrl'>,context:LanguageContext):string|undefined {
  if(product.imageReference||/^\/catalog-images\/reference\/[a-f0-9-]{36}\.jpg$/.test(product.imageUrl??''))return say(context,'Reference photo','Reference படம்','Reference photo');
 }
+export function indicativePriceText(product:Product,context:LanguageContext):string|undefined {
+ const price=indicativePriceFor(product);if(!price)return;
+ return `${say(context,'Approx.','சுமார்','Sumaar')} ${formatMoney(price.pricePaise)} / 1 ${unitName(price.unit,context)}`;
+}
 export function productPriceText(product:Product,context:LanguageContext):string {
- if(product.priceStatus==='confirm'||product.pricePaise===0&&product.priceStatus!=='free')return say(context,'Price: shop to confirm','விலை: கடை சொல்ல வேண்டும்','Vilai: kadai sollanum');
+ const indicative=indicativePriceText(product,context);if(indicative)return indicative;
+ if(product.priceStatus==='confirm'||product.pricePaise===0&&product.priceStatus!=='free')return say(context,'Price: shop to confirm','கடையில் சரிபார்த்து சொல்லப்படும்','Vilai: kadai sollanum');
  return `${formatMoney(product.pricePaise)} / 1 ${unitName(product.unit,context)}`;
 }
 export function productStockText(product:Product,context:LanguageContext):string {
