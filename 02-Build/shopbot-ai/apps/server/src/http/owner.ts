@@ -97,18 +97,25 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
    if(!(await pool.query('SELECT id FROM conversations WHERE store_id=$1 AND id=$2',[owner.storeId,req.params.id])).rowCount)return reply.code(404).send({error:'Conversation not found'});
    return {attempts:(await pool.query('SELECT id,message_id,stage,state,failure_code,validation_issues,observation FROM provider_attempts WHERE store_id=$1 AND conversation_id=$2 AND observation IS NOT NULL ORDER BY created_at DESC LIMIT 5',[owner.storeId,req.params.id])).rows,limit:5};
   });
-  app.get('/api/owner/snapshot',async()=>{
+  app.get<{Querystring:{conversation?:string}}>('/api/owner/snapshot',async(request,reply)=>{
+    const selectedConversation=z.object({conversation:uuid.optional()}).safeParse(request.query);
+    if(!selectedConversation.success)return reply.code(400).send({error:'Invalid conversation'});
     const client=await pool.connect();
     try{
       await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
       const store=(await client.query('SELECT id,name,synthetic,operator_paused,operator_revision,inventory_policy FROM stores WHERE id=$1',[owner.storeId])).rows[0];
-      const conversations=(await client.query(`SELECT c.id,c.actor,c.operator_mode,c.operator_revision,c.reply_language,c.draft,c.version,
+      const conversationQuery=`SELECT c.id,c.actor,c.operator_mode,c.operator_revision,c.reply_language,c.draft,c.version,
         CASE WHEN c.pending->>'kind'='review' THEN jsonb_build_object('reviewId',c.pending->>'id','expiresAt',c.pending->>'expiresAt','totalPaise',c.pending->'totalPaise','itemCount',jsonb_array_length(c.draft)) ELSE NULL END AS checkout,
         (SELECT text FROM messages WHERE conversation_id=c.id ORDER BY sequence DESC LIMIT 1) AS last_text,
         (SELECT max(created_at) FROM messages WHERE conversation_id=c.id) AS updated_at,
         (SELECT count(*)::int FROM messages WHERE conversation_id=c.id AND status IN ('pending','processing')) AS pending
         ,c.handoff_requested,(SELECT last_inbound_at FROM whatsapp_conversations WHERE conversation_id=c.id) AS last_inbound_at
-        FROM conversations c WHERE store_id=$1 ORDER BY c.handoff_requested DESC,updated_at DESC NULLS LAST,id LIMIT 100`,[owner.storeId])).rows;
+        FROM conversations c WHERE store_id=$1`;
+      const conversations=(await client.query(conversationQuery+' ORDER BY c.handoff_requested DESC,updated_at DESC NULLS LAST,id LIMIT 100',[owner.storeId])).rows;
+      // Deep links from shop-wide operations can refer to a conversation outside
+      // the recent inbox. Keep all recent rows and append its guarded metadata.
+      const selectedId=selectedConversation.data.conversation;
+      if(selectedId&&!conversations.some(c=>c.id===selectedId))conversations.push(...(await client.query(conversationQuery+' AND c.id=$2',[owner.storeId,selectedId])).rows);
       const deliveries=(await client.query(`SELECT c.id,count(m.id)::int AS total,count(*) FILTER(WHERE o.state IN ('delivered','read'))::int AS delivered,bool_or(o.state IN ('failed','unknown','blocked','cancelled')) AS issue
         FROM conversations c JOIN LATERAL (SELECT m.reply_group_id FROM messages m JOIN whatsapp_actions a ON a.message_id=m.id WHERE m.conversation_id=c.id AND a.binding_id::text=c.pending->>'id' AND a.event->>'type'='confirm' ORDER BY m.sequence DESC LIMIT 1) g ON true
         JOIN messages m ON m.reply_group_id=g.reply_group_id LEFT JOIN whatsapp_outbox o ON o.message_id=m.id

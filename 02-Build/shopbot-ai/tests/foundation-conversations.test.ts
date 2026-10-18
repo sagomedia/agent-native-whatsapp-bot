@@ -97,7 +97,8 @@ test('four-item corrections retain the active line, avoid unrelated images and r
  assert.equal(last(state).cards?.length??0,0);
  assert.equal(last(state).buttons?.some(button=>button.event.type==='confirm_products')??false,false);
  const rendered=renderWhatsAppReply(last(state),randomUUID(),'catalog.example.test');
- assert.doesNotMatch(JSON.stringify(rendered.payload),/H22|H23|H24|H25|stencil|scraper/i);
+ // Opaque callback IDs can randomly contain a SKU substring; inspect customer content.
+ assert.doesNotMatch(JSON.stringify(rendered.payload,(key,value)=>key==='id'?'[callback-id]':value),/H22|H23|H24|H25|stencil|scraper/i);
  const before=state.conversation;
  state=await turn(inbox,runtime,{...oldPhoto,id:randomUUID()});
  assert.deepEqual(state.conversation,before);
