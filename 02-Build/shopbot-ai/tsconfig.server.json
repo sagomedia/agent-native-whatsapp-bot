@@ -12,6 +12,7 @@
     "scripts/import-bulk-catalog.ts",
     "scripts/catalog-capacity.ts",
     "scripts/promote-catalog-review-later.ts",
-    "scripts/publish-catalog-reference-photos.ts"
+    "scripts/publish-catalog-reference-photos.ts",
+    "scripts/import-indicative-prices.ts"
   ]
 }

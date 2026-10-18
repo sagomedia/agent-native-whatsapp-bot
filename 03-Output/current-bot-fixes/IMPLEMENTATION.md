@@ -26,6 +26,8 @@ At the user's request, a subagent was requested with `gpt-6-luna`, effort `low`,
 
 Migration 37 adds nullable, validated `products.indicative_price` metadata. The importer is restricted to the exact synthetic shop, uses a frozen versioned snapshot, locks and rechecks all rows, audits the batch and supports a no-write replay. It never changes `price_paise`, `price_status`, stock, selling policy, merchant verification or product photographs. Existing actual prices take precedence. Ambiguous selling bases remain pending.
 
+The importer is compiled into the native release and required by the packaging check. A compiled-CLI regression exercises its deployed imports and early argument guards without development tooling or database access.
+
 Cards display `சுமார் ₹…`; approximate invoice amounts use `~` and an indicative-price footer. These totals do not satisfy exact-quote completeness, merchant acceptance or payment truth. Shop-entered final prices still require the existing final quote approval path.
 
 ## Verification and deployment

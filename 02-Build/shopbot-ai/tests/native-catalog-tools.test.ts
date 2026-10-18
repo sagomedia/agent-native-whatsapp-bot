@@ -71,3 +71,15 @@ test('compiled reference-photo CLI runs without tsx, requires batch/settings and
   const noSettings=runCompiled(cli,['--batch=fixture-import','--snapshot=/tmp/reference-no-write.json']);assert.equal(noSettings.status,1);assert.equal(noSettings.stdout,'');assert.match(JSON.parse(noSettings.stderr).message,/Explicit DATABASE_URL and SHOPBOT_CATALOG_STORE_ID/);
   const noAuthority=runCompiled(cli,['--batch=fixture-import','--snapshot=/tmp/reference-no-write.json','--apply']);assert.equal(noAuthority.status,1);assert.match(JSON.parse(noAuthority.stderr).message,/requires both --apply and --owner-authorized/);
 });
+
+test('compiled indicative-price CLI loads deployed imports and requires a proposal and explicit snapshot before connecting',()=>{
+  const cli=join(repository,'dist/scripts/import-indicative-prices.js');
+  assert.ok(existsSync(cli),'Run npm run build before compiled pricing CLI tests.');
+  const noProposal=runCompiled(cli,[]);
+  assert.ifError(noProposal.error);assert.equal(noProposal.status,1);assert.equal(noProposal.stdout,'');
+  assert.match(noProposal.stderr,/Usage: tsx scripts\/import-indicative-prices/);
+  assert.doesNotMatch(noProposal.stderr,/MODULE_NOT_FOUND|ERR_MODULE_NOT_FOUND/);
+  const noSnapshot=runCompiled(cli,['fixture-prices.json']);
+  assert.ifError(noSnapshot.error);assert.equal(noSnapshot.status,1);assert.equal(noSnapshot.stdout,'');
+  assert.match(noSnapshot.stderr,/Choose an explicit snapshot file/);
+});
