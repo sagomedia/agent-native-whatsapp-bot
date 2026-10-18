@@ -13,6 +13,8 @@
     "scripts/catalog-capacity.ts",
     "scripts/promote-catalog-review-later.ts",
     "scripts/publish-catalog-reference-photos.ts",
-    "scripts/import-indicative-prices.ts"
+    "scripts/import-indicative-prices.ts",
+    "scripts/import-shop-facts.ts",
+    "scripts/demo-evidence.ts"
   ]
 }

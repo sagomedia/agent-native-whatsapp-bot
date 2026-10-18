@@ -83,3 +83,9 @@ test('compiled indicative-price CLI loads deployed imports and requires a propos
   assert.ifError(noSnapshot.error);assert.equal(noSnapshot.status,1);assert.equal(noSnapshot.stdout,'');
   assert.match(noSnapshot.stderr,/Choose an explicit snapshot file/);
 });
+
+test('compiled shop-fact and demo evidence tools load without development dependencies or implicit database work',()=>{
+ const cli=join(repository,'dist/scripts/import-shop-facts.js');assert.ok(existsSync(cli));
+ const help=runCompiled(cli,['--help']);assert.ifError(help.error);assert.equal(help.status,0,help.stderr);assert.match(help.stdout,/Repeat the SAME chunk/);assert.match(help.stdout,/owner-authorized/);
+ const evidence=join(repository,'dist/scripts/demo-evidence.js');assert.ok(existsSync(evidence));const missing=runCompiled(evidence,[]);assert.equal(missing.status,1);assert.match(missing.stderr,/Usage: npm run demo:evidence/);assert.doesNotMatch(missing.stderr,/MODULE_NOT_FOUND|ERR_MODULE_NOT_FOUND/);
+});

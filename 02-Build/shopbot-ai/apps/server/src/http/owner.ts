@@ -25,6 +25,8 @@ import {randomUUID} from 'node:crypto';
 import {requestStatusText} from '../services/request-status.js';
 import type {OrderRequest} from '../../../../packages/contracts/index.js';
 import {registerOwnerCatalog} from './owner-catalog.js';
+import {registerOwnerFacts} from './owner-facts.js';
+import {registerOwnerOperations} from './owner-operations.js';
 import {catalogPhoto} from '../services/catalog-photos.js';
 import {loadImage} from '../services/image-media.js';
 import {loadVoicePlayback} from '../services/voice-media.js';
@@ -76,6 +78,8 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       await client.query('COMMIT');return result;
     }catch(error){await client.query('ROLLBACK');if(error instanceof ToolError)Object.assign(error,{statusCode:error.code==='forbidden'?403:409});throw error;}finally{client.release();}
   }
+  registerOwnerFacts(app,pool,owner.storeId,write);
+  registerOwnerOperations(app,pool,owner.storeId);
   await registerOwnerCatalog(app,pool,owner.storeId,write,catalogGenerator??(config.catalogAi?new GoogleCatalogGenerator(config.catalogAi.apiKey):undefined));
   const release=runtimeReleaseMetadata();
   app.get<{Querystring:{language?:string}}>('/api/owner/message-gallery',async(req,reply)=>{

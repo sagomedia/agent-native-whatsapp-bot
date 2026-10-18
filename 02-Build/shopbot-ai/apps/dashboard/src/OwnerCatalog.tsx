@@ -1,3 +1,4 @@
+import {OwnerBulkFacts} from './OwnerBulkFacts.js';
 import {OwnerStock} from './OwnerStock.js';
 import {verificationAfterEdit,unchecked,type Verification} from './owner-verification.js';
 import {OwnerProposals,type CatalogProposal} from './OwnerProposals.js';
@@ -25,7 +26,7 @@ const blank=():Form=>({sku:'',createId:crypto.randomUUID(),version:0,verificatio
 const words=(s:string)=>s.split(/[\n,]/).map(x=>x.trim()).filter(Boolean);
 async function request(path:string,body?:unknown,headers:Record<string,string>={}){const r=await fetch('/api/owner/catalog'+path,body===undefined?{cache:'no-store'}:{method:'POST',headers:{'content-type':'application/json','x-shopbot-owner':'1',...headers},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw new Error(data.error??data.message??'Could not save this product.');return data;}
 export const OwnerCatalog=memo(function OwnerCatalog({onDirtyChange}:{onDirtyChange?:(dirty:boolean)=>void}){
- const params=useOwnerUrl(),inventory=params.get('inventory')==='1',query=params.get('q')??'',visibility=params.get('visibility')??'',stock=params.get('stock')??'';
+ const params=useOwnerUrl(),bulk=params.get('bulk')==='1',inventory=params.get('inventory')==='1',query=params.get('q')??'',visibility=params.get('visibility')??'',stock=params.get('stock')??'';
  const family=params.get('family')??'',brand=params.get('brand')??'',exception=params.get('exception')??'',sort=params.get('sort')??'name',cursor=params.get('cursor')??'';
  const setQuery=(q:string)=>navigateOwner({q,page:null,cursor:null},true);
  const [reviewAction,setReviewAction]=useState<'hide'|'reject'|null>(null);
@@ -118,9 +119,11 @@ export const OwnerCatalog=memo(function OwnerCatalog({onDirtyChange}:{onDirtyCha
  const [testPhrase,setTestPhrase]=useState(''),[diagnosis,setDiagnosis]=useState<{revision:number;products:(Product&{issues:string[]})[];hidden:{sku:string;name:string}[]}|null>(null),[testing,setTesting]=useState(false);
  async function testCatalog(){setTesting(true);setError('');try{setDiagnosis(await request('/diagnose',{query:testPhrase}));}catch(e){setError((e as Error).message);}finally{setTesting(false);}}
  const canSuggest=!!catalog?.aiAvailable&&(!!description.trim()||!!form.name.trim()||!!photo||!!selected?.imageUrl);
+ if(bulk&&!dirty)return <OwnerBulkFacts onDirtyChange={onDirtyChange}/>;
  return <section className="owner-catalog" aria-label="Shop products">
   {error&&<Notice error>{error}{cursor&&<button onClick={()=>navigateOwner({cursor:null,page:null},true)}>Start from first page</button>}{!catalog&&<button type="button" onClick={()=>{setError('');setLoadingPage(true);void refresh();}}>Retry loading products</button>}</Notice>}{notice&&<Notice>{notice}</Notice>}
   {pendingChoose&&<ConfirmDialog title="Discard unsaved product changes?" onCancel={()=>{setPendingChoose(null);navigateOwner({product:form.sku||null},true);lastProductRoute.current=form.sku||null;}} onConfirm={()=>{const sku=pendingChoose.product?.sku??pendingChoose.sku;setDirty(false);setPendingChoose(null);if(sku)void loadProduct(sku);else openProduct();}}>Save the product first if you want to keep your edits.</ConfirmDialog>}
+  <div className="owner-product-tools"><OwnerLink className="owner-button" values={{bulk:'1'}} disabled={busy||dirty}>Update prices & stock in bulk</OwnerLink>{dirty&&<span>Save your product edits before a bulk update.</span>}</div>
   <OwnerProposals revision={draftRevision} onSelect={openProposal}/>
   {reviewAction&&<ConfirmDialog title={reviewAction==='hide'?'Hide this product?':'Reject this draft?'} confirmLabel={reviewAction==='hide'?'Hide product':'Reject draft'} onCancel={()=>setReviewAction(null)} onConfirm={()=>void completeReviewAction()}>{reviewAction==='hide'?'The product will leave customer search. Existing requests keep their submitted details.':'This proposal will leave the review queue. Its source and original photos are retained.'}</ConfirmDialog>}
   {inventory?<div className="owner-inventory">

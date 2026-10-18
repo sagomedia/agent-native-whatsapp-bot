@@ -431,6 +431,20 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
         FOR EACH ROW WHEN (OLD.indicative_price IS NOT NULL) EXECUTE FUNCTION clear_stale_indicative_price();
       INSERT INTO schema_migrations(version) VALUES(37);
     `);}
+    const v38=await client.query('SELECT version FROM schema_migrations WHERE version=38');
+    if(!v38.rowCount){await client.query(`
+      CREATE TABLE catalog_fact_batches (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),
+        file_hash text NOT NULL CHECK(file_hash ~ '^[a-f0-9]{64}$'),filename text,
+        expires_at timestamptz NOT NULL,status text NOT NULL CHECK(status IN ('preview','invalid','applying','complete','blocked')),
+        rows jsonb NOT NULL CHECK(jsonb_typeof(rows)='array' AND jsonb_array_length(rows) BETWEEN 1 AND 3000),
+        chunks jsonb NOT NULL DEFAULT '[]' CHECK(jsonb_typeof(chunks)='array'),
+        next_row integer NOT NULL DEFAULT 0 CHECK(next_row BETWEEN 0 AND 3000),error text,
+        created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX catalog_fact_batches_store_created ON catalog_fact_batches(store_id,created_at DESC,id);
+      INSERT INTO schema_migrations(version) VALUES(38);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

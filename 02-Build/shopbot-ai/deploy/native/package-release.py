@@ -20,7 +20,7 @@ parser.add_argument('--output-dir', type=Path, required=True)
 args = parser.parse_args()
 app = Path(__file__).resolve().parents[2]
 assert (app / 'dist/apps/server/src/index.js').is_file(), 'Run npm run build first'
-for required_cli in ['dist/scripts/import-bulk-catalog.js', 'dist/scripts/catalog-capacity.js', 'dist/scripts/promote-catalog-review-later.js', 'dist/scripts/publish-catalog-reference-photos.js', 'dist/scripts/import-indicative-prices.js']:
+for required_cli in ['dist/scripts/import-bulk-catalog.js', 'dist/scripts/catalog-capacity.js', 'dist/scripts/promote-catalog-review-later.js', 'dist/scripts/publish-catalog-reference-photos.js', 'dist/scripts/import-indicative-prices.js', 'dist/scripts/import-shop-facts.js', 'dist/scripts/demo-evidence.js']:
     assert (app / required_cli).is_file(), f'Required compiled catalog CLI is missing: {required_cli}; run npm run build'
 proof=json.loads((app/'dist/release-manifest.json').read_text())
 subprocess.run(['node','--input-type=module','-e',"import {verifyRelease} from './dist/apps/server/src/services/release-manifest.js'; await verifyRelease(process.cwd(),true);"],cwd=app,check=True)

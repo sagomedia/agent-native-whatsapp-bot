@@ -3,13 +3,13 @@ import {normalize, tokens, oneEdit} from '../../../packages/contracts/catalog-te
 
 export type OwnerProduct = Product & {active: boolean; origin: string; inventoryUpdatedAt: string | null};
 export type RequestState = {acceptance: string; fulfillment: string;advance_required?:boolean;advance_state?:string};
-export const ownerViews = ['conversations', 'requests', 'catalog', 'connections', 'message-review'] as const;
+export const ownerViews = ['overview', 'requests', 'conversations', 'catalog', 'connections', 'message-review'] as const;
 export type OwnerView = typeof ownerViews[number];
 export const viewLabels: Record<OwnerView, string> = {
-  conversations: 'Conversations', requests: 'Requests', catalog: 'Products', connections: 'Connections & usage', 'message-review':'Message review'
+  overview: 'Today', conversations: 'Conversations', requests: 'Orders', catalog: 'Products', connections: 'Settings & usage', 'message-review':'Message review'
 };
 export function ownerView(value: string | null): OwnerView {
-  return ownerViews.includes(value as OwnerView) ? value as OwnerView : 'conversations';
+  return ownerViews.includes(value as OwnerView) ? value as OwnerView : 'overview';
 }
 export function matchesProduct(product: OwnerProduct, query: string) {
   const search = normalize(query);
