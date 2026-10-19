@@ -21,7 +21,7 @@ export function mutationNegated(source:string,description=source):boolean {
  if(!description.includes(source))return true;
  const boundary=/[;.!?\n]|\s+(?:and|but|instead|அடுத்து|ஆனா)\s+/iu,start=description.indexOf(source);
  const context=(description.slice(0,start).split(boundary).at(-1)??'')+source+description.slice(start+source.length).split(boundary)[0];
- return /\b(?:don't|dont|do not|never|no need to)\s+(?:(?:just|ever|only)\s+)?(?:add|change|update|set|make|increase|decrease|replace|swap|remove|delete|drop)\b|(?:மாற்ற|மாத்த|சேர்|சேர்க்க|ஆட்|அட்|அப்டேட்|ரிமூவ்?|டெலீட்|டிலீட்)[^;.!?\n]{0,35}(?:வேண்டாம்|வேணாம்|பண்ணாத|செய்யாத)|மாற்றாத|மாத்தாத|சேர்க்காத|நீக்காத/iu.test(context);
+ return /\b(?:don't|dont|do not|never|no need to)\s+(?:(?:just|ever|only)\s+)?(?:add|change|update|set|make|increase|decrease|replace|swap|remove|delete|drop)\b|(?<![\p{L}\p{M}])(?:மாற்ற(?:ு|ுங்க)?|மாத்த(?:ு|ுங்க)?|சேர்|சேர்க்க|சேருங்க|அப்டேட்|ரிமூவ்?|டெலீட்|டிலீட்)(?=\s|$)[^;.!?\n]{0,35}(?:வேண்டாம்|வேணாம்|பண்ணாத|செய்யாத)|(?<![\p{L}\p{M}])(?:ஆட்|அட்)\s+(?:பண்ண|செய்ய)[^;.!?\n]{0,20}(?:வேண்டாம்|வேணாம்|பண்ணாத|செய்யாத)|(?<![\p{L}\p{M}])(?:மாற்றாத|மாத்தாத|சேர்க்காத|நீக்காத)/iu.test(context);
 }
 
 export function intentClauses(text: string): string[] {

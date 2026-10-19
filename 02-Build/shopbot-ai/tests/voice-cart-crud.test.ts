@@ -175,3 +175,14 @@ test('a decrement from an unknown count asks for the remaining total instead of 
  const bolt=line('bolt',null),source='remove one bolt',result=understandingToInterpretation({...base,proposedEdits:[{kind:'decrement_quantity',targetLineId:bolt.id,sourceText:source,quantity:1}]},{text:source,state:state([bolt])},false);
  assert.deepEqual(result.operations,[]);assert.match(result.clarifyQuestion??'',/எத்தனை|total/);assert.equal(bolt.quantity,null);
 });
+
+
+test('Tamil brand names starting like an edit verb remain valid removal targets',()=>{
+ for(const [name,source] of [['Atlas hammer','அட்லஸ் சுத்தியல் வேண்டாம்'],['Cheran hammer','சேரன் சுத்தியல் வேண்டாம்']]){
+  const hammer=line(name),result=understandingToInterpretation({...base,proposedEdits:[{kind:'remove_item',targetLineId:hammer.id,targetQuery:name,sourceText:source}]},{text:source,state:state([hammer])},false);assert.equal(result.operations[0]?.kind,'remove_item');
+ }
+});
+
+test('Tamil add negation still requires the actual add action phrase',()=>{
+ const source='ஸ்க்ரூ அட் பண்ண வேண்டாம்';assert.throws(()=>understandingToInterpretation({...base,intents:['add'],requestedItems:[{ordinal:0,sourceText:source,query:'screw',purchaseCount:2,unresolved:[]}]},{text:source,state:state([])},false),/negates this cart mutation/);
+});
