@@ -14,7 +14,10 @@ export function positiveRemoval(source:string,description=source):boolean {
  const boundary=/[;.!?\n]|\s+(?:and|but|instead|அடுத்து|ஆனா)\s+/iu;
  const start=description.indexOf(source),before=description.slice(0,start).split(boundary).at(-1)??'',after=description.slice(start+source.length).split(boundary)[0];
  const context=before+source+after;
- return !/\b(?:don't|dont|do not|never)\s+(?:remove|delete|drop)|(?:ரிமூவ்?|டெலீட்|டிலீட்|நீக்க|எடுக்க|எடுத்துர|எடுத்துட)[^;.!?\n]{0,35}(?:வேண்டாம்|வேணாம்|பண்ணாத|செய்யாத)|(?:remove|delete|drop)\s+(?:panna|pannu|pann)\s+(?:vendam|vendaam|venam)/iu.test(context);
+ // The infinitive "எடுக்க வேண்டாம்" negates removal. The completed
+ // imperative "எடுத்துருங்க வேண்டாம்" means take it out, I do not want it.
+ // Do not match the infinitive prefix inside the completed imperative.
+ return !/\b(?:don't|dont|do not|never)\s+(?:remove|delete|drop)|(?:ரிமூவ்?|டெலீட்|டிலீட்|நீக்க|நீக்கிட|எடுக்க|எடுத்துர|எடுத்துட|எடுத்திட)(?=\s|வேண்டாம்|வேணாம்|பண்ணாத|செய்யாத)[^;.!?\n]{0,35}(?:வேண்டாம்|வேணாம்|பண்ணாத|செய்யாத)|(?:remove|delete|drop)\s+(?:panna|pannu|pann)\s+(?:vendam|vendaam|venam)/iu.test(context);
 }
 
 export function mutationNegated(source:string,description=source):boolean {

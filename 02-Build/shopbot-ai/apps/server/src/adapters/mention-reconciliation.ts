@@ -117,7 +117,9 @@ function editText(source:string){
 }
 export function editIdentityWords(source:string){return tokens(editText(source)).filter(word=>word.length>2&&!/^\d/.test(word)&&!editNoise.has(word));}
 export function editMeasuresMatch(source:string,line:DraftLine):boolean {
- const measures=spokenMeasures(source).filter(measure=>['inch','mm','cm','m','foot','litre','ml','kg','g'].includes(measure.unit));
+ // Recognition sometimes writes the inch abbreviation as "4 in". Normalize
+ // it only for edit-size comparison, never for purchase-count extraction.
+ const measures=spokenMeasures(source.replace(/\b(\d+(?:\.\d+)?)\s*in\b/giu,'$1 inch')).filter(measure=>['inch','mm','cm','m','foot','litre','ml','kg','g'].includes(measure.unit));
  const product=line.candidates?.find(product=>product.sku===line.sku),known=[...line.productMeasures??[],...(line.packSize?[line.packSize]:[]),...spokenMeasures([line.query,line.name].join(' ')),...(product?catalogMeasures(product):[])];
  return measures.every(measure=>{const comparable=known.filter(value=>convertAmount(value,measure.unit)!==null);return !comparable.length||comparable.some(value=>convertAmount(value,measure.unit)===measure.value);});
 }
