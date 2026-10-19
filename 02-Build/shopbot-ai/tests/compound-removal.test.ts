@@ -58,8 +58,17 @@ test('shared removal evidence preserves individual identity and size checks and 
 });
 
 test('a plain English coordinated group can share its verb without inventing one in each name span',()=>{
- const s=fixtureState(),text='please remove Fevicol adhesive and screw box',u={...proposal(s,text),proposedEdits:[{kind:'remove_item',targetLineId:s.draft[3].id,sourceText:'Fevicol adhesive'},{kind:'remove_item',targetLineId:s.draft[2].id,sourceText:'screw box'}]};
- const result=understandingToInterpretation(u,input(s),false);assert.equal(result.operations.length,2);assert.ok(result.operations.every(op=>op.kind==='remove_item'&&op.supportingPhrase===text));
+ for(const count of ['','both','two','2']){
+  const s=fixtureState(),text=`please remove ${count} Fevicol adhesive and screw box`,u={...proposal(s,text),proposedEdits:[{kind:'remove_item',targetLineId:s.draft[3].id,sourceText:'Fevicol adhesive'},{kind:'remove_item',targetLineId:s.draft[2].id,sourceText:'screw box'}]};
+  const result=understandingToInterpretation(u,input(s),false);assert.equal(result.operations.length,2);assert.ok(result.operations.every(op=>op.kind==='remove_item'&&op.supportingPhrase===text));
+ }
+});
+
+test('a spoken group count can be written as a digit or either Tamil form without changing item quantities',()=>{
+ for(const count of ['2','இரண்டு','ரெண்டு']){
+  const s=fixtureState(),u=proposal(s,speech.replace('ரெண்டே',count)),result=understandingToInterpretation(u,input(s),false);
+  assert.equal(result.operations.length,2);assert.ok(result.operations.every(op=>op.kind==='remove_item'));assert.equal(s.draft[3].quantity,null);
+ }
 });
 
 for(const needsChoice of [false,true])test(`Google wire response and voice runtime remove both rows${needsChoice?' after resolving one target':''} and show only the remaining cart`,async()=>{
