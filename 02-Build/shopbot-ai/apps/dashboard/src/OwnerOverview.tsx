@@ -1,4 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
+import {visiblePoll} from './owner-polling.js';
 import type {OwnerOperationsSummary} from '../../server/src/services/owner-operations.js';
 import type {DraftLine} from '../../../packages/contracts/index.js';
 import {formatMoney} from '../../../packages/contracts/money.js';
@@ -10,9 +11,10 @@ const issueLabels={pending:'Awaiting processing',processing:'Processing',failed_
 function age(seconds:number|null){if(seconds===null)return 'Age unavailable';if(seconds<60)return 'Under a minute';if(seconds<3600)return Math.floor(seconds/60)+' min old';if(seconds<86400)return Math.floor(seconds/3600)+' hr old';return Math.floor(seconds/86400)+' days old';}
 export function OwnerOverview({data,busy,openChat}:{data:OverviewData;busy:boolean;openChat:(id:string)=>void}){
  const [summary,setSummary]=useState<OwnerOperationsSummary|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(false);
- const sequence=useRef(0);
- async function refresh(){const current=++sequence.current;setLoading(true);try{const response=await fetch('/api/owner/operations/summary',{cache:'no-store'}),result=await response.json();if(!response.ok)throw new Error(result.error??'Could not load shop readiness.');if(current===sequence.current){setSummary(result);setError('');}}catch(error){if(current===sequence.current)setError(error instanceof Error?error.message:'Could not load shop readiness.');}finally{if(current===sequence.current)setLoading(false);}}
- useEffect(()=>{const load=()=>{if(!document.hidden)void refresh();};load();const timer=setInterval(load,15000);window.addEventListener('focus',load);return()=>{sequence.current++;clearInterval(timer);window.removeEventListener('focus',load);};},[]);
+ const sequence=useRef(0),inFlight=useRef<Promise<void>>(Promise.resolve());
+ async function refresh(signal?:AbortSignal){const current=++sequence.current,previous=inFlight.current;setLoading(true);const task=(async()=>{await previous.catch(()=>{});if(signal?.aborted||current!==sequence.current)return;try{const response=await fetch('/api/owner/operations/summary',{cache:'no-store',signal}),result=await response.json();if(!response.ok)throw new Error(result.error??'Could not load shop readiness.');if(current===sequence.current){setSummary(result);setError('');}}catch(error){if(!signal?.aborted&&current===sequence.current)setError(error instanceof Error?error.message:'Could not load shop readiness.');}finally{if(current===sequence.current)setLoading(false);}})();inFlight.current=task;return task;}
+
+ useEffect(()=>{const stop=visiblePoll(signal=>refresh(signal),{intervalMs:15000});return()=>{sequence.current++;stop();};},[]);
  const active=data.requests.filter(activeRequest),help=data.conversations.filter(c=>c.handoff_requested),checkouts=data.conversations.filter(c=>'checkout' in c&&c.checkout);
  const conversations=new Map(data.conversations.map(c=>[c.id,c]));
  return <div className="owner-overview">

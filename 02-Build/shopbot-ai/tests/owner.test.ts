@@ -55,7 +55,8 @@ test('owner snapshot retains the recent inbox and store-scoped metadata for an o
   await pool.query("INSERT INTO stores(id,name,synthetic) VALUES($1,'Other shop','true')",[otherStore]);await pool.query("INSERT INTO conversations(id,store_id,actor) VALUES($1,$2,'private-other-shop')",[foreign,otherStore]);
   app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,port:3017,host:'127.0.0.1',mediaDir:'/tmp/owner-deeplink-test',owner},pool,undefined,undefined,createAccessVerifier(owner,async()=>[jwk]));
   const headers={host:owner.hostname,'cf-access-jwt-assertion':jwt()},snapshot=async(id?:string)=>app!.inject({url:'/api/owner/snapshot'+(id?'?conversation='+id:''),headers});
-  const before=(await snapshot()).json();assert.equal(before.conversations.length,100);assert.ok(!before.conversations.some((c:any)=>c.id===older));
+  const lite=await app.inject({url:'/api/owner/snapshot?details=0',headers});assert.equal(lite.statusCode,200);assert.equal(lite.json().detailsIncluded,false);assert.equal(lite.json().usage,null);assert.equal(lite.json().messaging,null);assert.deepEqual(lite.json().audit,[]);
+  const before=(await snapshot()).json();assert.equal(before.detailsIncluded,true);assert.equal(before.conversations.length,100);assert.ok(!before.conversations.some((c:any)=>c.id===older));
   const selectedResponse=await snapshot(older);assert.equal(selectedResponse.statusCode,200);const selected=selectedResponse.json();
   assert.deepEqual(selected.conversations.slice(0,100),before.conversations);assert.equal(selected.conversations.length,101);
   const metadata=selected.conversations.find((c:any)=>c.id===older);assert.equal(metadata.operator_mode,'owner');assert.equal(metadata.operator_revision,7);assert.equal(metadata.reply_language,'ta');assert.equal(metadata.last_text,'Earlier request needs review');assert.equal(metadata.pending,1);

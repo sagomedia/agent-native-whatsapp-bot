@@ -1,13 +1,14 @@
 import {OwnerOverview} from './OwnerOverview.js';
-import {OwnerMessageGallery} from './OwnerMessageGallery.js';
 import {OrderWorkflow,type WorkflowRequest,type AmendmentSummary} from './OrderWorkflow.js';
 import {OwnerObservations} from './OwnerObservations.js';
 import {VisualReplyView} from './VisualReplyView.js';
-import {useEffect, useState, useRef} from 'react';
+import {useEffect, useState, useRef, lazy, Suspense} from 'react';
+import {visiblePoll} from './owner-polling.js';
 import type {DraftLine, RichReply} from '../../../packages/contracts/index.js';
 import {formatMoney} from '../../../packages/contracts/money.js';
 import {draftIssueText,requestedAmountText} from '../../../packages/contracts/language.js';
-import {OwnerCatalog} from './OwnerCatalog.js';
+const OwnerCatalog=lazy(()=>import('./OwnerCatalog.js').then(module=>({default:module.OwnerCatalog})));
+const OwnerMessageGalleryLazy=lazy(()=>import('./OwnerMessageGallery.js').then(module=>({default:module.OwnerMessageGallery})));
 import {activeRequest, requestLabel, customerLabel, replyWindowOpen, when, day, clockTime, usd, microCurrency, channelLabels, auditLabels, ownerViews, ownerView, viewLabels} from './owner-model.js';
 import {useOwnerUrl, navigateOwner, Notice, EmptyState, ConfirmDialog, OwnerLink,ProductPhoto} from './owner-ui.js';
 import './owner.css';
@@ -15,11 +16,11 @@ import './owner.css';
 type Checkout = {reviewId:string;expiresAt:string;totalPaise:number;itemCount:number;state:'awaiting_customer'|'invoice_arriving'|'delivery_issue'|'expired'};
 type Conversation = {checkout?:Checkout|null;id:string; actor:string; operator_mode:'assistant'|'owner'; operator_revision:number; reply_language:string; draft:DraftLine[]; handoff_requested:boolean; last_inbound_at:string|null; pending:number; last_text:string|null; updated_at:string|null};
 type Request = WorkflowRequest & {id:string; conversation_id:string; acceptance:string; fulfillment:string; payment:string; total_paise:string; lines:DraftLine[]; created_at:string};
-type OwnerSnapshot = {requestCounts?:{active:number;history:number};store:{name:string; synthetic:string; operator_paused:boolean; operator_revision:number}; conversations:Conversation[]; requests:Request[];amendments?:AmendmentSummary[];quotes?:{id:string;request_id:string;state:string}[]; budget:{limit_microusd:string; committed_microusd:string; held_microusd:string; blocked:boolean}|null; usage:{attempts:number; failures:number; unknown:number; estimated_microusd:string}; audit:{action:string; target_id?:string; created_at:string}[]; mode:string; ownerEmail:string; channel:{whatsapp:string; liveSending:boolean; processing:boolean; lastReceivedAt:string|null; error:string|null; testOnly:boolean}; inference:{enabled:boolean; paidEnabled:boolean;rateHealth?:{status:'fresh'|'expiring'|'expired'|'invalid';verifiedOn:string|null;validUntil:string|null;daysRemaining:number|null}};messaging?:{totals:{currency:string|null;delivered:number;unknown:number;conflicting:number;estimated_microunits:string|null}[];month:string|null;accountTimezone:string|null;observedServiceDelivered:number;observedFreeTierDelivered:number;monthlyServiceAllowance:number;allowanceRemaining:null;analytics:{received_at:string;currency:string;costMicrounits:string|null;delivered:number;observedDelivered:number;observedEstimateMicrounits:string|null;deliveryCountDifference:number;rangeStart:number;rangeEnd:number}|null;analyticsAvailable:boolean}|null; generatedAt:string};
+type OwnerSnapshot = {detailsIncluded?:boolean;requestCounts?:{active:number;history:number};store:{name:string; synthetic:string; operator_paused:boolean; operator_revision:number}; conversations:Conversation[]; requests:Request[];amendments?:AmendmentSummary[];quotes?:{id:string;request_id:string;state:string}[]; budget:{limit_microusd:string; committed_microusd:string; held_microusd:string; blocked:boolean}|null; usage:{attempts:number; failures:number; unknown:number; estimated_microusd:string}; audit:{action:string; target_id?:string; created_at:string}[]; mode:string; ownerEmail:string; channel:{whatsapp:string; liveSending:boolean; processing:boolean; lastReceivedAt:string|null; error:string|null; testOnly:boolean}; inference:{enabled:boolean; paidEnabled:boolean;rateHealth?:{status:'fresh'|'expiring'|'expired'|'invalid';verifiedOn:string|null;validUntil:string|null;daysRemaining:number|null}};messaging?:{totals:{currency:string|null;delivered:number;unknown:number;conflicting:number;estimated_microunits:string|null}[];month:string|null;accountTimezone:string|null;observedServiceDelivered:number;observedFreeTierDelivered:number;monthlyServiceAllowance:number;allowanceRemaining:null;analytics:{received_at:string;currency:string;costMicrounits:string|null;delivered:number;observedDelivered:number;observedEstimateMicrounits:string|null;deliveryCountDifference:number;rangeStart:number;rangeEnd:number}|null;analyticsAvailable:boolean}|null; generatedAt:string};
 type Message = {id:string; conversation_id:string; media_available:boolean|null;media_state?:string;media_error?:string; direction:string; text:string; status:string; created_at:string; whatsapp:boolean; sender_kind?:string; payload?:Partial<RichReply>&{type?:string; mediaId?:string}};
 type Action = (path:string, body:unknown, success:string,onSuccess?:()=>void) => Promise<void>;
-async function api(path:string, body?:unknown) {
-  const response = await fetch('/api/owner/'+path, body === undefined ? {cache:'no-store'} : {method:'POST', headers:{'content-type':'application/json','x-shopbot-owner':'1'}, body:JSON.stringify(body)});
+async function api(path:string, body?:unknown, signal?:AbortSignal) {
+  const response = await fetch('/api/owner/'+path, body === undefined ? {cache:'no-store',signal} : {method:'POST', headers:{'content-type':'application/json','x-shopbot-owner':'1'}, body:JSON.stringify(body)});
   if (!response.ok) {const data = await response.json().catch(() => ({})); throw new Error(data.error ?? data.message ?? 'Unable to load the dashboard.');}
   return response.json();
 }
@@ -97,6 +98,8 @@ function Connections({data,busy,act}:{data:OwnerSnapshot;busy:boolean;act:Action
 }
 export function OwnerDashboard() {
   const params = useOwnerUrl(), view = ownerView(params.get('view')??(params.has('conversation')?'conversations':null));
+  const [catalogVisited,setCatalogVisited]=useState(view==='catalog');
+  useEffect(()=>{if(view==='catalog')setCatalogVisited(true);},[view]);
   const [data,setData] = useState<OwnerSnapshot|null>(null), [history,setHistory] = useState<Message[]>([]);
   const [loadError,setLoadError] = useState(''), [error,setError] = useState(''), [historyError,setHistoryError] = useState(''), [historyLoading,setHistoryLoading] = useState(false), [busy,setBusy] = useState(false);
   const [query,setQuery] = useState(''), [replyState,setReplyState] = useState({conversation:'',text:''}), [notice,setNotice] = useState(''), [catalogDirty,setCatalogDirty] = useState(false);
@@ -109,23 +112,29 @@ export function OwnerDashboard() {
   const replyAttempt = useRef<{conversation:string;id:string;text:string}|null>(null), actionBusy = useRef(false);
   const timeline = useRef<HTMLDivElement>(null), nearBottom = useRef(true), lastMessage = useRef('');
   const [newMessages,setNewMessages] = useState(false),[lastSyncedAt,setLastSyncedAt]=useState<string>(),[refreshing,setRefreshing]=useState(false);
-  const snapshotSequence=useRef(0),snapshotMounted=useRef(true);
+  const snapshotSequence=useRef(0),snapshotMounted=useRef(true),snapshotInFlight=useRef<Promise<void>>(Promise.resolve());
   const conversation = data?.conversations.find(c=>c.id===selected);
   const windowOpen = replyWindowOpen(conversation?.last_inbound_at), canReply = conversation?.actor!=='local-simulator' && conversation?.operator_mode==='owner' && !!data?.channel.liveSending && windowOpen;
   useEffect(()=>{document.title=viewLabels[view]+' · ShopBot';setNotice('');setError('');},[view,selected]);
-  async function refresh(){
-    const sequence=++snapshotSequence.current;setRefreshing(true);
-    try{const selectedId=params.get('conversation');const next:OwnerSnapshot=await api('snapshot'+(selectedId?'?conversation='+encodeURIComponent(selectedId):''));if(snapshotMounted.current&&sequence===snapshotSequence.current){setData(current=>stableSnapshot(current,next));setLastSyncedAt(next.generatedAt);setLoadError('');}}
-    catch(error){if(snapshotMounted.current&&sequence===snapshotSequence.current)setLoadError(error instanceof Error?error.message:'Could not refresh orders.');throw error;}
-    finally{if(snapshotMounted.current&&sequence===snapshotSequence.current)setRefreshing(false);}
+  async function refresh(signal?:AbortSignal){
+    const sequence=++snapshotSequence.current,previous=snapshotInFlight.current;setRefreshing(true);
+    const task=(async()=>{await previous.catch(()=>{});if(signal?.aborted||sequence!==snapshotSequence.current)return;
+      try{const selectedId=params.get('conversation');const next:OwnerSnapshot=await api('snapshot?details='+(view==='connections'?'1':'0')+(selectedId?'&conversation='+encodeURIComponent(selectedId):''),undefined,signal);if(snapshotMounted.current&&sequence===snapshotSequence.current){setData(current=>stableSnapshot(current,next));setLastSyncedAt(next.generatedAt);setLoadError('');}}
+      catch(error){if(signal?.aborted)return;if(snapshotMounted.current&&sequence===snapshotSequence.current)setLoadError(error instanceof Error?error.message:'Could not refresh orders.');throw error;}
+      finally{if(snapshotMounted.current&&sequence===snapshotSequence.current)setRefreshing(false);}
+    })();snapshotInFlight.current=task;return task;
   }
   useEffect(()=>{
     snapshotMounted.current=true;
-    const load=()=>{if(!document.hidden)void refresh().catch(()=>{});};
-    load();const timer=setInterval(load,5000);window.addEventListener('focus',load);document.addEventListener('visibilitychange',load);
-    return()=>{snapshotMounted.current=false;snapshotSequence.current++;clearInterval(timer);window.removeEventListener('focus',load);document.removeEventListener('visibilitychange',load);};
+    const stop=visiblePoll(signal=>refresh(signal),{intervalMs:view==='connections'?30000:view==='catalog'?20000:5000});
+    return()=>{snapshotMounted.current=false;snapshotSequence.current++;stop();};
   },[view,params.get('conversation')]);
-  useEffect(()=>{if(!selected){setHistory([]);return;}let active=true;setHistory([]);setHistoryLoading(true);setHistoryError('');nearBottom.current=true;lastMessage.current='';setNewMessages(false);const load=()=>api('conversations/'+selected).then(next=>{if(active){setHistory(current=>JSON.stringify(current)===JSON.stringify(next.messages)?current:next.messages);setHistoryError('');setHistoryLoading(false);}}).catch(e=>{if(active){setHistoryError(e.message);setHistoryLoading(false);}});void load();const timer=setInterval(()=>void load(),5000);return()=>{active=false;clearInterval(timer);};},[selected]);
+  useEffect(()=>{
+    if(view!=='conversations'||!selected){setHistory([]);setHistoryLoading(false);return;}
+    let active=true;setHistory([]);setHistoryLoading(true);setHistoryError('');nearBottom.current=true;lastMessage.current='';setNewMessages(false);
+    const stop=visiblePoll(async signal=>{try{const next=await api('conversations/'+selected,undefined,signal);if(active&&!signal.aborted){setHistory(current=>JSON.stringify(current)===JSON.stringify(next.messages)?current:next.messages);setHistoryError('');setHistoryLoading(false);}}catch(e){if(active&&!signal.aborted){setHistoryError((e as Error).message);setHistoryLoading(false);}}},{intervalMs:5000});
+    return()=>{active=false;stop();};
+  },[selected,view]);
   useEffect(()=>{setReplyText(replyDrafts.current[selected]??'');replyAttempt.current=replyAttempts.current[selected]??null;},[selected]);
   useEffect(()=>{const latest=history.at(-1)?.id??'';if(latest && latest!==lastMessage.current){if(nearBottom.current){timeline.current?.scrollTo({top:timeline.current.scrollHeight});setNewMessages(false);}else setNewMessages(true);}lastMessage.current=latest;},[history]);
   useEffect(()=>{if(view==='conversations' && nearBottom.current)timeline.current?.scrollTo({top:timeline.current.scrollHeight});},[view]);
@@ -159,8 +168,8 @@ export function OwnerDashboard() {
         {newMessages && <button className="owner-new-messages" onClick={()=>{timeline.current?.scrollTo({top:timeline.current.scrollHeight});nearBottom.current=true;setNewMessages(false);}}>New messages ↓</button>}
         <OwnerObservations key={conversation.id} conversationId={conversation.id}/>{conversation.draft.length>0 && <details className="owner-draft"><summary>Customer list · {conversation.draft.length} {conversation.draft.length===1?'item':'items'}</summary><ul>{conversation.draft.map(line=><li key={line.id}>{line.quantity===null?'Quantity needed':`${line.quantity} ${line.unit??''}`} · {line.name}{requestedAmountText(line,'en')?` · ${requestedAmountText(line,'en')}`:''}{draftIssueText(line,'en')?` · ${draftIssueText(line,'en')}`:''}</li>)}</ul></details>}
         {conversation.operator_mode!=='owner'?<div className="owner-composer-prompt"><p>{data.store.operator_paused?'Assistant is paused.':'Assistant is handling this chat.'} Take over to write a reply.</p><button className="owner-primary" disabled={busy} onClick={()=>void act('conversations/'+selected+'/control',{mode:'owner',revision:conversation.operator_revision},'You’re now handling this conversation.')}>Take over & reply</button></div>:!canReply?<div className="owner-composer-prompt"><p>{conversation.actor==='local-simulator'?'Preview conversation · customer replies are not sent.':!windowOpen?'The 24-hour WhatsApp reply window has closed.':'WhatsApp sending is disabled.'} You can still review this conversation.</p></div>:<form className="owner-reply-form" onSubmit={e=>{e.preventDefault();void sendReply();}}><label htmlFor="owner-reply">Reply to customer</label><div className="owner-compose-row"><textarea id="owner-reply" name="reply" autoComplete="off" maxLength={4096} rows={2} value={replyText} disabled={busy} onChange={e=>{setReplyText(e.target.value);replyDrafts.current[selected]=e.target.value;}} placeholder="Write your reply…"/><button className="owner-primary" type="submit" disabled={busy||!replyText.trim()}>{busy?'Sending…':'Send reply'}</button></div><small>Assistant replies stay held until you return this chat to the assistant.</small></form>}</>:<EmptyState title={selected?"Conversation unavailable":"Select a conversation"}>{selected?"This conversation could not be loaded. Refresh or choose a customer from the inbox.":"Choose a customer to see their messages."}</EmptyState>}</section></div>}
-      <div hidden={view!=='catalog'}><OwnerCatalog onDirtyChange={setCatalogDirty}/></div>
-      {view==='message-review'&&<OwnerMessageGallery/>}{view==='requests' && <RequestList data={data} busy={busy} act={act} openChat={openChat}/>}{view==='connections' && <Connections data={data} busy={busy} act={act}/>}
+      {(catalogVisited||view==='catalog')&&<div hidden={view!=='catalog'}><Suspense fallback={<p role="status">Loading products…</p>}><OwnerCatalog onDirtyChange={setCatalogDirty}/></Suspense></div>}
+      {view==='message-review'&&<Suspense fallback={<p role="status">Loading message review…</p>}><OwnerMessageGalleryLazy/></Suspense>}{view==='requests' && <RequestList data={data} busy={busy} act={act} openChat={openChat}/>}{view==='connections' && (data.detailsIncluded===false?<p role="status">Loading settings & usage…</p>:<Connections data={data} busy={busy} act={act}/>)}
       <footer className="owner-footer"><details><summary>Showing recent shop records</summary><p>Latest 100 conversations plus the selected conversation, and latest 100 requests; latest 200 messages per conversation. Last checked {when(lastSyncedAt??data.generatedAt)}.</p></details></footer>
     </>}
     {pendingNavigation && <ConfirmDialog title="Discard this reply?" onCancel={()=>setPendingNavigation(null)} onConfirm={()=>{setReplyText('');delete replyDrafts.current[selected];delete replyAttempts.current[selected];replyAttempt.current=null;pendingNavigation();setPendingNavigation(null);}}>Your unsent reply will be lost when you switch customers.</ConfirmDialog>}
