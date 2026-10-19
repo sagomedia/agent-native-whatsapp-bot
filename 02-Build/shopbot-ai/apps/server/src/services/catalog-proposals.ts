@@ -4,6 +4,7 @@ import {z} from 'zod';
 import {ownerProductSchema,saveCatalogProduct} from './catalog-products.js';
 import {imageUploadSchema,normalizeImage,type ImageMedia} from './image-media.js';
 import {saveCatalogPhoto} from './catalog-photos.js';
+import {imageHash,prepareCatalogImageVariants,saveCatalogImageVariants} from './catalog-image-variants.js';
 
 // Missing shop facts remain missing in drafts. The draft contract cannot carry
 // active/verified flags or grant publication rights to an AI client.
@@ -38,13 +39,15 @@ export async function updateProposal(c:PoolClient,storeId:string,input:unknown){
 }
 // Decode before taking the store lock. Original bytes and their hash survive
 // normalization, publication and rejection for owner inspection and recovery.
-export async function prepareProposalAsset(input:unknown,options:{processingTimeoutMs?:number}={}){const p=proposalAssetSchema.parse(input);return {input:p,media:await normalizeImage(p.photo,options)};}
+export async function prepareProposalAsset(input:unknown,options:{processingTimeoutMs?:number}={}){const p=proposalAssetSchema.parse(input),media=await normalizeImage(p.photo,options);media.variants=await prepareCatalogImageVariants(media.image,options.processingTimeoutMs);return {input:p,media};}
 export async function addProposalAsset(c:PoolClient,storeId:string,p:z.infer<typeof proposalAssetSchema>,media:ImageMedia){
  await draft(c,storeId,p.proposalId,p.version);const bytes=Buffer.from(p.photo.data,'base64'),sha=createHash('sha256').update(bytes).digest('hex');
  const prior=(await c.query('SELECT id,match_kind FROM catalog_proposal_assets WHERE store_id=$1 AND proposal_id=$2 AND sha256=$3',[storeId,p.proposalId,sha])).rows[0];
  if(prior){if(prior.match_kind!==p.matchKind)throw fail('This image was already staged with a different identity assessment. Upload the exact product photo instead.');return {id:prior.id,version:p.version,replayed:true};}
  const count=(await c.query('SELECT count(*)::int AS n FROM catalog_proposal_assets WHERE store_id=$1 AND proposal_id=$2',[storeId,p.proposalId])).rows[0].n;if(count>=5)throw fail('Keep at most five photos in a product draft.',400);
- const id=randomUUID();await c.query('INSERT INTO catalog_proposal_assets(id,store_id,proposal_id,original,mime_type,sha256,image,width,height,match_kind) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',[id,storeId,p.proposalId,bytes,p.photo.mimeType,sha,media.image,media.width,media.height,p.matchKind]);
+ const normalizedHash=imageHash(media.image);
+ if(media.variants)await saveCatalogImageVariants(c,storeId,normalizedHash,media.variants);
+ const id=randomUUID();await c.query('INSERT INTO catalog_proposal_assets(id,store_id,proposal_id,original,mime_type,sha256,image,width,height,match_kind,image_hash) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)',[id,storeId,p.proposalId,bytes,p.photo.mimeType,sha,media.image,media.width,media.height,p.matchKind,normalizedHash]);
  const version=(await c.query('UPDATE catalog_proposals SET version=version+1,updated_at=now() WHERE store_id=$1 AND id=$2 RETURNING version',[storeId,p.proposalId])).rows[0].version;return {id,version,replayed:false};
 }
 export async function publishProposal(c:PoolClient,storeId:string,input:unknown){

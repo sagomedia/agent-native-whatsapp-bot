@@ -13,6 +13,7 @@ import {createProposalSchema,updateProposalSchema,publishProposalSchema,createPr
 
 type Write=(action:string,target:string,run:(client:PoolClient)=>Promise<unknown>)=>Promise<unknown>;
 import {ownerProductSchema,saveCatalogProduct} from '../services/catalog-products.js';
+import {catalogImageSize,prepareCatalogImageVariants,sendOwnerCatalogImage} from '../services/catalog-image-variants.js';
 export {ownerProductSchema} from '../services/catalog-products.js';
 const words=z.array(z.string().trim().min(1).max(120)).max(40);
 const names=z.object({ta:z.string().trim().max(160).optional(),'ta-Latn':z.string().trim().max(160).optional()}).strict();
@@ -26,10 +27,16 @@ export async function registerOwnerCatalog(app:FastifyInstance,pool:Pool,storeId
  app.post('/api/owner/catalog/proposals',async(req,reply)=>{const p=createProposalSchema.safeParse(req.body);if(!p.success)return reply.code(400).send({error:'Check the draft fields.'});return write('catalog_draft',p.data.id,c=>createProposal(c,storeId,'owner-dashboard',p.data));});
  app.post('/api/owner/catalog/proposals/update',async(req,reply)=>{const p=updateProposalSchema.safeParse(req.body);if(!p.success)return reply.code(400).send({error:'Check the draft and its version.'});return write('catalog_draft_edit',p.data.id,c=>updateProposal(c,storeId,p.data));});
  app.post('/api/owner/catalog/proposals/photo',{bodyLimit:2904000},async(req,reply)=>{let prepared;try{prepared=await prepareProposalAsset(req.body);}catch{return reply.code(400).send({error:'Choose a valid draft and JPG, PNG or WebP photo under 2 MB.'});}return write('catalog_draft_photo',prepared.input.proposalId,c=>addProposalAsset(c,storeId,prepared.input,prepared.media));});
- app.get<{Params:{id:string;asset:string};Querystring:{original?:string}}>('/api/owner/catalog/proposals/:id/photos/:asset',async(req,reply)=>{
+ app.get<{Params:{id:string;asset:string};Querystring:{original?:string;size?:string}}>('/api/owner/catalog/proposals/:id/photos/:asset',async(req,reply)=>{
   if(!z.uuid().safeParse(req.params.id).success||!z.uuid().safeParse(req.params.asset).success)return reply.code(404).send();
-  const row=(await pool.query('SELECT image,original,mime_type FROM catalog_proposal_assets WHERE store_id=$1 AND proposal_id=$2 AND id=$3',[storeId,req.params.id,req.params.asset])).rows[0];
-  if(!row)return reply.code(404).send();return reply.type(req.query.original==='1'?row.mime_type:'image/jpeg').header('Cache-Control','private, no-store').send(req.query.original==='1'?row.original:row.image);
+  const size=catalogImageSize(req.query.size),original=req.query.original==='1';
+  // Select one representation; preview requests never retrieve original bytes.
+  const row=original?(await pool.query('SELECT original AS image,mime_type FROM catalog_proposal_assets WHERE store_id=$1 AND proposal_id=$2 AND id=$3',[storeId,req.params.id,req.params.asset])).rows[0]
+   :(await pool.query(`SELECT COALESCE(v.image,a.image) AS image FROM catalog_proposal_assets a LEFT JOIN catalog_image_variants v ON v.store_id=a.store_id AND v.source_hash=a.image_hash AND v.max_side=$4 WHERE a.store_id=$1 AND a.proposal_id=$2 AND a.id=$3`,[storeId,req.params.id,req.params.asset,size??null])).rows[0];
+  if(!row)return reply.code(404).send();
+  // Uploaded originals can retain private source metadata; only normalized previews revalidate.
+  if(original)return reply.header('Cache-Control','private, no-store').type(row.mime_type).send(row.image);
+  return sendOwnerCatalogImage(req,reply,row.image);
  });
  app.post('/api/owner/catalog/proposals/publish',async(req,reply)=>{const p=publishProposalSchema.safeParse(req.body);if(!p.success)return reply.code(400).send({error:'Complete the product fields and merchant confirmations.'});return write('catalog_publish',p.data.id,c=>publishProposal(c,storeId,p.data));});
  app.post('/api/owner/catalog/proposals/reject',async(req,reply)=>{const p=z.object({id:z.uuid(),version:z.number().int().positive()}).strict().safeParse(req.body);if(!p.success)return reply.code(400).send({error:'Reload the draft before rejecting it.'});return write('catalog_reject',p.data.id,c=>rejectProposal(c,storeId,p.data.id,p.data.version));});
@@ -90,6 +97,7 @@ export async function registerOwnerCatalog(app:FastifyInstance,pool:Pool,storeId
   // Validate access before decoding; normalized photos are versioned immutable public assets.
   if(!(await pool.query('SELECT 1 FROM products WHERE store_id=$1 AND sku=$2 AND version=$3',[storeId,req.params.sku,version])).rowCount)return reply.code(409).send({error:'Product changed. Reload before adding a photo.'});
   const media=await normalizeImage(parsed.data);
+  media.variants=await prepareCatalogImageVariants(media.image);
   return write('catalog_photo',storeId,async c=>{
    const assetId=await saveCatalogPhoto(c,storeId,media);
    const path='/catalog-images/custom/'+assetId+'.jpg';

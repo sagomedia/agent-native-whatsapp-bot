@@ -3,12 +3,13 @@ import {createHash} from 'node:crypto';
 import {z} from 'zod';
 import type {Pool} from 'pg';
 import {ToolError,withConversation,type ActorContext} from './context.js';
+import type {CatalogImageVariant} from './catalog-image-variants.js';
 const MAX_BYTES=2097152;
 const DEFAULT_PROCESSING_TIMEOUT_MS=10000;
 const MIN_PROCESSING_TIMEOUT_MS=1000;
 const MAX_PROCESSING_TIMEOUT_MS=60000;
 export const imageUploadSchema=z.object({id:z.uuid(),mimeType:z.enum(['image/jpeg','image/png','image/webp']),data:z.string().min(4).max(2796204).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/),caption:z.string().trim().max(1000).default('')}).strict();
-export type ImageMedia={image:Buffer;sourceHash:string;width:number;height:number};
+export type ImageMedia={image:Buffer;sourceHash:string;width:number;height:number;variants?:CatalogImageVariant[]};
 function run(binary:string,args:string[],bytes:Buffer,maxOutput:number,processingTimeoutMs:number){return new Promise<Buffer>((resolve,reject)=>{
  const child=spawn(binary,args,{stdio:['pipe','pipe','ignore']});let finished=false,size=0;const chunks:Buffer[]=[];
  const timer=setTimeout(()=>{child.kill('SIGKILL');finish(new ToolError('That image took too long to read. Try a smaller photo.'));},processingTimeoutMs);

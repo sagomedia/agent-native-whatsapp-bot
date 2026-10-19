@@ -25,6 +25,7 @@
     "release:restore-rehearsal": "tsx scripts/rehearse-restore.ts",
     "catalog:bulk": "tsx scripts/import-bulk-catalog.ts",
     "catalog:capacity": "tsx scripts/catalog-capacity.ts",
+    "catalog:image-variants": "node dist/scripts/backfill-catalog-image-variants.js",
     "catalog:scale-eval": "tsx scripts/evaluate-catalog-scale.ts",
     "catalog:facts": "tsx scripts/import-shop-facts.ts",
     "demo:evidence": "tsx scripts/demo-evidence.ts"

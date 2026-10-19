@@ -53,7 +53,7 @@ test('pending review follows merchant confirmations and selected source photos s
  const detail=await app.inject({url:'/api/owner/catalog/products/PAGE-0001'});assert.equal(detail.statusCode,200,detail.body);
  const product=detail.json().product;assert.equal(product.imageUrl,undefined);assert.equal(product.referencePhotos.length,5);
  for(const asset of product.referencePhotos){assert.equal(asset.proposalId,proposal);assert.equal(asset.matchKind,'unconfirmed');assert.ok(ownIds.includes(asset.id));assert.ok(!('image' in asset));assert.ok(!('original' in asset));}
- const ref=product.referencePhotos[0],photo=await app.inject({url:'/api/owner/catalog/proposals/'+ref.proposalId+'/photos/'+ref.id});assert.equal(photo.statusCode,200);assert.equal(photo.headers['cache-control'],'private, no-store');
+ const ref=product.referencePhotos[0],photo=await app.inject({url:'/api/owner/catalog/proposals/'+ref.proposalId+'/photos/'+ref.id});assert.equal(photo.statusCode,200);assert.equal(photo.headers['cache-control'],'private, no-cache, max-age=0');assert.ok(photo.headers.etag);
 }));
 test('a catalog revision change invalidates an old traversal and stale independently loaded edits cannot overwrite facts or stock',()=>fixture(async(pool,app)=>{
  const page=(await get(app)).json(),selected=(await app.inject({url:'/api/owner/catalog/products/PAGE-0001'})).json().product;

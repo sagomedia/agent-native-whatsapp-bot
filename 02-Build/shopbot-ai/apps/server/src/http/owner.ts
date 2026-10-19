@@ -27,7 +27,7 @@ import type {OrderRequest} from '../../../../packages/contracts/index.js';
 import {registerOwnerCatalog} from './owner-catalog.js';
 import {registerOwnerFacts} from './owner-facts.js';
 import {registerOwnerOperations} from './owner-operations.js';
-import {catalogPhoto} from '../services/catalog-photos.js';
+import {catalogImageSize,ownerCatalogProductImage,sendOwnerCatalogImage} from '../services/catalog-image-variants.js';
 import {loadImage} from '../services/image-media.js';
 import {loadVoicePlayback} from '../services/voice-media.js';
 import type {Config} from '../config.js';
@@ -97,9 +97,10 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
    if(!(await pool.query('SELECT id FROM conversations WHERE store_id=$1 AND id=$2',[owner.storeId,req.params.id])).rowCount)return reply.code(404).send({error:'Conversation not found'});
    return {attempts:(await pool.query('SELECT id,message_id,stage,state,failure_code,validation_issues,observation FROM provider_attempts WHERE store_id=$1 AND conversation_id=$2 AND observation IS NOT NULL ORDER BY created_at DESC LIMIT 5',[owner.storeId,req.params.id])).rows,limit:5};
   });
-  app.get<{Querystring:{conversation?:string}}>('/api/owner/snapshot',async(request,reply)=>{
-    const selectedConversation=z.object({conversation:uuid.optional()}).safeParse(request.query);
+  app.get<{Querystring:{conversation?:string;details?:string}}>('/api/owner/snapshot',async(request,reply)=>{
+    const selectedConversation=z.object({conversation:uuid.optional(),details:z.enum(['0','1']).default('1')}).safeParse(request.query);
     if(!selectedConversation.success)return reply.code(400).send({error:'Invalid conversation'});
+    const fullDetails=selectedConversation.data.details==='1';
     const client=await pool.connect();
     try{
       await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
@@ -129,14 +130,14 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       const requestCounts=(await client.query("SELECT count(*) FILTER(WHERE acceptance='awaiting_approval' OR acceptance='accepted' AND fulfillment NOT IN ('collected','cancelled'))::int AS active,count(*) FILTER(WHERE NOT(acceptance='awaiting_approval' OR acceptance='accepted' AND fulfillment NOT IN ('collected','cancelled')))::int AS history FROM order_requests WHERE store_id=$1",[owner.storeId])).rows[0];
       const amendments=(await client.query("SELECT id,request_id,conversation_id,kind,summary,proposed_lines,state,expected_revision,known_subtotal_paise,estimate_complete,created_at FROM order_amendments WHERE store_id=$1 AND state IN ('owner_pending','proposed') ORDER BY created_at LIMIT 100",[owner.storeId])).rows;
       const quotes=(await client.query("SELECT id,request_id,state,expected_revision,total_paise,created_at FROM order_quotes WHERE store_id=$1 AND state='offered' ORDER BY created_at LIMIT 100",[owner.storeId])).rows;
-      const usage=(await client.query(`SELECT count(*)::int AS attempts,count(*) FILTER(WHERE state='failed')::int AS failures,count(*) FILTER(WHERE state='unknown')::int AS unknown,coalesce(sum(estimated_cost_microusd),0)::text AS estimated_microusd FROM (SELECT state,estimated_cost_microusd FROM provider_attempts WHERE store_id=$1 UNION ALL SELECT state,estimated_cost_microusd FROM catalog_suggestions WHERE store_id=$1) attempts`,[owner.storeId])).rows[0];
+      const usage=fullDetails?(await client.query(`SELECT count(*)::int AS attempts,count(*) FILTER(WHERE state='failed')::int AS failures,count(*) FILTER(WHERE state='unknown')::int AS unknown,coalesce(sum(estimated_cost_microusd),0)::text AS estimated_microusd FROM (SELECT state,estimated_cost_microusd FROM provider_attempts WHERE store_id=$1 UNION ALL SELECT state,estimated_cost_microusd FROM catalog_suggestions WHERE store_id=$1) attempts`,[owner.storeId])).rows[0]:null;
       const budget=(await client.query('SELECT limit_microusd,committed_microusd,held_microusd,blocked FROM inference_budgets WHERE store_id=$1',[owner.storeId])).rows[0]??null;
-      const audit=(await client.query('SELECT action,target_id,details,created_at FROM owner_audit WHERE store_id=$1 ORDER BY sequence DESC LIMIT 20',[owner.storeId])).rows;
+      const audit=fullDetails?(await client.query('SELECT action,target_id,details,created_at FROM owner_audit WHERE store_id=$1 ORDER BY sequence DESC LIMIT 20',[owner.storeId])).rows:[];
       const wa=config.whatsapp?(await client.query('SELECT verified_at,last_webhook_at,last_received_at,send_blocked,last_error FROM whatsapp_channels WHERE phone_id=$1 AND store_id=$2',[config.whatsapp.phoneId,owner.storeId])).rows[0]:undefined;
       const channel={whatsapp:!wa?'not_connected':wa.send_blocked?'attention_required':wa.last_received_at?'receiving':wa.verified_at||wa.last_webhook_at?'webhook_verified':'awaiting_verification',liveSending:Boolean(wa&&config.whatsapp?.sendEnabled&&!wa.send_blocked),processing:Boolean(config.whatsapp?.processEnabled),lastReceivedAt:wa?.last_webhook_at??null,error:wa?.last_error??null,testOnly:true};
-      const messaging=config.whatsapp&&config.whatsapp.storeId===owner.storeId?{...await messagingCostSummary(client,{storeId:owner.storeId,phoneId:config.whatsapp.phoneId,accountTimezone:config.whatsapp.accountTimezone,rateCard:config.whatsapp.pricingRateCard}),analyticsAvailable:Boolean(config.whatsapp.accountTimezone&&config.whatsapp.accountCurrency&&config.whatsapp.businessPhoneNumber)}:null;
+      const messaging=fullDetails&&config.whatsapp&&config.whatsapp.storeId===owner.storeId?{...await messagingCostSummary(client,{storeId:owner.storeId,phoneId:config.whatsapp.phoneId,accountTimezone:config.whatsapp.accountTimezone,rateCard:config.whatsapp.pricingRateCard}),analyticsAvailable:Boolean(config.whatsapp.accountTimezone&&config.whatsapp.accountCurrency&&config.whatsapp.businessPhoneNumber)}:null;
       await client.query('COMMIT');
-      return {store,conversations,requests,requestCounts,amendments,quotes,usage,budget,audit,messaging,mode:config.mode,ownerEmail:owner.email,channel,inference:{enabled:!!(wa&&config.whatsapp?.aiEnabled&&config.whatsapp.processEnabled),paidEnabled:!!config.whatsapp?.paidEnabled,rateHealth:rateHealth(geminiTextRate)},limits:{conversations:100,requests:100},generatedAt:new Date().toISOString()};
+      return {detailsIncluded:fullDetails,store,conversations,requests,requestCounts,amendments,quotes,usage,budget,audit,messaging,mode:config.mode,ownerEmail:owner.email,channel,inference:{enabled:!!(wa&&config.whatsapp?.aiEnabled&&config.whatsapp.processEnabled),paidEnabled:!!config.whatsapp?.paidEnabled,rateHealth:rateHealth(geminiTextRate)},limits:{conversations:100,requests:100},generatedAt:new Date().toISOString()};
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
   });
   app.post('/api/owner/pricing/refresh',async(request,reply)=>{
@@ -162,12 +163,9 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     const bytes=readVisualImage(request.params.hash);
     return bytes?reply.type('image/png').send(bytes):reply.code(404).send({error:'Image not found'});
   });
-  app.get<{Params:{sku:string}}>('/api/owner/products/:sku/image',async(request,reply)=>{
-    const row=(await pool.query('SELECT image_path FROM products WHERE store_id=$1 AND sku=$2',[owner.storeId,request.params.sku])).rows[0];
-    const custom=/^\/catalog-images\/(custom|reference)\/([a-f0-9-]{36})\.jpg$/.exec(row?.image_path??'');
-    if(custom){const bytes=await catalogPhoto(pool,owner.storeId,custom[2],false,custom[1] as 'custom'|'reference');return bytes?reply.type('image/jpeg').send(bytes):reply.code(404).send({error:'Photo not found'});}
-    if(!row||!/^\/demo-images\/H\d{2}\.jpg$/.test(row.image_path??''))return reply.code(404).send({error:'Photo not found'});
-    try{return reply.type('image/jpeg').send(await readFile(resolve('resources/catalog/ksmc-demo/images',row.image_path.split('/').at(-1))));}catch{return reply.code(404).send({error:'Photo not found'});}
+  app.get<{Params:{sku:string};Querystring:{size?:string}}>('/api/owner/products/:sku/image',async(request,reply)=>{
+    const bytes=await ownerCatalogProductImage(pool,owner.storeId,request.params.sku,catalogImageSize(request.query.size));
+    return bytes?sendOwnerCatalogImage(request,reply,bytes):reply.code(404).send({error:'Photo not found'});
   });
   app.get<{Params:{id:string;kind:string;mediaId:string}}>('/api/owner/conversations/:id/media/:kind/:mediaId',async(request,reply)=>{
     const {id,kind,mediaId}=request.params;

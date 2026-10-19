@@ -445,6 +445,18 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       CREATE INDEX catalog_fact_batches_store_created ON catalog_fact_batches(store_id,created_at DESC,id);
       INSERT INTO schema_migrations(version) VALUES(38);
     `);}
+    const v39=await client.query('SELECT version FROM schema_migrations WHERE version=39');
+    if(!v39.rowCount){await client.query(`
+      ALTER TABLE catalog_proposal_assets ADD COLUMN image_hash text CHECK(image_hash IS NULL OR image_hash ~ '^[a-f0-9]{64}$');
+      CREATE TABLE catalog_image_variants (
+        store_id uuid NOT NULL REFERENCES stores(id),source_hash text NOT NULL CHECK(source_hash ~ '^[a-f0-9]{64}$'),
+        max_side integer NOT NULL CHECK(max_side IN (128,256,640)),
+        image bytea NOT NULL CHECK(octet_length(image) BETWEEN 1 AND 2097152),
+        content_hash text NOT NULL CHECK(content_hash ~ '^[a-f0-9]{64}$'),created_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY(store_id,source_hash,max_side)
+      );
+      INSERT INTO schema_migrations(version) VALUES(39);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

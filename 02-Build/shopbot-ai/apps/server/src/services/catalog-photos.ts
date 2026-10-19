@@ -4,12 +4,14 @@ import {resolve} from 'node:path';
 import {normalizeImage} from './image-media.js';
 import type {Pool,PoolClient} from 'pg';
 import type {ImageMedia} from './image-media.js';
+import {saveCatalogImageVariants} from './catalog-image-variants.js';
 
 // Call inside catalogWrite's store lock. Reusing identical immutable bytes does
 // not approve a photo for another product: that decision remains per product.
-export async function saveCatalogPhoto(client:PoolClient,storeId:string,media:Pick<ImageMedia,'image'|'width'|'height'>){
+export async function saveCatalogPhoto(client:PoolClient,storeId:string,media:Pick<ImageMedia,'image'|'width'|'height'|'variants'>){
  const contentHash=createHash('sha256').update(media.image).digest('hex');
  const existing=(await client.query('SELECT id FROM catalog_photos WHERE store_id=$1 AND content_hash=$2 AND width=$3 AND height=$4 LIMIT 1',[storeId,contentHash,media.width,media.height])).rows[0];
+ if(media.variants)await saveCatalogImageVariants(client,storeId,contentHash,media.variants);
  if(existing)return existing.id as string;
  const id=randomUUID();
  await client.query('INSERT INTO catalog_photos(id,store_id,image,width,height,content_hash) VALUES($1,$2,$3,$4,$5,$6)',[id,storeId,media.image,media.width,media.height,contentHash]);
