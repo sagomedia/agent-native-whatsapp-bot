@@ -190,8 +190,17 @@ export class GoogleInterpreter implements Interpreter {
     const text=(r.candidates?.[0]?.content?.parts??[]).filter(p=>!p.thought&&typeof p.text==='string').map(p=>p.text).join('');
     const observation=observeUnderstanding(text);
     let output:unknown=null,validationIssues:ProviderResult['validationIssues'];
+    let evidenceRepair:ProviderResult['evidenceRepair'];
     try{output=understandingToInterpretation(JSON.parse(text),input,this.supportsImageLists);}catch(error){
       validationIssues=[{path:'understanding',code:error instanceof z.ZodError?'invalid_contract':'invalid_evidence'}];
+      // A schema-valid plan can fail its verbatim evidence check. Let the
+      // metered runtime repair it once from the same transcript, never here
+      // inside an unaccounted provider call. Negated and stale targets stay rejected.
+      if(observation.envelopeValid&&!(error instanceof z.ZodError)&&error instanceof Error&&!/negates this cart mutation/.test(error.message)){
+        const proposal=turnUnderstandingSchema.safeParse(normalizeUnderstandingAbsence(JSON.parse(text)));
+        const current=(id:string)=>input.state.draft.some(line=>line.id===id);
+        if(proposal.success&&proposal.data.proposedEdits.every(edit=>current(edit.targetLineId))&&proposal.data.requestedItems.every(item=>!item.targetLineId||current(item.targetLineId))&&(proposal.data.proposedEdits.length||proposal.data.requestedItems.length))evidenceRepair={understanding:proposal.data,feedback:error.message.slice(0,500)};
+      }
       // A valid faithful transcript is still useful when a reference/evidence
       // contract fails. Retain it for a focused correction or deterministic
       // clear command, but execute none of the rejected shopping proposals.
@@ -202,7 +211,7 @@ export class GoogleInterpreter implements Interpreter {
         }
       }catch{/* Invalid structure has no usable customer evidence. */}
     }
-    return {output,validationIssues,usage,observation,responseModel:r.modelVersion,truncated:r.candidates?.length!==1||r.candidates[0].finishReason!=='STOP'||r.modelVersion!==this.billing.model};
+    return {output,validationIssues,usage,observation,...(evidenceRepair?{evidenceRepair}:{}),responseModel:r.modelVersion,truncated:r.candidates?.length!==1||r.candidates[0].finishReason!=='STOP'||r.modelVersion!==this.billing.model};
   }
 
 }

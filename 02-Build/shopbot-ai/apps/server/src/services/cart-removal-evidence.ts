@@ -2,9 +2,9 @@ import type {TurnUnderstanding} from '../../../../packages/contracts/understandi
 import {positiveRemoval,mutationNegated} from '../../../../packages/contracts/intent-language.js';
 
 type Edit=TurnUnderstanding['proposedEdits'][number];
-const groupCounts:Record<number,string[]>={2:['2','both','two','இரண்டு','ரெண்டு','இரண்டும்','இரண்டையும்','ரெண்டும்','ரெண்டையும்','ரெண்டே','ரெண்டுமே'],3:['3','three','மூன்று','மூணு','மூன்றும்','மூன்றையும்','மூணும்','மூணையும்']};
-const glue=new Set(['and','&','please','the','my','this','that','these','those','it','them','items','products','from','cart','list','only','அந்த','இந்த','இதை','அதை','இவையும்','அவையும்','இல்லை','இல்ல','வேண்டாம்','வேணாம்','பட்டியலில்','பட்டியலிலிருந்து','மற்றும்','எனக்கு']);
-const actions=new Set(['remove','delete','drop','take','out','எடுத்துருங்க','எடுத்துடுங்க','எடுத்திடுங்க','நீக்குங்க','நீக்கிடுங்க','நீக்கிடுங்கள்','ரிமூவ்','ரிமூவ','டெலீட்','டிலீட்','பண்ணுங்க','செய்யுங்க']);
+const groupCounts:Record<number,string[]>={2:['2','both','two','rendu','rendaiyum','rendayum','rendume','irandaiyum','இரண்டு','ரெண்டு','இரண்டும்','இரண்டையும்','ரெண்டும்','ரெண்டையும்','ரெண்டே','ரெண்டுமே'],3:['3','three','moonu','moondru','moondrayum','மூன்று','மூணு','மூன்றும்','மூன்றையும்','மூணும்','மூணையும்']};
+const glue=new Set(['and','&','illa','illai','andha','antha','indha','intha','vendam','vendaam','venam','please','the','my','this','that','these','those','it','them','items','products','from','cart','list','only','அந்த','இந்த','இதை','அதை','இவையும்','அவையும்','இல்லை','இல்ல','வேண்டாம்','வேணாம்','பட்டியலில்','பட்டியலிலிருந்து','மற்றும்','எனக்கு']);
+const actions=new Set(['remove','delete','drop','take','out','eduthurunga','eduthudunga','eduthidunga','neekkunga','எடுத்துருங்க','எடுத்துடுங்க','எடுத்திடுங்க','நீக்குங்க','நீக்கிடுங்க','நீக்கிடுங்கள்','ரிமூவ்','ரிமூவ','டெலீட்','டிலீட்','பண்ணுங்க','செய்யுங்க']);
 
 // Some provider responses retain each verbatim product mention but omit the
 // shared predicate from both spans. Bind only a fully covered, coordinated
@@ -19,7 +19,7 @@ export function sharedRemovalEvidence(edits:Edit[],source:string):Map<number,str
   if(members.length<2||members.some(({edit})=>edit.kind!=='remove_item')||new Set(members.map(({edit})=>edit.targetLineId)).size!==members.length)continue;
   const ordered=members.sort((a,b)=>a.start-b.start);
   if(ordered.some(({edit,start},index)=>clause.indexOf(edit.sourceText,start+1)>=0||index>0&&start<ordered[index-1].start+ordered[index-1].edit.sourceText.length))continue;
-  const coordinated=ordered.every(({edit})=>/(?:வும்|உம்)$/u.test(edit.sourceText))||/\band\b|&|மற்றும்/iu.test(clause);
+  const coordinated=ordered.every(({edit})=>/(?:வும்|உம்|[-\s](?:um|vum))$/iu.test(edit.sourceText))||/\band\b|&|மற்றும்/iu.test(clause);
   if(!coordinated)continue;
   let rest='',end=0;
   for(const {edit,start} of ordered){rest+=clause.slice(end,start)+' ';end=start+edit.sourceText.length;}

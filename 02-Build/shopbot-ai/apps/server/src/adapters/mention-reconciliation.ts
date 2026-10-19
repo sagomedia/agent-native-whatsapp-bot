@@ -113,7 +113,7 @@ export function compatibleLine(item:Item,line:DraftLine){
 const editNoise=new Set(['inch','inches','இன்ச்','இன்சு','mm','cm','metre','meter','litre','kg','piece','box','pack','pcs','pc','set','item','line','entry','product','and','of','the','my','this','that','one','first','second','third','last','எண்ணம்','பீஸ்','பேக்','பெட்டி','லிட்டர்','கிலோ','மீட்டர்','அது','அந்த','இந்த','பொருள்','எல்லாம்','missing','unknown','unavailable']);
 function editText(source:string){
  const substitutions:[RegExp,string][]=[[/பிவிசி|பீவிசி|பி\s*வி\s*சி/gu,'PVC'],[/பைப்(?:பு|பை|ப்கள்|களை)?/gu,'pipe'],[/ஸ்க்ரூ\s*டிரைவர்|ஸ்குரு\s*டிரைவர்/gu,'screw driver'],[/ஸ்க்ரூ|ஸ்குரு|திருகு/gu,'screw'],[/போல்ட்(?:டு|டை|டா|களை|கள்)?/gu,'bolt'],[/நட்டு(?:களை|கள்)?/gu,'nut'],[/பிளேயர்|ப்ளையர்|பிளையர்/gu,'plier'],[/கட்டிங்/gu,'cutting'],[/ஸ்விட்ச்|சுவிட்ச்/gu,'switch'],[/சாக்கெட்|சாக்கட்/gu,'socket'],[/பெயிண்ட்|பெயின்ட்/gu,'paint'],[/வயர்/gu,'wire'],[/ஹோஸ்|ஓஸ்/gu,'hose'],[/கார்டன்/gu,'garden']];
- let text=normalize(source);for(const [pattern,replacement] of substitutions)text=text.replace(pattern,replacement);return text;
+ let text=normalize(source).replace(/\bscrewdriver\b/giu,'screw driver');for(const [pattern,replacement] of substitutions)text=text.replace(pattern,replacement);return text;
 }
 export function editIdentityWords(source:string){return tokens(editText(source)).filter(word=>word.length>2&&!/^\d/.test(word)&&!editNoise.has(word));}
 export function editMeasuresMatch(source:string,line:DraftLine):boolean {
@@ -123,6 +123,15 @@ export function editMeasuresMatch(source:string,line:DraftLine):boolean {
  const product=line.candidates?.find(product=>product.sku===line.sku),known=[...line.productMeasures??[],...(line.packSize?[line.packSize]:[]),...spokenMeasures([line.query,line.name].join(' ')),...(product?catalogMeasures(product):[])];
  return measures.every(measure=>{const comparable=known.filter(value=>convertAmount(value,measure.unit)!==null);return !comparable.length||comparable.some(value=>convertAmount(value,measure.unit)===measure.value);});
 }
+// A normalized model target may translate a name, but cannot override a
+// different product type explicitly named in the current source.
+export function editIdentityMatches(source:string,line:DraftLine):boolean {
+ const words=new Set(editIdentityWords(source)),product=line.candidates?.find(p=>p.sku===line.sku);
+ const primary=editIdentityWords([line.query,line.name,product?.name].filter(Boolean).join(' '));
+ if(words.has('pipe')&&!words.has('hose')&&primary.includes('hose')&&!primary.includes('pipe'))return false;
+ if(words.has('screw')&&!words.has('driver')&&primary.includes('driver'))return false;
+ return true;
+}
 export function namedEditLines(source:string,state:ConversationState,options:{ignoreMeasures?:boolean}={}):DraftLine[]{
  const ordinal=/\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|[1-9]|10)(?:st|nd|rd|th)?\s+(?:item|line|product|entry|row)\b/i.exec(source);
  const last=/\blast\s+(?:item|line|product|entry|row)\b|கடைசி(?:யா|யில|யில்)?|லாஸ்ட்(?:டா|டாக)?/iu.test(source);
@@ -131,10 +140,7 @@ export function namedEditLines(source:string,state:ConversationState,options:{ig
  const scored=state.draft.map(line=>{
   const product=line.candidates?.find(p=>p.sku===line.sku);
   const names=[line.query,line.name,line.sku,product?.name,...product?.aliases??[],...Object.values(product?.localNames??{})].filter((n):n is string=>!!n);
-  // A garden hose's incidental "pipe" alias cannot outrank a literal pipe
-  // row. A stored garden-pipe request remains eligible through its own name.
-  const primary=editIdentityWords([line.query,line.name,product?.name].filter(Boolean).join(' '));
-  if(words.has('pipe')&&!words.has('hose')&&primary.includes('hose')&&!primary.includes('pipe'))return {line,score:0};
+  if(!editIdentityMatches(source,line))return {line,score:0};
   const known=new Set(names.flatMap(editIdentityWords)),shared=[...words].filter(word=>known.has(word));
   // An alias consisting only of a size/pack must not identify a product.
   const exact=names.filter(name=>editIdentityWords(name).length&&text.includes(editText(name))).map(name=>editIdentityWords(name).length*100+editText(name).length);

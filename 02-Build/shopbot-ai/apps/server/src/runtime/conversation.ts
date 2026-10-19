@@ -47,7 +47,7 @@ function quantityAnswer(state:ConversationState,lineId:string,amount:{quantity:n
  if(line?.sku&&(!amount.unit||!line.unit||sameUnit(amount.unit,line.unit)))return line.resolution==='needs_unit'&&!line.requestedAmount?{kind:'resolve_line',lineId,quantity:amount.quantity,requestedUnit:amount.unit}:{kind:'set_quantity',reference:lineId,quantity:amount.quantity,supportingPhrase:text.slice(0,200)};
  return {kind:'resolve_line',lineId,quantity:amount.quantity,...(amount.unit?{requestedUnit:amount.unit}:{})};
 }
-type Claimed = { cartEditResumed?:boolean; deadlineAt:number; id:string; token:string; event:SimulatorEvent; bindingId:string|null; state:ConversationState; catalog:Product[];catalogMap?:import('../../../../packages/contracts/index.js').CatalogMap;memory:AssistantMemory|null;displayedActions:SimulatorEvent[];displayedProducts:{event:SimulatorEvent;product:Product;delivered?:boolean}[] };
+type Claimed = { evidenceRepair?:import('../adapters/interpreter.js').EvidenceRepair;cartEditResumed?:boolean; deadlineAt:number; id:string; token:string; event:SimulatorEvent; bindingId:string|null; state:ConversationState; catalog:Product[];catalogMap?:import('../../../../packages/contracts/index.js').CatalogMap;memory:AssistantMemory|null;displayedActions:SimulatorEvent[];displayedProducts:{event:SimulatorEvent;product:Product;delivered?:boolean}[] };
 class DeferredRecommendation extends Error {}
 function correctionDescription(claim:Claimed,interpretation:Interpretation|undefined,description:string){
  if(claim.cartEditResumed&&claim.memory?.purpose==='cart_edit'&&claim.memory.sourceVersion===claim.state.version)return claim.memory.cartEdit?.description??description;
@@ -793,6 +793,14 @@ export class ConversationRuntime {
     let identified=await this.callProvider(ctx,claim,input,'identify');
     if(voice){transcript=this.provider.unifiedUnderstanding?identified.transcript:transcript;if(!transcript)throw new ToolError('No clear speech was recognized. Record again or type your request.','voice_unreadable');identified={...identified,transcript};text=transcript;}
     if(image&&identified.understanding?.inputKind==='handwritten_list')text=identified.understanding.observedText??text;
+    const evidenceRepair=!image&&identified.understanding?.unresolved.includes('validation_recovery')?claim.evidenceRepair:undefined;
+    if(evidenceRepair){
+      const repair=evidenceRepair;delete claim.evidenceRepair;
+      // Preserve the faithful current transcript and reserve a separate repair
+      // attempt. Rejected actions never reach tools; a second rejection stops.
+      try{identified={...await this.callProvider(ctx,claim,{...input,audio:undefined,text,repairSourceKind:voice?'audio':'text',planningFeedback:repair.feedback,proposal:{...identified,understanding:repair.understanding}},'repair'),...(voice?{transcript}:{})};}
+      catch{/* A denied or failed repair retains the original grounded no-op. */}
+    }
     if(identified.understanding?.cartTargetAnswer){
       const memory=claim.memory,goal=memory?.cartEdit,answer=identified.understanding.cartTargetAnswer;
       if(memory?.purpose!=='cart_edit'||memory.sourceVersion!==claim.state.version||!goal)throw new ToolError('Use the latest item question.','stale_question');
@@ -835,6 +843,7 @@ export class ConversationRuntime {
       });
       if(recovery.length)feedback='The inferred search wording found no SKU. The backend retrieved these real products in the proposed family with the same brand/specification filters. Repair only those search terms using the actual names/SKUs. Preserve every other item, count, explicit brand, dimensions and verbatim evidence. These are photo-check suggestions, not approval.';
       if(feedback){
+        if(evidenceRepair)throw new ToolError('Some cart details need checking. Please rephrase the current change.','interpretation_evidence');
         if(image)throw new ToolError('Some list details need checking. Please correct the unclear lines or ask the shop.','interpretation_evidence');
         const repaired=await this.callProvider(ctx,claim,{...input,text,audio:undefined,image:undefined,observations:recovery.length?recovery:input.observations,proposal:identified,planningFeedback:feedback,repairSourceKind:voice?'audio':'text'},'repair');
         const normalized=normalizeAmountEdits(repaired,text,claim.state);
@@ -915,6 +924,7 @@ export class ConversationRuntime {
       // A safe clarification can survive a rejected perception contract. Keep
       // the paid usage and evidence, but never cache that attempt as a success.
       const rejected=valid.understanding?.unresolved.includes('validation_recovery')===true;
+      if(stage==='identify'&&rejected&&output.evidenceRepair)claim.evidenceRepair=output.evidenceRepair;
       await this.pool.query("UPDATE provider_attempts SET state=$4,failure_code=$5,response=$1::jsonb,usage=$2::jsonb WHERE id=$3",[JSON.stringify(valid),JSON.stringify(output.usage),reservation.id,rejected?'failed':'succeeded',rejected?'invalid_evidence':null]);
       return valid;
     } catch(error) {
