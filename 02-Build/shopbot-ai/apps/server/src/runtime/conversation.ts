@@ -9,7 +9,7 @@ import {validateCurrentTurn,submissionIntent,namedRemovalsExplicit} from '../ser
 import {bindExplicitCorrection,compileKeepOnly,keepTargetCandidates} from '../services/shopping-corrections.js';
 import {understandingToInterpretation} from '../adapters/turn-understanding.js';
 import {validateProductMeaningEvidence} from '../services/product-meaning.js';
-import {reviewDeliveryReady} from '../services/review-delivery.js';
+import {reviewDeliveryReady,cancelSupersededReviews} from '../services/review-delivery.js';
 import {inferenceTiming,providerCallTimeout,processingLeaseSeconds} from '../services/inference-timing.js';
 import {productCheckCoversDraft} from '../services/counter-state.js';
 import {visualReply,returningReply,cartProgress} from '../services/visual-ordering.js';
@@ -552,7 +552,7 @@ export class ConversationRuntime {
       const alreadySeen=finalState.draft.filter(l=>l.sku).every(line=>{const product=line.candidates?.find(p=>p.sku===line.sku);return product&&claimed.displayedProducts.some(p=>p.delivered&&p.event.type==='edit_item'&&p.event.lineId===line.id&&productIdentity(p.product)===productIdentity(product));});
       rich=materializeVisualReply({...visualReply({...rich,compactReview:alreadySeen},finalState,replyRequest),storeName:claimed.catalogMap?.store.name});
       message=rich.text;
-      if(finalState.visualOrdering){const binding=conversationBinding(finalState,await loadAssistantMemory(client,ctx));const cancelled=await client.query("UPDATE whatsapp_outbox o SET state='cancelled',last_error='review_superseded' WHERE o.conversation_id=$1 AND o.state='queued' AND o.sender_kind='assistant' AND EXISTS(SELECT 1 FROM whatsapp_actions a WHERE a.message_id=o.message_id AND (a.source_version<>$2 OR a.binding_id IS DISTINCT FROM $3::uuid)) RETURNING o.message_id",[ctx.conversationId,finalState.version,binding]);if(cancelled.rowCount)await client.query("UPDATE messages SET status='cancelled' WHERE id=ANY($1::uuid[])",[cancelled.rows.map(r=>r.message_id)]);}
+      if(finalState.visualOrdering)await cancelSupersededReviews(client,ctx.conversationId,finalState.version,conversationBinding(finalState,await loadAssistantMemory(client,ctx)));
       const replyId=randomUUID();
       const parts=rich.parts??[undefined];
       for(const [index,part] of parts.entries()){

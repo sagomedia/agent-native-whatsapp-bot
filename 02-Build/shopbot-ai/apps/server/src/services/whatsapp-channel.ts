@@ -1,6 +1,7 @@
 import {refreshOrderListChoice} from './order-list-choice.js';
 import {normalizeVoice} from './voice-media.js';
 import {reviewDeliveryReady} from './review-delivery.js';
+import {whatsappSendError} from './whatsapp-send-error.js';
 import {catalogPhoto} from './catalog-photos.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {eventSchema,type SimulatorEvent} from '../../../../packages/contracts/index.js';
@@ -275,11 +276,23 @@ export class WhatsAppChannel {
       // Recovered in-flight sends are ambiguous: never automatically resend them.
       await client.query("UPDATE messages SET status='unknown' WHERE id IN (SELECT o.message_id FROM whatsapp_outbox o JOIN whatsapp_conversations w ON w.conversation_id=o.conversation_id WHERE w.phone_id=$1 AND o.state='sending' AND o.started_at<now()-interval '1 minute')",[c.phoneId]);
       await client.query("UPDATE whatsapp_outbox o SET state='unknown',last_error='interrupted_send' FROM whatsapp_conversations w WHERE w.conversation_id=o.conversation_id AND w.phone_id=$1 AND o.state='sending' AND o.started_at<now()-interval '1 minute'",[c.phoneId]);
-      // Meta can accept a carousel before delivering its images. Do not expose
-      // a later confirmation while the earlier invoice pages are still in flight.
+      // Current invoice pages must arrive in order. An uncertain obsolete review
+      // can release a later customer turn only after its action page was explicitly
+      // superseded; the uncertain page itself is neither retried nor marked sent.
       const row=(await client.query(`SELECT o.*,m.text,w.recipient,w.last_inbound_at,c.operator_mode,c.operator_revision AS current_revision,s.operator_paused
         FROM whatsapp_outbox o JOIN whatsapp_conversations w ON w.conversation_id=o.conversation_id JOIN conversations c ON c.id=w.conversation_id JOIN stores s ON s.id=c.store_id JOIN messages m ON m.id=o.message_id
-        WHERE w.phone_id=$1 AND c.store_id=$2 AND o.state='queued' AND o.next_attempt_at<=now() AND NOT EXISTS(SELECT 1 FROM messages earlier JOIN whatsapp_outbox pending ON pending.message_id=earlier.id WHERE earlier.conversation_id=m.conversation_id AND earlier.sequence<m.sequence AND pending.operator_revision=o.operator_revision AND pending.state IN ('queued','sending','unknown')) AND NOT EXISTS(SELECT 1 FROM messages prior JOIN whatsapp_outbox po ON po.message_id=prior.id WHERE prior.reply_group_id=m.reply_group_id AND prior.part_index<m.part_index AND po.state NOT IN ('delivered','read')) AND
+        WHERE w.phone_id=$1 AND c.store_id=$2 AND o.state='queued' AND o.next_attempt_at<=now() AND NOT EXISTS(
+          SELECT 1 FROM messages earlier JOIN whatsapp_outbox pending ON pending.message_id=earlier.id
+          WHERE earlier.conversation_id=m.conversation_id AND earlier.sequence<m.sequence AND pending.operator_revision=o.operator_revision AND pending.state IN ('queued','sending','unknown')
+          AND NOT(pending.state='unknown' AND pending.sender_kind='assistant' AND o.sender_kind='assistant'
+            AND earlier.reply_group_id IS NOT NULL AND m.reply_group_id IS DISTINCT FROM earlier.reply_group_id
+            AND EXISTS(SELECT 1 FROM messages old_turn JOIN messages new_turn ON new_turn.id=m.response_to
+              WHERE old_turn.id=earlier.response_to AND old_turn.conversation_id=m.conversation_id AND new_turn.conversation_id=m.conversation_id
+              AND old_turn.direction='inbound' AND new_turn.direction='inbound' AND new_turn.sequence>old_turn.sequence)
+            AND EXISTS(SELECT 1 FROM messages stale JOIN whatsapp_outbox cancelled ON cancelled.message_id=stale.id
+              WHERE stale.conversation_id=m.conversation_id AND stale.reply_group_id=earlier.reply_group_id
+              AND cancelled.state='cancelled' AND cancelled.last_error='review_superseded'))
+        ) AND NOT EXISTS(SELECT 1 FROM messages prior JOIN whatsapp_outbox po ON po.message_id=prior.id WHERE prior.reply_group_id=m.reply_group_id AND prior.part_index<m.part_index AND po.state NOT IN ('delivered','read')) AND
         (o.sender_kind='owner' AND c.operator_mode='owner' OR o.sender_kind='system' OR o.sender_kind='assistant' AND NOT s.operator_paused AND c.operator_mode='assistant') ORDER BY m.sequence LIMIT 1 FOR UPDATE OF o,c SKIP LOCKED`,[c.phoneId,c.storeId])).rows[0];
       if(!row){await client.query('COMMIT');return false;}
       if(row.sender_kind==='assistant'&&(row.operator_paused||row.operator_mode==='owner')){await client.query('COMMIT');return false;}
@@ -295,9 +308,18 @@ export class WhatsAppChannel {
       await client.query('SELECT id FROM stores WHERE id=$1 FOR SHARE',[c.storeId]);
       const controls=(await client.query('SELECT c.operator_mode,c.operator_revision,s.operator_paused FROM conversations c JOIN stores s ON s.id=c.store_id WHERE c.id=$1 FOR UPDATE OF c',[row.conversation_id])).rows[0];
       if(controls.operator_revision!==row.current_revision||row.sender_kind==='assistant'&&(controls.operator_paused||controls.operator_mode==='owner')||row.sender_kind==='owner'&&controls.operator_mode!=='owner'){await this.setDelivery(client,row.message_id,'cancelled','owner_control_changed');await client.query('COMMIT');return true;}
+      let response:Response|undefined,data:any,networkError:unknown;
       try{
-        const response=await this.request(`https://graph.facebook.com/${c.graphVersion}/${c.phoneId}/messages`,{method:'POST',headers:{authorization:'Bearer '+c.accessToken,'content-type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',recipient_type:'individual',to:row.recipient,...(row.reply_payload??{type:'text',text:{preview_url:false,body:row.text}}),biz_opaque_callback_data:row.message_id}),signal:AbortSignal.timeout(8000)});
-        const data=await response.json().catch(()=>null) as any;
+        response=await this.request(`https://graph.facebook.com/${c.graphVersion}/${c.phoneId}/messages`,{method:'POST',headers:{authorization:'Bearer '+c.accessToken,'content-type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',recipient_type:'individual',to:row.recipient,...(row.reply_payload??{type:'text',text:{preview_url:false,body:row.text}}),biz_opaque_callback_data:row.message_id}),signal:AbortSignal.timeout(8000),redirect:'error'});
+        data=await response.json().catch(()=>null);
+      }catch(error){networkError=error;}
+      if(!response){
+        const failure=whatsappSendError(networkError);
+        if(failure.retryable&&row.attempts<2){
+          await client.query("UPDATE whatsapp_outbox SET state='queued',next_attempt_at=now()+$2::integer*interval '10 seconds',last_error=$3 WHERE message_id=$1",[row.message_id,row.attempts+1,failure.code]);
+          await client.query("UPDATE messages SET status='queued' WHERE id=$1",[row.message_id]);
+        }else await this.setDelivery(client,row.message_id,failure.retryable?'failed':'unknown',failure.code);
+      }else{
         if(response.ok&&typeof data?.messages?.[0]?.id==='string'){
           await client.query("UPDATE whatsapp_outbox SET provider_id=$1,state='accepted',last_error=NULL WHERE message_id=$2",[data.messages[0].id,row.message_id]);
           await client.query("UPDATE messages SET status='accepted' WHERE id=$1",[row.message_id]);
@@ -306,11 +328,9 @@ export class WhatsAppChannel {
           await client.query("UPDATE messages SET status='queued' WHERE id=$1",[row.message_id]);
         }else{
           const code=Number.isInteger(data?.error?.code)?data.error.code:response.status;
-          await this.setDelivery(client,row.message_id,response.ok||response.status>=500?'unknown':'failed','meta_'+code);
-          if(response.status===401||response.status===403||code===190||code===10||code===200)await client.query("UPDATE whatsapp_channels SET send_blocked=true,last_error='authentication_or_permission' WHERE phone_id=$1",[c.phoneId]);
+          await this.setDelivery(client,row.message_id,response.ok||response.status>=500?'unknown':'failed',response.ok?'meta_invalid_response':'meta_'+code);
+          if(!response.ok&&(response.status===401||response.status===403||code===190||code===10||code===200))await client.query("UPDATE whatsapp_channels SET send_blocked=true,last_error='authentication_or_permission' WHERE phone_id=$1",[c.phoneId]);
         }
-      }catch{
-        await this.setDelivery(client,row.message_id,'unknown','network_outcome_unknown');
       }
       await client.query('COMMIT');
       await this.reconcile();return true;

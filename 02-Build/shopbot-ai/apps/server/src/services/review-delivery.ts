@@ -1,4 +1,16 @@
 import type {PoolClient} from 'pg';
+
+// Invalidate the complete unsent group, including text/image pages without
+// their own buttons. Attempted pages keep their truthful delivery outcome.
+export async function cancelSupersededReviews(client:PoolClient,conversationId:string,version:number,binding:string|null){
+ const cancelled=await client.query(`UPDATE whatsapp_outbox o SET state='cancelled',last_error='review_superseded'
+  FROM messages m WHERE m.id=o.message_id AND o.conversation_id=$1 AND o.state='queued' AND o.sender_kind='assistant'
+  AND EXISTS(SELECT 1 FROM messages page JOIN whatsapp_actions a ON a.message_id=page.id
+    WHERE page.conversation_id=o.conversation_id AND (page.id=m.id OR page.reply_group_id=m.reply_group_id)
+    AND (a.source_version<>$2 OR a.binding_id IS DISTINCT FROM $3::uuid)) RETURNING o.message_id`,[conversationId,version,binding]);
+ if(cancelled.rowCount)await client.query("UPDATE messages SET status='cancelled' WHERE id=ANY($1::uuid[])",[cancelled.rows.map(row=>row.message_id)]);
+}
+
 // Approval is attached to a complete visual reply group, never just its last
 // accepted HTTP request. A bound tap can prove its own page while that receipt
 // is delayed; every other page still needs a delivered/read receipt.
