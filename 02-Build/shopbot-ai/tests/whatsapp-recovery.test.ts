@@ -19,9 +19,10 @@ async function fixture(run:(pool:pg.Pool)=>Promise<void>){
 }
 
 test('send error diagnostics only permit retries for established pre-connection failures',()=>{
- for(const code of ['UND_ERR_CONNECT_TIMEOUT','ENOTFOUND','EAI_AGAIN','ECONNREFUSED','ENETUNREACH','EHOSTUNREACH'])assert.deepEqual(whatsappSendError(new TypeError('fetch failed',{cause:{code}})),{retryable:true,code:'network_connection_failed'});
- assert.equal(whatsappSendError(new TypeError('fetch failed',{cause:new AggregateError([{code:'ENETUNREACH'},{code:'ECONNREFUSED'}])})).retryable,true);
- assert.equal(whatsappSendError(new TypeError('fetch failed',{cause:new AggregateError([{code:'ENETUNREACH'},{code:'ECONNRESET'}])})).retryable,false);
+ for(const code of ['UND_ERR_CONNECT_TIMEOUT','ENOTFOUND','EAI_AGAIN','ECONNREFUSED','ENETUNREACH','EHOSTUNREACH'])assert.deepEqual(whatsappSendError(new TypeError('fetch failed',{cause:{code,syscall:['ENOTFOUND','EAI_AGAIN'].includes(code)?'getaddrinfo':'connect'}})),{retryable:true,code:'network_connection_failed'});
+ assert.equal(whatsappSendError(new TypeError('fetch failed',{cause:new AggregateError([{code:'ENETUNREACH',syscall:'connect'},{code:'ECONNREFUSED',syscall:'connect'}])})).retryable,true);
+ assert.equal(whatsappSendError(new TypeError('fetch failed',{cause:new AggregateError([{code:'ENETUNREACH',syscall:'connect'},{code:'ECONNRESET'}])})).retryable,false);
+ for(const syscall of [undefined,'write','read'])assert.equal(whatsappSendError(new TypeError('fetch failed',{cause:{code:'ENETUNREACH',syscall}})).retryable,false,'a code alone does not prove that failure preceded dispatch');
  for(const error of [new Error('synthetic secret which must never be stored'),null,{},new AggregateError([])])assert.deepEqual(whatsappSendError(error),{retryable:false,code:'network_outcome_unknown_transport'});
  assert.deepEqual(whatsappSendError(new DOMException('deadline','TimeoutError')),{retryable:false,code:'network_outcome_unknown_timeout'});
  assert.deepEqual(whatsappSendError(new TypeError('fetch failed',{cause:{code:'ECONNRESET'}})),{retryable:false,code:'network_outcome_unknown_connection_reset'});
@@ -67,7 +68,7 @@ for(const scenario of ['active_review','same_customer_turn','same_reply_group','
 }));
 
 test('pre-connection retries are delayed and capped; resets and deadlines remain unknown without retries',()=>fixture(async pool=>{
- let sends=0,error:unknown=new TypeError('fetch failed',{cause:{code:'EAI_AGAIN'}});
+ let sends=0,error:unknown=new TypeError('fetch failed',{cause:{code:'EAI_AGAIN',syscall:'getaddrinfo'}});
  const channel=new WhatsAppChannel(pool,cfg,async()=>{sends++;throw error;});await channel.setup();await channel.receive(incoming('retry.turn'));await channel.processNext();
  for(let attempt=1;attempt<=3;attempt++){
   assert.equal(await channel.sendNext(),true);

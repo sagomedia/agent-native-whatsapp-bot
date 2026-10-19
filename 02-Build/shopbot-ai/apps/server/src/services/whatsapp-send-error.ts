@@ -1,11 +1,13 @@
 // Only failures that establish no HTTP connection are safe to retry. A reset,
 // aborted deadline, or missing response can follow provider acceptance.
-const connectionCodes=new Set(['UND_ERR_CONNECT_TIMEOUT','ENOTFOUND','EAI_AGAIN','ECONNREFUSED','ENETUNREACH','EHOSTUNREACH']);
-type ErrorLike={name?:unknown;code?:unknown;cause?:unknown;errors?:unknown};
+const connectCodes=new Set(['ECONNREFUSED','ENETUNREACH','EHOSTUNREACH']);
+const dnsCodes=new Set(['ENOTFOUND','EAI_AGAIN']);
+type ErrorLike={name?:unknown;code?:unknown;syscall?:unknown;cause?:unknown;errors?:unknown};
 function beforeConnection(error:unknown,depth=0):boolean {
  if(!error||typeof error!=='object'||depth>3)return false;
  const value=error as ErrorLike;
- if(typeof value.code==='string'&&connectionCodes.has(value.code))return true;
+ if(value.code==='UND_ERR_CONNECT_TIMEOUT')return true;
+ if(typeof value.code==='string'&&(value.syscall==='connect'&&connectCodes.has(value.code)||value.syscall==='getaddrinfo'&&dnsCodes.has(value.code)))return true;
  if(Array.isArray(value.errors)&&value.errors.length)return value.errors.every(item=>beforeConnection(item,depth+1));
  return beforeConnection(value.cause,depth+1);
 }
