@@ -61,6 +61,7 @@ jobs:
       - name: Typecheck and build
         run: npm run build
       - name: Run PostgreSQL integration tests
-        run: npm run test:integration
+        # Avoid CPU oversubscription in the 100-image fixture; keep every assertion and timeout.
+        run: npx tsx --test --test-concurrency=2 tests/*.test.ts
       - name: Validate catalog preparation
         run: python3 -m unittest discover -s scripts -p 'test_catalog_cleanup.py'

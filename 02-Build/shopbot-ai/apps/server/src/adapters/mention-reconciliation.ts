@@ -2,7 +2,7 @@ import type {ConversationState,DraftLine} from '../../../../packages/contracts/i
 import type {TurnUnderstanding} from '../../../../packages/contracts/understanding.js';
 import {normalize,tokens} from '../../../../packages/contracts/catalog-text.js';
 import {say,lineName} from '../../../../packages/contracts/language.js';
-import {matchesProductMeasures,spokenMeasures,convertAmount,catalogPack,explicitPurchaseCount} from '../services/quantity-evidence.js';
+import {matchesProductMeasures,spokenMeasures,convertAmount,catalogPack,catalogMeasures,explicitPurchaseCount} from '../services/quantity-evidence.js';
 type Item=TurnUnderstanding['requestedItems'][number];
 import {additionalMention,repeatMention,correctionMention,currentItemMention} from '../../../../packages/contracts/intent-language.js';
 export {additionalMention} from '../../../../packages/contracts/intent-language.js';
@@ -109,21 +109,46 @@ export function compatibleLine(item:Item,line:DraftLine){
 }
 // Resolve an edit's spoken name against every old line. A model-chosen ID
 // cannot make the shared alias "pipe" identify one of two pipe entries.
-export function namedEditLines(source:string,state:ConversationState):DraftLine[]{
- const ordinal=/\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|[1-9]|10)(?:st|nd|rd|th)?\s+(?:item|line|product)\b/i.exec(source);
- if(ordinal){const index=({first:1,second:2,third:3,fourth:4,fifth:5,sixth:6,seventh:7,eighth:8,ninth:9,tenth:10} as Record<string,number>)[ordinal[1].toLowerCase()]??Number(ordinal[1]);return state.draft[index-1]?[state.draft[index-1]]:[];}
- const text=normalize(source);
- const editWords=(text:string)=>tokens(text.replace(/பிவிசி|பீவிசி|பி\s*வி\s*சி/gu,'PVC').replace(/பைப்(?:பு)?/gu,'pipe'));
+// Compare product identity, not the unit/pack words repeated on every card.
+const editNoise=new Set(['inch','inches','இன்ச்','இன்சு','mm','cm','metre','meter','litre','kg','piece','box','pack','pcs','pc','set','item','line','entry','product','and','of','the','my','this','that','one','first','second','third','last','எண்ணம்','பீஸ்','பேக்','பெட்டி','லிட்டர்','கிலோ','மீட்டர்','அது','அந்த','இந்த','பொருள்','எல்லாம்','missing','unknown','unavailable']);
+function editText(source:string){
+ const substitutions:[RegExp,string][]=[[/பிவிசி|பீவிசி|பி\s*வி\s*சி/gu,'PVC'],[/பைப்(?:பு|பை|ப்கள்|களை)?/gu,'pipe'],[/ஸ்க்ரூ\s*டிரைவர்|ஸ்குரு\s*டிரைவர்/gu,'screw driver'],[/ஸ்க்ரூ|ஸ்குரு|திருகு/gu,'screw'],[/போல்ட்(?:டு|டை|டா|களை|கள்)?/gu,'bolt'],[/நட்டு(?:களை|கள்)?/gu,'nut'],[/பிளேயர்|ப்ளையர்|பிளையர்/gu,'plier'],[/கட்டிங்/gu,'cutting'],[/ஸ்விட்ச்|சுவிட்ச்/gu,'switch'],[/சாக்கெட்|சாக்கட்/gu,'socket'],[/பெயிண்ட்|பெயின்ட்/gu,'paint'],[/வயர்/gu,'wire'],[/ஹோஸ்|ஓஸ்/gu,'hose'],[/கார்டன்/gu,'garden']];
+ let text=normalize(source);for(const [pattern,replacement] of substitutions)text=text.replace(pattern,replacement);return text;
+}
+export function editIdentityWords(source:string){return tokens(editText(source)).filter(word=>word.length>2&&!/^\d/.test(word)&&!editNoise.has(word));}
+export function editMeasuresMatch(source:string,line:DraftLine):boolean {
+ const measures=spokenMeasures(source).filter(measure=>['inch','mm','cm','m','foot','litre','ml','kg','g'].includes(measure.unit));
+ const product=line.candidates?.find(product=>product.sku===line.sku),known=[...line.productMeasures??[],...(line.packSize?[line.packSize]:[]),...spokenMeasures([line.query,line.name].join(' ')),...(product?catalogMeasures(product):[])];
+ return measures.every(measure=>{const comparable=known.filter(value=>convertAmount(value,measure.unit)!==null);return !comparable.length||comparable.some(value=>convertAmount(value,measure.unit)===measure.value);});
+}
+export function namedEditLines(source:string,state:ConversationState,options:{ignoreMeasures?:boolean}={}):DraftLine[]{
+ const ordinal=/\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|[1-9]|10)(?:st|nd|rd|th)?\s+(?:item|line|product|entry|row)\b/i.exec(source);
+ const last=/\blast\s+(?:item|line|product|entry|row)\b|கடைசி(?:யா|யில|யில்)?|லாஸ்ட்(?:டா|டாக)?/iu.test(source);
+ const index=ordinal?(({first:1,second:2,third:3,fourth:4,fifth:5,sixth:6,seventh:7,eighth:8,ninth:9,tenth:10} as Record<string,number>)[ordinal[1].toLowerCase()]??Number(ordinal[1]))-1:last?state.draft.length-1:undefined;
+ const text=editText(source),words=new Set(editIdentityWords(source));
  const scored=state.draft.map(line=>{
   const product=line.candidates?.find(p=>p.sku===line.sku);
   const names=[line.query,line.name,line.sku,product?.name,...product?.aliases??[],...Object.values(product?.localNames??{})].filter((n):n is string=>!!n);
-  const known=new Set(names.flatMap(editWords));
-  const shared=[...new Set(editWords(source).filter(w=>w.length>2&&!/^\d/.test(w)&&known.has(w)))];
-  const score=Math.max(shared.length*10,...names.filter(n=>text.includes(normalize(n))).map(n=>tokens(n).length*100+normalize(n).length));
-  return {line,score};
+  // A garden hose's incidental "pipe" alias cannot outrank a literal pipe
+  // row. A stored garden-pipe request remains eligible through its own name.
+  const primary=editIdentityWords([line.query,line.name,product?.name].filter(Boolean).join(' '));
+  if(words.has('pipe')&&!words.has('hose')&&primary.includes('hose')&&!primary.includes('pipe'))return {line,score:0};
+  const known=new Set(names.flatMap(editIdentityWords)),shared=[...words].filter(word=>known.has(word));
+  // An alias consisting only of a size/pack must not identify a product.
+  const exact=names.filter(name=>editIdentityWords(name).length&&text.includes(editText(name))).map(name=>editIdentityWords(name).length*100+editText(name).length);
+  return {line,score:Math.max(shared.length*10,...exact)};
  });
- const best=Math.max(0,...scored.map(s=>s.score));
- return best?scored.filter(s=>s.score===best).map(s=>s.line):[];
+ const best=Math.max(0,...scored.map(row=>row.score));
+ const named=(best?scored.filter(row=>row.score===best).map(row=>row.line):[]).filter(line=>options.ignoreMeasures||editMeasuresMatch(source,line));
+ if(index!==undefined){
+  const positional=state.draft[index];if(!positional)return [];
+  if(named.length)return named.some(line=>line.id===positional.id)?[positional]:[];
+  // A pure ordinal can select a row. A product named alongside a conflicting
+  // ordinal must be clarified, rather than letting position override identity.
+  const remainder=source.replace(ordinal?.[0]??/(?:\blast\s+(?:item|line|product|entry|row)\b|கடைசி(?:யா|யில|யில்)?|லாஸ்ட்(?:டா|டாக)?)/giu,'');
+  if(!editIdentityWords(remainder).filter(word=>!['remove','delete','drop','please','change','set','to','make','neekku','நீக்கு','நீக்குங்க','எடுத்துருங்க'].includes(word)).length)return [positional];
+ }
+ return named;
 }
 export function existingMention(item:Item,state:ConversationState):{line?:DraftLine;clarify?:string}{
  if(item.targetLineId){

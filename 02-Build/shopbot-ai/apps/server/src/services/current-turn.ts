@@ -11,7 +11,7 @@ export function submissionIntent(text:string):boolean {
  // A complete short command, never a substring of a shopping correction.
  return /^(?:(?:ok(?:ay)?|seri|sari|சரி|ஓகே|perfect|yes)\s*[, ]*\s*)*(?:anup(?:p)?ir?lam|anuppalaam|anupalaam|அனுப்பலாம்|அனுப்பிரலாம்|அனுப்பிடலாம்|கடைக்கு அனுப்புங்க|kadaikku anupp(?:u|unga|irunga)|send (?:it|this|the order|my order|the list|my list)(?: to (?:the )?(?:shop|store))?|(?:place|submit|finish) (?:the |my )?order|(?:ஆர்டரை|ஆர்டர்) (?:பிளேஸ் பண்ணிடலாம்|பிளேஸ் பண்ணலாம்|போட்டுடலாம்|அனுப்புங்க)|(?:இந்த )?பட்டியலை(?:க்)? கடைக்கு அனுப்புங்க)(?:\s+(?:naan vandhu collect pannikkiren|நான் வந்து.*))?$/.test(value);
 }
-import {negativeProductMention as negative,additionalMention as extra,intentClauses} from '../../../../packages/contracts/intent-language.js';
+import {negativeProductMention as negative,additionalMention as extra,intentClauses,removalMention,positiveRemoval} from '../../../../packages/contracts/intent-language.js';
 export function validateCurrentTurn(operations:Operation[],description:string,state:ConversationState):Operation[] {
  validateProductMeaningEvidence(operations,description);
  const removals=operations.filter(op=>op.kind==='remove_item');
@@ -27,6 +27,7 @@ export function validateCurrentTurn(operations:Operation[],description:string,st
 
  const clauses=intentClauses(description);
  for(const op of operations){
+  if(op.kind==='remove_item'&&removalMention.test(op.supportingPhrase??description)&&!positiveRemoval(op.supportingPhrase??description,description))throw new ToolError('The customer asked to keep this item. Your list is unchanged.','interpretation_polarity');
   if((op.kind==='set_amount'||op.kind==='increment_amount')&&!amountEvidence(op,description))throw new ToolError('Use the exact measured amount and supporting phrase from the current message. Additional amounts need explicit extra wording.','interpretation_evidence');
   if('supportingPhrase' in op&&op.supportingPhrase&&!description.includes(op.supportingPhrase))throw new ToolError('Use the exact supporting phrase from the current message.','interpretation_evidence');
   if(op.kind==='increment_quantity'&&!extra.test(op.supportingPhrase))throw new ToolError('An increment requires an explicitly additional count.','interpretation_evidence');
