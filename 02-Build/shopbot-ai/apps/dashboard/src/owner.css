@@ -318,3 +318,5 @@
 @media(max-width:800px){.owner-inventory-edit-actions{flex-direction:column;align-items:stretch}.owner-editor-summary{padding:18px;gap:22px}.owner-editor-section{padding:20px 0!important}.owner-editor-actionbar{padding:12px;gap:12px}.owner-editor-actionbar .owner-save-actions{display:grid;grid-template-columns:1fr 1fr;width:100%}.owner-editor-actionbar .owner-primary{grid-column:1/-1}.owner-editor-actionbar>div:first-child{display:none}.owner-editor-confirmations{padding:12px!important}.owner-quick-price{max-height:calc(100dvh - 24px);overflow:auto}.owner-quick-price .owner-actions{flex-wrap:wrap}.owner-inventory-table td[data-label=Actions]{padding-top:8px}}
 
 .owner-dialog-body{margin-bottom:20px;line-height:1.7}.owner-dialog-body ul{padding-left:20px;margin:10px 0}.owner-essential-fields output{display:block;padding:10px 0;font-size:18px;font-variant-numeric:tabular-nums}.owner-essential-fields small{display:block;font-size:12px;line-height:1.6;color:var(--ui-muted)}
+
+.owner-photo-full{display:inline-block;font-size:12px;margin-top:8px;min-height:32px;padding:5px 0}
