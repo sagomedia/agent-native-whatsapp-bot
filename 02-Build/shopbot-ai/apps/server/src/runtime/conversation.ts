@@ -1,3 +1,4 @@
+import {cartChangeFeedback} from '../services/cart-change-feedback.js';
 import {canAddToOrder,orderListChoice,askOrderItems,refreshOrderListChoice} from '../services/order-list-choice.js';
 import {acceptOrderQuote} from '../services/order-quotes.js';
 import {actionDeliveryReady} from '../services/review-delivery.js';
@@ -284,6 +285,8 @@ export class ConversationRuntime {
       }
       if(claimed.event.type==='voice'&&interpretation?.transcript)await client.query('UPDATE messages SET text=$1 WHERE id=$2 AND conversation_id=$3',[interpretation.transcript,claimed.id,ctx.conversationId]);
       if(failure)failure=voiceFailureKind==='unreadable'?customerCopy('voiceUnclear',current):voiceFailureKind==='processing'?customerCopy('voiceProcessing',current):customerError(failure,current);
+      const cartBefore=structuredClone(current);let cartMutated=false;
+      const retainedCartGoal=claimed.memory&&['cart_edit','cart_correction'].includes(claimed.memory.purpose)&&claimed.memory.sourceVersion===current.version&&!current.lastRequestId?claimed.memory:undefined;
       let replyRequest:import('../../../../packages/contracts/index.js').OrderRequest|null|undefined;
       let message=failure??'';let rich:RichReply={...plainReply(message),...(failure?{stage:'error' as const,clarificationReason:failureReason??(claimed.event.type==='voice'?'voice_processing_failed':'processing_failed')}:{})};
       // The savepoint ensures invalid dependent operations cannot partially mutate the draft.
@@ -410,7 +413,7 @@ export class ConversationRuntime {
             deterministic={...deterministic,args:{...deterministic.args,operations,expectedVersion:current.version}};
           }
           const invoke=async(call:ToolCall)=>{if(current.visualOrdering&&(call.name==='submit_order_request'||call.name==='confirm_product_choices'&&current.pending?.kind==='products'&&(current.pending.completeReview||claimed.event.type!=='select_product'))){const binding=call.name==='submit_order_request'?call.args.reviewId:call.args.batchId;if(!await reviewDeliveryReady(client,ctx.conversationId,binding,claimed.event.type==='confirm'||claimed.event.type==='confirm_products',claimed.event.type==='confirm'||claimed.event.type==='confirm_products'?claimed.event.id:undefined))throw new ToolError('All review parts must be delivered before approval. Please ask to review again.','review_incomplete');}
-          return this.tools.invokeInTransaction(client,{...ctx,...(call.name==='submit_order_request'&&(deterministic?.name==='submit_order_request'||explicitSend&&deterministic?.name==='confirm_product_choices')?{consentReviewId:call.args.reviewId}:{}),...(call.name==='confirm_product_choices'&&deterministic?.name==='confirm_product_choices'?{consentProductBatchId:call.args.batchId}:{}),...(selectedCatalogSku?{selectedCatalogSku,selectedCatalogProduct}:{})},call,claimed.id);};
+          const outcome=await this.tools.invokeInTransaction(client,{...ctx,...(call.name==='submit_order_request'&&(deterministic?.name==='submit_order_request'||explicitSend&&deterministic?.name==='confirm_product_choices')?{consentReviewId:call.args.reviewId}:{}),...(call.name==='confirm_product_choices'&&deterministic?.name==='confirm_product_choices'?{consentProductBatchId:call.args.batchId}:{}),...(selectedCatalogSku?{selectedCatalogSku,selectedCatalogProduct}:{})},call,claimed.id);if(call.name==='apply_draft_changes')cartMutated=true;return outcome;};
           let result:ToolResult;
           let assistance:CatalogObservation[]|undefined;
           let assistanceLineId:string|undefined;let assistanceBindingId:string|undefined;
@@ -475,14 +478,17 @@ export class ConversationRuntime {
             if(result.products) {
               const query=deterministic?.name==='search_products'||deterministic?.name==='discover_products'?deterministic.args.query:interpretation?.priceQuery;
               const quantity=deterministic?.name==='search_products'?deterministic.args.quantity:interpretation?.priceQuantity,unit=deterministic?.name==='search_products'?deterministic.args.requestedUnit:interpretation?.priceUnit;
-              if(query)result.discoveryBindingId=await saveAssistantMemory(client,ctx,{purpose:!!result.discovery||claimed.event.type==='browse'||interpretation?.conversation==='browse'?'discovery':'quote',queries:[query],lineId:null,sourceVersion:current.version,quoteQuantity:quantity,quoteUnit:unit,...(deterministic?.name==='discover_products'&&claimed.memory?.sourceVersion===current.version?{requestedQuantity:claimed.memory.requestedQuantity,requestedUnit:claimed.memory.requestedUnit}:{}),observations:[{tool:result.discovery?'discover_products':'search_products',query,products:result.products,totalCount:result.totalCount??result.products.length,discovery:result.discovery}]});
+              // A price interruption must not erase the current version-bound edit.
+              const preserveGoal=retainedCartGoal&&!interpretation?.operations.length&&(interpretation?.next==='price'||deterministic?.name==='search_products');
+              if(query&&!preserveGoal)result.discoveryBindingId=await saveAssistantMemory(client,ctx,{purpose:!!result.discovery||claimed.event.type==='browse'||interpretation?.conversation==='browse'?'discovery':'quote',queries:[query],lineId:null,sourceVersion:current.version,quoteQuantity:quantity,quoteUnit:unit,...(deterministic?.name==='discover_products'&&claimed.memory?.sourceVersion===current.version?{requestedQuantity:claimed.memory.requestedQuantity,requestedUnit:claimed.memory.requestedUnit}:{}),observations:[{tool:result.discovery?'discover_products':'search_products',query,products:result.products,totalCount:result.totalCount??result.products.length,discovery:result.discovery}]});
             }
             rich=presentReply(result,result.state??current,interpretation,claimed.event);replyRequest=result.request;if(result.request&&(deterministic?.name==='submit_order_request'||explicitSend&&deterministic?.name==='confirm_product_choices'))rich.stage='submitted';
             if(claimed.event.type==='text'&&canonicalShortcut(claimed.event.text)==='yes'&&deterministic?.name==='get_draft'&&claimed.memory?.sourceVersion===current.version) {
               if(claimed.memory.purpose==='quote')rich=plainReply(say(current,'That was a price check; nothing has been added. Use “Add to my list” or tell me which item and quantity you want.','அது விலை விவரம் மட்டுமே; பொருள் சேர்க்கவில்லை. “பட்டியலில் சேர்” என்பதைத் தேர்வு செய்யுங்கள் அல்லது பொருளையும் எண்ணிக்கையையும் சொல்லுங்கள்.','Athu price detail mattum; porul serkkala. “List-la seru” choose pannunga illa porulaiyum quantity-aiyum sollunga.'));
               else if(claimed.memory.observations.flatMap(o=>o.products).length>1)rich=plainReply(say(current,'Which of the options would you like? Choose a product or tell me its name; I haven’t changed your list.','எந்தப் பொருள் வேண்டும்? படத்தில் தேர்வு செய்யுங்கள் அல்லது பெயரைச் சொல்லுங்கள். உங்கள் பட்டியலில் மாற்றம் செய்யவில்லை.','Entha porul venum? Photo-la choose pannunga illa peyarai sollunga. Unga list-la maaththam seyyala.'));
             }
-            if(result.state&&(interpretation?.operations.length||deterministic?.name==='apply_draft_changes'||deterministic?.name==='confirm_product_choices'||deterministic?.name==='preview_order')) {
+            const preserveGoal=retainedCartGoal&&!cartMutated&&result.state?.version===cartBefore.version&&digest(result.state.draft)===digest(cartBefore.draft);
+            if(result.state&&!preserveGoal&&(interpretation?.operations.length||deterministic?.name==='apply_draft_changes'||deterministic?.name==='confirm_product_choices'||deterministic?.name==='preview_order')) {
               const line=pendingItem(result.state);
               if(line) {
                 const queries=[line.query??line.name],observations=await observeCatalog(client,ctx,this.tools,queries,`${claimed.id}:remember`);
@@ -513,7 +519,7 @@ export class ConversationRuntime {
         }
         await client.query('RELEASE SAVEPOINT turn_actions');
       } catch(error) {
-        await client.query('ROLLBACK TO SAVEPOINT turn_actions');
+        await client.query('ROLLBACK TO SAVEPOINT turn_actions');cartMutated=false;
         message=customerError(error instanceof Error?error.message:'Action failed. Your draft is retained.',current,error instanceof ToolError?error.code:undefined);rich={...plainReply(message),stage:'error',clarificationReason:error instanceof ToolError?error.code:'action_failed'};
         if(current.visualOrdering&&current.lastRequestId&&error instanceof ToolError&&error.code==='stale_question'&&claimed.memory?.purpose==='list_choice')rich=await refreshOrderListChoice(client,ctx,current,claimed.memory);
         if(current.visualOrdering&&error instanceof ToolError&&['stale_confirmation','review_incomplete'].includes(error.code)){const kept=await loadState(client,ctx);if(kept.draft.length&&!kept.lastRequestId){const renewed=await this.tools.invokeInTransaction(client,ctx,{name:'preview_order',args:{expectedVersion:kept.version}},claimed.id+':fresh-review');rich=presentReply(renewed,renewed.state!);}}
@@ -583,6 +589,10 @@ export class ConversationRuntime {
       if(replyRequest?.advanceRequired&&this.options.advance&&!rich.readOnly)rich=await upiAdvanceReply(client,ctx,finalState,this.options.advance.hostname,{demoPayAtShop:this.options.advance.demoPayAtShop,onlyOnce:true})??rich;
       const alreadySeen=finalState.draft.filter(l=>l.sku).every(line=>{const product=line.candidates?.find(p=>p.sku===line.sku);return product&&claimed.displayedProducts.some(p=>p.delivered&&p.event.type==='edit_item'&&p.event.lineId===line.id&&productIdentity(p.product)===productIdentity(product));});
       rich=materializeVisualReply({...visualReply({...rich,compactReview:alreadySeen},finalState,replyRequest),storeName:claimed.catalogMap?.store.name});
+      // Confirm only persisted customer CRUD, after presentation has chosen its
+      // primary question. Read-only refreshes and rejected plans say nothing.
+      const feedback=cartBefore.draft.length>0&&finalState.visualOrdering&&!failure&&rich.stage!=='error'&&cartMutated&&!cartBefore.lastRequestId&&!finalState.lastRequestId?cartChangeFeedback(cartBefore,finalState):undefined;
+      if(feedback)rich={...rich,text:feedback+'\n'+rich.text,parts:rich.parts?.map((part,index)=>index===0?{...part,text:feedback+'\n'+part.text}:part)};
       message=rich.text;
       if(finalState.visualOrdering)await cancelSupersededReviews(client,ctx.conversationId,finalState.version,conversationBinding(finalState,await loadAssistantMemory(client,ctx)));
       const replyId=randomUUID();

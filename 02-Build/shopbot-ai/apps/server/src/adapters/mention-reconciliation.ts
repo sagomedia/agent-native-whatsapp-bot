@@ -128,8 +128,21 @@ export function editMeasuresMatch(source:string,line:DraftLine):boolean {
 export function editIdentityMatches(source:string,line:DraftLine):boolean {
  const words=new Set(editIdentityWords(source)),product=line.candidates?.find(p=>p.sku===line.sku);
  const primary=editIdentityWords([line.query,line.name,product?.name].filter(Boolean).join(' '));
+ const known=new Set(editIdentityWords([line.query,line.name,product?.name,...product?.aliases??[],...Object.values(product?.localNames??{})].filter(Boolean).join(' ')));
  if(words.has('pipe')&&!words.has('hose')&&primary.includes('hose')&&!primary.includes('pipe'))return false;
  if(words.has('screw')&&!words.has('driver')&&primary.includes('driver'))return false;
+ const productHeads=new Set(['cutter','brush','blade','wheel','hose','pipe','box','switch','socket']);
+ if([...words].some(word=>productHeads.has(word)&&!known.has(word))&&primary.some(word=>productHeads.has(word)))return false;
+ // A shared head noun cannot turn a named variant into a different product.
+ // For example, "wire cutter" must not select the only "pipe cutter" row.
+ // Inspect adjacent words so conversational verbs and quantities are not
+ // mistaken for product qualifiers.
+ const spoken=editText(source);
+ const productQualifiers=new Set(['wire','pipe','paint','garden','water','pvc','steel','plastic','metal','wood','angle','cutting','grinding','screw','gas','electrical']);
+ for(const match of spoken.matchAll(/\b([a-z][a-z0-9]*)\s+(cutter|brush|blade|wheel|hose|pipe|box|switch|socket)\b/giu)){
+  const modifier=match[1].toLowerCase(),head=match[2].toLowerCase();
+  if(known.has(head)&&productQualifiers.has(modifier)&&!known.has(modifier))return false;
+ }
  return true;
 }
 export function namedEditLines(source:string,state:ConversationState,options:{ignoreMeasures?:boolean}={}):DraftLine[]{

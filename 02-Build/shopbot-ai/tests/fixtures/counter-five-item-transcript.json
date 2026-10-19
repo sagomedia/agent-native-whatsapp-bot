@@ -23,7 +23,7 @@
   },
   {
     "stage": "identify",
-    "text": "Which 1 inch PVC pipe do you need?",
+    "text": "Changed 1 inch PVC pipe\nWhich 1 inch PVC pipe do you need?",
     "cards": [
       {
         "kind": "product",
@@ -80,7 +80,7 @@
   },
   {
     "stage": "products",
-    "text": "5 items",
+    "text": "Changed 0.75 inch PVC Pipe Local (1 piece)\n5 items",
     "cards": [
       {
         "kind": "instruction",

@@ -95,6 +95,6 @@ for(const needsChoice of [false,true])test(`Google wire response and voice runti
   const attempt=(await pool.query('SELECT state,validation_issues,response FROM provider_attempts WHERE conversation_id=$1',[id])).rows[0];assert.equal(attempt.state,'succeeded');assert.equal(attempt.validation_issues,null);assert.equal(attempt.response.operations.length,needsChoice?0:2);
   const reply=after.messages.filter(message=>message.direction==='outbound').at(-1)!;assert.doesNotMatch(reply.text,/கேட்டது:|பட்டியல் அப்படியே|எந்தப் பொருளை மாற்றணும்/);
   const cards=reply.rich?.parts?.flatMap(part=>part.cards??[])??reply.rich?.cards??[];
-  assert.deepEqual(cards.flatMap(card=>'kind' in card&&card.kind==='product'?[card.lineId]:[]),s.draft.slice(0,2).map(row=>row.id));assert.equal(reply.text,'2 items');
+  assert.deepEqual(cards.flatMap(card=>'kind' in card&&card.kind==='product'?[card.lineId]:[]),s.draft.slice(0,2).map(row=>row.id));assert.match(reply.text,/\n2 items$/);assert.match(reply.text,/screw box/);assert.match(reply.text,/Fevicol adhesive/);
  }finally{await pool.end();await admin.query(`DROP SCHEMA ${schema} CASCADE`);await admin.end();}
 });
