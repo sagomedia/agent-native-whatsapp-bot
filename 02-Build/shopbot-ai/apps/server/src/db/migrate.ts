@@ -457,6 +457,18 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       );
       INSERT INTO schema_migrations(version) VALUES(39);
     `);}
+    const v40=await client.query('SELECT version FROM schema_migrations WHERE version=40');
+    if(!v40.rowCount){await client.query(`
+      CREATE TABLE order_quote_drafts (
+        request_id uuid PRIMARY KEY REFERENCES order_requests(id) ON DELETE CASCADE,
+        store_id uuid NOT NULL REFERENCES stores(id),expected_revision integer NOT NULL CHECK(expected_revision>0),
+        amendment_id uuid REFERENCES order_amendments(id) ON DELETE CASCADE,
+        lines jsonb NOT NULL CHECK(jsonb_typeof(lines)='array' AND jsonb_array_length(lines) BETWEEN 1 AND 50),
+        version integer NOT NULL DEFAULT 1 CHECK(version>0),updated_by text NOT NULL,
+        updated_at timestamptz NOT NULL DEFAULT now()
+      );
+      INSERT INTO schema_migrations(version) VALUES(40);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

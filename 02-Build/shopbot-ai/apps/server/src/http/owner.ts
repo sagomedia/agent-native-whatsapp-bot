@@ -4,6 +4,7 @@ import {reserveRequest,closeRequestStock} from '../services/inventory.js';
 import {ToolError} from '../services/context.js';
 import {verifyManualAdvance,verifyManualRefund} from '../services/upi-advance.js';
 import {decideAmendment} from '../services/order-amendments.js';
+import {saveQuoteDraftSchema,saveQuoteDraft,quoteDraftRow} from '../services/order-quote-drafts.js';
 import {orderQuoteSchema,offerOrderQuote,orderQuoteReply} from '../services/order-quotes.js';
 import {queueOrderNotice} from '../services/order-notices.js';
 import {customerCopy} from '../../../../packages/contracts/customer-copy.js';
@@ -122,14 +123,14 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
         JOIN messages m ON m.reply_group_id=g.reply_group_id LEFT JOIN whatsapp_outbox o ON o.message_id=m.id
         WHERE c.store_id=$1 AND c.pending->>'kind'='review' GROUP BY c.id`,[owner.storeId])).rows;
       for(const conversation of conversations){if(conversation.checkout){const delivery=deliveries.find(d=>d.id===conversation.id);conversation.checkout.state=Date.parse(conversation.checkout.expiresAt)<=Date.now()?'expired':delivery?.issue?'delivery_issue':delivery&&delivery.delivered<delivery.total?'invoice_arriving':'awaiting_customer';}}
-      const requests=(await client.query("SELECT r.id,r.conversation_id,r.acceptance,r.payment,r.fulfillment,coalesce(r.effective_total_paise,r.total_paise) AS total_paise,coalesce(r.effective_lines,r.lines) AS lines,r.created_at,r.estimate_complete,r.excluded_line_ids,r.advance_required,r.effective_revision,r.inventory_state,r.inventory_untracked_line_ids,r.packed_revision,a.state AS advance_state,a.amount_paise AS advance_amount_paise FROM order_requests r LEFT JOIN order_advances a ON a.request_id=r.id WHERE r.store_id=$1 ORDER BY CASE WHEN r.acceptance='awaiting_approval' OR r.acceptance='accepted' AND r.fulfillment NOT IN ('collected','cancelled') THEN 0 ELSE 1 END,r.created_at DESC LIMIT 100",[owner.storeId])).rows;
+      const requests=(await client.query("SELECT r.id,r.conversation_id,r.acceptance,r.payment,r.fulfillment,r.lines AS original_lines,coalesce(r.effective_total_paise,r.total_paise) AS total_paise,coalesce(r.effective_lines,r.lines) AS lines,r.created_at,r.estimate_complete,r.excluded_line_ids,r.advance_required,r.effective_revision,r.inventory_state,r.inventory_untracked_line_ids,r.packed_revision,a.state AS advance_state,a.amount_paise AS advance_amount_paise FROM order_requests r LEFT JOIN order_advances a ON a.request_id=r.id WHERE r.store_id=$1 ORDER BY CASE WHEN r.acceptance='awaiting_approval' OR r.acceptance='accepted' AND r.fulfillment NOT IN ('collected','cancelled') THEN 0 ELSE 1 END,r.created_at DESC LIMIT 100",[owner.storeId])).rows;
       const requestSkus=[...new Set(requests.flatMap(r=>(r.lines as OrderRequest['lines']).flatMap(l=>l.sku?[l.sku]:[])))];
       const stockProducts=requestSkus.length?(await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND sku=ANY($2::text[])`,[owner.storeId,requestSkus])).rows.map(productFromRow):[];
       const reservations=requests.length?(await client.query("SELECT request_id,sku,quantity FROM inventory_reservations WHERE store_id=$1 AND request_id=ANY($2::uuid[]) AND state='active'",[owner.storeId,requests.map(r=>r.id)])).rows:[];
       for(const r of requests)r.inventory=stockProducts.filter(p=>(r.lines as OrderRequest['lines']).some(l=>l.sku===p.sku)).map(p=>({sku:p.sku,name:p.name,unit:p.unit,onHand:p.stockOnHand,reserved:p.stockReserved,available:p.stock,held:Number(reservations.find(h=>h.request_id===r.id&&h.sku===p.sku)?.quantity??0),version:p.version,hasPhoto:!!p.imageUrl}));
       const requestCounts=(await client.query("SELECT count(*) FILTER(WHERE acceptance='awaiting_approval' OR acceptance='accepted' AND fulfillment NOT IN ('collected','cancelled'))::int AS active,count(*) FILTER(WHERE NOT(acceptance='awaiting_approval' OR acceptance='accepted' AND fulfillment NOT IN ('collected','cancelled')))::int AS history FROM order_requests WHERE store_id=$1",[owner.storeId])).rows[0];
       const amendments=(await client.query("SELECT id,request_id,conversation_id,kind,summary,proposed_lines,state,expected_revision,known_subtotal_paise,estimate_complete,created_at FROM order_amendments WHERE store_id=$1 AND state IN ('owner_pending','proposed') ORDER BY created_at LIMIT 100",[owner.storeId])).rows;
-      const quotes=(await client.query("SELECT id,request_id,state,expected_revision,total_paise,created_at FROM order_quotes WHERE store_id=$1 AND state='offered' ORDER BY created_at LIMIT 100",[owner.storeId])).rows;
+      const quotes=(await client.query("SELECT id,request_id,state,expected_revision,total_paise,lines,created_at FROM order_quotes WHERE store_id=$1 AND state='offered' ORDER BY created_at LIMIT 100",[owner.storeId])).rows;
       const usage=fullDetails?(await client.query(`SELECT count(*)::int AS attempts,count(*) FILTER(WHERE state='failed')::int AS failures,count(*) FILTER(WHERE state='unknown')::int AS unknown,coalesce(sum(estimated_cost_microusd),0)::text AS estimated_microusd FROM (SELECT state,estimated_cost_microusd FROM provider_attempts WHERE store_id=$1 UNION ALL SELECT state,estimated_cost_microusd FROM catalog_suggestions WHERE store_id=$1) attempts`,[owner.storeId])).rows[0]:null;
       const budget=(await client.query('SELECT limit_microusd,committed_microusd,held_microusd,blocked FROM inference_budgets WHERE store_id=$1',[owner.storeId])).rows[0]??null;
       const audit=fullDetails?(await client.query('SELECT action,target_id,details,created_at FROM owner_audit WHERE store_id=$1 ORDER BY sequence DESC LIMIT 20',[owner.storeId])).rows:[];
@@ -335,6 +336,27 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       const r=(await client.query('SELECT c.reply_language FROM order_requests r JOIN conversations c ON c.id=r.conversation_id WHERE r.id=$1 AND r.store_id=$2',[request.params.id,owner.storeId])).rows[0];
       const text=customerCopy('refundComplete',{replyLanguage:r.reply_language});
       return {...result,...await queueOrderNotice(client,owner.storeId,request.params.id,'advance-refunded',textPresentation(text),config.whatsapp,p.data.notify)};
+    });
+  });
+  app.get<{Params:{id:string}}>('/api/owner/requests/:id/quote-draft',async(request,reply)=>{
+    if(!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Invalid order.'});
+    if(!(await pool.query('SELECT 1 FROM order_requests WHERE store_id=$1 AND id=$2',[owner.storeId,request.params.id])).rowCount)return reply.code(404).send({error:'Order not found.'});
+    const row=(await pool.query('SELECT * FROM order_quote_drafts WHERE store_id=$1 AND request_id=$2',[owner.storeId,request.params.id])).rows[0];
+    return {draft:row?quoteDraftRow(row):null};
+  });
+  app.post<{Params:{id:string}}>('/api/owner/requests/:id/quote-draft',async(request,reply)=>{
+    const p=saveQuoteDraftSchema.safeParse(request.body);
+    if(!p.success||!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Check the quote draft fields.'});
+    return write('quote_draft',request.params.id,c=>saveQuoteDraft(c,owner.storeId,request.params.id,owner.email,p.data));
+  });
+  app.post<{Params:{id:string}}>('/api/owner/requests/:id/quote/notify',async(request,reply)=>{
+    const p=z.object({quoteId:uuid,expectedRevision:z.number().int().positive(),notify:z.literal(true)}).strict().safeParse(request.body);
+    if(!p.success||!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Choose the current quote and enable WhatsApp notification.'});
+    return write('order_quote_notice',request.params.id,async client=>{
+      const row=(await client.query("SELECT q.id,q.created_at FROM order_quotes q JOIN order_requests r ON r.id=q.request_id WHERE q.store_id=$1 AND r.store_id=$1 AND q.request_id=$2 AND q.id=$3 AND q.state='offered' AND q.expected_revision=r.effective_revision AND r.effective_revision=$4 AND r.acceptance<>'rejected' AND r.fulfillment NOT IN ('collected','cancelled') FOR UPDATE OF q,r",[owner.storeId,request.params.id,p.data.quoteId,p.data.expectedRevision])).rows[0];
+      if(!row||Date.now()-new Date(row.created_at).getTime()>=24*3600000)throw new ToolError('The quote changed or expired. Review the order and send a fresh quote.','stale_version');
+      if((await client.query("SELECT 1 FROM order_amendments WHERE request_id=$1 AND state IN ('proposed','owner_pending')",[request.params.id])).rowCount)throw new ToolError('Review the customer change before notifying them about a quote.');
+      return {quoteId:row.id,...await queueOrderNotice(client,owner.storeId,request.params.id,'quote-'+row.id,await orderQuoteReply(client,owner.storeId,row.id),config.whatsapp,true)};
     });
   });
   app.post<{Params:{id:string}}>('/api/owner/requests/:id/quote',async(request,reply)=>{
