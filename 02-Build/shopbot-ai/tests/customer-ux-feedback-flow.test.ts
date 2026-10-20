@@ -34,7 +34,7 @@ async function send(inbox:SimulatorService,runtime:ConversationRuntime,text:stri
 for(const [language,expected] of [['en','Changed PVC pipe (3 pieces)'],['ta','PVC pipe மாற்றப்பட்டது (3 எண்ணம்)'],['ta-Latn','PVC pipe maaththiyaachu (3 ennam)']] as const)test(`persisted quantity feedback reaches the first native WhatsApp part in ${language}`,()=>fixture(language,async(_pool,inbox,runtime)=>{
  const after=await send(inbox,runtime,'make PVC pipe three'),out=after.messages.filter(m=>m.direction==='outbound').at(-1)!,rich=out.rich!;
  assert.equal(after.conversation.draft.find(line=>line.sku==='FEED-PIPE')?.quantity,3);assert.equal(after.conversation.pending?.kind,'products');assert.equal(after.requests.length,0);
- assert.ok(out.text.startsWith(expected));assert.ok(rich.parts?.[0].text.startsWith(expected));assert.match(out.text,/3 items/);
+ assert.ok(out.text.startsWith(expected));assert.ok(rich.parts?.[0].text.startsWith(expected));assert.equal(rich.parts?.flatMap(p=>p.cards).filter(c=>c.kind==='product').length,1);assert.ok(rich.parts?.[0].cards.some(c=>c.kind==='product'&&c.product.sku==='FEED-PIPE'));assert.match(rich.parts![0].cards[0].caption,/3/);
  const rendered=renderWhatsAppReply({...rich,parts:[rich.parts![0]]},out.id,'shop.example.test');assert.ok(JSON.stringify(rendered.payload).includes(expected));
 }));
 

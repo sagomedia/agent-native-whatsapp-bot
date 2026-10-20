@@ -20,7 +20,7 @@ export const keepOnlySchema=z.object({sourceText:phrase,complete:z.boolean(),tar
 export const turnUnderstandingSchema=z.object({
  schemaVersion:z.literal(2),inputKind:z.enum(['text','audio','product_photo','handwritten_list','unknown_image']),
  transcript:z.string().trim().max(4000).optional(),observedText:z.string().trim().max(8000).optional(),
- intents:z.array(z.enum(['lookup','price','add','edit','estimate','submit','status','store_info','help','cancel','clear_list','pause','greeting','thanks','unrelated'])).min(1).max(8),
+ intents:z.array(z.enum(['lookup','price','add','edit','view_list','estimate','submit','status','store_info','help','cancel','clear_list','pause','greeting','thanks','unrelated'])).min(1).max(8),
  requestedItems:z.array(understandingItemSchema).max(50),proposedEdits:z.array(edit).max(100),
  keepOnly:keepOnlySchema.optional(),
  keepOnlyAnswer:keepTarget.optional(),

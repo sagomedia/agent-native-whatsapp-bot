@@ -1,4 +1,5 @@
 import {spokenTamilInstruction} from './tamil-style.js';
+import {listViewRequest} from '../services/list-view-intent.js';
 import {amendmentIntent} from '../services/order-amendments.js';
 import {say,safeQuestion} from '../../../../packages/contracts/language.js';
 import {z} from 'zod';
@@ -18,6 +19,7 @@ const baseUnderstandingInstruction=`Understand the CURRENT customer input for a 
 
 
 export const understandingInstruction=baseUnderstandingInstruction+spokenTamilInstruction+`
+Use view_list when the customer asks to see their current shopping list/products/photos, including natural Tamil/Tanglish paraphrases and "nothing needs changing, just show the products". This is a read-only viewing request, not an edit, new search, quantity answer, product approval or submission. Return no requestedItems/proposedEdits/cartTargetAnswer for a pure view, and do not ask permission to show what was requested. A pending edit or quantity question must not hijack this new viewing goal. Mixed "remove the screw box and show my list" retains the evidenced edit plus view_list. Never use view_list for a price question or looking for a new product outside the current cart.
 For a linked instruction such as "keep only these three and remove everything else", use keepOnly: {sourceText: the verbatim complete keep/remove-rest instruction, complete: whether every kept item was heard, targets: [{sourceText: verbatim name/reference, query: faithful English identity including specifications, targetLineId: exact current ID when unambiguous}]}. These targets identify existing lines, not additions; do not repeat them in requestedItems or enumerate complement removals in proposedEdits. Leave targetLineId absent for an ambiguous name and ask one focused question about that kept item. Keep the entire linked correction pending until all kept targets are clear; an unrelated old product question does not supersede the customer's keep-only goal. Keep separate SKU/specification lines distinct even when names match. Never infer quantity=1 from a kept name. "Remove one" from a single line with count=2 uses decrement_quantity with quantity=1; removing one duplicate ENTRY uses remove_item with that exact entry's ID and preserves the other entry's count, including an unknown count. If those meanings or targets are unclear ask, do not guess. For an explicitly repeated duplicate ENTRY, include that verbatim repeated-entry/remove clause as the kept target's duplicateSourceText; the backend may retain a known count only for exact same-SKU/specification entries. If keepOnly already removes the repeated entry, omit that redundant remove_item edit. Use keepOnlyAnswer only when the current message answers pendingKeepOnly's identity question: {sourceText: verbatim current answer, query: faithful English identity, targetLineId: current ID when clear}. A new full request uses its own ordinary intents instead. Never output keepOnly for a negated keep/remove-rest instruction.
 When pendingCartEdit contains a current saved edit goal and the new input only answers which item, use cartTargetAnswer: {sourceText: verbatim current answer, query: normalized English identity of the chosen CURRENT cart row, targetLineId: its current ID only when unambiguous}. Do not repeat the old remove/change verb as invented current evidence; omit requestedItems and proposedEdits for this answer. A new independent command, cancellation or price question is not a cartTargetAnswer. The pending goal contains every linked edit; answer only its first unresolved target and let the backend resume the saved actions. A vague both/all answer with no unique current target must ask about the listed candidates, never invent a new smaller set of removals from earlier turns.
 For every proposed edit, include targetQuery as the normalized English identity of the CURRENT cart item, separate from query (the replacement product). Keep sourceText verbatim. A request to remove/delete/rimuv/ரிமூவ் an existing item is remove_item, never an add or quantity update. A spoken size such as five inch describes a dimension, not five pieces. If a customer repeats a size word hesitantly, keep its purchase count uncertain rather than borrowing the repetition as a count. Do not emit both a requestedItem and an edit against an unresolved reference to the same row. Preserve the requested operation when asking which cart row it applies to.
@@ -94,6 +96,16 @@ export function understandingToInterpretation(value:unknown,input:Interpretation
  if(input.audio&&!u.transcript?.trim())throw new Error('No clear speech was recognized');
  if(input.image&&u.observedText===undefined)throw new Error('Image evidence is missing');
  const source=input.audio?u.transcript!:input.image?u.observedText!:input.text;
+ // A complete non-mutating viewing control can correct an old focused-edit
+ // interpretation. Images remain evidence-only and cannot issue this control.
+ if(!input.image&&listViewRequest(source)){
+  u.intents=['view_list'];u.requestedItems=[];u.proposedEdits=[];u.shopQuestions=[];u.unresolved=[];
+  delete u.keepOnly;delete u.keepOnlyAnswer;delete u.cartTargetAnswer;delete u.clarifyQuestion;
+ }
+ if(!input.image&&u.intents.includes('view_list')&&u.intents.every(intent=>['view_list','pause'].includes(intent))){
+  u.requestedItems=[];u.proposedEdits=[];u.unresolved=[];
+  delete u.keepOnly;delete u.keepOnlyAnswer;delete u.cartTargetAnswer;delete u.clarifyQuestion;
+ }
  let reconciliationQuestion:string|undefined;
  const deferredCartTargets:NonNullable<Interpretation['deferredCartTargets']>=[];
  const heldIds=new Set<string>();

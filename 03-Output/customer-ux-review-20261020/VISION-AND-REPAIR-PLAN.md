@@ -136,7 +136,7 @@ Run the relevant regressions and full build/suite after the change. Show a short
 2. Is the suggested edit behavior right: affected product card(s) for a simple change, full current carousel whenever the customer asks for the list and after removal review?
 3. What should change in the example rules or plan before implementation?
 
-No source fix, customer send, rollback, model replay or deployment was performed during this review. This Markdown brief is the only project change.
+At the initial planning checkpoint, this Markdown brief was the only project change. No source fix, customer send, rollback, model replay or deployment had been performed. The subsequently approved implementation is recorded below.
 
 ## Approved implementation refinement
 
@@ -145,3 +145,9 @@ The follow-up request authorizes improving this plan and implementing the repair
 Separate three presentation decisions: an explicit whole-list view, an actual edit of one current product, and an unchanged incidental refresh. An actual edit must not disappear into the unchanged text-summary optimization. A simple count/amount edit should show the affected product card, with full-list viewing always available. Removals should show the remaining current list. Preserve truthful unknowns and all confirmation/authorization gates.
 
 Demonstrate failure before changing the code, then check stored state and actual native image/carousel payloads for the corrected journeys. Publish visual walkthrough evidence with the implementation. Source tests alone do not certify speech recognition or real-phone delivery. Do not deploy, replay historical commands, transfer stored customer audio, send customer test messages or alter live data in this implementation phase.
+
+## Implementation checkpoint
+
+The approved refinement is implemented. Explicit list viewing now uses a read-only semantic intent and current draft read, with product images/carousels despite previous delivery. Pending editing/quantity context is preserved. Known-product count/amount edits retain the affected photo, removals show the remaining list, and single-item reviews use one product image. The implementation also guards generic yes after photos from submitting an earlier bill and avoids expired approval actions.
+
+See [implementation and limitations](/home/gk-pc/whatsapp-bot-finish/03-Output/customer-ux-review-20261020/IMPLEMENTATION.md) and the [visual walkthrough](/home/gk-pc/whatsapp-bot-finish/03-Output/customer-ux-review-20261020/evidence/walkthrough.html). Source verification is recorded with issue 48 and the pull request. User visual review, deployment approval and real-phone/fresh-speech acceptance remain separate steps.

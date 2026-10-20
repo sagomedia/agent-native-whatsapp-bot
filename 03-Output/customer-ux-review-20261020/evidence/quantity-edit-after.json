@@ -1,0 +1,211 @@
+{
+  "name": "quantity-edit",
+  "language": "en",
+  "draft": [
+    {
+      "id": "da00dee9-9e99-437b-9a90-e12d44ddbc27",
+      "sku": "VIS-0",
+      "name": "PVC pipe",
+      "quantity": 3
+    },
+    {
+      "id": "74c3f744-ff41-4ae7-be07-b66c16885941",
+      "sku": "VIS-1",
+      "name": "Blueguard PVC pipe",
+      "quantity": 2
+    },
+    {
+      "id": "e267a8ec-a814-4cc3-826b-ab824c8b419c",
+      "sku": "VIS-2",
+      "name": "screw box",
+      "quantity": 3
+    }
+  ],
+  "rich": {
+    "kind": "text",
+    "text": "Changed PVC pipe (3 pieces)\nUpdated items",
+    "parts": [
+      {
+        "id": "0518da47-6c16-491a-bb57-e8bc7954c78c",
+        "text": "Changed PVC pipe (3 pieces)\nUpdated items",
+        "cards": [
+          {
+            "kind": "product",
+            "lineId": "da00dee9-9e99-437b-9a90-e12d44ddbc27",
+            "buttons": [
+              {
+                "event": {
+                  "id": "d96202b9-b8bc-41f7-a608-d5a956751e63",
+                  "type": "edit_item",
+                  "lineId": "da00dee9-9e99-437b-9a90-e12d44ddbc27",
+                  "expectedVersion": 2
+                },
+                "label": "Change this"
+              },
+              {
+                "event": {
+                  "id": "467ce93f-1782-49b8-9e6e-d3f2a81366d6",
+                  "type": "shopping_action",
+                  "action": "view_products",
+                  "expectedVersion": 2
+                },
+                "label": "View full list"
+              }
+            ],
+            "caption": "1. PVC pipe\n₹10.00 / 1 piece\n3 pieces",
+            "product": {
+              "sku": "VIS-0",
+              "name": "PVC pipe",
+              "unit": "piece",
+              "stock": 100,
+              "aliases": [],
+              "version": 1,
+              "imageUrl": "/demo-images/H01.jpg",
+              "localNames": {},
+              "pricePaise": 1000,
+              "priceStatus": "priced",
+              "stockOnHand": 100,
+              "quantityStep": 1,
+              "stockReserved": 0,
+              "inventoryVersion": 1,
+              "sellingUnitVerified": true
+            }
+          }
+        ]
+      }
+    ],
+    "stage": "products",
+    "groupId": "ba075c3f-a6fd-4a95-9edb-fa6c06fe3e75",
+    "version": 1,
+    "partCount": 1,
+    "partIndex": 0,
+    "presentation": "single_product",
+    "replyLanguage": "en",
+    "outboundMessages": 1
+  },
+  "replies": [
+    {
+      "kind": "text",
+      "text": "Changed PVC pipe (3 pieces)\nUpdated items",
+      "parts": [
+        {
+          "id": "0518da47-6c16-491a-bb57-e8bc7954c78c",
+          "text": "Changed PVC pipe (3 pieces)\nUpdated items",
+          "cards": [
+            {
+              "kind": "product",
+              "lineId": "da00dee9-9e99-437b-9a90-e12d44ddbc27",
+              "buttons": [
+                {
+                  "event": {
+                    "id": "d96202b9-b8bc-41f7-a608-d5a956751e63",
+                    "type": "edit_item",
+                    "lineId": "da00dee9-9e99-437b-9a90-e12d44ddbc27",
+                    "expectedVersion": 2
+                  },
+                  "label": "Change this"
+                },
+                {
+                  "event": {
+                    "id": "467ce93f-1782-49b8-9e6e-d3f2a81366d6",
+                    "type": "shopping_action",
+                    "action": "view_products",
+                    "expectedVersion": 2
+                  },
+                  "label": "View full list"
+                }
+              ],
+              "caption": "1. PVC pipe\n₹10.00 / 1 piece\n3 pieces",
+              "product": {
+                "sku": "VIS-0",
+                "name": "PVC pipe",
+                "unit": "piece",
+                "stock": 100,
+                "aliases": [],
+                "version": 1,
+                "imageUrl": "/demo-images/H01.jpg",
+                "localNames": {},
+                "pricePaise": 1000,
+                "priceStatus": "priced",
+                "stockOnHand": 100,
+                "quantityStep": 1,
+                "stockReserved": 0,
+                "inventoryVersion": 1,
+                "sellingUnitVerified": true
+              }
+            }
+          ]
+        }
+      ],
+      "stage": "products",
+      "groupId": "ba075c3f-a6fd-4a95-9edb-fa6c06fe3e75",
+      "version": 1,
+      "partCount": 1,
+      "partIndex": 0,
+      "presentation": "single_product",
+      "replyLanguage": "en",
+      "outboundMessages": 1
+    }
+  ],
+  "payloads": [
+    {
+      "format": "buttons",
+      "actions": [
+        {
+          "id": "wvYC6k0SGniMGC6oGNQc",
+          "label": "Change this",
+          "event": {
+            "id": "d96202b9-b8bc-41f7-a608-d5a956751e63",
+            "type": "edit_item",
+            "lineId": "da00dee9-9e99-437b-9a90-e12d44ddbc27",
+            "expectedVersion": 2
+          }
+        },
+        {
+          "id": "wiU0LNR74YaaI0wumwQa",
+          "label": "View full list",
+          "event": {
+            "id": "467ce93f-1782-49b8-9e6e-d3f2a81366d6",
+            "type": "shopping_action",
+            "action": "view_products",
+            "expectedVersion": 2
+          }
+        }
+      ],
+      "payload": {
+        "type": "interactive",
+        "interactive": {
+          "type": "button",
+          "header": {
+            "type": "image",
+            "image": {
+              "link": "https://shop.example.test/catalog-images/H01.jpg"
+            }
+          },
+          "body": {
+            "text": "Changed PVC pipe (3 pieces)\nUpdated items\n1. PVC pipe\n₹10.00 / 1 piece\n3 pieces"
+          },
+          "action": {
+            "buttons": [
+              {
+                "type": "reply",
+                "reply": {
+                  "id": "wvYC6k0SGniMGC6oGNQc",
+                  "title": "Change this"
+                }
+              },
+              {
+                "type": "reply",
+                "reply": {
+                  "id": "wiU0LNR74YaaI0wumwQa",
+                  "title": "View full list"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "requests": 0
+}

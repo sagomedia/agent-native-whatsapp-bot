@@ -1,0 +1,73 @@
+{
+  "date": "2026-10-20",
+  "baselineSourceCommit": "8d55b42516db98f68154f8ff8bc005cbf686e0c6",
+  "trackingIssue": "https://github.com/sagomedia/agent-native-whatsapp-bot/issues/48",
+  "baselineReproductions": {
+    "failed": 7,
+    "passed": 0,
+    "expectedFailure": true
+  },
+  "integration": {
+    "tests": 825,
+    "passed": 825,
+    "failed": 0,
+    "skipped": 0
+  },
+  "newVisualScenarios": 21,
+  "pythonTests": 4,
+  "productionBuild": "passed",
+  "typecheck": "passed",
+  "walkthrough": "actual synthetic native payloads, rendered and visually inspected",
+  "deployed": false,
+  "liveDatabaseWrites": 0,
+  "customerMessagesSent": 0,
+  "storedAudioTransfers": 0,
+  "historicalCustomerCommandsExecuted": false,
+  "nativeSpeechAccuracy": "not established by offline tests",
+  "realPhoneDelivery": "pending controlled acceptance",
+  "hostedChecks": "Recorded separately on issue 48 and the pull request",
+  "comparisons": [
+    {
+      "case": "view-0",
+      "beforeNativeFormats": [
+        "text"
+      ],
+      "afterNativeFormats": [
+        "carousel"
+      ],
+      "afterProducts": [
+        "VIS-0",
+        "VIS-1",
+        "VIS-2"
+      ],
+      "orderRequests": 0
+    },
+    {
+      "case": "quantity-edit",
+      "beforeNativeFormats": [
+        "buttons"
+      ],
+      "afterNativeFormats": [
+        "buttons"
+      ],
+      "afterProducts": [
+        "VIS-0"
+      ],
+      "orderRequests": 0
+    },
+    {
+      "case": "removal-review",
+      "beforeNativeFormats": [
+        "buttons"
+      ],
+      "afterNativeFormats": [
+        "carousel"
+      ],
+      "afterProducts": [
+        "VIS-0",
+        "VIS-1"
+      ],
+      "orderRequests": 0
+    }
+  ]
+}

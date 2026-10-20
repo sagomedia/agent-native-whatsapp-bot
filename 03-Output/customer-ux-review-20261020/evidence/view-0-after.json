@@ -1,0 +1,597 @@
+{
+  "name": "view-0",
+  "language": "en",
+  "draft": [
+    {
+      "id": "58bc217d-6047-4a5e-8af8-e841db278641",
+      "sku": "VIS-0",
+      "name": "PVC pipe",
+      "quantity": 1
+    },
+    {
+      "id": "9190e8ef-c2ef-4245-a804-ef5aaf356f4a",
+      "sku": "VIS-1",
+      "name": "Blueguard PVC pipe",
+      "quantity": 2
+    },
+    {
+      "id": "80ab20b5-8baf-4a24-9576-6b3fdf42135d",
+      "sku": "VIS-2",
+      "name": "screw box",
+      "quantity": 3
+    }
+  ],
+  "rich": {
+    "kind": "text",
+    "text": "3 items",
+    "parts": [
+      {
+        "id": "8ec9003b-db19-469b-ba15-8ee91741744a",
+        "text": "3 items",
+        "cards": [
+          {
+            "kind": "instruction",
+            "lines": [
+              "Check every item",
+              "Estimated total: ₹60.00"
+            ],
+            "title": "3 items",
+            "buttons": [
+              {
+                "event": {
+                  "id": "cad8899b-03b8-4cc7-86ff-48685766406b",
+                  "type": "confirm_products",
+                  "batchId": "a0d997a2-1dcc-49f1-bde8-ea9706c6a106"
+                },
+                "label": "Correct, show bill"
+              },
+              {
+                "event": {
+                  "id": "a83217ab-b28c-45c5-9c0e-d070d467fe50",
+                  "type": "shopping_action",
+                  "action": "edit_list",
+                  "expectedVersion": 1
+                },
+                "label": "Change items"
+              }
+            ],
+            "caption": "Swipe to check → Then tap Show bill.",
+            "imageUrl": "/catalog-images/messages/614a6197a46ae81ffb96118f8d33ce9b04f38a088faf9aaea70202a1fe4080af.png",
+            "reviewGuide": true
+          },
+          {
+            "kind": "product",
+            "lineId": "58bc217d-6047-4a5e-8af8-e841db278641",
+            "buttons": [
+              {
+                "event": {
+                  "id": "cad8899b-03b8-4cc7-86ff-48685766406b",
+                  "type": "confirm_products",
+                  "batchId": "a0d997a2-1dcc-49f1-bde8-ea9706c6a106"
+                },
+                "label": "Correct, show bill"
+              },
+              {
+                "event": {
+                  "id": "f8defeee-5319-47b3-b8be-2c49f8e7643d",
+                  "type": "edit_item",
+                  "lineId": "58bc217d-6047-4a5e-8af8-e841db278641",
+                  "expectedVersion": 1
+                },
+                "label": "Change this"
+              }
+            ],
+            "caption": "1. PVC pipe\n₹10.00 / 1 piece\n1 piece",
+            "product": {
+              "sku": "VIS-0",
+              "name": "PVC pipe",
+              "unit": "piece",
+              "stock": 100,
+              "aliases": [],
+              "version": 1,
+              "imageUrl": "/demo-images/H01.jpg",
+              "localNames": {},
+              "pricePaise": 1000,
+              "priceStatus": "priced",
+              "stockOnHand": 100,
+              "quantityStep": 1,
+              "stockReserved": 0,
+              "inventoryVersion": 1,
+              "sellingUnitVerified": true
+            }
+          },
+          {
+            "kind": "product",
+            "lineId": "9190e8ef-c2ef-4245-a804-ef5aaf356f4a",
+            "buttons": [
+              {
+                "event": {
+                  "id": "cad8899b-03b8-4cc7-86ff-48685766406b",
+                  "type": "confirm_products",
+                  "batchId": "a0d997a2-1dcc-49f1-bde8-ea9706c6a106"
+                },
+                "label": "Correct, show bill"
+              },
+              {
+                "event": {
+                  "id": "f896a488-30f8-49c7-8a51-853be787fb7e",
+                  "type": "edit_item",
+                  "lineId": "9190e8ef-c2ef-4245-a804-ef5aaf356f4a",
+                  "expectedVersion": 1
+                },
+                "label": "Change this"
+              }
+            ],
+            "caption": "2. Blueguard PVC pipe\n₹10.00 / 1 piece\n2 pieces",
+            "product": {
+              "sku": "VIS-1",
+              "name": "Blueguard PVC pipe",
+              "unit": "piece",
+              "stock": 100,
+              "aliases": [],
+              "version": 1,
+              "imageUrl": "/demo-images/H02.jpg",
+              "localNames": {},
+              "pricePaise": 1000,
+              "priceStatus": "priced",
+              "stockOnHand": 100,
+              "quantityStep": 1,
+              "stockReserved": 0,
+              "inventoryVersion": 1,
+              "sellingUnitVerified": true
+            }
+          },
+          {
+            "kind": "product",
+            "lineId": "80ab20b5-8baf-4a24-9576-6b3fdf42135d",
+            "buttons": [
+              {
+                "event": {
+                  "id": "cad8899b-03b8-4cc7-86ff-48685766406b",
+                  "type": "confirm_products",
+                  "batchId": "a0d997a2-1dcc-49f1-bde8-ea9706c6a106"
+                },
+                "label": "Correct, show bill"
+              },
+              {
+                "event": {
+                  "id": "40162a9a-0f46-4175-8b9f-7560a2448924",
+                  "type": "edit_item",
+                  "lineId": "80ab20b5-8baf-4a24-9576-6b3fdf42135d",
+                  "expectedVersion": 1
+                },
+                "label": "Change this"
+              }
+            ],
+            "caption": "3. screw box\n₹10.00 / 1 piece\n3 pieces",
+            "product": {
+              "sku": "VIS-2",
+              "name": "screw box",
+              "unit": "piece",
+              "stock": 100,
+              "aliases": [],
+              "version": 1,
+              "imageUrl": "/demo-images/H27.jpg",
+              "localNames": {},
+              "pricePaise": 1000,
+              "priceStatus": "priced",
+              "stockOnHand": 100,
+              "quantityStep": 1,
+              "stockReserved": 0,
+              "inventoryVersion": 1,
+              "sellingUnitVerified": true
+            }
+          }
+        ]
+      }
+    ],
+    "stage": "products",
+    "groupId": "54e99338-2df4-43b2-a5ff-176448b5a41d",
+    "version": 1,
+    "readOnly": true,
+    "partCount": 1,
+    "partIndex": 0,
+    "presentation": "carousel_preview",
+    "compactReview": true,
+    "replyLanguage": "en",
+    "outboundMessages": 1
+  },
+  "replies": [
+    {
+      "kind": "text",
+      "text": "3 items",
+      "parts": [
+        {
+          "id": "8ec9003b-db19-469b-ba15-8ee91741744a",
+          "text": "3 items",
+          "cards": [
+            {
+              "kind": "instruction",
+              "lines": [
+                "Check every item",
+                "Estimated total: ₹60.00"
+              ],
+              "title": "3 items",
+              "buttons": [
+                {
+                  "event": {
+                    "id": "cad8899b-03b8-4cc7-86ff-48685766406b",
+                    "type": "confirm_products",
+                    "batchId": "a0d997a2-1dcc-49f1-bde8-ea9706c6a106"
+                  },
+                  "label": "Correct, show bill"
+                },
+                {
+                  "event": {
+                    "id": "a83217ab-b28c-45c5-9c0e-d070d467fe50",
+                    "type": "shopping_action",
+                    "action": "edit_list",
+                    "expectedVersion": 1
+                  },
+                  "label": "Change items"
+                }
+              ],
+              "caption": "Swipe to check → Then tap Show bill.",
+              "imageUrl": "/catalog-images/messages/614a6197a46ae81ffb96118f8d33ce9b04f38a088faf9aaea70202a1fe4080af.png",
+              "reviewGuide": true
+            },
+            {
+              "kind": "product",
+              "lineId": "58bc217d-6047-4a5e-8af8-e841db278641",
+              "buttons": [
+                {
+                  "event": {
+                    "id": "cad8899b-03b8-4cc7-86ff-48685766406b",
+                    "type": "confirm_products",
+                    "batchId": "a0d997a2-1dcc-49f1-bde8-ea9706c6a106"
+                  },
+                  "label": "Correct, show bill"
+                },
+                {
+                  "event": {
+                    "id": "f8defeee-5319-47b3-b8be-2c49f8e7643d",
+                    "type": "edit_item",
+                    "lineId": "58bc217d-6047-4a5e-8af8-e841db278641",
+                    "expectedVersion": 1
+                  },
+                  "label": "Change this"
+                }
+              ],
+              "caption": "1. PVC pipe\n₹10.00 / 1 piece\n1 piece",
+              "product": {
+                "sku": "VIS-0",
+                "name": "PVC pipe",
+                "unit": "piece",
+                "stock": 100,
+                "aliases": [],
+                "version": 1,
+                "imageUrl": "/demo-images/H01.jpg",
+                "localNames": {},
+                "pricePaise": 1000,
+                "priceStatus": "priced",
+                "stockOnHand": 100,
+                "quantityStep": 1,
+                "stockReserved": 0,
+                "inventoryVersion": 1,
+                "sellingUnitVerified": true
+              }
+            },
+            {
+              "kind": "product",
+              "lineId": "9190e8ef-c2ef-4245-a804-ef5aaf356f4a",
+              "buttons": [
+                {
+                  "event": {
+                    "id": "cad8899b-03b8-4cc7-86ff-48685766406b",
+                    "type": "confirm_products",
+                    "batchId": "a0d997a2-1dcc-49f1-bde8-ea9706c6a106"
+                  },
+                  "label": "Correct, show bill"
+                },
+                {
+                  "event": {
+                    "id": "f896a488-30f8-49c7-8a51-853be787fb7e",
+                    "type": "edit_item",
+                    "lineId": "9190e8ef-c2ef-4245-a804-ef5aaf356f4a",
+                    "expectedVersion": 1
+                  },
+                  "label": "Change this"
+                }
+              ],
+              "caption": "2. Blueguard PVC pipe\n₹10.00 / 1 piece\n2 pieces",
+              "product": {
+                "sku": "VIS-1",
+                "name": "Blueguard PVC pipe",
+                "unit": "piece",
+                "stock": 100,
+                "aliases": [],
+                "version": 1,
+                "imageUrl": "/demo-images/H02.jpg",
+                "localNames": {},
+                "pricePaise": 1000,
+                "priceStatus": "priced",
+                "stockOnHand": 100,
+                "quantityStep": 1,
+                "stockReserved": 0,
+                "inventoryVersion": 1,
+                "sellingUnitVerified": true
+              }
+            },
+            {
+              "kind": "product",
+              "lineId": "80ab20b5-8baf-4a24-9576-6b3fdf42135d",
+              "buttons": [
+                {
+                  "event": {
+                    "id": "cad8899b-03b8-4cc7-86ff-48685766406b",
+                    "type": "confirm_products",
+                    "batchId": "a0d997a2-1dcc-49f1-bde8-ea9706c6a106"
+                  },
+                  "label": "Correct, show bill"
+                },
+                {
+                  "event": {
+                    "id": "40162a9a-0f46-4175-8b9f-7560a2448924",
+                    "type": "edit_item",
+                    "lineId": "80ab20b5-8baf-4a24-9576-6b3fdf42135d",
+                    "expectedVersion": 1
+                  },
+                  "label": "Change this"
+                }
+              ],
+              "caption": "3. screw box\n₹10.00 / 1 piece\n3 pieces",
+              "product": {
+                "sku": "VIS-2",
+                "name": "screw box",
+                "unit": "piece",
+                "stock": 100,
+                "aliases": [],
+                "version": 1,
+                "imageUrl": "/demo-images/H27.jpg",
+                "localNames": {},
+                "pricePaise": 1000,
+                "priceStatus": "priced",
+                "stockOnHand": 100,
+                "quantityStep": 1,
+                "stockReserved": 0,
+                "inventoryVersion": 1,
+                "sellingUnitVerified": true
+              }
+            }
+          ]
+        }
+      ],
+      "stage": "products",
+      "groupId": "54e99338-2df4-43b2-a5ff-176448b5a41d",
+      "version": 1,
+      "readOnly": true,
+      "partCount": 1,
+      "partIndex": 0,
+      "presentation": "carousel_preview",
+      "compactReview": true,
+      "replyLanguage": "en",
+      "outboundMessages": 1
+    }
+  ],
+  "payloads": [
+    {
+      "format": "carousel",
+      "actions": [
+        {
+          "id": "wwlWGvBIA8VGYLqXMY6X",
+          "label": "Correct, show bill",
+          "event": {
+            "id": "cad8899b-03b8-4cc7-86ff-48685766406b",
+            "type": "confirm_products",
+            "batchId": "a0d997a2-1dcc-49f1-bde8-ea9706c6a106"
+          }
+        },
+        {
+          "id": "wzc24S63jW6DsI6lsG6t",
+          "label": "Change items",
+          "event": {
+            "id": "a83217ab-b28c-45c5-9c0e-d070d467fe50",
+            "type": "shopping_action",
+            "action": "edit_list",
+            "expectedVersion": 1
+          }
+        },
+        {
+          "id": "wW15GXYAvgLTYpC25Dae",
+          "label": "Correct, show bill",
+          "event": {
+            "id": "cad8899b-03b8-4cc7-86ff-48685766406b",
+            "type": "confirm_products",
+            "batchId": "a0d997a2-1dcc-49f1-bde8-ea9706c6a106"
+          }
+        },
+        {
+          "id": "w0rTwm5EoCUgnfj0AjzU",
+          "label": "Change this",
+          "event": {
+            "id": "f8defeee-5319-47b3-b8be-2c49f8e7643d",
+            "type": "edit_item",
+            "lineId": "58bc217d-6047-4a5e-8af8-e841db278641",
+            "expectedVersion": 1
+          }
+        },
+        {
+          "id": "wutRtwZSKeZhdC-xc6Y-",
+          "label": "Correct, show bill",
+          "event": {
+            "id": "cad8899b-03b8-4cc7-86ff-48685766406b",
+            "type": "confirm_products",
+            "batchId": "a0d997a2-1dcc-49f1-bde8-ea9706c6a106"
+          }
+        },
+        {
+          "id": "wQvMPpKTP4OBXFKhhXrC",
+          "label": "Change this",
+          "event": {
+            "id": "f896a488-30f8-49c7-8a51-853be787fb7e",
+            "type": "edit_item",
+            "lineId": "9190e8ef-c2ef-4245-a804-ef5aaf356f4a",
+            "expectedVersion": 1
+          }
+        },
+        {
+          "id": "wHg8c0P2ye7DHKXE2A8b",
+          "label": "Correct, show bill",
+          "event": {
+            "id": "cad8899b-03b8-4cc7-86ff-48685766406b",
+            "type": "confirm_products",
+            "batchId": "a0d997a2-1dcc-49f1-bde8-ea9706c6a106"
+          }
+        },
+        {
+          "id": "wQxgX3VZ-rHVBrZgMvt3",
+          "label": "Change this",
+          "event": {
+            "id": "40162a9a-0f46-4175-8b9f-7560a2448924",
+            "type": "edit_item",
+            "lineId": "80ab20b5-8baf-4a24-9576-6b3fdf42135d",
+            "expectedVersion": 1
+          }
+        }
+      ],
+      "payload": {
+        "type": "interactive",
+        "interactive": {
+          "type": "carousel",
+          "body": {
+            "text": "3 items"
+          },
+          "action": {
+            "cards": [
+              {
+                "card_index": 0,
+                "type": "cta_url",
+                "header": {
+                  "type": "image",
+                  "image": {
+                    "link": "https://shop.example.test/catalog-images/messages/614a6197a46ae81ffb96118f8d33ce9b04f38a088faf9aaea70202a1fe4080af.png"
+                  }
+                },
+                "body": {
+                  "text": "Swipe to check → Then tap Show bill."
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "quick_reply",
+                      "quick_reply": {
+                        "id": "wwlWGvBIA8VGYLqXMY6X",
+                        "title": "Correct, show bill"
+                      }
+                    },
+                    {
+                      "type": "quick_reply",
+                      "quick_reply": {
+                        "id": "wzc24S63jW6DsI6lsG6t",
+                        "title": "Change items"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "card_index": 1,
+                "type": "cta_url",
+                "header": {
+                  "type": "image",
+                  "image": {
+                    "link": "https://shop.example.test/catalog-images/H01.jpg"
+                  }
+                },
+                "body": {
+                  "text": "1. PVC pipe\n₹10.00 / 1 piece\n1 piece"
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "quick_reply",
+                      "quick_reply": {
+                        "id": "wW15GXYAvgLTYpC25Dae",
+                        "title": "Correct, show bill"
+                      }
+                    },
+                    {
+                      "type": "quick_reply",
+                      "quick_reply": {
+                        "id": "w0rTwm5EoCUgnfj0AjzU",
+                        "title": "Change this"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "card_index": 2,
+                "type": "cta_url",
+                "header": {
+                  "type": "image",
+                  "image": {
+                    "link": "https://shop.example.test/catalog-images/H02.jpg"
+                  }
+                },
+                "body": {
+                  "text": "2. Blueguard PVC pipe\n₹10.00 / 1 piece\n2 pieces"
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "quick_reply",
+                      "quick_reply": {
+                        "id": "wutRtwZSKeZhdC-xc6Y-",
+                        "title": "Correct, show bill"
+                      }
+                    },
+                    {
+                      "type": "quick_reply",
+                      "quick_reply": {
+                        "id": "wQvMPpKTP4OBXFKhhXrC",
+                        "title": "Change this"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "card_index": 3,
+                "type": "cta_url",
+                "header": {
+                  "type": "image",
+                  "image": {
+                    "link": "https://shop.example.test/catalog-images/H27.jpg"
+                  }
+                },
+                "body": {
+                  "text": "3. screw box\n₹10.00 / 1 piece\n3 pieces"
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "quick_reply",
+                      "quick_reply": {
+                        "id": "wHg8c0P2ye7DHKXE2A8b",
+                        "title": "Correct, show bill"
+                      }
+                    },
+                    {
+                      "type": "quick_reply",
+                      "quick_reply": {
+                        "id": "wQxgX3VZ-rHVBrZgMvt3",
+                        "title": "Change this"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "requests": 0
+}

@@ -1,4 +1,5 @@
 import {cartChangeFeedback} from '../services/cart-change-feedback.js';
+import {listViewRequest} from '../services/list-view-intent.js';
 import {canAddToOrder,orderListChoice,askOrderItems,refreshOrderListChoice} from '../services/order-list-choice.js';
 import {acceptOrderQuote} from '../services/order-quotes.js';
 import {actionDeliveryReady} from '../services/review-delivery.js';
@@ -13,7 +14,7 @@ import {validateProductMeaningEvidence} from '../services/product-meaning.js';
 import {reviewDeliveryReady,cancelSupersededReviews} from '../services/review-delivery.js';
 import {inferenceTiming,providerCallTimeout,processingLeaseSeconds} from '../services/inference-timing.js';
 import {productCheckCoversDraft} from '../services/counter-state.js';
-import {visualReply,returningReply,cartProgress} from '../services/visual-ordering.js';
+import {visualReply,visualListView,visualCartMutation,returningReply,cartProgress} from '../services/visual-ordering.js';
 import {productIdentity} from '../services/product-confirmation.js';
 import {materializeVisualReply} from '../services/visual-images.js';
 import {protectQuantityEvidence,explicitPurchaseCount} from '../services/quantity-evidence.js';
@@ -48,7 +49,7 @@ function quantityAnswer(state:ConversationState,lineId:string,amount:{quantity:n
  if(line?.sku&&(!amount.unit||!line.unit||sameUnit(amount.unit,line.unit)))return line.resolution==='needs_unit'&&!line.requestedAmount?{kind:'resolve_line',lineId,quantity:amount.quantity,requestedUnit:amount.unit}:{kind:'set_quantity',reference:lineId,quantity:amount.quantity,supportingPhrase:text.slice(0,200)};
  return {kind:'resolve_line',lineId,quantity:amount.quantity,...(amount.unit?{requestedUnit:amount.unit}:{})};
 }
-type Claimed = { evidenceRepair?:import('../adapters/interpreter.js').EvidenceRepair;cartEditResumed?:boolean; deadlineAt:number; id:string; token:string; event:SimulatorEvent; bindingId:string|null; state:ConversationState; catalog:Product[];catalogMap?:import('../../../../packages/contracts/index.js').CatalogMap;memory:AssistantMemory|null;displayedActions:SimulatorEvent[];displayedProducts:{event:SimulatorEvent;product:Product;delivered?:boolean}[] };
+type Claimed = { lastReplyWasListView?:boolean;evidenceRepair?:import('../adapters/interpreter.js').EvidenceRepair;cartEditResumed?:boolean; deadlineAt:number; id:string; token:string; event:SimulatorEvent; bindingId:string|null; state:ConversationState; catalog:Product[];catalogMap?:import('../../../../packages/contracts/index.js').CatalogMap;memory:AssistantMemory|null;displayedActions:SimulatorEvent[];displayedProducts:{event:SimulatorEvent;product:Product;delivered?:boolean}[] };
 class DeferredRecommendation extends Error {}
 function correctionDescription(claim:Claimed,interpretation:Interpretation|undefined,description:string){
  if(claim.cartEditResumed&&claim.memory?.purpose==='cart_edit'&&claim.memory.sourceVersion===claim.state.version)return claim.memory.cartEdit?.description??description;
@@ -146,7 +147,7 @@ export class ConversationRuntime {
       const shown=(await client.query("SELECT payload,coalesce((SELECT o.state FROM whatsapp_outbox o WHERE o.message_id=messages.id),'delivered') AS delivery FROM messages WHERE conversation_id=$1 AND direction='outbound' ORDER BY sequence DESC LIMIT 20",[ctx.conversationId])).rows;
       const displayedProducts=shown.flatMap(r=>[...(r.payload?.parts??[]).flatMap((p:any)=>p.cards.flatMap((c:any)=>c.kind==='product'?(c.buttons??[]).map((b:any)=>({event:b.event,product:c.product,delivered:['delivered','read'].includes(r.delivery)})):[])),...(r.payload?.cards??[]).flatMap((c:any)=>c.action&&c.product?[{event:c.action,product:c.product}]:[])]);
       const displayedActions=shown.flatMap(r=>[...(r.payload?.parts??[]).flatMap((p:any)=>[...(p.buttons??[]).map((b:any)=>b.event),...(p.cards??[]).flatMap((c:any)=>(c.buttons??[]).map((b:any)=>b.event))]),...(r.payload?.cards??[]).flatMap((c:any)=>c.action?[c.action]:[]),...(r.payload?.buttons??[]).map((b:any)=>b.event)]);
-      return {deadlineAt:new Date(claimedDeadline.rows[0].inference_deadline_at).getTime(),id:m.id,token,event:m.payload,bindingId:m.binding_id,state:await loadState(client,ctx),catalog:await catalogEnabled(client,ctx)?await catalogContext(client,ctx):await getProducts(client,ctx),catalogMap:await catalogEnabled(client,ctx)?await getCatalogMap(client,ctx):undefined,memory:await loadAssistantMemory(client,ctx),displayedActions,displayedProducts} as Claimed;
+      return {deadlineAt:new Date(claimedDeadline.rows[0].inference_deadline_at).getTime(),id:m.id,token,event:m.payload,bindingId:m.binding_id,lastReplyWasListView:shown[0]?.payload?.readOnly===true&&shown[0]?.payload?.stage==='products',state:await loadState(client,ctx),catalog:await catalogEnabled(client,ctx)?await catalogContext(client,ctx):await getProducts(client,ctx),catalogMap:await catalogEnabled(client,ctx)?await getCatalogMap(client,ctx):undefined,memory:await loadAssistantMemory(client,ctx),displayedActions,displayedProducts} as Claimed;
     });
     if(!claimed) return false;
     let requestedLanguage=claimed.event.type==='change_language'?claimed.event.language:claimed.event.type==='text'?languageRequest(claimed.event.text):undefined;
@@ -154,6 +155,7 @@ export class ConversationRuntime {
     let failure:string|undefined;let failureReason:string|undefined;
     let voiceFailureKind:'unreadable'|'processing'|undefined;
     let deterministic:ToolCall|undefined;
+    let viewRequested=claimed.event.type==='text'&&listViewRequest(claimed.event.text);
     let clearConfirmation=false,changeWholeList=false;
     if(claimed.event.type==='retry_voice'){
       const retry=claimed.event;
@@ -161,7 +163,8 @@ export class ConversationRuntime {
       else claimed.event={id:retry.id,type:'voice',mediaId:retry.mediaId};
     }
     if(!failure)try {
-      if(claimed.event.type==='resolve_cart_target'){
+      if(viewRequested)deterministic={name:'get_draft',args:{}};
+      else if(claimed.event.type==='resolve_cart_target'){
         const event=claimed.event,memory=claimed.memory,goal=memory?.cartEdit;
         const target=goal?.targets.find(target=>target.kind===event.targetKind&&target.index===event.targetIndex);
         if(event.expectedVersion!==claimed.state.version||claimed.state.lastRequestId||memory?.purpose!=='cart_edit'||memory.sourceVersion!==claimed.state.version||memory.id!==event.memoryId||claimed.bindingId!==memory.id||!target?.candidateLineIds.includes(event.lineId)||!claimed.displayedActions.some(action=>digest(action)===digest(event)))throw new ToolError('Use the latest item choices. Your list is kept.','stale_question');
@@ -225,6 +228,10 @@ export class ConversationRuntime {
           if(deterministic)interpretation={operations:[],next:'continue',transcript};
         }catch(error){failure=error instanceof Error?error.message:'Invalid spoken list control';}
       }
+    }
+    if(!failure&&claimed.event.type!=='image'&&(viewRequested||listViewRequest(interpretation?.transcript??'')||interpretation?.understanding?.intents.includes('view_list')&&!interpretation.operations.length)){
+      viewRequested=true;deterministic={name:'get_draft',args:{}};social=undefined;clearConfirmation=false;changeWholeList=false;
+      interpretation={operations:[],next:'continue',transcript:interpretation?.transcript};
     }
     if(!deterministic&&interpretation?.conversation==='handoff'&&!interpretation.operations.length&&!interpretation.understanding?.intents.includes('estimate'))deterministic={name:'request_store_assistance',args:{expectedVersion:claimed.state.version}};
     if(!failure&&!deterministic&&claimed.event.type!=='image'&&interpretation?.understanding?.intents.includes('status')&&!interpretation.operations.length)deterministic={name:'get_order_status',args:{}};
@@ -293,7 +300,10 @@ export class ConversationRuntime {
       await client.query('SAVEPOINT turn_actions');
       try {
 
-        if(!failure&&current.lastRequestId&&(claimed.event.type==='confirm_amendment'||claimed.event.type==='discard_amendment')){
+        if(!failure&&viewRequested){
+          const result=await this.tools.invokeInTransaction(client,ctx,{name:'get_draft',args:{}},claimed.id);
+          rich=visualListView(result.state??current);message=rich.text;
+        } else if(!failure&&current.lastRequestId&&(claimed.event.type==='confirm_amendment'||claimed.event.type==='discard_amendment')){
           if(!claimed.displayedActions.some(a=>digest(a)===digest(claimed.event)))throw new ToolError('Use the displayed amendment choices.','stale_confirmation');
           if(claimed.event.type==='confirm_amendment'&&!await actionDeliveryReady(client,ctx.conversationId,claimed.event.id,true))throw new ToolError('Wait for the complete amendment review.','review_incomplete');
           rich=await customerAmendmentAction(client,ctx,current,claimed.event,claimed.id);message=rich.text;
@@ -587,8 +597,9 @@ export class ConversationRuntime {
       if(claimed.catalogMap)rich={...rich,storeName:claimed.catalogMap.store.name};
       if(interpretation?.understanding?.unresolved.includes('validation_recovery')&&interpretation.transcript)rich.contextLines=[say(finalState,`Heard: ${interpretation.transcript.slice(0,250)}`,`கேட்டது: ${interpretation.transcript.slice(0,250)}`,`Kettathu: ${interpretation.transcript.slice(0,250)}`),...rich.contextLines??[]];
       if(replyRequest?.advanceRequired&&this.options.advance&&!rich.readOnly)rich=await upiAdvanceReply(client,ctx,finalState,this.options.advance.hostname,{demoPayAtShop:this.options.advance.demoPayAtShop,onlyOnce:true})??rich;
-      const alreadySeen=finalState.draft.filter(l=>l.sku).every(line=>{const product=line.candidates?.find(p=>p.sku===line.sku);return product&&claimed.displayedProducts.some(p=>p.delivered&&p.event.type==='edit_item'&&p.event.lineId===line.id&&productIdentity(p.product)===productIdentity(product));});
-      rich=materializeVisualReply({...visualReply({...rich,compactReview:alreadySeen},finalState,replyRequest),storeName:claimed.catalogMap?.store.name});
+      const alreadySeen=finalState.draft.length>0&&finalState.draft.every(line=>{const product=line.candidates?.find(p=>p.sku===line.sku);return product&&claimed.displayedProducts.some(p=>p.delivered&&p.event.type==='edit_item'&&p.event.lineId===line.id&&productIdentity(p.product)===productIdentity(product));});
+      const editVisual=finalState.visualOrdering&&cartMutated&&!failure&&rich.stage!=='error'&&!rich.readOnly&&finalState.pending?.kind==='products'&&!['cart_edit_target','keep_only_target','intent_clarification'].includes(rich.clarificationReason??'')?visualCartMutation(cartBefore,finalState,{contextLines:rich.contextLines,fullList:interpretation?.understanding?.intents.includes('view_list')}):undefined;
+      rich=materializeVisualReply({...editVisual??visualReply({...rich,compactReview:alreadySeen&&!cartMutated},finalState,replyRequest),storeName:claimed.catalogMap?.store.name});
       // Confirm only persisted customer CRUD, after presentation has chosen its
       // primary question. Read-only refreshes and rejected plans say nothing.
       const feedback=cartBefore.draft.length>0&&finalState.visualOrdering&&!failure&&rich.stage!=='error'&&cartMutated&&!cartBefore.lastRequestId&&!finalState.lastRequestId?cartChangeFeedback(cartBefore,finalState):undefined;
@@ -742,6 +753,7 @@ export class ConversationRuntime {
         return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[{kind:'add_item',query:found[0].sku,quantity:claim.memory.requestedQuantity??null,...(claim.memory.requestedUnit?{requestedUnit:claim.memory.requestedUnit}:{})}]}};
       }
       if(claim.memory?.sourceVersion===s.version&&claim.memory.purpose==='discovery')return {name:'get_draft',args:{}};
+      if(s.pending?.kind==='review'&&claim.lastReplyWasListView&&['yes','confirm'].includes(text))return {name:'get_draft',args:{}};
       if(s.pending?.kind==='review')return {name:'submit_order_request',args:{reviewId:text==='send it'&&claim.memory?.purpose==='quote'&&claim.memory.sourceVersion===s.version&&claim.bindingId===claim.memory.id?s.pending.id:claim.bindingId??'00000000-0000-4000-8000-000000000000'}};
       if(s.pending?.kind==='question'&&conversationBinding(s,claim.memory)===claim.bindingId&&s.pending.version===s.version){const pending=s.pending;const line=s.draft.find(l=>l.id===pending.lineId);
         if(text==='yes'&&line&&!line.sku&&(line.resolution==='needs_choice'||line.resolution==='unavailable')&&claim.memory?.lineId===line.id&&found.length===1)return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[{kind:'resolve_line',lineId:line.id,query:found[0].sku}]}};
@@ -792,6 +804,7 @@ export class ConversationRuntime {
       transcript=recognized.transcript?.trim();
       if(!transcript)throw new ToolError('No clear speech was recognized. Record again or type your request.','voice_unreadable');
       const command=spokenClearCommand(transcript)??canonicalShortcut(transcript);
+      if(listViewRequest(transcript))return {operations:[],next:'continue',transcript};
       if(negatedSpokenClear(transcript))return {operations:[],next:'continue',transcript,conversation:'pause'};
       if(languageRequest(transcript))return {operations:[],next:'continue',transcript};
       if(submissionIntent(transcript)||['yes','confirm','send it','place order','review','checkout','enough','bill','estimated bill','estimate','show bill','bill evvalavu','பில் எவ்வளவு','பில் காட்டு'].includes(command)||socialIntent(transcript)==='handoff')return {operations:[],next:'continue',transcript};

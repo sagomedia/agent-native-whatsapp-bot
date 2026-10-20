@@ -1,0 +1,62 @@
+{
+  "name": "view-0",
+  "language": "en",
+  "draft": [
+    {
+      "id": "95fcfe0f-addc-487a-a95f-d62e58a5545c",
+      "sku": "VIS-0",
+      "name": "PVC pipe",
+      "quantity": 1
+    },
+    {
+      "id": "ebffd38c-6624-459e-9bfa-429ec49cd34d",
+      "sku": "VIS-1",
+      "name": "Blueguard PVC pipe",
+      "quantity": 2
+    },
+    {
+      "id": "1f112c4b-0a74-49a7-be0b-c63de13bf0c0",
+      "sku": "VIS-2",
+      "name": "screw box",
+      "quantity": 3
+    }
+  ],
+  "rich": {
+    "kind": "text",
+    "text": "What should change in your list?",
+    "stage": "identify",
+    "version": 1,
+    "presentation": "text",
+    "compactReview": true,
+    "replyLanguage": "en",
+    "outboundMessages": 1,
+    "clarificationReason": "intent_clarification"
+  },
+  "replies": [
+    {
+      "kind": "text",
+      "text": "What should change in your list?",
+      "stage": "identify",
+      "version": 1,
+      "presentation": "text",
+      "compactReview": true,
+      "replyLanguage": "en",
+      "outboundMessages": 1,
+      "clarificationReason": "intent_clarification"
+    }
+  ],
+  "payloads": [
+    {
+      "format": "text",
+      "actions": [],
+      "payload": {
+        "type": "text",
+        "text": {
+          "preview_url": false,
+          "body": "What should change in your list?"
+        }
+      }
+    }
+  ],
+  "requests": 0
+}

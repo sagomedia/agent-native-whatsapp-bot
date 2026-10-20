@@ -46,7 +46,7 @@ test('saved 50m dimension plan becomes five pieces with the same photo and other
  const r=new ConversationRuntime(pool,planner(input=>!input.state.draft.length?{next:'review',operations:seed}:{next:'review',operations:[{kind:'resolve_line',lineId:input.state.draft[2].id,query:'garden hose',quantity:1,productMeasures:[{value:50,unit:'m'}],supportingPhrase:'இந்த ஹோஸ் வந்து 50 மீட்டர் வேணும்'}]}),{visualOrdering:true});
  const before=await text(i,r,'three products');const after=await text(i,r,'இல்ல இல்ல இந்த ஹோஸ் வந்து 50 மீட்டர் வேணும்');
  assert.deepEqual(after.conversation.draft.slice(0,2),before.conversation.draft.slice(0,2));assert.equal(hose(after).id,hose(before).id);assert.equal(hose(after).quantity,5);assert.deepEqual(hose(after).requestedAmount,{value:50,unit:'m'});
- assert.equal(cards(after).length,0);assert.match(last(after).text,/50 மீட்டர்/);assert.ok(last(after).parts?.flatMap(p=>p.buttons??[]).some(b=>b.event.type==='shopping_action'&&b.event.action==='view_products'));assert.equal(after.requests.length,0);assert.equal(after.conversation.productReview,null);
+ assert.equal(cards(after).length,1);assert.ok(cards(after).some(c=>c.kind==='product'&&c.product.sku==='H13'));assert.match(last(after).text,/50 மீட்டர்/);assert.ok(cards(after).some(c=>c.buttons?.some(b=>b.event.type==='shopping_action'&&b.event.action==='view_products')));assert.equal(after.requests.length,0);assert.equal(after.conversation.productReview,null);
  renderWhatsAppReply(last(after),randomUUID(),'test.example');
 }));
 

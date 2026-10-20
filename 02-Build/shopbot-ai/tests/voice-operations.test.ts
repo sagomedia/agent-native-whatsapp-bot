@@ -39,7 +39,7 @@ test('known stock stays retained while compact cards show price and the requeste
 
 for(const language of ['ta','en'] as const)test(`${language} uses one instruction language and one unit label`,()=>fixture(async(pool,i)=>{
  await pool.query('UPDATE conversations SET reply_language=$1,reply_language_explicit=true WHERE id=$2',[language,i.context.conversationId]);
- const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});const s=await text(i,r,'one hose');const instruction=cards(s).find(c=>c.kind==='instruction')!.caption;const product=cards(s).find(c=>c.kind==='product')!;assert.equal(last(s).parts?.length,1);assert.equal(last(s).parts?.[0].cards.length,2);
+ const r=new ConversationRuntime(pool,provider(hosePlan),{visualOrdering:true});const s=await text(i,r,'one hose');const instruction=cards(s).flatMap(c=>c.buttons??[]).find(b=>b.event.type==='confirm_products')!.label;const product=cards(s).find(c=>c.kind==='product')!;assert.equal(last(s).parts?.length,1);assert.equal(last(s).parts?.[0].cards.length,1);
  if(language==='ta'){assert.match(instruction,/[\u0b80-\u0bff]/);assert.doesNotMatch(instruction,/[\u0900-\u097f\u4e00-\u9fff]/);assert.ok(!/\b(?:inch|m|pieces?)\b/.test(product.caption));assert.match(product.caption,/1 எண்ணம்/);}else{assert.ok(!/[\u0b80-\u0bff]/.test(instruction));assert.match(product.caption,/1 piece/);}
  assert.match(product.caption,/450/);
 }));

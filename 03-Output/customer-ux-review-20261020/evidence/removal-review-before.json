@@ -1,0 +1,243 @@
+{
+  "name": "removal-review",
+  "language": "en",
+  "draft": [
+    {
+      "id": "89197dbe-522b-4490-9314-1c793125911d",
+      "sku": "VIS-0",
+      "name": "PVC pipe",
+      "quantity": 1
+    },
+    {
+      "id": "3a662669-1322-4773-b380-72b2e99d3f26",
+      "sku": "VIS-1",
+      "name": "Blueguard PVC pipe",
+      "quantity": 2
+    }
+  ],
+  "rich": {
+    "kind": "text",
+    "text": "Removed screw box\n2 items\nEstimated total: ₹30.00",
+    "parts": [
+      {
+        "id": "b9ca82f7-616e-45e9-a113-9e9488e73112",
+        "text": "Removed screw box\n2 items\nEstimated total: ₹30.00",
+        "cards": [],
+        "buttons": [
+          {
+            "event": {
+              "id": "75fbbc01-4330-4d79-b6dd-1bb7e03e64fd",
+              "type": "confirm_products",
+              "batchId": "c1b70f12-d8a4-465b-a12c-186a2eee3bd3"
+            },
+            "label": "Correct, show bill"
+          },
+          {
+            "event": {
+              "id": "658e9004-acfe-4b3f-9129-c8050eb6526d",
+              "type": "shopping_action",
+              "action": "edit_list",
+              "expectedVersion": 2
+            },
+            "label": "Change items"
+          },
+          {
+            "event": {
+              "id": "285ad340-02c7-4a40-8b35-4447150593da",
+              "type": "shopping_action",
+              "action": "view_products",
+              "expectedVersion": 2
+            },
+            "label": "See photos"
+          }
+        ]
+      }
+    ],
+    "stage": "products",
+    "buttons": [
+      {
+        "event": {
+          "id": "75fbbc01-4330-4d79-b6dd-1bb7e03e64fd",
+          "type": "confirm_products",
+          "batchId": "c1b70f12-d8a4-465b-a12c-186a2eee3bd3"
+        },
+        "label": "Correct, show bill"
+      },
+      {
+        "event": {
+          "id": "658e9004-acfe-4b3f-9129-c8050eb6526d",
+          "type": "shopping_action",
+          "action": "edit_list",
+          "expectedVersion": 2
+        },
+        "label": "Change items"
+      },
+      {
+        "event": {
+          "id": "285ad340-02c7-4a40-8b35-4447150593da",
+          "type": "shopping_action",
+          "action": "view_products",
+          "expectedVersion": 2
+        },
+        "label": "See photos"
+      }
+    ],
+    "groupId": "9fe84c91-909a-4de9-ad8c-57f3760c79a7",
+    "version": 1,
+    "readOnly": true,
+    "partCount": 1,
+    "partIndex": 0,
+    "presentation": "text",
+    "replyLanguage": "en",
+    "outboundMessages": 1
+  },
+  "replies": [
+    {
+      "kind": "text",
+      "text": "Removed screw box\n2 items\nEstimated total: ₹30.00",
+      "parts": [
+        {
+          "id": "b9ca82f7-616e-45e9-a113-9e9488e73112",
+          "text": "Removed screw box\n2 items\nEstimated total: ₹30.00",
+          "cards": [],
+          "buttons": [
+            {
+              "event": {
+                "id": "75fbbc01-4330-4d79-b6dd-1bb7e03e64fd",
+                "type": "confirm_products",
+                "batchId": "c1b70f12-d8a4-465b-a12c-186a2eee3bd3"
+              },
+              "label": "Correct, show bill"
+            },
+            {
+              "event": {
+                "id": "658e9004-acfe-4b3f-9129-c8050eb6526d",
+                "type": "shopping_action",
+                "action": "edit_list",
+                "expectedVersion": 2
+              },
+              "label": "Change items"
+            },
+            {
+              "event": {
+                "id": "285ad340-02c7-4a40-8b35-4447150593da",
+                "type": "shopping_action",
+                "action": "view_products",
+                "expectedVersion": 2
+              },
+              "label": "See photos"
+            }
+          ]
+        }
+      ],
+      "stage": "products",
+      "buttons": [
+        {
+          "event": {
+            "id": "75fbbc01-4330-4d79-b6dd-1bb7e03e64fd",
+            "type": "confirm_products",
+            "batchId": "c1b70f12-d8a4-465b-a12c-186a2eee3bd3"
+          },
+          "label": "Correct, show bill"
+        },
+        {
+          "event": {
+            "id": "658e9004-acfe-4b3f-9129-c8050eb6526d",
+            "type": "shopping_action",
+            "action": "edit_list",
+            "expectedVersion": 2
+          },
+          "label": "Change items"
+        },
+        {
+          "event": {
+            "id": "285ad340-02c7-4a40-8b35-4447150593da",
+            "type": "shopping_action",
+            "action": "view_products",
+            "expectedVersion": 2
+          },
+          "label": "See photos"
+        }
+      ],
+      "groupId": "9fe84c91-909a-4de9-ad8c-57f3760c79a7",
+      "version": 1,
+      "readOnly": true,
+      "partCount": 1,
+      "partIndex": 0,
+      "presentation": "text",
+      "replyLanguage": "en",
+      "outboundMessages": 1
+    }
+  ],
+  "payloads": [
+    {
+      "format": "buttons",
+      "actions": [
+        {
+          "id": "ws9ceUilQumzGEAZxt2I",
+          "label": "Correct, show bill",
+          "event": {
+            "id": "75fbbc01-4330-4d79-b6dd-1bb7e03e64fd",
+            "type": "confirm_products",
+            "batchId": "c1b70f12-d8a4-465b-a12c-186a2eee3bd3"
+          }
+        },
+        {
+          "id": "wd81OJvPDCZd__su_3ZZ",
+          "label": "Change items",
+          "event": {
+            "id": "658e9004-acfe-4b3f-9129-c8050eb6526d",
+            "type": "shopping_action",
+            "action": "edit_list",
+            "expectedVersion": 2
+          }
+        },
+        {
+          "id": "w8fd4tmyP9ngJ7z27sb0",
+          "label": "See photos",
+          "event": {
+            "id": "285ad340-02c7-4a40-8b35-4447150593da",
+            "type": "shopping_action",
+            "action": "view_products",
+            "expectedVersion": 2
+          }
+        }
+      ],
+      "payload": {
+        "type": "interactive",
+        "interactive": {
+          "type": "button",
+          "body": {
+            "text": "Removed screw box\n2 items\nEstimated total: ₹30.00"
+          },
+          "action": {
+            "buttons": [
+              {
+                "type": "reply",
+                "reply": {
+                  "id": "ws9ceUilQumzGEAZxt2I",
+                  "title": "Correct, show bill"
+                }
+              },
+              {
+                "type": "reply",
+                "reply": {
+                  "id": "wd81OJvPDCZd__su_3ZZ",
+                  "title": "Change items"
+                }
+              },
+              {
+                "type": "reply",
+                "reply": {
+                  "id": "w8fd4tmyP9ngJ7z27sb0",
+                  "title": "See photos"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "requests": 0
+}
