@@ -33,10 +33,16 @@ Publication is one explicit review of actual values followed by Confirm & publis
 
 - Existing ShopBot colors: white #ffffff, background #f2f6f3, ink #20382e, muted #52675d, teal #19685f, warning #8b520d. Color represents selection, state or an exception.
 - Arial and the bundled Tamil font. Product title 20px, section title 15px, normal field text 14px desktop / 16px phone, supporting metadata 12px.
-- Desktop grouped form fields and 36–40px controls; phone targets at least 44px. Dense rows show values with consistent alignment and tabular numerals.
+- Desktop grouped form fields and 36–40px controls; phone form and primary-action targets at least 44px. Dense rows show values with consistent alignment and tabular numerals.
 - Left-aligned content. Borders divide records and field groups; avoid a separate large card for every quantity or instruction.
 - Record tabs remain mounted to retain edits; keyboard navigation, visible focus, phone section selector, readable error recovery and draft guards are required.
 
 ## Structural review against the request
 
 The previous screen spent space on repeated headings, summary cards, stock forms and a long confirmation area before showing all editable facts. This solution gives inventory facts a stable place, uses sectioned records for secondary work and replaces repeated acknowledgment with an explicit save/publication action. It preserves information density through grouping and alignment rather than shrinking every label or hiding required facts.
+
+## Workflow decisions after browser verification
+
+Entering a positive price also selects the priced state; clearing it selects price-to-confirm. Zero requires the explicit free-item status. A previously approved no-photo product retains that choice during ordinary edits; uploading an exact photo selects that photo. Drafts and imported records still require an explicit first photo/no-photo decision.
+
+Stock exceptions open the actual product's Stock section directly. An uncertain stock operation retains its task and retry payload when metadata refreshes; product switching is blocked until recovery. The record's fields remain mounted while sections change, preserving edits. Short phone action labels and compact repeated metadata keep the form visible in Tamil. Tablet inventory rows become paired record cards where seven narrow columns would be cramped.
