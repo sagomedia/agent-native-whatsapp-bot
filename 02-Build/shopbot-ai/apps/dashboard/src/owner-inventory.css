@@ -40,13 +40,17 @@
 .owner-shell-v2 .owner-inventory-module .owner-product-row strong{font-size:13px;line-height:1.4}
 .owner-shell-v2 .owner-inventory-module .owner-product-row span>span{font-size:12px}
 .owner-shell-v2 .owner-inventory-module .owner-product-workspace{padding:0;border:0;min-width:0}
-.owner-shell-v2 .owner-inventory-module .owner-editor-back{margin:10px 16px 0;min-height:28px;padding:0;color:var(--ui-accent)}
+.owner-shell-v2 .owner-inventory-module .owner-editor-back{margin:0;min-height:28px;padding:0;color:var(--ui-accent)}
 .owner-shell-v2 .owner-inventory-module .owner-editor-heading{padding:14px 16px;margin:0;align-items:start;gap:10px}
 .owner-shell-v2 .owner-inventory-module .owner-editor-heading h2{font-size:20px;line-height:1.4;overflow-wrap:anywhere;margin:0 0 5px}
 .owner-shell-v2 .owner-inventory-module .owner-editor-heading p{font-size:12px;margin-top:5px}
 .owner-shell-v2 .owner-inventory-module .owner-editor-options{margin:0;position:relative;min-width:110px}
 .owner-shell-v2 .owner-inventory-module .owner-editor-options summary{padding:7px 9px;border:1px solid var(--ui-border);border-radius:4px;white-space:nowrap;font-size:13px}
-.owner-shell-v2 .owner-inventory-module .owner-editor-options[open]{z-index:12;background:white;box-shadow:0 5px 16px #20382e18;border:1px solid var(--ui-border);padding:5px;min-width:180px}
+.owner-shell-v2 .owner-inventory-module .owner-editor-options[open]{z-index:12}
+.owner-record-backbar{display:flex;align-items:center;gap:10px;padding:10px 16px 0}
+.owner-record-backbar>.owner-editor-options{margin-left:auto!important}
+.owner-editor-menu{position:absolute;right:0;top:100%;z-index:12;width:190px;padding:6px;display:grid;gap:5px;border:1px solid var(--ui-border);background:white;box-shadow:0 5px 16px #20382e18}
+.owner-editor-options:not([open])>.owner-editor-menu{display:none}
 .owner-shell-v2 .owner-inventory-module .owner-record-totals{display:grid;grid-template-columns:minmax(180px,1.6fr) repeat(3,minmax(80px,1fr));border-block:1px solid var(--ui-border);background:#f6f8f6;padding:0 16px}
 .owner-shell-v2 .owner-inventory-module .owner-record-totals>div{padding:10px 12px;border-left:1px solid var(--ui-border);min-width:0}
 .owner-shell-v2 .owner-inventory-module .owner-record-totals>div:first-child{padding-left:0;border:0}
@@ -125,7 +129,7 @@
  .owner-shell-v2 .owner-inventory-module .owner-editor-heading h2{font-size:18px}
  .owner-shell-v2 .owner-inventory-module .owner-editor-options{min-width:90px}
  .owner-shell-v2 .owner-inventory-module .owner-editor-options summary{padding:5px;font-size:12px;white-space:normal;min-height:36px}
- .owner-shell-v2 .owner-inventory-module .owner-editor-options[open]{min-width:140px}
+ .owner-shell-v2 .owner-inventory-module .owner-editor-options[open]{min-width:0}
  .owner-shell-v2 .owner-inventory-module .owner-record-totals{grid-template-columns:repeat(3,minmax(0,1fr));padding:0 12px}
  .owner-shell-v2 .owner-inventory-module .owner-record-totals>div{padding:8px 6px}
  .owner-shell-v2 .owner-inventory-module .owner-record-totals>div:first-child{grid-column:1/-1;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--ui-border);padding-block:8px}
@@ -165,12 +169,12 @@
 }
 @media(max-width:800px){
  .owner-shell-v2 .owner-inventory-module .owner-product-workspace{position:relative}
- .owner-shell-v2 .owner-inventory-module .owner-editor-back{display:inline-flex;align-items:center;border:0;min-height:30px;margin:8px 12px 0;padding:0;background:none;font-size:12px}
+ .owner-shell-v2 .owner-inventory-module .owner-editor-back{display:inline-flex;align-items:center;border:0;min-height:30px;margin:0;padding:0;background:none;font-size:12px}
  .owner-shell-v2 .owner-inventory-module .owner-editor-heading{padding:8px 12px 10px}
  .owner-shell-v2 .owner-inventory-module .owner-editor-heading>div{width:100%;min-width:0}
  .owner-shell-v2 .owner-inventory-module .owner-editor-heading h2{font-size:17px;line-height:1.35;margin-bottom:6px}
  .owner-shell-v2 .owner-inventory-module .owner-editor-heading p{display:inline;font-size:11px;margin-left:6px}
- .owner-shell-v2 .owner-inventory-module .owner-editor-options{position:absolute;right:12px;top:8px;min-width:0}
+ .owner-shell-v2 .owner-inventory-module .owner-editor-options{position:relative;min-width:0}
  .owner-shell-v2 .owner-inventory-module .owner-editor-options summary{min-height:30px;font-size:12px;padding:4px 7px}
  .owner-shell-v2 .owner-inventory-module .owner-save-actions>.owner-primary{grid-column:auto!important}
 }
@@ -178,7 +182,7 @@
 @media(max-width:800px){
  .owner-shell-v2 .owner-inventory-module .owner-full-action{display:none}
  .owner-shell-v2 .owner-inventory-module .owner-short-action{display:inline}
- .owner-shell-v2 .owner-inventory-module .owner-mobile-record-code{display:block;position:absolute;left:120px;top:16px;max-width:80px;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ui-muted)}
+ .owner-shell-v2 .owner-inventory-module .owner-mobile-record-code{display:block;position:static;max-width:58px;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ui-muted)}
  .owner-shell-v2 .owner-inventory-module .owner-editor-heading p{display:none}
  .owner-shell-v2 .owner-inventory-module .owner-editor-actionbar>div[role=status]{display:none}
  .owner-shell-v2 .owner-inventory-module .owner-editor-actionbar>div[data-dirty=true]{display:flex}
@@ -198,9 +202,17 @@
  .owner-shell-v2 .owner-inventory-module .owner-inventory-table td[data-label]::before{content:attr(data-label);display:block;font-size:11px;color:var(--ui-muted);margin-bottom:4px;line-height:1.4}
  .owner-shell-v2 .owner-inventory-module .owner-inventory-table td[data-label=Actions]::before,.owner-shell-v2 .owner-inventory-module .owner-inventory-table td[data-label=Visibility]::before{display:none}
  .owner-shell-v2 .owner-inventory-module .owner-inventory-edit-actions button{white-space:normal;overflow-wrap:anywhere}
- .owner-shell-v2 .owner-inventory-module .owner-mobile-record-code{left:146px;max-width:58px}
+ .owner-shell-v2 .owner-inventory-module .owner-mobile-record-code{max-width:58px}
  .owner-shell-v2 .owner-inventory-module .owner-record-navigation{padding-block:4px}
  .owner-shell-v2 .owner-inventory-module .owner-record-totals>div,.owner-shell-v2 .owner-inventory-module .owner-record-totals>div:first-child{padding-block:4px}
  .owner-shell-v2 .owner-inventory-module .owner-editor-heading{padding-top:4px}
 }
 @media(max-width:640px){.owner-shell-v2 .owner-inventory-module .owner-inventory-table tbody{grid-template-columns:minmax(0,1fr)}}
+
+/* The compact back bar allocates space for identity and actions without overlap. */
+@media(max-width:800px){
+ .owner-record-backbar{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,58px) auto;gap:6px;padding:8px 12px 0}
+ .owner-record-backbar>.owner-editor-options{grid-column:3}
+ .owner-shell-v2 .owner-inventory-module .owner-record-from-order>.owner-record-backbar>.owner-editor-back:not(.owner-order-return){display:none}
+ .owner-shell-v2 .owner-inventory-module .owner-save-actions{grid-template-columns:minmax(0,.65fr) repeat(2,minmax(0,1fr))}
+}

@@ -53,7 +53,7 @@ try{
  await page.setViewportSize({width:320,height:640});await visit('catalog');await page.locator('.owner-inventory-edit-actions').first().getByRole('button',{name:'Update price',exact:true}).click();await page.getByRole('dialog').waitFor();assert.ok((await page.getByRole('dialog').boundingBox()).width<=304);await page.screenshot({path:resolve(out,'price-dialog-320.png')});await page.getByRole('dialog').getByRole('button',{name:'Cancel',exact:true}).click();
  await page.goto(base+'/owner?view=catalog&bulk=1');await page.getByLabel('Upload the edited CSV',{exact:false}).setInputFiles({name:'Checked shop facts.csv',mimeType:'text/csv',buffer:Buffer.from('sku,price_rupees\nH01,246\n')});await page.getByText('Review the proposed changes',{exact:true}).waitFor();assert.equal(await page.locator('.owner-bulk-table tbody tr').count(),2);assert.ok(await page.locator('.owner-bulk-table').evaluate(el=>el.scrollWidth<=el.clientWidth+1));await page.locator('.owner-bulk-table tbody tr').first().scrollIntoViewIfNeeded();assert.equal(await page.locator('.owner-bulk-table tbody tr').first().evaluate(el=>getComputedStyle(el).display),'grid');await page.screenshot({path:resolve(out,'csv-preview-320.png')});
  // The read-only rehearsal never applies that intercepted preview.
- await page.getByRole('button',{name:'Back to products',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'Back to products',exact:true}).click();
+ await page.getByRole('button',{name:'Back to products',exact:true}).click();assert.equal(await page.getByRole('dialog').count(),0);
  for(const language of ['en','ta']){
   await visit('overview');await page.getByLabel('Dashboard language / மொழி').selectOption(language);
   for(const request of snapshot.requests){
