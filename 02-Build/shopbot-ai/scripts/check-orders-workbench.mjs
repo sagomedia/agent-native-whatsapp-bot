@@ -41,7 +41,7 @@ assert.equal(await page.getByRole('button',{name:'Refresh',exact:true}).count(),
 assert.equal(await page.getByRole('button',{name:'Test connection · details',exact:true}).count(),0);
 assert.equal(await page.getByLabel('Unit price 1 (₹)',{exact:true}).inputValue(),'25.00');
 assert.equal(await page.locator('.order-line').first().locator('.order-price-suggested').count(),1);
-const photo=page.getByRole('button',{name:'Enlarge photo of '+names[0],exact:true});assert.ok((await photo.locator('img').boundingBox()).width>=94);await photo.click();const dialog=page.getByRole('dialog');await dialog.waitFor();assert.ok((await dialog.locator('img').boundingBox()).width>400);await page.getByRole('button',{name:'Close photo',exact:true}).click();
+const photo=page.getByRole('button',{name:'Enlarge photo of '+names[0],exact:true});assert.ok((await photo.locator('img').boundingBox()).width>=94);await photo.click();const dialog=page.getByRole('dialog');await dialog.waitFor();assert.ok((await dialog.locator('img').boundingBox()).width>400);assert.match(await dialog.locator('img').getAttribute('src'),/original=1/);assert.equal(await dialog.locator('img').getAttribute('srcset'),null);await page.getByRole('button',{name:'Close photo',exact:true}).click();
 assert.equal(await page.getByText('I checked this manual item’s identity and selling unit.',{exact:true}).count(),0);
 assert.equal(await page.getByText('I checked the original request, quantity, pack size and any duplicate.',{exact:true}).count(),0);
 await page.getByRole('button',{name:'Send quote for approval',exact:true}).click();await page.getByRole('alert').getByText(/Enter the missing details/).waitFor();assert.equal(lastQuote,null);

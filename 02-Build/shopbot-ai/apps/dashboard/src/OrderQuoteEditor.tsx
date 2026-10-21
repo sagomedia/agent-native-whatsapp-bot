@@ -20,7 +20,7 @@ function fromSaved(draft:SavedQuoteDraft):EditorState{return{lines:draft.lines,r
 function OrderPhotoPreview({src,name,onClose}:{src:string;name:string;onClose:()=>void}){
  const dialog=useRef<HTMLDialogElement>(null);
  useEffect(()=>{const element=dialog.current;element?.showModal();return()=>element?.close();},[]);
- return <dialog className="owner-dialog order-photo-preview" ref={dialog} aria-label={'Product photo: '+name} onCancel={e=>{e.preventDefault();onClose();}}><header><h2>{name}</h2><button type="button" onClick={onClose} autoFocus>Close photo</button></header><ProductPhoto src={src} name={name} large/><p>Reference photo. Check the actual item, size and variant in your store before quoting.</p></dialog>;
+ return <dialog className="owner-dialog order-photo-preview" ref={dialog} aria-label={'Product photo: '+name} onCancel={e=>{e.preventDefault();onClose();}}><header><h2>{name}</h2><button type="button" onClick={onClose} autoFocus>Close photo</button></header><ProductPhoto src={src+(src.includes('?')?'&':'?')+'original=1'} name={name} large/><p>Reference photo. Check the actual item, size and variant in your store before quoting.</p></dialog>;
 }
 function MatchProduct({line,onChoose,onClose}:{line:DraftLine;onChoose:(p:Product)=>void;onClose:()=>void}){
  const [query,setQuery]=useState(line.query??line.name),[products,setProducts]=useState<Product[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState('');
