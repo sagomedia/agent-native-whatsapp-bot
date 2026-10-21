@@ -1,0 +1,48 @@
+# UI and UX completeness review
+
+21 October 2026. Follow-up to the [functional audit](../workflow-check-20261021/FUNCTION-MATRIX.md) and [operator guide](../workflow-check-20261021/OPERATOR-GUIDE.md). Tracking: [issue #52](https://github.com/sagomedia/agent-native-whatsapp-bot/issues/52); review: [draft PR #54](https://github.com/sagomedia/agent-native-whatsapp-bot/pull/54).
+
+**Some simplifications did hide useful context and recovery actions.** This pass restores that information and fixes navigation traps. The counter workspace, editable quotes, product photos, approvals, stock holds, manual controls and detailed tools remain. No new commerce wizard or mandatory tour was added.
+
+## Page-by-page result
+
+| Page or section | Gap found | Implemented change |
+|---|---|---|
+| Today | Failed/unknown/blocked sends, failed attachments and blocked budgets were inside closed diagnostics. A failed readiness read had no visible retry outside that section. | Show a compact attention section only when those problems exist, with a direct affected conversation where supplied, settings and an expandable diagnostic check. Show failed reads and retry above the daily jobs. Routine pending work is not presented as a failure. |
+| Today: channel notice | A test-only connection with sending disabled could say messages could reach approved recipients. | Disabled sending takes precedence; the page explicitly says customer messages are not being sent. |
+| Daily task shortcuts and Quick help | A previous product, CSV view, search, family or brand could hide the intended task. Opening a stock repair could reopen CSV instead of the product. | Task shortcuts clear the destination's filters, selection and paging. Normal navigation tabs still preserve the owner's place. Stock repair opens the exact product. |
+| Orders: worklist | A conversation had no direct route to all its orders; changing stages dropped the search. | Add a bounded All orders stage, preserve search across stages, and link each conversation to that customer's orders across all stages. Backend search remains shop scoped and paged. |
+| Orders: information | Acceptance, pickup, payment and inventory state were too deep in other actions. Advance verification could disappear after success. Available units and the order's own held units were absent from item context. | Show a compact facts summary in the order content, with separate advance/balance payment truth and stock state. Matched items show available units and units held for this order. Unknown payment/stock stays explicit. |
+| Orders: saved quote | Turning notifications off before offering a quote left the saved-quote WhatsApp action disabled while its enabling toggle disappeared in read-only mode. | Keep notification control reachable after saving/offering and during pickup. Explain the off state; turning it on permits the existing explicit send action. Does not automatically send a message or create another quote. |
+| Orders: small phones and Tamil | Repeated fixed guidance left almost no item space on a 320×640 screen. A long Tamil secondary button could push the main action outside its container. | Put full action guidance in scrollable content and a short translated reminder beside the fixed action. Wrap both buttons within their available width. Keep at least 120 CSS pixels of usable order content in the English and Tamil stress cases; final production assets retain at least 143 pixels across all 12 seeded order/language combinations at 320×640. Global assistance stays on the worklist when a short phone opens an individual order. |
+| Messages: retained information | The server returned only the latest 200 messages, with no indicator or way to retrieve earlier evidence. | Add stable sequence cursors and Earlier, Newer and Latest message controls. Each page stays bounded to 200 messages. New incoming messages do not shift older pages. Return to the latest messages before composing so a reply is grounded in the current conversation. |
+| Messages: context and errors | A filtered empty help queue could say no conversations existed. Failed transcript reads could also show No messages yet. Sending eligibility appeared only after takeover; there was no order link. | Distinguish empty filters from an empty shop; provide View all conversations. Failed reads have retry and do not claim the transcript is empty. Show reply-window/channel context and the related-order route before takeover. |
+| Products: filters | Family, brand, exception and sort could be applied with no visible indication while filters were closed. Clearing a no-result search required reopening filters. | Keep all applied filters visible with one Clear filters action, including inline updates. Product/inbox search inputs respect the API's 200-character bound. |
+| Products: inventory | Stock was available stock but labelled simply Stock; held quantities were not visible in the list. | Label Available stock and show physical/on-shelf and held quantities when reservations exist. Quick stock and full movement tools keep their separate totals. |
+| Products: unavailable record | An unsuccessful product read could leave the previous product's form on screen. | Keep that form hidden until the intended record loads. Retry the exact selected product or return to the list; do not offer the previous product for editing under the failed selection. |
+| Products: history, drafts, imports | A failed stock-history read could look like no movements. Draft/import/evidence failures lacked direct recovery. | Distinguish loading, unavailable history and actual empty history. Add explicit retry for stock history, draft lists, intake progress and interpretation evidence; preserve existing merchant facts and writes. |
+| Products: full editor and CSV | Reviewed the full editor, source references, five merchant confirmations, publish/hide/reject, diagnostic search, CSV instructions, full receipts and partial-save recovery. | These remain available. A failed product save scrolls its error into view. Existing partial/resumable CSV and edited-only inline semantics are retained; no additional required steps were added. |
+| Settings and usage | A conflicting charge with zero `unknown` charges could omit the warning that the total is incomplete. | Warn for either unknown or conflicting charges. Connection, pause, budget, exact amounts, price validity, monthly analytics and activity remain available. |
+| Message review | A failed fetch had no retry; changing language could briefly retain the preceding language's examples. A stage without examples was blank. | Clear prior examples while loading, ignore superseded responses, provide retry, and show a truthful empty state with Show all stages. Preview controls remain disabled. |
+
+## Information hierarchy
+
+The main task, current commerce state and blocking facts stay visible. Detailed source evidence, exact cost ledgers, CSV receipts, original customer requests and destructive alternatives remain available in labelled sections. Their expansion does not gate the normal quote, price update or pickup action.
+
+The visual/structural review did not justify another palette, card system or navigation redesign: the layout already follows this shop's counter tasks. The important defects were missing functional states and context. Code and browser review also covered semantic controls, labels, focus, failed reads, long content and narrow layouts against the [Web Interface Guidelines](https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/command.md).
+
+## Validation
+
+- Full UTF-8 PostgreSQL suite: **843/843**, zero failed or skipped. The new integration case traverses 405 retained Tamil messages, checks stable paging after a new incoming message, rejects malformed/overflow cursors and prevents cross-shop reads. Existing queue tests now cover All orders and a ready order found through its conversation.
+- Production build and TypeScript checks pass. Four Python catalog preparation checks pass.
+- `check-dashboard-completeness.mjs`: eight scenario groups covering the gaps above, all six pages at 1440/768/390/320 pixels, English/Tamil phone context and action bounds for every seeded order state. Every write is rejected by this fixture harness; no page errors.
+- Existing 18-group daily task acceptance passes, including retry identity, partial saves, cancellation/refund, access recovery, product publication and language. Existing eight-size quote acceptance passes, including notification-off recovery after offering the quote without creating a duplicate quote.
+- The real local API browser run passes six pages, durable draft/quote state, acceptance → ready → collection with actual reservations, price/count persistence, pause/resume and takeover eligibility. Its synthetic store has no live providers. The final preview is reseeded after those mutations.
+
+Evidence is under `evidence/`. Browser fixture checks and real local API results are separate. The final hosted checkpoint is recorded in the PR checks and issue #52.
+
+## Remaining acceptance
+
+The automated review cannot establish that every intended staff member learns the application after one demonstration. Use the existing four-job operator exercise with actual novice staff. Physical keyboard/safe areas, enlarged text/zoom and screen-reader checks, native Tamil copy review, older-device/weak-network timings and real channel/bank acceptance remain open. Advanced English fallbacks still exist; this is not a claim of complete Tamil localization.
+
+[Try the synthetic preview](http://127.0.0.1:3044/owner?view=overview). No production deployment, live AI calls, customer sends or money transfers were performed.

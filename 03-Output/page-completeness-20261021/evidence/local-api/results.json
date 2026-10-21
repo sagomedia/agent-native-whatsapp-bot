@@ -1,0 +1,21 @@
+{
+  "synthetic": true,
+  "realLocalApi": true,
+  "views": 6,
+  "viewports": [
+    1440,
+    390
+  ],
+  "quoteDraftSaveReload": true,
+  "offeredQuoteRequiresApproval": true,
+  "missingChannelNotClaimedSent": true,
+  "priceSavedPaise": 3150,
+  "physicalCountSaved": 18,
+  "approvalToCollection": true,
+  "readyOrderCollection": true,
+  "reservationsViaRealServices": true,
+  "pauseResume": true,
+  "takeoverWithSendingDisabled": true,
+  "quickHelp": true,
+  "pageErrors": []
+}

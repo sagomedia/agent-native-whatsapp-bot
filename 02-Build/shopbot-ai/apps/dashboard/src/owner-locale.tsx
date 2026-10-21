@@ -60,6 +60,33 @@ export function ownerText(locale:OwnerLocale,text:string){
  if(tamil[text])return tamil[text];
  return text.replace(/\bCustomer · /g,'வாடிக்கையாளர் · ').replace(/^(\d+) items$/,'$1 பொருட்கள்').replace(/^Resolve (\d+) items?$/,'$1 பொருட்களின் விவரங்களை நிரப்பு');
 }
+Object.assign(tamil,{
+ 'Quote saved':'விலைப்பட்டியல் சேமிக்கப்பட்டது','Order saved':'ஆர்டர் சேமிக்கப்பட்டது','WhatsApp notification is off. Turn it on below to send this saved quote.':'WhatsApp அறிவிப்பு நிறுத்தப்பட்டுள்ளது. சேமித்த விலைப்பட்டியலை அனுப்ப கீழே மீண்டும் செயல்படுத்துங்கள்.',
+ 'Recorded stock is short.':'பதிவு செய்த இருப்பு போதவில்லை.','Check the advance before acceptance.':'ஏற்கும் முன் முன்பணத்தைச் சரிபாருங்கள்.','Confirm availability before acceptance.':'ஏற்கும் முன் கிடைக்கும் இருப்பை உறுதி செய்யுங்கள்.','Stock has not been reconciled.':'கடை இருப்பு இன்னும் சரிபார்க்கப்படவில்லை.','Collection does not record payment.':'பொருள் கொடுத்த பதிவு பணம் பெற்ற பதிவு அல்ல.','Confirm items are packed before marking ready.':'தயார் எனக் குறிக்கும் முன் பொதியைச் சரிபாருங்கள்.',
+ 'Recorded stock is short. Check the shelf; update its count or change the quote to the store item you can supply.':'பதிவு செய்த இருப்பு போதவில்லை. கடையில் இருப்பைச் சரிபார்த்து எண்ணிக்கையை மாற்றுங்கள் அல்லது கொடுக்கக்கூடிய கடைப் பொருளுக்கு விலைப்பட்டியலை மாற்றுங்கள்.',
+ 'Check the customer’s advance in your bank app, then record it in the payment details.':'வங்கி செயலியில் வாடிக்கையாளரின் முன்பணத்தைச் சரிபார்த்து பண விவரங்களில் பதிவு செய்யுங்கள்.',
+ 'The customer confirmed these items. Check availability in your store, then accept the order.':'வாடிக்கையாளர் இந்தப் பொருட்களை உறுதி செய்துள்ளார். கடையில் இருப்பைச் சரிபார்த்து ஆர்டரை ஏற்றுக்கொள்ளுங்கள்.',
+ 'Check the shelf quantities for this earlier order before reserving its items.':'இந்த முந்தைய ஆர்டருக்கு இருப்பை ஒதுக்கும் முன் கடையில் எண்ணிக்கையைச் சரிபாருங்கள்.',
+ 'Record collection after handing the items to the customer.':'பொருட்களை வாடிக்கையாளரிடம் கொடுத்த பிறகு பதிவு செய்யுங்கள்.',
+ 'Pack the approved quantities, sizes and units. Mark ready confirms this packing check.':'ஒப்புதல் பெற்ற எண்ணிக்கை, அளவு, விற்பனை அலகுகளின்படி பொதி செய்யுங்கள். தயார் எனக் குறித்தால் இந்தச் சரிபார்ப்பை உறுதி செய்கிறீர்கள்.',
+ 'Sending disabled':'செய்தி அனுப்புதல் நிறுத்தப்பட்டுள்ளது',
+ 'Loading stock history…':'இருப்பு வரலாறு ஏற்றப்படுகிறது…','Retry stock history':'இருப்பு வரலாற்றை மீண்டும் ஏற்று','Unavailable':'கிடைக்கவில்லை',
+ 'Message checks need attention':'செய்தி நிலைகளைச் சரிபார்க்க வேண்டும்',
+ 'Review message checks':'செய்தி நிலைகளைச் சரிபார்',
+ 'Open affected conversation':'பாதிக்கப்பட்ட உரையாடலைத் திற',
+ 'failed sends':'அனுப்ப முடியாத செய்திகள்','deliveries unknown':'சென்றடைந்த நிலை தெரியாதவை','blocked sends':'தடுக்கப்பட்ட செய்திகள்','failed attachments':'தோல்வியடைந்த இணைப்புகள்',
+ 'Sending connection blocked.':'செய்தி அனுப்பும் இணைப்பு தடுக்கப்பட்டுள்ளது.','AI budget is blocked.':'AI செலவு வரம்பு தடுக்கப்பட்டுள்ளது.',
+ 'Last loaded checks are shown.':'கடைசியாக ஏற்றிய நிலைகள் காட்டப்படுகின்றன.','Shop checks are unavailable.':'கடை நிலைகளை இப்போது ஏற்ற முடியவில்லை.',
+ 'Applied filters':'பயன்படுத்திய வடிகட்டிகள்','Search':'தேடல்','Published':'வெளியிடப்பட்டது','Hidden / draft':'மறைக்கப்பட்டது / வரைவு','Product family':'பொருள் வகை','Needs attention':'கவனிக்க வேண்டும்','Missing photo':'படம் இல்லை','Draft version conflict':'வரைவு பதிப்பு முரண்பாடு','Sort by':'வரிசைப்படுத்து','Product code':'பொருள் குறியீடு','Recently updated':'சமீபத்தில் மாற்றியது',
+ 'Available stock':'விற்பனைக்குக் கிடைக்கும் இருப்பு','No products match these filters. Clear filters to see the full catalog.':'இந்த வடிகட்டிகளில் பொருட்கள் இல்லை. முழுப் பட்டியலைப் பார்க்க வடிகட்டிகளை நீக்குங்கள்.',
+ 'Could not open product':'பொருளைத் திறக்க முடியவில்லை','Back to products':'பொருட்களுக்குத் திரும்பு',
+ 'Order facts':'ஆர்டர் விவரங்கள்','Shop acceptance':'கடை ஏற்பு','Not yet accepted':'இன்னும் ஏற்கவில்லை','Accepted':'ஏற்றது','Pickup':'பொருள் கொடுத்தல்','Not started':'இன்னும் தொடங்கவில்லை','Payment':'பணம்','advance verified':'முன்பணம் சரிபார்க்கப்பட்டது','Order payment not recorded':'ஆர்டர் பணம் பெற்றதாகப் பதிவு இல்லை','Balance payment not recorded':'மீதிப் பணம் பெற்றதாகப் பதிவு இல்லை','Payment link being created':'பணம் செலுத்தும் இணைப்பு உருவாகிறது','Payment pending':'பணம் செலுத்தக் காத்திருக்கிறது','Payment recorded':'பணம் பெற்றதாகப் பதிவானது','Payment failed':'பணம் செலுத்துதல் தோல்வி','Payment link expired':'பணம் செலுத்தும் இணைப்பு காலாவதியானது','Payment cancelled':'பணம் செலுத்துதல் ரத்தானது','Payment outcome unknown':'பணம் செலுத்திய நிலை தெரியவில்லை','Refund pending':'பணம் திருப்பித் தர வேண்டும்','Refund recorded':'திருப்பித் தந்ததாகப் பதிவானது','Payment needs review':'பண நிலையைச் சரிபார்க்க வேண்டும்',
+ 'Held for this order':'இந்த ஆர்டருக்கு ஒதுக்கியது','Deducted on collection':'பொருள் கொடுத்தபோது இருப்பு குறைந்தது','Reservation released':'ஒதுக்கிய இருப்பு விடுவிக்கப்பட்டது','Shelf reconciliation needed':'கடை இருப்பைச் சரிபார்க்க வேண்டும்','Check shelf before acceptance':'ஏற்கும் முன் கடையில் இருப்பைச் சரிபாருங்கள்','items need a shelf check':'பொருட்களுக்கு கடை இருப்பைச் சரிபார்க்க வேண்டும்',
+ 'No customers need help':'உதவி கேட்கும் வாடிக்கையாளர்கள் இல்லை','Try another search or view all conversations.':'வேறு சொற்களில் தேடுங்கள் அல்லது எல்லா உரையாடல்களையும் பாருங்கள்.','View all conversations':'எல்லா உரையாடல்களையும் பார்',
+ 'Message history pages':'முந்தைய செய்திப் பக்கங்கள்','Viewing earlier messages. Return to the latest messages before replying.':'முந்தைய செய்திகள் காட்டப்படுகின்றன. பதில் அளிக்கும் முன் சமீபத்திய செய்திகளுக்குத் திரும்புங்கள்.','Newer messages':'அடுத்த செய்திகள்','Latest messages':'சமீபத்திய செய்திகள்','Earlier messages':'முந்தைய செய்திகள்','Latest 200 messages. Earlier messages are available.':'கடைசி 200 செய்திகள். அதற்கு முந்தைய செய்திகளையும் பார்க்கலாம்.',
+ 'Review this customer’s orders':'இந்த வாடிக்கையாளரின் ஆர்டர்களைப் பார்','Last customer message':'வாடிக்கையாளரின் கடைசி செய்தி','No WhatsApp reply window recorded':'WhatsApp பதில் அளிக்கும் நேரம் பதிவாகவில்லை','WhatsApp sending is disabled.':'WhatsApp செய்தி அனுப்புதல் நிறுத்தப்பட்டுள்ளது.','Reply window closed':'பதில் அளிக்கும் நேரம் முடிந்தது',
+ 'No message previews in this stage':'இந்த நிலையில் செய்தி மாதிரிகள் இல்லை','Choose another stage or check again.':'வேறு நிலையைத் தேர்வு செய்யுங்கள் அல்லது மீண்டும் சரிபாருங்கள்.','Show all stages':'எல்லா நிலைகளையும் காட்டு'
+});
 const storageKey='shopbot.owner.language';
 const LocaleContext=createContext({locale:'en' as OwnerLocale,t:(text:string)=>text,setLocale:(_locale:OwnerLocale)=>{}});
 export function OwnerLocaleProvider({children}:{children:ReactNode}){

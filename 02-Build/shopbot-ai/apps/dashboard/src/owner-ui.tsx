@@ -37,7 +37,7 @@ export function Notice({children, error = false}: {children: ReactNode; error?: 
   return <p className={error ? 'owner-error' : 'owner-success'} role={error ? 'alert' : 'status'}>{children}</p>;
 }
 export function EmptyState({title, children}: {title: string; children: ReactNode}) {
-  return <div className="owner-empty"><h2>{title}</h2><p>{children}</p></div>;
+  return <div className="owner-empty"><h2>{title}</h2><div>{children}</div></div>;
 }
 /** Only owner catalog images support precomputed variants; customer media stays unchanged. */
 function photoVariant(src:string,size:number){

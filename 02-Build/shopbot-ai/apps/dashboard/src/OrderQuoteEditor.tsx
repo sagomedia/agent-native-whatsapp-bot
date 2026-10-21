@@ -34,9 +34,10 @@ function MatchProduct({line,onChoose,onClose}:{line:DraftLine;onChoose:(p:Produc
   {loading?<p role="status">Finding products…</p>:error?<p role="alert">{error} <button type="button" onClick={()=>setQuery(q=>q+' ')}>{t("Try again")}</button></p>:products.length?<div className="order-match-results">{products.map(p=><button key={p.sku} type="button" onClick={()=>onChoose(p)}><ProductPhoto src={p.imageUrl?'/api/owner/products/'+encodeURIComponent(p.sku)+'/image?v='+p.version:undefined} name={p.name}/><span><strong>{p.name}</strong><small>{p.sku} · per {p.unit} · {p.priceStatus==='confirm'?t("Price to confirm"):formatMoney(p.pricePaise)} · {p.stock===null?'Check stock':p.stock+' available'}</small></span><span>{t("Choose")}</span></button>)}</div>:<p>No catalog suggestions. Close this panel and quote the store item directly.</p>}
  </div>;
 }
-export function OrderQuoteEditor({request:r,originalLines,amendments,offered,notify,onNotify,onRefresh,busy,children,amendmentToQuote,onAmendmentLoaded,nextAction}:{request:WorkflowRequest;originalLines?:DraftLine[];amendments:AmendmentSummary[];offered?:{id:string;lines?:DraftLine[];total_paise?:string;created_at?:string};busy:boolean;notify:boolean;onNotify:(value:boolean)=>void;onRefresh:()=>Promise<void>;children:ReactNode;amendmentToQuote?:string;onAmendmentLoaded:()=>void;nextAction?:{label:string;help:string;disabled?:boolean;run:()=>void}}){
+export function OrderQuoteEditor({request:r,originalLines,amendments,offered,notify,onNotify,onRefresh,busy,children,amendmentToQuote,onAmendmentLoaded,nextAction,context}:{context?:ReactNode;request:WorkflowRequest;originalLines?:DraftLine[];amendments:AmendmentSummary[];offered?:{id:string;lines?:DraftLine[];total_paise?:string;created_at?:string};busy:boolean;notify:boolean;onNotify:(value:boolean)=>void;onRefresh:()=>Promise<void>;children:ReactNode;amendmentToQuote?:string;onAmendmentLoaded:()=>void;nextAction?:{label:string;help:string;summary?:string;disabled?:boolean;run:()=>void}}){
  const {t}=useOwnerLocale();
  const [state,setState]=useState<EditorState>(()=>drafts.get(r.id)??fresh(r,offered?.lines??r.lines)),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(''),[success,setSuccess]=useState(''),[matching,setMatching]=useState<string>(),[discard,setDiscard]=useState<'saved'|'current'|'amendment'>(),[loaded,setLoaded]=useState(false),[preview,setPreview]=useState<{src:string;name:string}>(),[revising,setRevising]=useState(false);
+ const statusPanel=useRef<HTMLDivElement>(null);
  const inFlight=useRef(false);
  const current=useRef(state);current.current=state;
  const revision=r.effective_revision??1,dirty=JSON.stringify(state.lines)!==state.baseline;
@@ -44,6 +45,7 @@ export function OrderQuoteEditor({request:r,originalLines,amendments,offered,not
  const source=state.amendmentId?pending.find(a=>a.id===state.amendmentId)?.proposed_lines??r.lines:offered?.lines??r.lines;
  const stale=state.revision!==revision||!!state.amendmentId&&!pending.some(a=>a.id===state.amendmentId);
  const blockedChange=pending.length>0&&!state.amendmentId||amendments.some(a=>a.request_id===r.id&&a.state==='proposed');
+ useEffect(()=>{if(stale||blockedChange)statusPanel.current?.scrollIntoView({block:'start'});},[stale,blockedChange]);
  const closed=['collected','cancelled'].includes(r.fulfillment)||r.acceptance==='rejected';
  const expired=!!offered?.created_at&&Date.now()-Date.parse(offered.created_at)>=24*3600000;
  const readOnly=!!offered&&!expired||closed||!!nextAction&&!revising&&!dirty&&!state.version,disabled=busy||loading||!loaded||saving||readOnly||stale||blockedChange;
@@ -82,15 +84,16 @@ export function OrderQuoteEditor({request:r,originalLines,amendments,offered,not
 
  return <div className="order-quote-layout">
   <section className="order-items-panel" aria-label="Order items and quote">
-   <div className="order-editor-status">
-    {readOnly&&nextAction?<div className="order-review-banner"><strong>{nextAction.help}</strong></div>:null}
+   <div className="order-items-scroll" role="region" aria-label="Order item list" tabIndex={0}>
+   <div className="order-editor-status" ref={statusPanel}>
     {!readOnly&&!stale&&!blockedChange?<div className="order-review-banner needs-check" role="status"><div><strong>{unresolved?`${unresolved} ${unresolved===1?'item needs':'items need'} details before sending.`:t("Check the orange suggestions, then send the quote.")}</strong><p>Check the photo, item, quantity and price against your store. Edit anything here. Catalog matching is optional.</p></div></div>:null}
     {stale?<div className="order-review-banner needs-check" role="alert"><div><strong>The customer’s order changed.</strong><p>Your edits are kept. Load the current order before sending.</p><button type="button" onClick={()=>setDiscard('current')}>{t("Load current order")}</button></div></div>:null}
     {blockedChange?<div className="order-review-banner needs-check"><strong>Review the customer’s change in the order details below.</strong></div>:null}
-    {offered&&!expired?<div className="order-review-banner"><div><strong>{t("Quote saved · awaiting customer approval")}</strong><p>These are the quoted details. The customer confirms before pickup preparation.</p></div></div>:null}
+    {offered&&!expired?<div className="order-review-banner"><div><strong>{t("Quote saved · awaiting customer approval")}</strong><p>These are the quoted details. The customer confirms before pickup preparation.</p>{!notify?<p>{t('WhatsApp notification is off. Turn it on below to send this saved quote.')}</p>:null}</div></div>:null}
     {expired?<div className="order-review-banner needs-check"><strong>The quote expired. Check the details and send an updated quote.</strong></div>:null}
    </div>
-   <div className="order-items-scroll" role="region" aria-label="Order item list" tabIndex={0}>
+    {context}
+    {readOnly&&nextAction?<div className="order-review-banner order-action-guidance"><p>{t(nextAction.help)}</p></div>:null}
     {loading?<p className="order-loading" role="status">Loading your saved quote…</p>:null}
     <div className="order-table" role="table" aria-label="Quote line items">
      <div className="order-table-head" role="row"><span role="columnheader">{t("Item · verify in store")}</span><span role="columnheader">{t("Quantity")}</span><span role="columnheader">{t("Unit")}</span><span role="columnheader">{t("Price / unit")}</span><span role="columnheader">{t("Amount")}</span></div>
@@ -101,6 +104,7 @@ export function OrderQuoteEditor({request:r,originalLines,amendments,offered,not
       const amount=line.price!==''&&Number(line.quantity)>0?lineTotal(Math.round(Number(line.price)*100),Number(line.quantity)):null;
       const review=!readOnly&&(line.estimated||!line.sku||!!original?.sourceUncertainty?.length||!!original?.catalogIssue);
       const duplicate=!!original?.sku&&source.filter(l=>l.sku===original.sku).length>1;
+      const inventory=line.sku?r.inventory?.find(item=>item.sku===line.sku):undefined;
       const basis=problems[index]!.filter(problem=>problem.field==='saleMode').map(problem=>problem.message);
       return <div className={'order-line'+(review?' order-line-review':'')+(issues[index]!.length&&!readOnly?' order-line-needs-check':'')} key={line.id}>
        <div className="order-table-row" role="row" id={'quote-row-'+line.id} tabIndex={-1}>
@@ -111,6 +115,7 @@ export function OrderQuoteEditor({request:r,originalLines,amendments,offered,not
           <p className="order-source-phrase">{t("Customer asked:")+" "}{original?.supportingPhrase??original?.query??original?.name??line.name}{original&&requestedAmountText(original,'en')?' · '+requestedAmountText(original,'en'):''}</p>
           <small className="order-shop-check">{readOnly?t("Shop-quoted item"):line.sku?t("Suggested product · verify in store"):t("Store item · no catalog match required")}</small>
           {original?.sourceUncertainty?.length?<p className="order-review-detail">Check the size and quantity against the original request.</p>:null}
+          {inventory?<p className="order-stock-context">{t('Available')}: {inventory.available??t('Unknown')} {inventory.unit} · {t('Held for this order')}: {inventory.held??0}{inventory.onHand===null?` · ${t('Check shelf before acceptance')}`:''}</p>:null}
           {duplicate?<p className="order-review-detail">Requested more than once. These remain separate items.</p>:null}
           {!readOnly?<div className="order-item-tools"><button type="button" className="owner-link" disabled={disabled} onClick={()=>setMatching(matching===line.id?undefined:line.id)}>{line.sku?t("Change catalog suggestion"):t("Find in catalog (optional)")}</button>{line.sku?<button type="button" className="owner-link" disabled={disabled} onClick={()=>setState(s=>({...s,attempt:undefined,lines:s.lines.map(l=>l.id===line.id?{...l,referenceSku:l.sku,sku:undefined,productVersion:undefined,manualConfirmed:true}:l)}))}>{t("Use store item instead")}</button>:null}</div>:null}
          </div>
@@ -135,14 +140,14 @@ export function OrderQuoteEditor({request:r,originalLines,amendments,offered,not
    {error?<div className="order-save-error" role="alert"><p>{error}</p><button type="button" disabled={saving} onClick={()=>setDiscard('saved')}>{t("Load saved draft")}</button></div>:null}
    {success?<p className="order-save-status" role="status">{success}</p>:null}
    <div className="order-footer-row">
-    <div className="order-footer-total"><strong>{priced===displayLines.length?t("Quote total"):t("Priced subtotal")} <span>{priced?formatMoney(offered?.total_paise?Number(offered.total_paise):total):'—'}</span></strong><small>{unresolved?`${unresolved} ${unresolved===1?'item needs':'items need'} details`:readOnly?nextAction?.help??'Customer approval and pickup are shown in the order details.':'Sending confirms you checked these item details and prices.'}</small></div>
+    <div className="order-footer-total"><strong>{priced===displayLines.length?t("Quote total"):t("Priced subtotal")} <span>{priced?formatMoney(offered?.total_paise?Number(offered.total_paise):total):'—'}</span></strong><small>{unresolved?`${unresolved} ${unresolved===1?'item needs':'items need'} details`:readOnly?t(nextAction?.summary??nextAction?.help??'Customer approval and pickup are shown in the order details.'):'Sending confirms you checked these item details and prices.'}</small></div>
     <div className="order-footer-actions">
      {readOnly&&nextAction?<><button type="button" disabled={busy||saving} onClick={()=>setRevising(true)}>{t("Change quote")}</button><button type="button" className="owner-primary" disabled={busy||saving||nextAction.disabled} onClick={nextAction.run}>{t(nextAction.label)}</button></>:null}
-     {!readOnly?<><button type="button" disabled={disabled} onClick={()=>void saveDraft()}>{saving?t("Saving…"):t("Save draft")}</button><button type="button" className="owner-primary" disabled={disabled} onClick={()=>unresolved?jump():void send()}>{unresolved?`Resolve ${unresolved} ${unresolved===1?'item':'items'}`:t("Send quote for approval")}</button></>:null}
+     {!readOnly?<><button type="button" disabled={disabled} onClick={()=>void saveDraft()}>{saving?t("Saving…"):t("Save draft")}</button><button type="button" className="owner-primary" disabled={disabled} onClick={()=>unresolved?jump():void send()}>{unresolved?t(`Resolve ${unresolved} ${unresolved===1?'item':'items'}`):t("Send quote for approval")}</button></>:null}
      {offered&&!expired&&!closed?<button type="button" disabled={busy||saving||!notify||blockedChange} onClick={()=>void notifyQuote()}>{t("Send saved quote on WhatsApp")}</button>:null}
     </div>
    </div>
-   {!readOnly?<div className="order-footer-note"><span role="status">{loading?t("Loading…"):saving?t("Saving…"):dirty?t("Unsaved changes"):state.savedAt||state.version?t("Draft saved"):t("Ready to review")}</span><button type="button" className="owner-link" aria-pressed={notify} disabled={saving} onClick={()=>onNotify(!notify)}>{notify?t("WhatsApp notification on"):t("WhatsApp notification off")}</button></div>:null}
+   {!closed?<div className="order-footer-note">{!readOnly?<span role="status">{loading?t("Loading…"):saving?t("Saving…"):dirty?t("Unsaved changes"):state.savedAt||state.version?t("Draft saved"):t("Ready to review")}</span>:null}<button type="button" className="owner-link" aria-pressed={notify} disabled={saving} onClick={()=>onNotify(!notify)}>{notify?t("WhatsApp notification on"):t("WhatsApp notification off")}</button></div>:null}
   </aside>
   {preview?<OrderPhotoPreview {...preview} onClose={()=>setPreview(undefined)}/>:null}
   {discard?<ConfirmDialog title={discard==='saved'?'Load the saved draft?':discard==='amendment'?'Quote the customer’s proposed list?':'Load the current order?'} confirmLabel={discard==='saved'?t("Load saved draft"):discard==='amendment'?'Quote proposed list':t("Load current order")} onCancel={()=>{setDiscard(undefined);onAmendmentLoaded();}} onConfirm={()=>void reloadCurrent()}>Your unsaved quote edits will be replaced. The saved draft stays unchanged until you save again.</ConfirmDialog>:null}

@@ -5,7 +5,7 @@ import {z} from 'zod';
 export const ownerSnapshotQuery=z.object({
   conversation:z.uuid().optional(), order:z.uuid().optional(),
   details:z.enum(['0','1']).default('1'),
-  orderStage:z.enum(['review','customer','ready','history']).optional(),
+  orderStage:z.enum(['review','customer','ready','history','all']).optional(),
   orderSearch:z.string().trim().max(200).default(''),
   orderPage:z.coerce.number().int().min(1).max(10000).default(1),
   inboxSearch:z.string().trim().max(200).default(''),

@@ -48,6 +48,8 @@ test('owner queue and inbox paging search beyond 100 rows, retain selected metad
   app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,host:'127.0.0.1',port:3017,mediaDir:'/tmp/owner-page-test',owner},pool,undefined,undefined,async()=>({email:owner.email,subject:'offline'}));
   const read=async(q:string)=>{const response=await app!.inject({url:'/api/owner/snapshot?details=0&'+q,headers:{host:owner.hostname,'cf-access-jwt-assertion':'offline'}});assert.equal(response.statusCode,200,response.body);return response.json();};
   const first=await read('orderStage=review&inboxPage=1');assert.equal(first.requests.length,25);assert.equal(first.orderPage.total,129);assert.equal(first.requestCounts.ready,1);assert.equal(first.requestCounts.active,130);assert.equal(first.inboxPage.size,25);assert.equal(first.conversationCounts.help,1);
+  const all=await read('orderStage=all');assert.equal(all.orderPage.total,130);assert.equal(all.requests.length,25);
+  const allCustomer=await read('orderStage=all&orderSearch='+ids[1]!.conversation);assert.equal(allCustomer.requests[0].id,ids[1]!.order);assert.equal(allCustomer.requests[0].fulfillment,'ready_for_pickup');
   const second=await read('orderStage=review&orderPage=2');assert.ok(second.requests.every((r:any)=>!first.requests.some((before:any)=>before.id===r.id)));
   const searched=await read('orderStage=review&orderSearch=Archived');assert.equal(searched.requests.length,1);assert.equal(searched.requests[0].id,ids[0]!.order);assert.equal(searched.orderPage.total,1);
   const literal=await read('orderStage=review&orderSearch='+encodeURIComponent('50%_item'));assert.equal(literal.orderPage.total,1);
@@ -56,6 +58,35 @@ test('owner queue and inbox paging search beyond 100 rows, retain selected metad
   const help=await read('inboxPage=1&inboxHelp=1');assert.equal(help.inboxPage.total,1);
   for(const query of ['orderPage=0','orderStage=bogus','order=bad','inboxPage=-1','orderSearch='+encodeURIComponent('x'.repeat(201))]){assert.equal((await app!.inject({url:'/api/owner/snapshot?'+query,headers:{host:owner.hostname,'cf-access-jwt-assertion':'offline'}})).statusCode,400);}
   assert.equal((await pool.query('SELECT count(*)::int AS n FROM order_requests')).rows[0].n,130);
+  assert.equal((await pool.query('SELECT count(*)::int AS n FROM owner_audit')).rows[0].n,0);
+ }finally{await app?.close();await pool.end();await admin.query(`DROP SCHEMA ${schema} CASCADE`);await admin.end();}
+});
+
+test('owner message pages retain older Tamil evidence with stable, bounded, store-scoped cursors',async()=>{
+ const schema='owner_history_'+randomUUID().replaceAll('-',''),admin=new pg.Pool({connectionString:process.env.DATABASE_URL});await admin.query(`CREATE SCHEMA ${schema}`);
+ const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:`-c search_path=${schema}`});let app:Awaited<ReturnType<typeof createApp>>|undefined;
+ try{
+  await setupDatabase(pool,'mock');const conversation=randomUUID(),otherStore=randomUUID(),foreign=randomUUID();
+  await pool.query("INSERT INTO conversations(id,store_id,actor) VALUES($1,$2,'history-shopper')",[conversation,fixtureStore]);
+  await pool.query("INSERT INTO stores(id,name,synthetic) VALUES($1,'Other shop',true)",[otherStore]);
+  await pool.query("INSERT INTO conversations(id,store_id,actor) VALUES($1,$2,'foreign-shopper')",[foreign,otherStore]);
+  const expected:string[]=[];
+  for(let index=0;index<405;index++){
+   const id=randomUUID();expected.push(id);
+   await pool.query("INSERT INTO messages(id,conversation_id,direction,text,status) VALUES($1,$2,'inbound',$3,'processed')",[id,conversation,`தமிழ் பொருள் விவரம் ${index}`]);
+  }
+  const owner={hostname:'owner.example.test',issuer:'https://offline.example.test',audience:'offline',email:'owner@example.test',storeId:fixtureStore};
+  app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,host:'127.0.0.1',port:3017,mediaDir:'/tmp/owner-history-test',owner},pool,undefined,undefined,async()=>({email:owner.email,subject:'offline-owner'}));
+  const read=async(id=conversation,cursor='')=>app!.inject({url:'/api/owner/conversations/'+id+(cursor?'?before='+encodeURIComponent(cursor):''),headers:{host:owner.hostname,'cf-access-jwt-assertion':'offline'}});
+  const first=(await read()).json();assert.equal(first.messages.length,200);assert.equal(first.limit,200);assert.deepEqual(first.messages.map((m:any)=>m.id),expected.slice(-200));assert.ok(first.olderCursor);
+  // New incoming messages cannot shift or duplicate the older page.
+  const latest=randomUUID();await pool.query("INSERT INTO messages(id,conversation_id,direction,text,status) VALUES($1,$2,'inbound','New incoming message','processed')",[latest,conversation]);
+  const second=(await read(conversation,first.olderCursor)).json(),third=(await read(conversation,second.olderCursor)).json();
+  assert.equal(second.messages.length,200);assert.equal(third.messages.length,5);assert.equal(third.olderCursor,null);
+  const all=[...third.messages,...second.messages,...first.messages];assert.deepEqual(all.map((m:any)=>m.id),expected);assert.equal(new Set(all.map((m:any)=>m.id)).size,405);assert.ok(all.every((m:any)=>m.text.startsWith('தமிழ் பொருள் விவரம்')));
+  assert.equal((await read()).json().messages.at(-1).id,latest);
+  assert.equal((await read(foreign,first.olderCursor)).statusCode,404);
+  for(const cursor of ['-1','0','1.1','1 OR 1=1','9223372036854775808'])assert.equal((await read(conversation,cursor)).statusCode,400);
   assert.equal((await pool.query('SELECT count(*)::int AS n FROM owner_audit')).rows[0].n,0);
  }finally{await app?.close();await pool.end();await admin.query(`DROP SCHEMA ${schema} CASCADE`);await admin.end();}
 });

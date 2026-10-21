@@ -1,5 +1,7 @@
 # Function-by-function verification
 
+Follow-up: [page completeness review](../page-completeness-20261021/README.md) records the current **843/843** result, additional context/recovery fixes and a bounded Earlier messages control. The transcript window described below was the earlier baseline.
+
 21 October 2026. “Pass” here means the named automated check passed in an isolated store with mocked external services or a synthetic local owner API. It does not mean a real customer, bank, phone or novice staff member has verified that function.
 
 The complete UTF-8 PostgreSQL suite passes **842/842, with zero skipped tests**. Browser evidence and the actual local API result are recorded separately in `VERIFICATION.json`. Files below are under `02-Build/shopbot-ai/`.
@@ -31,7 +33,7 @@ The complete UTF-8 PostgreSQL suite passes **842/842, with zero skipped tests**.
 | Clone draft, confirm five merchant facts, publish/hide/reject | Catalog/editor suites and expanded dashboard browser | Pass; clone identity is separate; publication/hiding/rejection remain deliberate. |
 | Import progress, exceptions and staged source ownership | `owner-catalog-pages`, `catalog-bulk`, `catalog-reference-photos` | Pass for scoped, bounded reads and preserved provenance. |
 | Agent search diagnostic after catalog changes | `owner-catalog`, dashboard browser | Pass; only published approved facts reach customer search. |
-| Transcript, voice/photo, visual cards and delivery state | Owner/catalog/media/channel regression suites, message browser | Pass with fixtures; no new real recording or handset playback tested. Transcript remains the existing last-100-message window. |
+| Transcript, voice/photo, visual cards and delivery state | Owner/catalog/media/channel regression suites, message browser | Pass with fixtures; no new real recording or handset playback tested. The baseline transcript returned the latest 200 messages. The follow-up now provides bounded earlier/newer pages. |
 | Manual takeover, acknowledgement and return | `owner-fulfillment`, `owner`, dashboard browser, local API | Pass; composer eligibility follows server-confirmed control. |
 | Unsent manual reply, lost acknowledgement, expired window | Owner/channel regressions, expanded message browser | Pass; draft remains; retry retains the same operation ID. |
 | Global assistant pause versus one-chat return | Owner/channel regressions, dashboard browser, local API | Pass; returning one chat does not lift shop-wide pause. |

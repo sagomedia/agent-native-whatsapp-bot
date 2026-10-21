@@ -1,5 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {useOwnerLocale} from './owner-locale.js';
+import {catalogTaskRoute,orderTaskRoute,inboxTaskRoute} from './owner-task-routes.js';
 import {OwnerLink,navigateOwner} from './owner-ui.js';
 const copy={
  en:{title:'Learn the daily jobs',intro:'Start on Today. Open the job you need and follow its main action. You can reopen this help at any time.',close:'Close help',open:'Open this task',remember:'Remember',rules:['Orange prices are suggestions. Check the item, unit and price in your shop.','Send quote for approval asks the customer to confirm. Save draft keeps your work without sending. Accepting holds stock; collection deducts it.','Unknown stock is not zero. A physical count includes items held for orders.','Record a payment or refund only after checking your bank/UPI app.'],jobs:[
@@ -15,7 +16,7 @@ const copy={
  {title:'வாடிக்கையாளருக்குப் பதில் அளி',steps:['செய்திகள் → சரியான வாடிக்கையாளர் → நான் பதில் அளிக்கிறேன்.','பதிலை எழுதி அனுப்புங்கள். சேமித்த / அனுப்பக் காத்திருக்கும் நிலையைப் பாருங்கள். சென்றடைந்த நிலை உரையாடலில் காட்டப்படும்.','முடிந்ததும் உதவியாளரிடம் ஒப்படையுங்கள். கடை முழுவதற்கும் நிறுத்தியிருந்தால் அமைப்புகளில் மீண்டும் தொடங்க வேண்டும்.']}
  ]}
 };
-const routes:Record<string,string|null>[]=[{view:'requests',requests:'review',order:null,orderSearch:null,orderPage:null},{view:'requests',requests:'review',order:null,orderSearch:null,orderPage:null},{view:'catalog',inventory:'1',bulk:null,quick:null,product:null,q:null,cursor:null,page:null},{view:'conversations',conversation:null,inboxHelp:null,inboxSearch:null,inboxPage:null}];
+const routes:Record<string,string|null>[]=[orderTaskRoute,orderTaskRoute,catalogTaskRoute,inboxTaskRoute];
 export function OwnerQuickHelp({onClose}:{onClose:()=>void}){
  const {locale}=useOwnerLocale(),text=copy[locale],[task,setTask]=useState(0),dialog=useRef<HTMLDialogElement>(null),opener=useRef(document.activeElement as HTMLElement|null);
  useEffect(()=>{const element=dialog.current;element?.showModal();return()=>{element?.close();opener.current?.focus();};},[]);

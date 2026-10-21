@@ -46,3 +46,12 @@ Record completion, wrong turns, help requested, accidental changes and the train
 ஆரஞ்சு விலை ஒரு பரிந்துரை மட்டுமே. வங்கியில் பணம் வந்ததையோ திருப்பி அனுப்பியதையோ சரிபார்த்த பிறகே பதிவு செய்யுங்கள். அனுப்பக் காத்திருப்பது சென்றடைந்ததற்கான உறுதி அல்ல. பதிவு செய்தல் பணத்தை அனுப்பாது.
 
 தமிழ் சொற்களை உண்மையான கடைப் பணியாளர்கள் சரிபார்த்து ஏற்க வேண்டும்; இந்தக் குறிப்பு அவர்களின் நடைமுறைப் பயிற்சிக்குப் பதிலாகாது.
+
+## When a record or action seems missing
+
+The [page completeness follow-up](../page-completeness-20261021/README.md) adds these recovery paths:
+
+- Products shows all applied filters even when the filter controls are closed. Use Clear filters to return to the full catalog; your pending inline edits remain visible separately.
+- In a conversation, Review this customer's orders opens all order stages for that customer. Earlier messages reaches retained history; return to Latest messages before replying.
+- A saved quote's WhatsApp notification choice stays below its action. If notifications are off, turn them on before using Send saved quote on WhatsApp. This uses the existing quote.
+- An unavailable record or history shows a retry. It does not mean the product, conversation or stock movements do not exist.

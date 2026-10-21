@@ -8,11 +8,14 @@ type Movement={id:string;kind:string;on_hand_before:string|null;on_hand_after:st
 export function OwnerStock({product,disabled,onSaved,onBusyChange}:{product:Product;disabled:boolean;onSaved:()=>Promise<void>;onBusyChange?:(busy:boolean)=>void}){
  const {t}=useOwnerLocale();
  const [kind,setKind]=useState<StockTask|null>(()=>product.stockOnHand==null?'count':null),[quantity,setQuantity]=useState(''),[reason,setReason]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[success,setSuccess]=useState(''),[history,setHistory]=useState<Movement[]>([]);
+ const [historyLoading,setHistoryLoading]=useState(false),[historyError,setHistoryError]=useState('');
+ const historySequence=useRef(0);
  const resultId=useId();
  const attempt=useRef<{fingerprint:string;id:string;body:StockWrite}|null>(null),running=useRef(false),[uncertain,setUncertain]=useState(false);
- async function load(signal?:AbortSignal){try{const response=await fetch('/api/owner/catalog/products/'+encodeURIComponent(product.sku)+'/stock',{cache:'no-store',signal});if(response.ok&&!signal?.aborted)setHistory((await response.json()).movements);}catch{/* History can be retried independently of stock facts. */}}
+ async function load(signal?:AbortSignal){const sequence=++historySequence.current;setHistoryLoading(true);try{const response=await fetch('/api/owner/catalog/products/'+encodeURIComponent(product.sku)+'/stock',{cache:'no-store',signal}),data=await response.json();if(!response.ok||!Array.isArray(data.movements))throw new Error(data.error??'Could not load stock history.');if(!signal?.aborted&&sequence===historySequence.current){setHistory(data.movements);setHistoryError('');}}catch(e){if(!signal?.aborted&&sequence===historySequence.current)setHistoryError((e as Error).message);}finally{if(!signal?.aborted&&sequence===historySequence.current)setHistoryLoading(false);}}
+
  useEffect(()=>{setKind(product.stockOnHand==null?'count':null);setQuantity('');setReason('');setError('');setSuccess('');setUncertain(false);attempt.current=null;},[product.sku]);
- useEffect(()=>{const controller=new AbortController();void load(controller.signal);return()=>controller.abort();},[product.sku,product.inventoryVersion]);
+ useEffect(()=>{const controller=new AbortController();void load(controller.signal);return()=>{historySequence.current++;controller.abort();};},[product.sku,product.inventoryVersion]);
  useEffect(()=>{onBusyChange?.(busy||uncertain);},[busy,uncertain,onBusyChange]);
  const preview=kind?stockChangePreview(product,kind,quantity):null;
  async function save(){
@@ -41,6 +44,6 @@ export function OwnerStock({product,disabled,onSaved,onBusyChange}:{product:Prod
    {uncertain?<p>The last save has an uncertain result. Retry this same change before starting another.</p>:null}
   </fieldset>:null}
   {disabled?<p>Save or discard product edits before recording stock.</p>:null}
-  <details><summary>{t('Recent stock history')}</summary>{history.length?<ul>{history.map(m=><li key={m.id}>{m.kind} · {m.on_hand_before??t('Unknown')} → {m.on_hand_after??t('Unknown')} · {t('Held for orders')} {Number(m.reserved_after)}<br/><small>{m.reason} · {new Date(m.created_at).toLocaleString('en-IN')}</small></li>)}</ul>:<p>No movements recorded yet. Existing catalog counts have not been physically rechecked.</p>}</details>
+  <details><summary>{t('Recent stock history')}{historyError?' · '+t('Unavailable'):''}</summary>{historyLoading?<p role="status">{t('Loading stock history…')}</p>:null}{historyError?<Notice error>{historyError} <button type="button" disabled={historyLoading} onClick={()=>void load()}>{t('Retry stock history')}</button></Notice>:null}{history.length?<ul>{history.map(m=><li key={m.id}>{m.kind} · {m.on_hand_before??t('Unknown')} → {m.on_hand_after??t('Unknown')} · {t('Held for orders')} {Number(m.reserved_after)}<br/><small>{m.reason} · {new Date(m.created_at).toLocaleString('en-IN')}</small></li>)}</ul>:!historyLoading&&!historyError?<p>No movements recorded yet. Existing catalog counts have not been physically rechecked.</p>:null}</details>
  </section>;
 }

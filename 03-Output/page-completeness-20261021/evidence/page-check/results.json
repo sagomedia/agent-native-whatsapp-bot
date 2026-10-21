@@ -1,0 +1,21 @@
+{
+  "synthetic": true,
+  "writes": [],
+  "passed": [
+    "Today exposes send failures and disabled channel truth; task shortcuts clear unrelated filters and selections",
+    "Failed shop checks have a visible retry outside the closed diagnostics section",
+    "All applied product filters remain visible when controls are closed; clear and draft retry recover in place",
+    "Failed product reads never leave the previous product editable; stock history errors never masquerade as no movements; both retry in place",
+    "Order acceptance, pickup, payment and stock are visible; stock repair opens the actual product even after a CSV task",
+    "Message filters have truthful empty states; read failures retry; all 405 retained messages are reachable in bounded pages with a direct order link",
+    "Evidence and preview errors offer retry; empty preview filters can reset; conflicting-only charges retain the incomplete-total warning",
+    "Six pages fit desktop, tablet and 320/390-pixel phones; every seeded order state retains usable content and actions in English and Tamil"
+  ],
+  "viewports": [
+    1440,
+    768,
+    390,
+    320
+  ],
+  "pageErrors": []
+}
