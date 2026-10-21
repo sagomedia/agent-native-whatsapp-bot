@@ -1,0 +1,1 @@
+Owner UX acceptance passed: suggested prices, large/enlarged photos, direct manual store quotes, no review checkboxes, optional matching, save/conflict recovery, one-action send, customer approval, automatic refresh, offline recovery, approval-to-acceptance-to-ready-to-collection, fixed viewport and independently scrolling items.

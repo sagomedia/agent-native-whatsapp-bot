@@ -1,0 +1,2 @@
+shopbot_test|SQL_ASCII
+shopbot_workflow_utf8|UTF8

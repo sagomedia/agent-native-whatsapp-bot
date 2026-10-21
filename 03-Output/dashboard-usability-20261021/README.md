@@ -1,5 +1,7 @@
 # ShopBot dashboard usability candidate
 
+**Follow-up correction:** the earlier two local conversation failures came from the test database's SQL_ASCII encoding. The UTF-8 rerun passes 842/842; see [complete workflow check](../workflow-check-20261021/README.md) for current fixes, evidence and the operator teaching guide. Earlier results below are retained as historical evidence.
+
 Implemented locally on 21 October 2026. [Scope and baseline](SCOPE.md) · [Implementation and remaining acceptance](IMPLEMENTATION.md) · [Verification record](VERIFICATION.json).
 
 The dashboard keeps the existing commerce workflow and brings everyday tasks closer: Today, Orders, Messages and Products, with Settings and message examples still available. A measured routine price change takes **2 clicks instead of 4**, excluding typing, from an already visible inventory row. This is one measured task, not a claim that every workflow is twice as fast.

@@ -29,3 +29,18 @@ test('the simplified review still identifies missing facts and requires explicit
  assert.equal(quoteLineIssues({...line!,price:'0',free:false},original,[original]).length,1);
  assert.deepEqual(quoteLineIssues({...line!,price:'0',free:true},original,[original]),[]);
 });
+
+import {quoteGuidance} from '../apps/dashboard/src/owner-quote-guidance.js';
+test('quote guidance focuses invalid nonzero quantities and explicit free confirmation, not an unrelated price',()=>{
+ const original=item({pricePaise:2500}),line=initialQuoteLines([original])[0]!;
+ for(const quantity of ['101','-2','0.0001'])assert.equal(quoteGuidance({...line,quantity},original,[original])[0]!.field,'quantity');
+ assert.equal(quoteGuidance({...line,price:'0',free:false},original,[original])[0]!.field,'free');
+ assert.deepEqual(quoteGuidance({...line,price:'0',free:true},original,[original]),[]);
+});
+test('quote guidance asks pack or measured basis before send and identifies incompatible selling units',()=>{
+ const original=item({name:'Paint 10 litre can',unit:'litre',pricePaise:2500}),line=initialQuoteLines([original])[0]!;
+ assert.equal(quoteGuidance(line,original,[original])[0]!.field,'saleMode');
+ assert.deepEqual(quoteGuidance({...line,saleMode:'measured'},original,[original]),[]);
+ assert.equal(quoteGuidance({...line,saleMode:'measured',unit:'can'},original,[original])[0]!.field,'unit');
+ assert.deepEqual(quoteGuidance({...line,saleMode:'pack',unit:'can'},original,[original]),[]);
+});

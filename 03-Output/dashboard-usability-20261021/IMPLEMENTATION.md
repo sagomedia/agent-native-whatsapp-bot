@@ -1,5 +1,7 @@
 # Implementation and verification
 
+**Follow-up correction:** the earlier two local conversation failures came from the test database's SQL_ASCII encoding. The UTF-8 rerun passes 842/842; see [complete workflow check](../workflow-check-20261021/README.md) for current fixes, evidence and the operator teaching guide. Earlier results below are retained as historical evidence.
+
 ## Outcome
 
 The React owner dashboard now has four familiar daily destinations, direct Today shortcuts, one responsive order sheet and simpler price/stock actions. Existing mutation services remain responsible for price, stock, reservations, customer consent, payments and fulfillment. No schema migration is needed.
