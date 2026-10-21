@@ -1,6 +1,6 @@
 # Inventory workspace: more facts, fewer acknowledgments
 
-The new owner inventory screen uses a dense product table and a compact record with grouped fields and sections. It replaces five publication checkboxes with one review of actual values and **Confirm & publish**. The accepted baseline is `9b7bafe`; scope and reference-led design were committed as `8eee919`. This continues draft PR #54 and acceptance issue #52.
+The new owner inventory screen uses a dense product table and a compact record with grouped fields and sections. It replaces five publication checkboxes with one review of actual values and **Confirm & publish**. The accepted baseline is `9b7bafe`; scope and reference-led design were first committed as `8eee919`. PR #54 merged that earlier dashboard baseline during this pass. The inventory revision now follows current `main` on `codex/inventory-workspace-20261021`; [acceptance issue #52](https://github.com/sagomedia/agent-native-whatsapp-bot/issues/52) links its separate draft PR and current hosted checks.
 
 ## What the references changed
 
