@@ -7,6 +7,6 @@ export function visiblePoll(load:(signal:AbortSignal)=>Promise<void>,options:{in
  }
  function changed(){clear();if(doc.hidden){wake=false;controller?.abort();}else void run();}
  function focus(){if(!doc.hidden)void run();}
- doc.addEventListener('visibilitychange',changed);win.addEventListener('focus',focus);void run();
- return ()=>{stopped=true;clear();controller?.abort();doc.removeEventListener('visibilitychange',changed);win.removeEventListener('focus',focus);};
+ doc.addEventListener('visibilitychange',changed);win.addEventListener('focus',focus);win.addEventListener('online',focus);void run();
+ return ()=>{stopped=true;clear();controller?.abort();doc.removeEventListener('visibilitychange',changed);win.removeEventListener('focus',focus);win.removeEventListener('online',focus);};
 }

@@ -1,0 +1,55 @@
+{
+  "integration": {
+    "passed": 837,
+    "failed": 0,
+    "skipped": 0
+  },
+  "targeted": {
+    "passed": 27,
+    "failed": 0
+  },
+  "browser": {
+    "development": "passed",
+    "viewports": [
+      [
+        1586,
+        1100
+      ],
+      [
+        1536,
+        1024
+      ],
+      [
+        1366,
+        768
+      ],
+      [
+        1024,
+        600
+      ],
+      [
+        390,
+        844
+      ],
+      [
+        360,
+        740
+      ]
+    ],
+    "suggestedPrices": "passed",
+    "photoEnlargement": "passed",
+    "manualStoreItems": "passed",
+    "optionalCatalogMatching": "passed",
+    "noPerItemReviewCheckboxes": "passed",
+    "draftConflictRecovery": "passed",
+    "customerApproval": "passed",
+    "automaticRefresh": "passed",
+    "offlineRecovery": "passed",
+    "outerPageScrolling": "none",
+    "itemPanelScrolling": "passed",
+    "productionBundle": "passed"
+  },
+  "productionBuild": "passed",
+  "testCustomerMessagesSent": 0,
+  "liveShopFactsAppliedByTests": 0
+}

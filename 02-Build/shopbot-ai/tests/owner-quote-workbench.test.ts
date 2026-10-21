@@ -81,6 +81,16 @@ test('catalog matches reject stale/foreign SKUs, wrong units and invalid increme
  assert.equal((await attempt({})).statusCode,409,'Stale browser send cannot bypass a newer saved draft');
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM order_quotes')).rows[0].n,0);
 }));
+test('sending a complete store-item quote confirms its details without a catalog match or separate review checkbox',()=>fixture(async({pool,post,request}:any)=>{
+ const path='requests/'+request.id,saved=(await post(path+'/quote-draft',draft(request))).json().draft;
+ const response=await post(path+'/quote',quote(request,saved,{manualConfirmed:true,reviewed:false}));
+ assert.equal(response.statusCode,200,response.body);
+ const row=(await pool.query('SELECT * FROM order_quotes')).rows[0];
+ assert.equal(row.lines[0].sku,undefined);assert.equal(row.lines[0].merchantConfirmed.actor,owner.email);
+ assert.equal((await pool.query('SELECT count(*)::int AS n FROM inventory_reservations')).rows[0].n,0);
+ const order=(await pool.query('SELECT * FROM order_requests')).rows[0];
+ assert.equal(order.effective_lines,null);assert.equal(order.acceptance,'awaiting_approval');
+}));
 test('current offered quotes protect drafts; expired quotes can be reviewed and replaced',()=>fixture(async({pool,post,request}:any)=>{
  const path='requests/'+request.id,saved=(await post(path+'/quote-draft',draft(request))).json().draft;
  const first=await post(path+'/quote',quote(request,saved));assert.equal(first.statusCode,200,first.body);

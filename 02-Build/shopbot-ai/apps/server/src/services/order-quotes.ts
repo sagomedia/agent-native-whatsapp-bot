@@ -34,7 +34,10 @@ export async function offerOrderQuote(client:PoolClient,storeId:string,requestId
  const lines:DraftLine[]=p.lines.map(line=>{
   if(!line.pricePaise&&!line.free)throw new ToolError('An unknown price cannot be zero. Explicitly mark a free item.');
   const original=old.find(o=>o.id===line.id)!;
-  if(p.draftVersion){const problems=quoteLineIssues({...line,quantity:String(line.quantity),price:(line.pricePaise/100).toFixed(2),free:!!line.free,saleMode:line.saleMode??''},original,old);if(problems.length)throw new ToolError(`${line.name}: ${problems.join('. ')}`);}
+  if(p.draftVersion){
+   if(!line.sku&&!line.manualConfirmed)throw new ToolError(`${line.name}: confirm the store item's details when sending the quote.`);
+   const problems=quoteLineIssues({...line,quantity:String(line.quantity),price:(line.pricePaise/100).toFixed(2),free:!!line.free,saleMode:line.saleMode??''},original,old);if(problems.length)throw new ToolError(`${line.name}: ${problems.join('. ')}`);
+  }
   const unchanged=line.name===original.name&&line.unit===original.unit&&!line.manualConfirmed;
   let product:Product|undefined=unchanged?original.candidates?.find(p=>p.sku===original.sku):undefined;
   if(line.sku){

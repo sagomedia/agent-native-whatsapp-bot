@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ShopBot · Orders and stock design review</title>
+  <style>
+    :root{font-family:Arial,sans-serif;color:#20252b;background:#f4f6f8;line-height:1.6}*{box-sizing:border-box}body{margin:0}header,main{max-width:1300px;margin:auto;padding:28px}header{padding-top:44px;padding-bottom:8px}h1{font-size:clamp(28px,4vw,44px);line-height:1.15;letter-spacing:-1px;margin:12px 0 20px}h2{font-size:23px;line-height:1.35;margin:10px 0}p{max-width:850px;margin:12px 0;color:#4b596e}a{color:#1d4ed8;text-underline-offset:4px}a:focus-visible{outline:3px solid #2563eb;outline-offset:5px}.eyebrow{font-size:13px;font-weight:600;color:#1d4ed8}.actions{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin:24px 0}.primary{display:inline-block;background:#2563eb;color:white;padding:11px 18px;border-radius:5px;text-decoration:none;font-weight:600}.contents{display:flex;gap:25px;flex-wrap:wrap;padding:18px 0;border-top:1px solid #d9e0e8;border-bottom:1px solid #d9e0e8}section{padding-top:28px;margin-bottom:42px;scroll-margin-top:20px}figure{margin:20px 0}figure a{display:block}figure img{display:block;max-width:100%;height:auto;background:white;border:1px solid #d9e0e8;border-radius:5px}figcaption{font-size:12px;color:#59667b;margin-top:8px}ol{padding-left:24px;max-width:850px}li{padding:5px 0}.note{font-size:13px}footer{padding:22px 0;border-top:1px solid #d9e0e8;font-size:13px;color:#59667b}@media(max-width:600px){header,main{padding:20px}header{padding-top:28px}.contents{gap:12px 20px}.actions{gap:15px}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">ShopBot · Design review · 20 October 2026</div>
+    <h1>Make the next action obvious.</h1>
+    <p>The last redesign exposed too many internal checks. These concepts organize the page around the work: finish a quote, prepare an approved order, or record stock.</p>
+    <p><strong>Selected direction: A, the order sheet.</strong> The app fits the browser window. The order header, total and main action stay in place; long order and item lists scroll inside their own panels. B is retained as an alternative concept. Both share the same Stock page.</p>
+    <div class="actions"><a class="primary" href="prototype.html">Try the clickable prototype</a><a href="RESEARCH-AND-DESIGN-BRIEF.md">Read the research and proposed rules</a></div>
+    <p class="note">Sample data only. The prototype does not connect to the shop, send WhatsApp messages, or save real orders or stock.</p>
+    <nav class="contents" aria-label="Design concepts"><a href="#sheet">A · Order sheet</a><a href="#guided">B · Guided review</a><a href="#stock">Stock tasks</a><a href="#try">Tasks to try</a></nav>
+  </header>
+  <main>
+    <section id="sheet">
+      <div class="eyebrow">A · Selected direction</div>
+      <h2>See the order. Fix the two missing decisions. Send the quote.</h2>
+      <p>Keep known facts readable, put the required correction directly beside its item, and keep the main action visible at the bottom. Long items and order lists scroll independently while the application stays within the window. Once the customer approves, the page becomes a packing list.</p>
+      <figure><a href="images/A-order-sheet.png" aria-label="Open full-size order-sheet concept"><img src="images/A-order-sheet.png" alt="Generated ShopBot order-sheet concept with eight visible items, two highlighted corrections and one bottom action"></a><figcaption>ImageGen concept. The clickable prototype develops this layout with real demo product photos and editable sample values.</figcaption></figure>
+      <a href="prototype.html">Try A and B in the prototype →</a>
+    </section>
+    <section id="guided">
+      <div class="eyebrow">B · Alternative for occasional staff</div>
+      <h2>One unresolved item at a time.</h2>
+      <p>Start with the ambiguous switch, then ask for the missing cutter price. Completed items remain visible. This reduces scanning, but adds navigation when an experienced owner wants to price many items.</p>
+      <figure><a href="images/B-guided-review.png" aria-label="Open full-size guided-review concept"><img src="images/B-guided-review.png" loading="lazy" alt="Generated ShopBot guided-review concept showing a switch choice with the rest of the order alongside"></a><figcaption>ImageGen concept. Use “B · Guided” in the prototype to try the same sample order.</figcaption></figure>
+    </section>
+    <section id="stock">
+      <div class="eyebrow">Shared stock workflow</div>
+      <h2>Record what changed without editing the product.</h2>
+      <p>Choose Receive stock, Walk-in sale or Correct count. See the result before saving. On shelf includes items held for orders; held quantities are calculated from those orders.</p>
+      <figure><a href="images/stock-tasks.png" aria-label="Open full-size stock concept"><img src="images/stock-tasks.png" loading="lazy" alt="Generated ShopBot stock page with a product list, three direct stock actions and a before-and-after preview"></a><figcaption>Receiving 6 changes 12 on shelf to 18. The 3 held for orders stay held, leaving 15 available.</figcaption></figure>
+    </section>
+    <section id="try">
+      <h2>Judge the effort of finishing a task.</h2>
+      <p>The prototype has passed interaction and arithmetic checks. That does not establish that it is easy to use. Try these without reading instructions inside the app:</p>
+      <ol>
+        <li>Finish the eight-item quote: choose the ₹35 switch and enter ₹180 for the cutter. The complete total should be ₹1,058.</li>
+        <li>Send the demo quote, then use the separate “Customer approves (demo)” control. Accept the order, prepare it and record collection.</li>
+        <li>Reset the demo, open Stock and receive 6 PVC pipes. Check that the preview is 18 on shelf, 3 held and 15 available.</li>
+        <li>Use Correct count to record 14 on shelf. Check that held stock stays 3 and available stock becomes 11.</li>
+      </ol>
+      <p>The useful feedback is where you hesitate, cannot find the next action, or need a step that is missing.</p>
+      <div class="actions"><a class="primary" href="prototype.html">Open the prototype</a></div>
+    </section>
+    <footer>Design concepts only. Generated imagery is for this review and is not merchant catalog imagery. No production application or shop data was changed.</footer>
+  </main>
+</body>
+</html>
