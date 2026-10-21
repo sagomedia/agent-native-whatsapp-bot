@@ -35,7 +35,9 @@ Open http://localhost:3017. The optional AI test page is at http://localhost:301
 
 ## Development and verification
 
-`main` is the current application baseline. Create a `codex/<change>` or `feature/<change>` branch for further work and open a pull request. Historical rollback points are retained as `checkpoint/*` tags. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and [GIT-WORKFLOW.md](GIT-WORKFLOW.md) for recovery.
+`main` is the current published application baseline, including the consolidated ordering, catalog, WhatsApp recovery and owner-dashboard work. The [21 October branch cleanup](03-Output/branch-cleanup-20261021/README.md) records the retired branches and their preserved commits. One active dashboard branch remains for unfinished inventory work.
+
+Create a `codex/<change>` or `feature/<change>` branch from an up-to-date `main`, open a pull request, and retire the branch after its work is merged. Historical rollback points are retained as `checkpoint/*` tags. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and [GIT-WORKFLOW.md](GIT-WORKFLOW.md) for recovery. Merging source does not deploy it or complete owner/device acceptance.
 
 The [GitHub Actions workflow](.github/workflows/project-checks.yml) runs the build, PostgreSQL integration tests and catalog checks on pushes and pull requests, with a disposable database and mocked AI providers. Check the current commit's [Actions result](https://github.com/sagomedia/agent-native-whatsapp-bot/actions) before merging. Earlier reports and the saved CI proposal describe historical permission restrictions; workflow publishing was authorized on 15 October 2026.
 
