@@ -2,7 +2,7 @@
 
 21 October 2026. Follow-up to the dashboard usability candidate. [Function-by-function matrix](FUNCTION-MATRIX.md) · [Short operator teaching guide](OPERATOR-GUIDE.md) · [Verification record](VERIFICATION.json).
 
-The complete automated suite passes **842/842, zero skipped** on UTF-8 PostgreSQL. Build/typecheck, four Python catalog checks and expanded browser workflows pass. A separate real local API run verifies the built application against an isolated synthetic database. No live customer messages, AI calls or money transfers were made.
+The complete automated suite passes **842/842, zero skipped** on UTF-8 PostgreSQL. Build/typecheck, four Python catalog checks and expanded browser workflows pass. A separate real local API run verifies the built application against an isolated synthetic database, including acceptance, readiness, collection and real stock holds. No live customer messages, AI calls or money transfers were made.
 
 ## Workflow problems fixed
 
@@ -15,6 +15,8 @@ The complete automated suite passes **842/842, zero skipped** on UTF-8 PostgreSQ
 7. Receipt and refund could share one input value. They now have separate fields; recording a refund requires its actual reference and explains that it does not send money.
 8. Offered quotes could say sent even when WhatsApp was unavailable. The banner now says saved/awaiting approval, and a lost send response can recover the recorded quote without claiming delivery.
 9. An unconnected chat could foreground a closed reply window instead of the disabled channel. The blocked composer now names disabled sending first.
+
+The practice data now uses actual demo-catalog prices/totals and the real inventory services to create accepted/collected examples. This avoids teaching with status labels that have no matching stock holds. The preview refuses a SQL_ASCII database before creating its schema.
 
 The **? Quick help** button adds optional English/Tamil instructions for quoting, pickup, price/stock and customer replies. Each guide can open the correct task. It does not add a mandatory tour or extra daily-work step. [Phone help screenshot](evidence/tasks/quick-help-phone.png).
 

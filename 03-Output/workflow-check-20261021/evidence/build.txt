@@ -21,4 +21,4 @@ dist/dashboard/assets/OwnerCatalog-CUinXVAK.js             83.39 kB │ gzip:  2
 dist/dashboard/assets/language-CiP3My05.js                 97.66 kB │ gzip:  28.36 kB
 dist/dashboard/assets/index-B1IZT-6J.js                   351.10 kB │ gzip: 105.13 kB
 
-✓ built in 307ms
+✓ built in 279ms

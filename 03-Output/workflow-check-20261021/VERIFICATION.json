@@ -114,6 +114,9 @@
     "missingChannelNotClaimedSent": true,
     "priceSavedPaise": 3150,
     "physicalCountSaved": 18,
+    "approvalToCollection": true,
+    "readyOrderCollection": true,
+    "reservationsViaRealServices": true,
     "pauseResume": true,
     "takeoverWithSendingDisabled": true,
     "quickHelp": true,
@@ -129,5 +132,7 @@
     "Old-device and weak-network timing",
     "Fresh real channel and bank/provider acceptance",
     "Controlled release authorization"
-  ]
+  ],
+  "previewFixtures": "Catalog-derived prices and totals; accepted/collected examples use real reservation/collection services.",
+  "previewEncodingGuard": "SQL_ASCII rejected before schema creation; UTF8 startup passed"
 }
