@@ -47,7 +47,8 @@
     "offlineRecovery": "passed",
     "outerPageScrolling": "none",
     "itemPanelScrolling": "passed",
-    "productionBundle": "passed"
+    "productionBundle": "passed",
+    "approvalThroughCollection": "passed"
   },
   "productionBuild": "passed",
   "testCustomerMessagesSent": 0,

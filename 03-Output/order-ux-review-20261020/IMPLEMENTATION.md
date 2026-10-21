@@ -12,7 +12,7 @@ Catalog search remains optional. **Use store item instead** detaches a catalog s
 
 The order queue and item region scroll independently. The document stays within the viewport, with the order heading and quote actions visible. Mobile navigation scrolls within its own row rather than breaking labels across lines. Long product names wrap in their editable field.
 
-Payment, amendments and pickup remain available in contextual order details. A customer change that blocks quoting exposes its workflow. Mark ready explicitly confirms the physical packing check instead of requiring a separate packing checkbox. Customer approval, payment receipt, reservation and collection remain distinct recorded actions.
+After customer approval, the main action becomes **Accept order**, then **Mark ready for pickup**, then **Mark collected**. Approved item details are read-only; **Change quote** opens a deliberate revision that still needs customer approval. Payment, amendments and pickup remain available in contextual order details. A customer change that blocks quoting exposes its workflow. Mark ready explicitly confirms the physical packing check instead of requiring a separate packing checkbox. Customer approval, payment receipt, reservation and collection remain distinct recorded actions.
 
 ## Automatic updates
 
@@ -22,6 +22,6 @@ Normal owner pages no longer expose Refresh or Test connection controls. Existin
 
 Changes are in the actual React dashboard, shared quote-draft validation and owner quote service. No migration or catalog/product-fact edit is required. New optional draft metadata records whether a price is suggested and which catalog photo is retained as a reference.
 
-The synthetic browser acceptance script checks price suggestions, photo enlargement, manual store items, optional catalog selection, direct Send, saved-draft persistence, conflict recovery, customer-approval state, automatic refresh, offline recovery, and independently scrolling items with stationary order controls at five screen sizes. It intercepts all API calls and sends no customer messages. Screenshots are actual browser renders with synthetic orders and existing demo product images.
+The synthetic browser acceptance script checks price suggestions, photo enlargement, manual store items, optional catalog selection, direct Send, saved-draft persistence, conflict recovery, customer-approval state, automatic refresh, offline recovery, the approval-to-collection handoff, and independently scrolling items with stationary order controls at five screen sizes. It intercepts all API calls and sends no customer messages. Screenshots are actual browser renders with synthetic orders and existing demo product images.
 
 Focused backend tests cover the manual-item send path, missing facts, unknown prices, explicit free prices, draft concurrency, catalog guards, inventory and reconnection polling. Final regression, release and deployment results are recorded in `VERIFICATION.json` after those checks finish. The owner's walkthrough remains the usability acceptance step; automated checks do not prove the workflow is easy for a new operator.
