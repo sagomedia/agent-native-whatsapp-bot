@@ -20,6 +20,10 @@ parser.add_argument('--output-dir', type=Path, required=True)
 args = parser.parse_args()
 app = Path(__file__).resolve().parents[2]
 assert (app / 'dist/apps/server/src/index.js').is_file(), 'Run npm run build first'
+for required_cli in ['dist/scripts/import-bulk-catalog.js', 'dist/scripts/catalog-capacity.js', 'dist/scripts/promote-catalog-review-later.js', 'dist/scripts/publish-catalog-reference-photos.js', 'dist/scripts/import-indicative-prices.js', 'dist/scripts/import-shop-facts.js', 'dist/scripts/demo-evidence.js', 'dist/scripts/backfill-catalog-image-variants.js']:
+    assert (app / required_cli).is_file(), f'Required compiled catalog CLI is missing: {required_cli}; run npm run build'
+proof=json.loads((app/'dist/release-manifest.json').read_text())
+subprocess.run(['node','--input-type=module','-e',"import {verifyRelease} from './dist/apps/server/src/services/release-manifest.js'; await verifyRelease(process.cwd(),true);"],cwd=app,check=True)
 node_name = 'node-v22.22.1-linux-x64.tar.xz'
 expected = None
 if args.node_archive:
@@ -59,6 +63,8 @@ for name in ['catalog.json', 'catalog-map.json']:
     shutil.copy2(app / 'resources/catalog/ksmc-demo' / name, catalog / name)
 shutil.copytree(app / 'resources/catalog/ksmc-demo/images', catalog / 'images')
 shutil.copytree(app / 'resources/fonts',stage / 'app/resources/fonts')
+if (app/'resources/welcome').exists():
+    shutil.copytree(app/'resources/welcome',stage/'app/resources/welcome')
 dependency_additions=[]
 base_lock_sha256=None
 if args.dependency_additions_from:
@@ -87,6 +93,19 @@ if args.node_archive:
             destination.write_bytes(source.read())
     (stage / 'node/bin/node').chmod(0o755)
 shutil.copytree(app / 'deploy/native', stage / 'deploy', ignore=shutil.ignore_patterns('__pycache__'))
+# A slim stage intentionally lacks the reused dependency tree until staging on
+# the VPS. Verify its exact artifact set without importing Node dependencies.
+assert json.loads((stage/'app/dist/release-manifest.json').read_text())==proof
+packaged_files=[]
+for root in ['dist','resources','package.json','package-lock.json']:
+    target=stage/'app'/root
+    for path in sorted(target.rglob('*')) if target.is_dir() else [target]:
+        if path.is_file():
+            relative=path.relative_to(stage/'app').as_posix()
+            if relative!='dist/release-manifest.json':
+                assert not path.is_symlink(), 'Artifact symlinks are forbidden'
+                packaged_files.append({'path':relative,'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
+assert sorted(packaged_files,key=lambda item:item['path'])==proof['files'], 'Packaged artifacts differ from the verified source build'
 for name in ['install.sh', 'rollback.sh', 'upgrade.sh']:
     (stage / 'deploy' / name).chmod(0o755)
 
@@ -99,10 +118,20 @@ if args.source_base_commit:
     assert re.fullmatch('[a-f0-9]{40}',args.source_base_commit), 'Invalid source base commit'
     base_commit=args.source_base_commit
 else:
-    base_commit=subprocess.check_output(['git','-c','core.worktree='+str(repository),'--work-tree='+str(repository),'rev-parse','HEAD'],cwd=app,text=True).strip()
+    git_dir=repository/'.git'
+    if git_dir.is_file():
+        pointer=git_dir.read_text().strip()
+        assert pointer.startswith('gitdir: '), 'Invalid managed worktree metadata'
+        git_dir=(repository/pointer.removeprefix('gitdir: ')).resolve()
+    base_commit=subprocess.check_output(['git','--git-dir='+str(git_dir),'--work-tree='+str(repository),'rev-parse','HEAD'],cwd=app,text=True).strip()
+assert proof['gitCommit']==base_commit, 'Built release must match the current source commit'
 manifest = {
     'release_id': release_id,
     'source_base_commit': base_commit,
+    'verified_artifact_sha256':proof['artifactHash'],
+    'prompt_version':proof['promptVersion'],
+    'understanding_version':proof['understandingVersion'],
+    'model_id':proof['model'],
     'dependency_additions':dependency_additions,
     'base_lock_sha256':base_lock_sha256,
     'source_tree_sha256': source_hash.hexdigest(),

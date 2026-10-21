@@ -1,0 +1,13 @@
+# Owner catalog at 3,000 rows
+
+The Products page transfers 25 products at a time (server maximum 100), with literal Tamil/English search, SKU/name/recent-stock sorting, family/brand filters, visibility, unknown/out-of-stock filters, and missing-photo/price/review-conflict groups. Counts refer to the matching catalog rather than the loaded page. Thumbnails load lazily. The selected product and proposal are fetched independently, so an editor can remain open while the owner searches another page.
+
+Product cursors bind the shop, filters, sort, page size and catalog revision. Invalid/cross-shop cursors fail; changed catalog revisions require a fresh first page. Timestamp cursors preserve PostgreSQL precision and break ties by SKU/ID. Draft pages are stable ordered continuations rather than a frozen snapshot: a reviewed row can leave the draft queue while another owner is paging.
+
+Unpublished drafts have separate bounded pages, search, source-batch filtering and exception groups: version conflicts, source issues, missing exact photo, price to confirm and stock not entered. Groups overlap and never grant merchant confirmations. Selecting a draft loads its details, provenance and original/normalized asset choices through the existing review path. Import progress lists the latest 25 batches and paginated row states, errors and current proposal links. Retry remains the explicit resumable intake command; the browser never receives filesystem access.
+
+Late search responses cannot replace a newer query. Dirty editors survive searching, page changes, refreshes and stale-save errors; the owner must explicitly reconcile newer facts before saving. Stock remains audited and versioned. Unpublished source rows and unknown stock are not treated as available live inventory.
+
+Verification: 20 focused server/owner/proposal cases passed during implementation. The Playwright scale rehearsal used 3,000 synthetic products and 3,000 drafts; largest product transfer was 25. It checked off-page selection, dirty/stale editors, response races, exception groups, import conflicts and 390px layouts. Root also inspected the generated screenshots. No real merchant catalog or browser session was changed.
+
+Reproduce with an isolated database for `tests/owner-catalog-pages.test.ts` and the existing owner/catalog/proposal tests. `scripts/check-owner-catalog-scale.mjs` drives the development dashboard against bounded synthetic API fixtures; its header documents the required Playwright/Chrome paths. This browser result establishes layout/client behavior, not live database/network latency or merchant approval. Conversation/order summary polling keeps its existing bounds; no WebSocket service is introduced.

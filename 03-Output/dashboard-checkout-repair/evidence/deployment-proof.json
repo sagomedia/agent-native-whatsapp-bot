@@ -1,0 +1,159 @@
+{
+  "deployment": {
+    "activeRelease": "preview-668a03eec8b7",
+    "backup": "/var/backups/shopbot-migration/dashboard-20261016T133458Z",
+    "ready": true,
+    "demoPayAtShop": true,
+    "artifactHash": "6fff7c7ade387802020e6d3aea25d0bc597fed02055a9a080333da59c8878b8c",
+    "sourceCommit": "f3f97e177026f87f687adc93574b892344c534c3"
+  },
+  "preservation": {
+    "preservation": {
+      "orders": true,
+      "advances": true,
+      "amendments": true,
+      "quotes": true,
+      "controls": true,
+      "budgets": true,
+      "inventory": true
+    },
+    "schemaVersion": 34,
+    "budgetCeilingsPreserved": true,
+    "environmentUnchanged": true
+  },
+  "realCartProbe": {
+    "release": "preview-668a03eec8b7",
+    "realCartRead": true,
+    "invoicePages": 1,
+    "invoiceRows": 4,
+    "knownRows": 3,
+    "unpricedRows": 1,
+    "originalContainerCountRetained": true,
+    "knownSubtotalPaise": 319500,
+    "allRowsPreserved": true,
+    "readOnly": true,
+    "automaticOrderConsent": false,
+    "customerDraftUnchanged": true,
+    "transactionRolledBack": true,
+    "providerCalls": 0,
+    "whatsappMessagesSent": 0,
+    "existingOrders": 3,
+    "activeOrders": 0,
+    "privateImageFiles": [
+      "/var/lib/shopbot-vps/deployment-probes/dashboard/51276cac837708a5d57e2839aadc4344497056ced051da019c77eea54c3fe585.png"
+    ]
+  },
+  "liveHttpChecks": {
+    "activeRelease": "preview-668a03eec8b7",
+    "release": {
+      "model": "gemini-3.5-flash-lite",
+      "status": "content_verified",
+      "gitTree": "9e8e29ae22914e398ea3296d243ac33a4f7c0ed1",
+      "createdAt": "2026-10-16T13:08:11.269Z",
+      "gitCommit": "f3f97e177026f87f687adc93574b892344c534c3",
+      "artifactHash": "6fff7c7ade387802020e6d3aea25d0bc597fed02055a9a080333da59c8878b8c",
+      "promptVersion": "2026-10-15.4",
+      "understandingVersion": 2
+    },
+    "schemaVersion": 34,
+    "service": {
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "SubState": "running"
+    },
+    "publicChecks": {
+      "ownerLogin": {
+        "status": 302,
+        "bytes": 510,
+        "mimeType": "text/html"
+      },
+      "welcomeAudio": {
+        "status": 200,
+        "bytes": 32125,
+        "mimeType": "audio/ogg"
+      },
+      "publicSimulator": {
+        "status": 404,
+        "bytes": 21,
+        "mimeType": "application/json"
+      },
+      "ownerWithoutJwt": {
+        "status": 403,
+        "bytes": 34,
+        "mimeType": "application/json"
+      },
+      "nativeReadiness": {
+        "status": 200,
+        "bytes": 32,
+        "mimeType": "application/json"
+      },
+      "actualPaintPhoto": {
+        "status": 200,
+        "bytes": 19030,
+        "mimeType": "image/jpeg"
+      }
+    },
+    "demoPayAtShop": true,
+    "paymentVerification": "owner_checked",
+    "orderCount": 3,
+    "ledger": [
+      {
+        "limit_microusd": 4500000,
+        "committed_microusd": 290820,
+        "held_microusd": 1536820,
+        "blocked": false
+      }
+    ],
+    "bankPaymentTested": false,
+    "whatsappTestMessageSent": false
+  },
+  "inventoryMcp": {
+    "transport": "SSH stdio to current VPS release",
+    "server": {
+      "name": "shopbot-owner-catalog",
+      "version": "1.1.0"
+    },
+    "connected": true,
+    "tools": [
+      "catalog_drafts",
+      "catalog_edit_draft",
+      "catalog_inventory",
+      "catalog_propose",
+      "catalog_search",
+      "catalog_stage_photo"
+    ],
+    "inventoryPagesRead": 2,
+    "paginationPreservesIdentity": true,
+    "realPaintSearchFound": 2,
+    "readOnlyInventoryHint": true,
+    "publicationOrOrderToolExposed": false,
+    "draftsWritten": 0,
+    "bankPaymentMade": false,
+    "whatsappMessageSent": false
+  },
+  "codexMcpConfiguration": {
+    "configured": "shopbot_catalog",
+    "enabled": true,
+    "otherServersPreserved": true,
+    "tools": 6,
+    "privateConfigurationBackup": "/home/gk-pc/.codex/config.toml.shopbot-catalog-backup-20261016T125223Z"
+  },
+  "databaseBackupBytes": 65527347,
+  "databaseBackupRestoreListValid": true,
+  "staging": {
+    "staged_release": "preview-668a03eec8b7",
+    "runtime_reused_from": "preview-3a10873e26da",
+    "bundle_sha256": "f01c4a89f4aff8dedb12435bea55aeba03f12f863bbb88465105b42f19380ddd",
+    "new_content_bytes": 8187816,
+    "disk_free_bytes": 500752384
+  },
+  "cleanup": {
+    "activeRelease": "preview-668a03eec8b7",
+    "previousReleaseRetained": true,
+    "previousCheckoutReleaseRetained": true,
+    "freshBackupRetained": true,
+    "privateMcpEnvironmentBackedUp": true,
+    "privateOperationScriptsSaved": true,
+    "diskFreeBytes": 499761152
+  }
+}

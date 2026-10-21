@@ -1,0 +1,249 @@
+{
+  "name": "quantity-edit",
+  "language": "en",
+  "draft": [
+    {
+      "id": "f8a7cd47-9ec1-4859-b826-62505c7fbcd6",
+      "sku": "VIS-0",
+      "name": "PVC pipe",
+      "quantity": 3
+    },
+    {
+      "id": "be9b9afc-7776-4b6f-8812-99f3bded91ee",
+      "sku": "VIS-1",
+      "name": "Blueguard PVC pipe",
+      "quantity": 2
+    },
+    {
+      "id": "b3f7cbed-cdb9-48b2-b03a-153d343d45f2",
+      "sku": "VIS-2",
+      "name": "screw box",
+      "quantity": 3
+    }
+  ],
+  "rich": {
+    "kind": "text",
+    "text": "Changed PVC pipe (3 pieces)\n3 items\nEstimated total: ₹80.00",
+    "parts": [
+      {
+        "id": "0ddadd8e-1368-4c8f-8bfe-70c916019666",
+        "text": "Changed PVC pipe (3 pieces)\n3 items\nEstimated total: ₹80.00",
+        "cards": [],
+        "buttons": [
+          {
+            "event": {
+              "id": "b30500e8-0245-4110-a974-7a4f3843888e",
+              "type": "confirm_products",
+              "batchId": "740b7a1f-d802-42fb-816d-6b0a9cc42486"
+            },
+            "label": "Correct, show bill"
+          },
+          {
+            "event": {
+              "id": "ed55d8d5-2c3e-45c3-86a9-24bb7992333b",
+              "type": "shopping_action",
+              "action": "edit_list",
+              "expectedVersion": 2
+            },
+            "label": "Change items"
+          },
+          {
+            "event": {
+              "id": "2ce55693-d443-406b-acce-0565048700b8",
+              "type": "shopping_action",
+              "action": "view_products",
+              "expectedVersion": 2
+            },
+            "label": "See photos"
+          }
+        ]
+      }
+    ],
+    "stage": "products",
+    "buttons": [
+      {
+        "event": {
+          "id": "b30500e8-0245-4110-a974-7a4f3843888e",
+          "type": "confirm_products",
+          "batchId": "740b7a1f-d802-42fb-816d-6b0a9cc42486"
+        },
+        "label": "Correct, show bill"
+      },
+      {
+        "event": {
+          "id": "ed55d8d5-2c3e-45c3-86a9-24bb7992333b",
+          "type": "shopping_action",
+          "action": "edit_list",
+          "expectedVersion": 2
+        },
+        "label": "Change items"
+      },
+      {
+        "event": {
+          "id": "2ce55693-d443-406b-acce-0565048700b8",
+          "type": "shopping_action",
+          "action": "view_products",
+          "expectedVersion": 2
+        },
+        "label": "See photos"
+      }
+    ],
+    "groupId": "ced6a6aa-277f-4808-b1a9-e8a6781f6d89",
+    "version": 1,
+    "readOnly": true,
+    "partCount": 1,
+    "partIndex": 0,
+    "presentation": "text",
+    "replyLanguage": "en",
+    "outboundMessages": 1
+  },
+  "replies": [
+    {
+      "kind": "text",
+      "text": "Changed PVC pipe (3 pieces)\n3 items\nEstimated total: ₹80.00",
+      "parts": [
+        {
+          "id": "0ddadd8e-1368-4c8f-8bfe-70c916019666",
+          "text": "Changed PVC pipe (3 pieces)\n3 items\nEstimated total: ₹80.00",
+          "cards": [],
+          "buttons": [
+            {
+              "event": {
+                "id": "b30500e8-0245-4110-a974-7a4f3843888e",
+                "type": "confirm_products",
+                "batchId": "740b7a1f-d802-42fb-816d-6b0a9cc42486"
+              },
+              "label": "Correct, show bill"
+            },
+            {
+              "event": {
+                "id": "ed55d8d5-2c3e-45c3-86a9-24bb7992333b",
+                "type": "shopping_action",
+                "action": "edit_list",
+                "expectedVersion": 2
+              },
+              "label": "Change items"
+            },
+            {
+              "event": {
+                "id": "2ce55693-d443-406b-acce-0565048700b8",
+                "type": "shopping_action",
+                "action": "view_products",
+                "expectedVersion": 2
+              },
+              "label": "See photos"
+            }
+          ]
+        }
+      ],
+      "stage": "products",
+      "buttons": [
+        {
+          "event": {
+            "id": "b30500e8-0245-4110-a974-7a4f3843888e",
+            "type": "confirm_products",
+            "batchId": "740b7a1f-d802-42fb-816d-6b0a9cc42486"
+          },
+          "label": "Correct, show bill"
+        },
+        {
+          "event": {
+            "id": "ed55d8d5-2c3e-45c3-86a9-24bb7992333b",
+            "type": "shopping_action",
+            "action": "edit_list",
+            "expectedVersion": 2
+          },
+          "label": "Change items"
+        },
+        {
+          "event": {
+            "id": "2ce55693-d443-406b-acce-0565048700b8",
+            "type": "shopping_action",
+            "action": "view_products",
+            "expectedVersion": 2
+          },
+          "label": "See photos"
+        }
+      ],
+      "groupId": "ced6a6aa-277f-4808-b1a9-e8a6781f6d89",
+      "version": 1,
+      "readOnly": true,
+      "partCount": 1,
+      "partIndex": 0,
+      "presentation": "text",
+      "replyLanguage": "en",
+      "outboundMessages": 1
+    }
+  ],
+  "payloads": [
+    {
+      "format": "buttons",
+      "actions": [
+        {
+          "id": "wkHT7upgR3jRYmqzJWi1",
+          "label": "Correct, show bill",
+          "event": {
+            "id": "b30500e8-0245-4110-a974-7a4f3843888e",
+            "type": "confirm_products",
+            "batchId": "740b7a1f-d802-42fb-816d-6b0a9cc42486"
+          }
+        },
+        {
+          "id": "wVVbB9p_Ot6nzF5te-gy",
+          "label": "Change items",
+          "event": {
+            "id": "ed55d8d5-2c3e-45c3-86a9-24bb7992333b",
+            "type": "shopping_action",
+            "action": "edit_list",
+            "expectedVersion": 2
+          }
+        },
+        {
+          "id": "w_K7KVQIeJiponyBGzWL",
+          "label": "See photos",
+          "event": {
+            "id": "2ce55693-d443-406b-acce-0565048700b8",
+            "type": "shopping_action",
+            "action": "view_products",
+            "expectedVersion": 2
+          }
+        }
+      ],
+      "payload": {
+        "type": "interactive",
+        "interactive": {
+          "type": "button",
+          "body": {
+            "text": "Changed PVC pipe (3 pieces)\n3 items\nEstimated total: ₹80.00"
+          },
+          "action": {
+            "buttons": [
+              {
+                "type": "reply",
+                "reply": {
+                  "id": "wkHT7upgR3jRYmqzJWi1",
+                  "title": "Correct, show bill"
+                }
+              },
+              {
+                "type": "reply",
+                "reply": {
+                  "id": "wVVbB9p_Ot6nzF5te-gy",
+                  "title": "Change items"
+                }
+              },
+              {
+                "type": "reply",
+                "reply": {
+                  "id": "w_K7KVQIeJiponyBGzWL",
+                  "title": "See photos"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "requests": 0
+}

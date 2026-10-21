@@ -1,0 +1,29 @@
+{
+  "status": "deployed",
+  "release": "preview-3edcf01749a1",
+  "previousRelease": "preview-931f6c6628c7",
+  "gitCommit": "fea4a9d56f46d040166903eb443d75150984e3a5",
+  "artifactHash": "9bbe9f676b3b6acf5d7b9037fde323075272b23a7904fff07e1cb330ee8b0927",
+  "promptVersion": "2026-10-15.2",
+  "schemaVersion": 32,
+  "checks": {
+    "originalOrdersPreserved": true,
+    "budgetUnchanged": true,
+    "ownerModesPreserved": true
+  },
+  "databaseBackup": "/var/backups/shopbot-migration/owner-20261016T045244Z/database.dump",
+  "privateBackup": "/var/backups/shopbot-migration/final-code-20261016T050107Z",
+  "diskFreeBytes": 600973312,
+  "before": {
+    "originalOrders": "3:64edb73284259d23435210c6475a955f",
+    "budget": "[{\"limit_microusd\":4500000,\"committed_microusd\":277762,\"held_microusd\":114688,\"blocked\":false}]",
+    "operators": "[{\"operator_mode\":\"assistant\",\"count\":2}, \n {\"operator_mode\":\"owner\",\"count\":1}]",
+    "outbox": "[{\"state\":\"cancelled\",\"count\":3}, \n {\"state\":\"delivered\",\"count\":171}, \n {\"state\":\"failed\",\"count\":1}]"
+  },
+  "after": {
+    "originalOrders": "3:64edb73284259d23435210c6475a955f",
+    "budget": "[{\"limit_microusd\":4500000,\"committed_microusd\":277762,\"held_microusd\":114688,\"blocked\":false}]",
+    "operators": "[{\"operator_mode\":\"assistant\",\"count\":2}, \n {\"operator_mode\":\"owner\",\"count\":1}]",
+    "outbox": "[{\"state\":\"cancelled\",\"count\":3}, \n {\"state\":\"delivered\",\"count\":171}, \n {\"state\":\"failed\",\"count\":1}]"
+  }
+}

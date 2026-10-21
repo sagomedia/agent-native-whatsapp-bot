@@ -1,0 +1,11 @@
+# Copy the reviewed section into Codex configuration after creating a private
+# shop-specific environment file. No secret belongs in this file or Git.
+[mcp_servers.shopbot_catalog]
+command = "node"
+args = ["--env-file=/ABSOLUTE/PRIVATE/shopbot-mcp.env", "/ABSOLUTE/RELEASE/app/dist/apps/server/src/mcp/stdio.js"]
+cwd = "/ABSOLUTE/RELEASE/app"
+enabled = false
+startup_timeout_sec = 20
+tool_timeout_sec = 30
+enabled_tools = ["catalog_inventory", "catalog_search", "catalog_drafts", "catalog_propose", "catalog_edit_draft", "catalog_stage_photo"]
+default_tools_approval_mode = "writes"

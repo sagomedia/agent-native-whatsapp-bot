@@ -2,14 +2,15 @@ import type {Product} from '../../../packages/contracts/index.js';
 import {normalize, tokens, oneEdit} from '../../../packages/contracts/catalog-text.js';
 
 export type OwnerProduct = Product & {active: boolean; origin: string; inventoryUpdatedAt: string | null};
-export type RequestState = {acceptance: string; fulfillment: string};
-export const ownerViews = ['conversations', 'requests', 'catalog', 'connections'] as const;
+export type RequestState = {acceptance: string; fulfillment: string;advance_required?:boolean;advance_state?:string};
+export const ownerViews = ['overview', 'requests', 'conversations', 'catalog', 'connections', 'message-review'] as const;
 export type OwnerView = typeof ownerViews[number];
 export const viewLabels: Record<OwnerView, string> = {
-  conversations: 'Conversations', requests: 'Requests', catalog: 'Products', connections: 'Connections & usage'
+  overview: 'Today', conversations: 'Messages', requests: 'Orders', catalog: 'Products', connections: 'Settings & usage', 'message-review':'Message review'
 };
+export const viewDescriptions:Record<OwnerView,string>={overview:'Orders and customer help, in one place.',requests:'Check requests, send quotes and prepare pickups.',conversations:'Read the request, help the customer and keep the order moving.',catalog:'Shop prices, available stock and the details customers need.',connections:'Your connection, assistant controls and recorded costs.','message-review':'Check the messages your customers see.'};
 export function ownerView(value: string | null): OwnerView {
-  return ownerViews.includes(value as OwnerView) ? value as OwnerView : 'conversations';
+  return ownerViews.includes(value as OwnerView) ? value as OwnerView : 'overview';
 }
 export function matchesProduct(product: OwnerProduct, query: string) {
   const search = normalize(query);
@@ -33,7 +34,7 @@ export function requestLabel(request: RequestState) {
   if (request.acceptance === 'rejected') return 'Declined';
   if (request.fulfillment === 'cancelled') return 'Cancelled';
   if (request.fulfillment === 'collected') return 'Collected';
-  if (request.acceptance === 'awaiting_approval') return 'New';
+  if (request.acceptance === 'awaiting_approval') return request.advance_required&&request.advance_state!=='verified'?'Awaiting advance check':'New';
   if (request.fulfillment === 'ready_for_pickup') return 'Ready for pickup';
   if (request.acceptance === 'accepted') return 'Preparing';
   return request.acceptance.replaceAll('_', ' ');
@@ -53,6 +54,11 @@ export const clockTime = (value: string) => new Intl.DateTimeFormat('en-IN', {ti
 export const usd = (micros: string | number, exact = false) => new Intl.NumberFormat('en-US', {
   style: 'currency', currency: 'USD', minimumFractionDigits: exact ? 6 : 2, maximumFractionDigits: exact ? 6 : 2
 }).format(Number(micros) / 1000000);
+export function microCurrency(micros:string|null,currency:string|null) {
+  if(micros===null||currency===null||!/^\d+$/.test(micros)||!/^[A-Z]{3}$/.test(currency))return 'Amount unavailable';
+  const amount=BigInt(micros),whole=amount/1000000n,fraction=(amount%1000000n).toString().padStart(6,'0');
+  return new Intl.NumberFormat('en-IN',{style:'currency',currency,minimumFractionDigits:6,maximumFractionDigits:6}).formatToParts(whole).map(part=>part.type==='fraction'?fraction:part.value).join('');
+}
 export const channelLabels: Record<string, string> = {
   not_connected: 'Not connected', awaiting_verification: 'Awaiting verification',
   webhook_verified: 'Connected · awaiting first message', receiving: 'Receiving test events', attention_required: 'Needs attention'

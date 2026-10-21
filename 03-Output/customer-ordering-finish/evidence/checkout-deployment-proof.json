@@ -1,0 +1,112 @@
+{
+  "deployment": {
+    "activeRelease": "preview-27f9774fb582",
+    "backup": "/var/backups/shopbot-migration/checkout-20261016T115855Z",
+    "ready": true,
+    "demoPayAtShop": true,
+    "artifactHash": "5ebc75c1c61fa8e480398391ee9cc13e12768e9e6c3bf25336224e70d67cc48b",
+    "sourceCommit": "531bc3ae50eae3200363af82140adb3ad84ac690"
+  },
+  "preservation": {
+    "preservation": {
+      "orders": true,
+      "advances": true,
+      "amendments": true,
+      "quotes": true,
+      "controls": true,
+      "budgets": true,
+      "inventory": true
+    },
+    "schemaVersion": 34,
+    "budgetCeilingsPreserved": true
+  },
+  "actualInventoryProbe": {
+    "release": "preview-27f9774fb582",
+    "realInventoryProbed": true,
+    "alternativeFound": true,
+    "requestedPack": {
+      "unit": "litre",
+      "value": 10
+    },
+    "candidates": [
+      {
+        "sku": "SHOP-3DB752A98B9B41BF",
+        "catalogPack": "10kg",
+        "photoAvailable": true,
+        "sellingUnitVerified": false
+      }
+    ],
+    "selectedAutomatically": false,
+    "providerCalls": 0,
+    "whatsappMessagesSent": 0,
+    "transactionRolledBack": true,
+    "customerDraftUnchanged": true
+  },
+  "liveChecks": {
+    "activeRelease": "preview-27f9774fb582",
+    "release": {
+      "model": "gemini-3.5-flash-lite",
+      "status": "content_verified",
+      "gitTree": "3cb1b10408ef68d03f480d70f833a81b84badd54",
+      "createdAt": "2026-10-16T11:58:16.242Z",
+      "gitCommit": "531bc3ae50eae3200363af82140adb3ad84ac690",
+      "artifactHash": "5ebc75c1c61fa8e480398391ee9cc13e12768e9e6c3bf25336224e70d67cc48b",
+      "promptVersion": "2026-10-15.4",
+      "understandingVersion": 2
+    },
+    "schemaVersion": 34,
+    "service": {
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "SubState": "running"
+    },
+    "publicChecks": {
+      "ownerLogin": {
+        "status": 302,
+        "bytes": 510,
+        "mimeType": "text/html"
+      },
+      "welcomeAudio": {
+        "status": 200,
+        "bytes": 32125,
+        "mimeType": "audio/ogg"
+      },
+      "publicSimulator": {
+        "status": 404,
+        "bytes": 21,
+        "mimeType": "application/json"
+      },
+      "ownerWithoutJwt": {
+        "status": 403,
+        "bytes": 34,
+        "mimeType": "application/json"
+      },
+      "nativeReadiness": {
+        "status": 200,
+        "bytes": 32,
+        "mimeType": "application/json"
+      },
+      "actualPaintPhoto": {
+        "status": 200,
+        "bytes": 19030,
+        "mimeType": "image/jpeg"
+      }
+    },
+    "demoPayAtShop": true,
+    "paymentVerification": "owner_checked",
+    "orderCount": 3,
+    "ledger": [
+      {
+        "limit_microusd": 4500000,
+        "committed_microusd": 288491,
+        "held_microusd": 1536820,
+        "blocked": false
+      }
+    ],
+    "bankPaymentTested": false,
+    "whatsappTestMessageSent": false
+  },
+  "publicCheckClient": "Browser User-Agent; Cloudflare rejects the default Python urllib signature",
+  "backupBytes": 65015208,
+  "backupRestoreListValid": true
+}

@@ -1,0 +1,26 @@
+{
+  "tests": 536,
+  "passed": 536,
+  "failed": 0,
+  "skipped": 0,
+  "typecheck": "passed",
+  "productionBuild": "passed",
+  "releaseBuild": "passed",
+  "sourceCommit": "531bc3ae50eae3200363af82140adb3ad84ac690",
+  "isolatedDatabase": "PostgreSQL 17.6, disposable local container",
+  "scenarios": [
+    "actual product identity retained across litre/kg alternatives",
+    "bilingual Tamil/English paint spelling variants",
+    "known and unknown products through photos and complete invoice",
+    "explicit order submission and one automatic QR offer",
+    "demo pay at shop records unpaid status",
+    "production default still requires actual advance verification",
+    "natural Tamil checkout phrasing",
+    "original container count retained with unverified selling units",
+    "fresh prices without mutating a read-only estimate",
+    "owner accepts, packs, marks collected; later status remains usable",
+    "submitted order bill request cannot create a second checkout"
+  ],
+  "realBankPaymentTested": false,
+  "realWhatsAppTestMessageSent": false
+}

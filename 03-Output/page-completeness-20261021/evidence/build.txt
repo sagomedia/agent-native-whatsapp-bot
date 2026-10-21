@@ -1,0 +1,24 @@
+
+> shopbot-ai@0.1.0 build
+> npm run typecheck && vite build --config apps/dashboard/vite.config.ts && tsc -p tsconfig.server.json
+
+
+> shopbot-ai@0.1.0 typecheck
+> tsc --noEmit
+
+vite v8.3.2 building client environment for production...
+transforming...
+✓ 160 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/dashboard/index.html                                   0.56 kB │ gzip:   0.33 kB
+dist/dashboard/assets/NotoSansTamil-Regular-DCL-21BS.ttf   72.60 kB
+dist/dashboard/assets/index-DfBYuks1.css                   97.66 kB │ gzip:  16.90 kB
+dist/dashboard/assets/OwnerMessageGallery-CGgbE4MH.js       2.91 kB │ gzip:   1.24 kB
+dist/dashboard/assets/OwnerQuickHelp-I8TxqEfX.js            9.33 kB │ gzip:   3.01 kB
+dist/dashboard/assets/owner-ui-BoS7VxHK.js                 47.89 kB │ gzip:  12.31 kB
+dist/dashboard/assets/OwnerCatalog-BGTjUjM9.js             86.01 kB │ gzip:  22.95 kB
+dist/dashboard/assets/language-CiP3My05.js                 97.66 kB │ gzip:  28.36 kB
+dist/dashboard/assets/index-6T_e-inK.js                   358.10 kB │ gzip: 106.96 kB
+
+✓ built in 361ms

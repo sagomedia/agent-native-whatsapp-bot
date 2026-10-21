@@ -1,0 +1,31 @@
+flowchart TD
+    IN[Customer sends a message] --> GUARD[D: verify identity, deduplicate, load context]
+    GUARD --> MODE{D: explicit owner takeover?}
+    MODE -->|Yes| OWNER[Owner handles chat; retain inbound messages]
+    MODE -->|No| ROUTE{D or A: what does this message need?}
+    ROUTE -->|Greeting only| WELCOME[D: short welcome text and approved audio once]
+    WELCOME --> WAIT[Wait for voice, text, or photo]
+    WAIT --> IN
+    ROUTE -->|New list or draft correction| EXTRACT[A: extract each item and its evidence]
+    EXTRACT --> MATCH[H: catalog lookup and hard constraints]
+    MATCH --> CHOICE{D: enough evidence for this item?}
+    CHOICE -->|No| ASK[H: one practical question or real photo choices]
+    ASK --> IN
+    CHOICE -->|No catalog match| UNKNOWN[D: retain description as shop-check item]
+    CHOICE -->|Yes| VERIFY[D: customer checks product and quantity]
+    UNKNOWN --> REVIEW[D: review every line; unknown prices stay blank]
+    VERIFY --> REVIEW
+    REVIEW --> CONSENT{D: explicit approval of current review?}
+    CONSENT -->|Change something| IN
+    CONSENT -->|Yes| PAY[D: create linked Rs 10 QR and payment link]
+    PAY --> CHECK[D: verify provider payment; handle pending or expired]
+    CHECK -->|Verified| QUEUE[D: actionable request in owner dashboard]
+    QUEUE --> SHOP[D: owner quotes, accepts, prepares, marks ready]
+    SHOP --> NOTIFY[D: send truthful status and pickup updates]
+    NOTIFY --> IN
+    ROUTE -->|Status or payment question| STATUS[D: read current trusted facts and reply]
+    ROUTE -->|Change to submitted order| AMEND[H: interpret and confirm a proposed amendment]
+    AMEND --> DECIDE[D: owner decision; retain original version and payment]
+    DECIDE --> NOTIFY
+    ROUTE -->|Acknowledgement only| QUIET[D: record processed; no outgoing message]
+    STATUS --> IN

@@ -24,3 +24,13 @@ test('reply composer closes at the 24-hour boundary and never enables sending fo
  assert.equal(replyWindowOpen(new Date(now+1).toISOString(),now),false);
  assert.equal(replyWindowOpen(null,now),false);assert.equal(replyWindowOpen('unknown',now),false);
 });
+
+import {verificationAfterEdit} from '../apps/dashboard/src/owner-verification.js';
+test('merchant fact checks survive unrelated edits and invalidate their actual dependencies',()=>{
+ const checked={identity:true,photo:true,sellingUnit:true,price:true,stock:true};
+ assert.deepEqual(verificationAfterEdit(checked,'stock'),{...checked,stock:false});
+ assert.deepEqual(verificationAfterEdit(checked,'price'),{...checked,price:false});
+ assert.deepEqual(verificationAfterEdit(checked,'unit'),{...checked,sellingUnit:false,price:false,stock:false});
+ assert.deepEqual(verificationAfterEdit(checked,'photo'),{...checked,photo:false});
+ assert.ok(Object.values(verificationAfterEdit(checked,'name')).every(value=>value===false));
+});

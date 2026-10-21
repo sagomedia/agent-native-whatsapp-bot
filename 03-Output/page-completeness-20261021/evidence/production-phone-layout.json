@@ -1,0 +1,131 @@
+{
+  "synthetic": true,
+  "productionAssets": true,
+  "viewport": [
+    320,
+    640
+  ],
+  "rows": [
+    {
+      "language": "en",
+      "state": "ready_for_pickup",
+      "complete": true,
+      "height": 194.3125,
+      "buttons": {
+        "width": 282,
+        "scroll": 282
+      }
+    },
+    {
+      "language": "en",
+      "state": "awaiting_approval",
+      "complete": true,
+      "height": 194.3125,
+      "buttons": {
+        "width": 282,
+        "scroll": 282
+      }
+    },
+    {
+      "language": "en",
+      "state": "awaiting_approval",
+      "complete": false,
+      "height": 194.3125,
+      "buttons": {
+        "width": 282,
+        "scroll": 282
+      }
+    },
+    {
+      "language": "en",
+      "state": "awaiting_approval",
+      "complete": false,
+      "height": 194.3125,
+      "buttons": {
+        "width": 282,
+        "scroll": 282
+      }
+    },
+    {
+      "language": "en",
+      "state": "awaiting_approval",
+      "complete": false,
+      "height": 194.3125,
+      "buttons": {
+        "width": 282,
+        "scroll": 282
+      }
+    },
+    {
+      "language": "en",
+      "state": "collected",
+      "complete": true,
+      "height": 244.3125,
+      "buttons": {
+        "width": 282,
+        "scroll": 282
+      }
+    },
+    {
+      "language": "ta",
+      "state": "ready_for_pickup",
+      "complete": true,
+      "height": 147.75,
+      "buttons": {
+        "width": 282,
+        "scroll": 282
+      }
+    },
+    {
+      "language": "ta",
+      "state": "awaiting_approval",
+      "complete": true,
+      "height": 165.9375,
+      "buttons": {
+        "width": 282,
+        "scroll": 282
+      }
+    },
+    {
+      "language": "ta",
+      "state": "awaiting_approval",
+      "complete": false,
+      "height": 143.25,
+      "buttons": {
+        "width": 282,
+        "scroll": 282
+      }
+    },
+    {
+      "language": "ta",
+      "state": "awaiting_approval",
+      "complete": false,
+      "height": 143.25,
+      "buttons": {
+        "width": 282,
+        "scroll": 282
+      }
+    },
+    {
+      "language": "ta",
+      "state": "awaiting_approval",
+      "complete": false,
+      "height": 143.25,
+      "buttons": {
+        "width": 282,
+        "scroll": 282
+      }
+    },
+    {
+      "language": "ta",
+      "state": "collected",
+      "complete": true,
+      "height": 244.3125,
+      "buttons": {
+        "width": 282,
+        "scroll": 282
+      }
+    }
+  ],
+  "errors": []
+}

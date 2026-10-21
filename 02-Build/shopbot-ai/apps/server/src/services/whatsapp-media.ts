@@ -37,7 +37,8 @@ async function downloadBytes(config:WhatsAppConfig,request:typeof fetch,url:stri
   }
   throw new MediaDownloadError('media_network_failed','Media download connection failed');
 }
-export async function downloadWhatsAppMedia(config:WhatsAppConfig,request:typeof fetch,mediaId:string,kind:'image'|'voice',messageId:string){
+export type DownloadedVoice={audio:Buffer;mimeType:string};
+export async function downloadWhatsAppMedia(config:WhatsAppConfig,request:typeof fetch,mediaId:string,kind:'image'|'voice',messageId:string,onVoiceDownloaded?:(source:DownloadedVoice)=>Promise<void>){
   if(!/^\d{1,100}$/.test(mediaId))throw new MediaDownloadError('media_invalid_id','Invalid media identifier');
   const metadata=JSON.parse((await downloadBytes(config,request,`https://graph.facebook.com/${config.graphVersion}/${mediaId}`,8192)).toString()) as {url?:string;mime_type?:string;file_size?:number};
   let url:URL;
@@ -46,5 +47,6 @@ export async function downloadWhatsAppMedia(config:WhatsAppConfig,request:typeof
   const maximum=kind==='image'?2097152:1048576;
   if(!Number.isSafeInteger(metadata.file_size)||metadata.file_size!<=0||metadata.file_size!>maximum)throw new MediaDownloadError('media_too_large','Media is too large');
   const data=(await downloadBytes(config,request,url.href,maximum)).toString('base64'),mimeType=metadata.mime_type?.split(';')[0].trim();
+  if(kind==='voice'){voiceUploadSchema.parse({id:messageId,data,mimeType});await onVoiceDownloaded?.({audio:Buffer.from(data,'base64'),mimeType:mimeType!});}
   return kind==='image'?normalizeImage(imageUploadSchema.parse({id:messageId,data,mimeType,caption:''})):normalizeVoice(voiceUploadSchema.parse({id:messageId,data,mimeType}));
 }

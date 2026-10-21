@@ -1,16 +1,26 @@
 import type {ConversationState,Product} from './index.js';
+import {canonicalMeasurementUnit,measurementNumber,measurementNumberPattern,measurementUnitPattern,normalizeFractionNumbers,spokenNumberValues} from './measurements.js';
 import {formatMoney} from './money.js';
+import {indicativePriceFor} from './indicative-prices.js';
+export {indicativePriceFor} from './indicative-prices.js';
 
 export type ReplyLanguage='ta'|'ta-Latn'|'en';
 export type LocalNames=Partial<Record<ReplyLanguage,string>>;
-export type LanguageContext=Pick<ConversationState,'replyLanguage'>|ReplyLanguage;
+export type LanguageContext=(Pick<ConversationState,'replyLanguage'>&Partial<Pick<ConversationState,'draft'>>)|ReplyLanguage;
 // Missing language belongs to the legacy English renderer. Every new native
 // session explicitly stores Tamil; preferences never come from model guesses.
 export function languageOf(context:LanguageContext):ReplyLanguage {return typeof context==='string'?context:context.replyLanguage??'en';}
 export function say(context:LanguageContext,en:string,ta:string,tanglish:string):string {const language=languageOf(context);return language==='ta'?ta:language==='ta-Latn'?tanglish:en;}
 export function localName(name:string,names:LocalNames|undefined,context:LanguageContext):string {return names?.[languageOf(context)]??name;}
 export function productName(product:Product,context:LanguageContext):string {return measurementText(localName(product.name,product.localNames,context),context);}
-export function lineName(line:ConversationState['draft'][number],context:LanguageContext):string {const product=line.candidates?.find(p=>p.sku===line.sku);return product?productName(product,context):line.query??line.name;}
+export function lineName(line:ConversationState['draft'][number],context:LanguageContext):string {
+ const product=line.candidates?.find(p=>p.sku===line.sku);
+ if(product)return productName(product,context);
+ const label=line.query??line.name;
+ const mentioned=[...normalizeFractionNumbers(label).matchAll(new RegExp('('+measurementNumberPattern+')\\s*('+measurementUnitPattern+')','giu'))];
+ const missing=(line.productMeasures??[]).filter(measure=>!mentioned.some(m=>measurementNumber(m[1])===measure.value&&canonicalMeasurementUnit(m[2])===canonicalMeasurementUnit(measure.unit)));
+ return measurementText([...missing.map(m=>`${m.value} ${m.unit}`),label].join(' '),context);
+}
 const units:Record<string,[string,string]>={inch:['இன்ச்','inch'],metre:['மீட்டர்','metre'],can:['டப்பா','dabba'],tin:['டப்பா','dabba'],bucket:['வாளி','vaali'],piece:['எண்ணம்','ennam'],box:['பெட்டி','petti'],bottle:['பாட்டில்','bottle'],roll:['ரோல்','roll'],pair:['ஜோடி','jodi'],pack:['பேக்','pack'],foot:['அடி','adi'],m:['மீட்டர்','metre'],mm:['மி.மீ.','mm'],cm:['செ.மீ.','cm'],kg:['கிலோ','kilo'],g:['கிராம்','gram'],litre:['லிட்டர்','litre'],unit:['எண்ணம்','ennam']};
 export function unitName(unit:string,context:LanguageContext,quantity=1):string {const translated=units[unit];if(languageOf(context)!=='en')return translated?say(context,unit,...translated):unit;return quantity===1?unit:({inch:'inches',metre:'metres',box:'boxes',foot:'feet',kg:'kg',g:'g',m:'m',mm:'mm',cm:'cm',litre:'litres'} as Record<string,string>)[unit]??unit+'s';}
 export function languageRequest(text:string):ReplyLanguage|undefined {
@@ -25,12 +35,24 @@ export function languageRequest(text:string):ReplyLanguage|undefined {
 // go through validated interpretation; these cannot infer sizes or quantities.
 export function canonicalShortcut(text:string):string {
  const s=text.normalize('NFC').trim().toLowerCase().replace(/[.!?]+$/,'');
+ const checkout:Record<string,string>={'பில்ல ரெடி பண்ணலாமா':'checkout','பில் ரெடி பண்ணுங்க':'checkout','பில் வேணும்':'checkout','பில்லை காட்டு':'checkout','எவ்வளவு ஆகும்':'checkout','எவ்ளோ ஆகும்':'checkout','மொத்தம் எவ்வளவு':'checkout','estimate bill venum':'checkout','pack it':'checkout','okay pack it':'checkout','ok pack it':'checkout','சரி பேக் பண்ணுங்க':'checkout','பேக் பண்ணுங்க':'checkout','பேக் பண்ணிடுங்க':'checkout','order finish pannu':'checkout','எல்லா பொருளும் ஓகே அண்ணே':'yes','எல்லா பொருளும் ஓகே':'yes','எல்லாம் ஓகே':'yes','ellam okay':'yes'};
+ if(checkout[s])return checkout[s];
  const shortcuts:Record<string,string>={'கடையிடம் பேசு':'human please','kadaiyila pesu':'human please','clear all':'clear my list','எல்லாமே சரி':'yes','பொருட்கள் சரி':'yes','எல்லாம் சரி':'yes','everything is right':'yes','all correct':'yes','porutkal sari':'yes','ellame sari':'yes','வணக்கம்':'hello','vanakkam':'hello','நன்றி':'thanks','nandri':'thanks','உதவி':'help','udhavi':'help','வேண்டாம்':'no','vendam':'no','இப்போ வேண்டாம்':'not now','இப்போது வேண்டாம்':'not now','ippo vendam':'not now','கடைக்காரரிடம் பேச வேண்டும்':'human please','kadaikaarar kitta pesanum':'human please','பட்டியலை காட்டு':'review','பட்டியலைக் காட்டு':'review','என் பட்டியல்':'review','பட்டியலை பார்க்க வேண்டும்':'review','list kaatu':'review','list paaru':'review','pothum':'enough','போதும்':'enough','கோரிக்கை நிலை':'status','நிலை':'status','நிலையை காட்டு':'status','நிலையைப் பார்க்க':'status','status kaatu':'status','பட்டியலை காலி செய்':'clear my list','பட்டியலைக் காலி செய்':'clear my list','list clear pannu':'clear my list','ஆமாம்':'yes','ஆம்':'yes','சரி':'yes','aama':'yes','aamam':'yes','sari':'yes','இவற்றை சேர்':'add these items','இவற்றைச் சேர்':'add these items','இதனை சேர்':'add this item','இதை சேர்':'add this item','இதைச் சேர்':'add this item','ithai seru':'add this item','ivatrai seru':'add these items','பட்டியலில் சேர்':'add to my list','list la seru':'add to my list','கடைக்கு அனுப்பு':'send it','kadaikku anuppu':'send it','மீண்டும் பார்':'check again','மீண்டும் பார்க்கவும்':'check again','மறுபடியும் பார்':'check again','திரும்ப பார்':'check again','thirumba paaru':'check again','marubadi paaru':'check again','மீண்டும் தேடு':'check again','இதை நீக்கு':'remove it','ithai neekku':'remove it'};
  return shortcuts[s]??s;
 }
-export function safeQuestion(question:string|undefined,context:LanguageContext):string|undefined {
- if(!question||!/[?][)\]\"'”’]*$/.test(question.trim())||/[\d₹$]|price|cost|discount|payment|stock|ready|approved|guarantee|deliver|https?:|விலை|பணம்|தள்ளுபடி|இருப்பு|உறுதி|டெலிவரி/i.test(question))return;
+export function safeQuestion(question:string|undefined,context:LanguageContext,currentText=''):string|undefined {
+ if(!question||!/[?][)\]\"'”’]*$/.test(question.trim())||/[₹$]|price|cost|discount|payment|stock|ready|approved|guarantee|deliver|https?:|விலை|பணம்|தள்ளுபடி|இருப்பு|உறுதி|டெலிவரி/i.test(question))return;
+ // Numeric clarification is grounded in current list facts, never model-invented
+ // amounts. Commercial claims remain blocked above even when a number is known.
+ const draft=typeof context==='string'?[]:context.draft??[];
+ const facts=draft.flatMap((line,index)=>[String(index+1),line.query??'',line.name,
+  String(line.quantity??''),JSON.stringify(line.packSize??{}),JSON.stringify(line.productMeasures??[]),
+  ...(line.candidates??[]).flatMap(p=>[p.name,...Object.values(p.localNames??{}),...Object.values(p.specifications??{})])]);
+ const numbers=(text:string)=>normalizeFractionNumbers(text).match(/\d+(?:\.\d+)?/g)??[];
+ const known=new Set([...facts.flatMap(numbers),...spokenNumberValues(currentText)]);
+ if(numbers(question).some(n=>!known.has(n)))return;
  const tamil=/[\u0b80-\u0bff]/.test(question),language=languageOf(context);
+ if(/[\p{L}]/u.test(question.replace(/[\p{Script=Tamil}\p{Script=Latin}]/gu,'')))return;
  if(language==='ta'&&!tamil||language==='ta-Latn'&&(tamil||!/(venum|por|pann|enna|eth|neenga|unga|thaan|iruk|size-aa|brand-aa)/i.test(question))||language==='en'&&tamil)return;
  return question;
 }
@@ -69,8 +91,8 @@ export function draftIssueText(line:ConversationState['draft'][number],context:L
  const reasons:Record<string,[string,string,string]>={
   unreadable:['This list line could not be read; correct it or ask the shop','இந்த வரியைப் படிக்க முடியவில்லை; திருத்திச் சொல்லுங்கள் அல்லது கடையிடம் கேளுங்கள்','Intha variyai padikka mudiyala; thiruthi sollunga illa kadaiyila kelunga'],
   budget_unverified:['Shop must confirm a valid amount within this budget','இந்தப் பணத்திற்கு தரக்கூடிய அளவை கடை உறுதி செய்யணும்','Intha panathukku tharakkoodiya alavai kadai confirm pannanum'],
-  price_unverified:['Shop must confirm price','விலையை கடை உறுதி செய்ய வேண்டும்','Vilayai kadai confirm pannanum'],
-  selling_unit_unverified:['Shop must verify pack / selling unit','பேக் / விற்பனை அலகை கடை உறுதி செய்ய வேண்டும்','Pack / selling unit-ai kadai confirm pannanum'],
+  price_unverified:['Shop must confirm price','கடையில் சரிபார்த்து சொல்லப்படும்','Vilayai kadai confirm pannanum'],
+  selling_unit_unverified:['Shop must verify pack / selling unit','இந்த pack-ஐ எப்படி தர்றாங்கன்னு கடை check பண்ணும்','Pack / selling unit-ai kadai confirm pannanum'],
   amount_unverified:['Product found; shop must verify the amount per selling unit','பொருள் இருக்கு; பீஸ் அளவை கடை உறுதி செய்யணும்','Porul irukku; piece alavai kadai confirm pannanum'],
   cutting_required:['Product found; cutting and its price need shop confirmation','பொருள் இருக்கு; வெட்டித் தருவதையும் விலையையும் கடை உறுதி செய்யணும்','Porul irukku; cut panni tharuvathaiyum vilayaiyum kadai confirm pannanum'],
   continuous_length:['Product found; one continuous length needs shop confirmation','பொருள் இருக்கு; ஒரே நீளமாகக் கிடைப்பதை கடை உறுதி செய்யணும்','Porul irukku; ore neelamaaga kidaippathai kadai confirm pannanum'],
@@ -90,13 +112,20 @@ export function measurementText(value:string,context:LanguageContext):string {
   return amount+' '+unitName(unit,context);
  });
 }
+export function referencePhotoLabel(product:Pick<Product,'imageReference'|'imageUrl'>,context:LanguageContext):string|undefined {
+ if(product.imageReference||/^\/catalog-images\/reference\/[a-f0-9-]{36}\.jpg$/.test(product.imageUrl??''))return say(context,'Reference photo','Reference படம்','Reference photo');
+}
+export function indicativePriceText(product:Product,context:LanguageContext):string|undefined {
+ const price=indicativePriceFor(product);if(!price)return;
+ return `${say(context,'Approx.','சுமார்','Sumaar')} ${formatMoney(price.pricePaise)} / 1 ${unitName(price.unit,context)}`;
+}
 export function productPriceText(product:Product,context:LanguageContext):string {
- if(product.priceStatus==='confirm'||product.pricePaise===0&&product.priceStatus!=='free')return say(context,'Price: shop to confirm','விலை: கடை சொல்ல வேண்டும்','Vilai: kadai sollanum');
+ const indicative=indicativePriceText(product,context);if(indicative)return indicative;
+ if(product.priceStatus==='confirm'||product.pricePaise===0&&product.priceStatus!=='free')return say(context,'Price: shop to confirm','கடையில் சரிபார்த்து சொல்லப்படும்','Vilai: kadai sollanum');
  return `${formatMoney(product.pricePaise)} / 1 ${unitName(product.unit,context)}`;
 }
 export function productStockText(product:Product,context:LanguageContext):string {
- if(product.stock===null)return say(context,'Stock: shop to check','இருப்பு: கடை சரிபார்க்க வேண்டும்','Stock: kadai check pannanum');
+ if(product.stock===null)return say(context,'Availability: shop to check','கிடைக்குமானு கடை check பண்ணும்','Kidaikkumaanu kadai check pannum');
  if(product.stock===0)return say(context,'Currently out of stock','இப்போது இருப்பு இல்லை','Ippo stock illai');
- const detail=`${product.stock} ${unitName(product.unit,context,product.stock)}`;
- return say(context,`Available: ${detail} recorded`,`இருக்கு: ${detail}`,`Irukku: ${detail}`);
+ return say(context,'Available · shop record','கடை list-ல stock இருக்கு','Kadai list-la stock irukku');
 }

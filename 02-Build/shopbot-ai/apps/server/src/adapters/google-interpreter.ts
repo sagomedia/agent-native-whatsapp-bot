@@ -1,11 +1,16 @@
-import {turnUnderstandingSchema} from '../../../../packages/contracts/understanding.js';
+import {amendmentIntent} from '../services/order-amendments.js';
+import {spokenTamilInstruction} from './tamil-style.js';
+import {admitRequest} from '../services/inference-admission.js';
+import {observeUnderstanding,perceptionEnvelope} from '../services/perception-observation.js';
+import {providerSdkTimeout} from '../services/inference-timing.js';
+import {turnUnderstandingSchema,normalizeUnderstandingAbsence} from '../../../../packages/contracts/understanding.js';
 import {UNDERSTANDING_PROMPT_VERSION} from '../../../../packages/contracts/model-policy.js';
 import {understandingInstruction,understandingResponseSchema,understandingPrompt,understandingToInterpretation} from './turn-understanding.js';
 import {languageOf,say} from '../../../../packages/contracts/language.js';
 import {GoogleGenAI,ThinkingLevel,ServiceTier,type GenerateContentParameters,type GenerateContentResponse} from '@google/genai';
 import {z} from 'zod';
 import {interpretationSchema,operationSchema} from '../../../../packages/contracts/index.js';
-import {geminiTextRate,validateRateCard,type RateCard} from '../services/inference-budget.js';
+import {geminiTextRate,validateRateCard,rateHealth,type RateCard} from '../services/inference-budget.js';
 import type {Interpreter,InterpretationInput,ProviderResult} from './interpreter.js';
 import {planningResponseSchema,imageResponseSchema,recognitionResponseSchema} from './google-planning-schema.js';
 
@@ -49,7 +54,7 @@ Edits: use stable current UUIDs. Identity changes use resolve_line with lineId/q
 Named multi-line edits work while other questions are pending. Negation (வேண்டாம்/venda/do not want) removes only the named existing line; absent means no addition. remove_item:{reference,supportingPhrase}. A refusal of choices never clears the list. Ambiguous targets ask which item without writes. Only set_fulfillment has method:pickup. Bare yes never approves or submits; yes plus an edit is an edit.
 Browsing/job/availability discovery is read-only: operations=[],next=assist,assistance:{rootQuery,queries:[1-3 useful queries],lineId:only the current line for alternatives,quantity:explicit only,requestedUnit:explicit only,question:optional},assistanceSearch:{keywords,...valid map filters}. Continue remembered goals on check again; a workpiece diameter is useCase, not a cutter dimension. Multi-item purchase lists use operations, not assistance. Pure prices use operations=[],next=price,priceQuery,priceQuantity/priceUnit if stated; never mutate a draft from a pure quote. Mixed edits plus bill use review. Social/pause/help use operations=[],next=continue,conversation:greeting|thanks|help|handoff|pause. Shop questions use conversation:shop_question,shopQuestions:[delivery|discount|hours|technical|availability]; keep shopping edits if combined. Use backend catalog observations before asking questions. If an exact known product is found, return its search/price plan; do not ask for stock or price data already present. Missing price is independent of positive stock. One short localized clarifyQuestion/assistance.question may ask missing identity details, never make commerce claims. Text planning uses the given voice transcript, never regenerates it. Omit all unused optional fields.`;
 export type NativeSettings={unifiedUnderstanding?:boolean;allowImageLists?:boolean;maxOutputTokens?:number;allowPaidInference:boolean;apiKey:string;model:string;budgetMicrousd:number;allowMultimodal?:boolean;freeQuota?:{scope:string;model:string}};
-const submittedInstruction='The previous request is immutable and not an editable draft. Do not resolve_line or copy quantities from previous orders. A single new product or job returns operations=[],next=assist,assistance and optionally assistanceSearch. A new multi-item shopping list must preserve EACH item with add_item operations,next=review; the backend will hold it for an explicit new-list button, not edit the old order. Use only actual purchase amounts; unspecified quantities stay null. Assistance fields are allowed ONLY with next=assist.';
+const submittedInstruction='For an explicit amendment or cancellation to the submitted order, propose operations against its current line IDs; the backend stages an amendment and never edits the original snapshot. For extra/add/change/remove use this route. An explicit new order uses a separate list. The previous request is immutable. Never apply an edit yourself or copy quantities into unrelated new products. A single new product or job returns operations=[],next=assist,assistance and optionally assistanceSearch. A new multi-item shopping list must preserve EACH item with add_item operations,next=review; the backend will hold it for an explicit new-list button, not edit the old order. Use only actual purchase amounts; unspecified quantities stay null. Assistance fields are allowed ONLY with next=assist.';
 const quantityInstruction='Tamil purchase amount: "oru blade venum" / "ஒரு பிளேடு வேணும்" explicitly requests quantity=1; rendu/ரெண்டு=2. Do not omit the spoken amount in a purchase request. Availability-only "oru blade irukka" has no purchase quantity. Size distinction: "oru inch pipe" means a 1-inch pipe, NOT one pipe. "rendu blade and oru inch pipe" means blade quantity=2 and 1-inch pipe quantity=null. Only a separate purchase amount counts as quantity. Write numeric dimensions as digits in canonical search queries (1 inch pipe), while preserving the original spoken words in transcript.';
 const visualQuantityInstruction='Keep packSize, purchase count and requestedAmount separate. One 10L can: count=1, packSize=10 litre, requestedUnit=can; two cans: count=2. 10L paint without a count: quantity=null; never ten cans. ProductMeasures describe one physical item. One 1-inch pipe: diameter=1 inch,count=1; a bare 1-inch pipe has count=null. A selected 10m hose requested as 50m total uses set_amount; backend checks whole packs, cutting, continuous length, unit verification and stock. Keep its SKU/photo. New products remain add_item while other items are unresolved. '+quantityInstruction;
 export function readNativeSettings(env=process.env):NativeSettings {
@@ -75,7 +80,7 @@ function prompt(input:InterpretationInput) {
   // Media recognition describes the request before available stock can bias it.
   const mediaRecognition=!!(input.audio||input.image);
   const catalogMap=mediaRecognition||input.stage==='recommend'?undefined:input.catalogMap;
-  const state=input.state.lastRequestId?{...input.state,draft:[],pending:null,editingLineId:null}:input.state;
+  const state=input.state.lastRequestId&&!input.audio&&!amendmentIntent(input.text)?{...input.state,draft:[],pending:null,editingLineId:null}:input.state;
   const memory=input.state.lastRequestId&&input.assistantMemory?.purpose==='pending'?null:input.assistantMemory;
   const publicCatalog=(mediaRecognition||input.stage==='recommend'||input.catalogMap?[]:input.catalog??[]).slice(0,20).map(p=>({sku:p.sku,name:p.name,unit:p.unit,familyId:p.familyId,specifications:p.specifications}));
   const publicObservations=(items:NonNullable<InterpretationInput['observations']>)=>items.slice(0,3).map(o=>({tool:o.tool,query:o.query,totalCount:o.totalCount,discovery:o.discovery?{facets:o.discovery.facets.slice(0,1),noExactMatch:o.discovery.noExactMatch}:undefined,products:o.products.slice(0,4).map(p=>({sku:p.sku,name:p.name,unit:p.unit,brand:p.brand,familyId:p.familyId,specifications:p.specifications}))}));
@@ -100,7 +105,7 @@ export class GoogleInterpreter implements Interpreter {
   private multimodal:boolean;
   constructor(settings:NativeSettings,transport?:GoogleTransport) {
     if((!settings.allowPaidInference&&!settings.freeQuota)||!settings.apiKey||settings.model!==geminiTextRate.model) throw new Error('Live interpretation is disabled: native configuration is incomplete.');
-    validateRateCard(geminiTextRate);this.billing={...geminiTextRate,maxOutputTokens:settings.maxOutputTokens??geminiTextRate.maxOutputTokens};this.freeQuota=settings.freeQuota;this.name=`google:${settings.model}${this.freeQuota?':free':''}`;
+    if(rateHealth(geminiTextRate).status==='invalid')validateRateCard(geminiTextRate);this.billing={...geminiTextRate,maxOutputTokens:settings.maxOutputTokens??geminiTextRate.maxOutputTokens};this.freeQuota=settings.freeQuota;this.name=`google:${settings.model}${this.freeQuota?':free':''}`;
     this.unifiedUnderstanding=settings.unifiedUnderstanding===true;
     this.supportsImageLists=this.unifiedUnderstanding&&settings.allowImageLists===true;
     if(this.unifiedUnderstanding)this.name+=':understanding-v2:'+UNDERSTANDING_PROMPT_VERSION;
@@ -114,11 +119,27 @@ export class GoogleInterpreter implements Interpreter {
     if(input.audio&&(!this.supportsAudio||input.audio.mimeType!=='audio/wav'||input.audio.durationSeconds<=0||input.audio.durationSeconds>30||input.audio.data.length>1280100))throw new Error('Audio requires the free-only adapter and a verified recording of up to 30 seconds.');
     if((input.catalog?.length??0)>200||Buffer.byteLength((input.stage==='recognize'?'Transcribe the new recording.':prompt(input))+(input.image?imageInstruction:planningInstruction),'utf8')>64000) throw new Error('Native context is too large. Narrow the catalog before interpretation.');
   }
-  async interpret(input:InterpretationInput,signal:AbortSignal):Promise<ProviderResult> {
+  private buildRequest(input:InterpretationInput):GenerateContentParameters {
+    const signal=undefined;
+    if(this.unifiedUnderstanding&&input.stage!=='recognize'&&input.stage!=='recommend'){
+      const context=understandingPrompt(input);
+      return {model:this.billing.model,contents:[{role:'user',parts:[{text:context},...((input.audio??input.image)?[{inlineData:{mimeType:(input.audio??input.image)!.mimeType,data:(input.audio??input.image)!.data}}]:[])]}],config:{systemInstruction:understandingInstruction+'\n'+`Saved replyLanguage is ${languageOf(input.state)}. Write clarifyQuestion in this language using short natural shop wording. Keep transcript/observedText faithful to the actual input; canonical query words may be English. Set explicitLanguageRequest only for an explicit customer request. Use the TurnUnderstanding schema, never legacy operations or next fields.`,responseMimeType:'application/json',responseJsonSchema:understandingResponseSchema(),maxOutputTokens:this.billing.maxOutputTokens,serviceTier:ServiceTier.STANDARD,thinkingConfig:{thinkingLevel:ThinkingLevel.MINIMAL},automaticFunctionCalling:{disable:true},abortSignal:signal,httpOptions:{timeout:providerSdkTimeout(input),retryOptions:{attempts:1}}}};
+    }
+    return {model:this.billing.model,contents:(input.image||input.audio)?[{role:'user',parts:[{text:input.stage==='recognize'?'Transcribe this new recording.':prompt(input)},{inlineData:{mimeType:(input.image??input.audio)!.mimeType,data:(input.image??input.audio)!.data}}]}]:prompt(input),config:{systemInstruction:(input.stage==='recognize'?voiceInstruction+'\n'+voiceLocaleHint(input):replyLanguageInstruction(input)+'\n'+(input.stage==='recommend'?recommendationInstruction:input.image?imageInstruction+'\nOnly photoSpecificationKeys are supported hard-filter fields. Put other visible label words in keywords, not specificationFilters. Omit familyId and departmentId: recognition must not force an absent product into the available catalog.':planningInstruction+'\n'+(input.state.visualOrdering?visualQuantityInstruction:quantityInstruction))+(input.state.lastRequestId&&!input.image&&input.stage!=='recommend'?'\n'+submittedInstruction:'')),responseMimeType:'application/json',responseJsonSchema:input.stage==='recognize'?recognitionResponseSchema():input.stage==='recommend'?z.toJSONSchema(recommendationSchema):input.image?imageResponseSchema():planningResponseSchema(false),maxOutputTokens:this.billing.maxOutputTokens,serviceTier:ServiceTier.STANDARD,thinkingConfig:{thinkingLevel:input.stage==='recognize'?ThinkingLevel.LOW:ThinkingLevel.MINIMAL},automaticFunctionCalling:{disable:true},abortSignal:signal,httpOptions:{timeout:providerSdkTimeout(input),retryOptions:{attempts:1}}}};
+  }
+  prepareInput(input:InterpretationInput) {
+    validateRateCard(this.billing);
     this.validateInput(input);
-    if(this.unifiedUnderstanding&&input.stage!=='recognize'&&input.stage!=='recommend')return this.understand(input,signal);
+    const request=this.buildRequest(input),admission=admitRequest(request);
+    return {admission,interpret:(signal:AbortSignal)=>this.interpretPrepared(input,signal,request)};
+  }
+  async interpret(input:InterpretationInput,signal:AbortSignal):Promise<ProviderResult> {
+    return this.prepareInput(input).interpret(signal);
+  }
+  private async interpretPrepared(input:InterpretationInput,signal:AbortSignal,request:GenerateContentParameters):Promise<ProviderResult> {
+    if(this.unifiedUnderstanding&&input.stage!=='recognize'&&input.stage!=='recommend')return this.understand(input,signal,request);
     let r:GenerateContentResponse;
-    try {r=await this.transport.generateContent({model:this.billing.model,contents:(input.image||input.audio)?[{role:'user',parts:[{text:input.stage==='recognize'?'Transcribe this new recording.':prompt(input)},{inlineData:{mimeType:(input.image??input.audio)!.mimeType,data:(input.image??input.audio)!.data}}]}]:prompt(input),config:{systemInstruction:(input.stage==='recognize'?voiceInstruction+'\n'+voiceLocaleHint(input):replyLanguageInstruction(input)+'\n'+(input.stage==='recommend'?recommendationInstruction:input.image?imageInstruction+'\nOnly photoSpecificationKeys are supported hard-filter fields. Put other visible label words in keywords, not specificationFilters. Omit familyId and departmentId: recognition must not force an absent product into the available catalog.':planningInstruction+'\n'+(input.state.visualOrdering?visualQuantityInstruction:quantityInstruction))+(input.state.lastRequestId&&!input.image&&input.stage!=='recommend'?'\n'+submittedInstruction:'')),responseMimeType:'application/json',responseJsonSchema:input.stage==='recognize'?recognitionResponseSchema():input.stage==='recommend'?z.toJSONSchema(recommendationSchema):input.image?imageResponseSchema():planningResponseSchema(false),maxOutputTokens:this.billing.maxOutputTokens,serviceTier:ServiceTier.STANDARD,thinkingConfig:{thinkingLevel:input.stage==='recognize'?ThinkingLevel.LOW:ThinkingLevel.MINIMAL},automaticFunctionCalling:{disable:true},abortSignal:signal,httpOptions:{timeout:input.audio?19000:input.state.visualOrdering?44000:9500,retryOptions:{attempts:1}}}});} catch(error) {if(typeof error==='object'&&error!==null&&'status' in error&&error.status===429) throw new FreeQuotaError();throw error;}
+    try {r=await this.transport.generateContent({...request,config:{...request.config,abortSignal:signal}});} catch(error) {if(typeof error==='object'&&error!==null&&'status' in error&&error.status===429) throw new FreeQuotaError();throw error;}
     const u=r.usageMetadata;
     const usage=u?Object.fromEntries(['promptTokenCount','candidatesTokenCount','thoughtsTokenCount','totalTokenCount','cachedContentTokenCount','toolUsePromptTokenCount'].filter(k=>u[k as keyof typeof u]!==undefined).map(k=>[k,u[k as keyof typeof u] as number])):null;
     const parts=r.candidates?.[0]?.content?.parts??[];
@@ -162,27 +183,35 @@ export class GoogleInterpreter implements Interpreter {
 
     return {output,validationIssues,truncated:r.candidates?.length!==1||r.candidates[0].finishReason!=='STOP'||r.modelVersion!==this.billing.model,usage,responseModel:r.modelVersion};
   }
-  private async understand(input:InterpretationInput,signal:AbortSignal):Promise<ProviderResult> {
-    const context=understandingPrompt(input);
-    if(Buffer.byteLength(context+understandingInstruction,'utf8')>64000)throw new Error('Understanding context is too large');
+  private async understand(input:InterpretationInput,signal:AbortSignal,request:GenerateContentParameters):Promise<ProviderResult> {
     let r:GenerateContentResponse;
-    try {r=await this.transport.generateContent({model:this.billing.model,contents:[{role:'user',parts:[{text:context},...((input.audio??input.image)?[{inlineData:{mimeType:(input.audio??input.image)!.mimeType,data:(input.audio??input.image)!.data}}]:[])]}],config:{systemInstruction:understandingInstruction+'\n'+`Saved replyLanguage is ${languageOf(input.state)}. Write clarifyQuestion in this language using short natural shop wording. Keep transcript/observedText faithful to the actual input; canonical query words may be English. Set explicitLanguageRequest only for an explicit customer request. Use the TurnUnderstanding schema, never legacy operations or next fields.`,responseMimeType:'application/json',responseJsonSchema:understandingResponseSchema(),maxOutputTokens:this.billing.maxOutputTokens,serviceTier:ServiceTier.STANDARD,thinkingConfig:{thinkingLevel:ThinkingLevel.MINIMAL},automaticFunctionCalling:{disable:true},abortSignal:signal,httpOptions:{timeout:input.audio?19000:input.state.visualOrdering?44000:9500,retryOptions:{attempts:1}}}});}catch(error){if(typeof error==='object'&&error!==null&&'status' in error&&error.status===429)throw new FreeQuotaError();throw error;}
+    try {r=await this.transport.generateContent({...request,config:{...request.config,abortSignal:signal}});}catch(error){if(typeof error==='object'&&error!==null&&'status' in error&&error.status===429)throw new FreeQuotaError();throw error;}
     const u=r.usageMetadata,usage=u?Object.fromEntries(['promptTokenCount','candidatesTokenCount','thoughtsTokenCount','totalTokenCount','cachedContentTokenCount','toolUsePromptTokenCount'].filter(k=>u[k as keyof typeof u]!==undefined).map(k=>[k,u[k as keyof typeof u] as number])):null;
     const text=(r.candidates?.[0]?.content?.parts??[]).filter(p=>!p.thought&&typeof p.text==='string').map(p=>p.text).join('');
+    const observation=observeUnderstanding(text);
     let output:unknown=null,validationIssues:ProviderResult['validationIssues'];
+    let evidenceRepair:ProviderResult['evidenceRepair'];
     try{output=understandingToInterpretation(JSON.parse(text),input,this.supportsImageLists);}catch(error){
       validationIssues=[{path:'understanding',code:error instanceof z.ZodError?'invalid_contract':'invalid_evidence'}];
+      // A schema-valid plan can fail its verbatim evidence check. Let the
+      // metered runtime repair it once from the same transcript, never here
+      // inside an unaccounted provider call. Negated and stale targets stay rejected.
+      if(observation.envelopeValid&&!(error instanceof z.ZodError)&&error instanceof Error&&!/negates this cart mutation/.test(error.message)){
+        const proposal=turnUnderstandingSchema.safeParse(normalizeUnderstandingAbsence(JSON.parse(text)));
+        const current=(id:string)=>input.state.draft.some(line=>line.id===id);
+        if(proposal.success&&proposal.data.proposedEdits.every(edit=>current(edit.targetLineId))&&proposal.data.requestedItems.every(item=>!item.targetLineId||current(item.targetLineId))&&(proposal.data.proposedEdits.length||proposal.data.requestedItems.length))evidenceRepair={understanding:proposal.data,feedback:error.message.slice(0,500)};
+      }
       // A valid faithful transcript is still useful when a reference/evidence
       // contract fails. Retain it for a focused correction or deterministic
       // clear command, but execute none of the rejected shopping proposals.
-      try{const parsed=turnUnderstandingSchema.safeParse(JSON.parse(text));
-        if(parsed.success&&!input.image&&(input.audio?parsed.data.inputKind==='audio'&&!!parsed.data.transcript:parsed.data.inputKind==='text')){
-          const understood=parsed.data;
-          output=interpretationSchema.parse({operations:[],next:'continue',...(input.audio?{transcript:understood.transcript}:{}),clarifyQuestion:say(input.state,'Your list is kept. Which item should I change, and what type and quantity do you want?','பட்டியல் அப்படியே இருக்கு. எந்தப் பொருளை மாற்றணும், அதன் வகையும் எண்ணிக்கையும் என்ன?','List appadiye irukku. Entha porulai maathanum, athan type-um count-um enna?'),understanding:{...understood,requestedItems:[],proposedEdits:[],shopQuestions:[],unresolved:['validation_recovery']}});
+      try{const understood=perceptionEnvelope(JSON.parse(text));
+        if(understood&&(input.audio?understood.inputKind==='audio'&&!!understood.transcript:input.image?['handwritten_list','product_photo','unknown_image'].includes(understood.inputKind)&&understood.observedText!==undefined:understood.inputKind==='text')){
+          const invalid=observation.rows.find(row=>!row.valid),question=invalid?say(input.state,`Item ${invalid.position+1} needs correction. I have not added this list. Please resend the complete corrected list.`,`பொருள் ${invalid.position+1}-ஐ திருத்த வேண்டும். இந்தப் பட்டியலைச் சேர்க்கவில்லை. முழுப் பட்டியலையும் திருத்தி மீண்டும் அனுப்புங்கள்.`,`Porul ${invalid.position+1}-ai thiruthanum. Intha list-ai serkkala. Muzhu corrected list-ai marubadi anuppunga.`):say(input.state,'Your list is kept. Which item should I change, and what type and quantity do you want?','பட்டியல் அப்படியே இருக்கு. எந்தப் பொருளை மாற்றணும், அதன் வகையும் எண்ணிக்கையும் என்ன?','List appadiye irukku. Entha porulai maathanum, athan type-um count-um enna?');
+          output=interpretationSchema.parse({operations:[],next:'continue',...(input.audio?{transcript:understood.transcript}:{}),clarifyQuestion:question,understanding:{...understood,requestedItems:[],proposedEdits:[],shopQuestions:[],unresolved:['validation_recovery']}});
         }
       }catch{/* Invalid structure has no usable customer evidence. */}
     }
-    return {output,validationIssues,usage,responseModel:r.modelVersion,truncated:r.candidates?.length!==1||r.candidates[0].finishReason!=='STOP'||r.modelVersion!==this.billing.model};
+    return {output,validationIssues,usage,observation,...(evidenceRepair?{evidenceRepair}:{}),responseModel:r.modelVersion,truncated:r.candidates?.length!==1||r.candidates[0].finishReason!=='STOP'||r.modelVersion!==this.billing.model};
   }
 
 }
@@ -191,8 +220,9 @@ export class FreeQuotaError extends Error {constructor(){super('Provider rate li
 
 function replyLanguageInstruction(input:InterpretationInput) {
  const language=languageOf(input.state);
- return `Customer reply language is ${language}. Write clarifyQuestion and assistance.question in ${language==='ta'?'natural Tamil script':language==='ta-Latn'?'Tamil in Latin letters (Tanglish), not English sentences':'English'}. Use a warm, respectful local shop-assistant tone: short everyday Tamil, not formal literary or bureaucratic phrasing. In Tanglish use natural spoken Tamil in Latin letters with familiar shop terms such as size, brand, piece and list; do not translate whole sentences into English or use exaggerated slang. Ask one short question at a time. Understand colloquial Tamil, Tanglish spelling variations and English input. Keep canonical enum strings, IDs, specification values and catalog search keywords unchanged. Never switch language because a product name or customer message uses English. A standalone explicit request to change language returns operations=[], next=continue; retain the exact audible transcript for voice so the backend can recognize the preference. Do not invent commerce facts. Omit unused optional fields rather than returning null.`;
+ return `Customer reply language is ${language}. Write questions in ${language==='ta'?'Tamil script with familiar English shop words':language==='ta-Latn'?'spoken Tamil in Latin letters, not English sentences':'English'}. ${spokenTamilInstruction} Keep IDs, enums, specification values and canonical search keywords unchanged. A standalone explicit language-change request has operations=[],next=continue; preserve its verbatim voice transcript. Omit unused optional fields, never null.`;
 }
+
 function normalizeOptionalNulls(value:unknown,state:InterpretationInput['state'],catalogMap?:InterpretationInput['catalogMap'],text=''):unknown {
  if(!value||typeof value!=='object'||Array.isArray(value))return value;
  const result={...value} as Record<string,unknown>;

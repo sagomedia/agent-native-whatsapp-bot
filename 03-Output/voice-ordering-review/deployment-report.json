@@ -1,0 +1,102 @@
+{
+  "release": "preview-539dc247a0a0",
+  "previousRelease": "preview-8f1f1ff48237",
+  "status": "active_ready",
+  "sourceCommit": "d8c5586aa928841fd225126ff997623ffbd0a010",
+  "repository": "https://github.com/sagomedia/agent-native-whatsapp-bot",
+  "branch": "codex/voice-order-recovery-final",
+  "pullRequest": "https://github.com/sagomedia/agent-native-whatsapp-bot/pull/4",
+  "pullRequestDraft": true,
+  "pullRequestMerged": false,
+  "earlierBaselinePullRequest": "https://github.com/sagomedia/agent-native-whatsapp-bot/pull/3",
+  "earlierBaselineMerged": true,
+  "bundleSha256": "013a873d3a66b36ae77841d05fc125623d56cfdf1058a217feeabb0f31739a70",
+  "databaseBackup": "/var/backups/shopbot-migration/owner-20261013T180342Z",
+  "configurationPreserved": true,
+  "productionCounts": {
+    "stores": 1,
+    "products": 39,
+    "conversations": 3,
+    "order_requests": 3,
+    "messages": 317,
+    "whatsapp_channels": 1
+  },
+  "queueStatesPreserved": true,
+  "publicRoutes": {
+    "webhookUnsigned": 403,
+    "privacy": 200,
+    "ownerAccess": 302,
+    "pipeImage": 200,
+    "hoseImage": 200,
+    "ready": 200
+  },
+  "offlineTests": {
+    "tests": 390,
+    "pass": 390,
+    "fail": 0,
+    "skipped": 0
+  },
+  "productionBuild": "passed",
+  "model": "gemini-3.5-flash-lite",
+  "promptVersion": "2026-10-13.7",
+  "nativeReplayCases": [
+    {
+      "name": "recorded-pipe-and-cutter-with-legacy-cart",
+      "pass": true,
+      "elapsedMs": 3857
+    },
+    {
+      "name": "recorded-rejected-correction-recovers",
+      "pass": true,
+      "elapsedMs": 3248
+    },
+    {
+      "name": "recorded-clear-all-requires-confirmation",
+      "pass": true,
+      "elapsedMs": 2148
+    },
+    {
+      "name": "unspecified-pumping-pipe",
+      "pass": true,
+      "elapsedMs": 2097
+    },
+    {
+      "name": "brand-is-not-substituted",
+      "pass": true,
+      "elapsedMs": 1681
+    },
+    {
+      "name": "material-belongs-only-to-cutter",
+      "pass": true,
+      "elapsedMs": 1522
+    },
+    {
+      "name": "extra-is-increment",
+      "pass": true,
+      "elapsedMs": 1668
+    },
+    {
+      "name": "restated-total-is-not-extra",
+      "pass": true,
+      "elapsedMs": 1183
+    },
+    {
+      "name": "negated-clear-keeps-list",
+      "pass": true,
+      "elapsedMs": 214
+    }
+  ],
+  "nativeReplayEstimatedCostMicrousd": "23101",
+  "evaluationReservationCapMicrousd": 100000,
+  "spendingLimitMicrousd": "4500000",
+  "priorHeldBudgetPreserved": true,
+  "newEvaluationUnsettledAttempts": 0,
+  "whatsAppTestSends": 0,
+  "testOrders": 0,
+  "gitHubCI": "not_enabled_workflow_scope_missing; proposal_in_PR",
+  "realDevicePilot": "pending_customer_retest",
+  "canonicalDirtyCheckout": "preserved",
+  "temporaryRegressionDatabase": "removed",
+  "newMigrations": 0,
+  "dependencyChanges": false
+}

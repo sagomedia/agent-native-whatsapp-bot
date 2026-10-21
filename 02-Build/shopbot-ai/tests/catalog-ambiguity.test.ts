@@ -52,9 +52,10 @@ test('unspecified water and pumping pipes retain quantity without inventing a PV
   const visible=visualReply({version:1,kind:'text',text:result.message,presentation:'text',outboundMessages:1},result.state!);
   assert.equal(visible.stage,'identify');
   assert.match(visible.text,/Which kind of pipe/);
-  assert.match(JSON.stringify(visible.parts),/2/);
-  assert.match(JSON.stringify(visible.parts),/1 inch/);
-  assert.ok(!JSON.stringify(visible.parts).includes('H13'));
+  assert.equal(visible.parts,undefined);
+  assert.equal(result.state!.draft[0].quantity,2,'the known count stays in the cart without repeating it in a category question');
+  assert.match(visible.text,/1 inch/);
+  assert.ok(!JSON.stringify(visible).includes('H13'));
   assert.equal((await pool.query('SELECT count(*)::int AS count FROM order_requests WHERE conversation_id=$1',[conversationId])).rows[0].count,0);
  }finally{await pool.end();await admin.query(`DROP SCHEMA "${schema}" CASCADE`);await admin.end();}
 });

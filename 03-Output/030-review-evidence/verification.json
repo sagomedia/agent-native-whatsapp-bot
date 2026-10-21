@@ -1,0 +1,39 @@
+{
+  "reviewDate": "2026-10-14",
+  "timezone": "Asia/Kolkata",
+  "chatCheckoutCommit": "fccf1e39e130d565ff838fdfc28076304b551fbf",
+  "reviewedSourceCommit": "2403f76e0c770b9217fc191d2dc88ff8581560d3",
+  "scope": "Read-only source audit and offline verification; planning artifacts only",
+  "nodeVersion": "22.22.1",
+  "postgresImage": "postgres:17.6-alpine",
+  "checks": {
+    "build": "passed",
+    "integration": {
+      "passed": 445,
+      "failed": 0,
+      "skipped": 0
+    },
+    "catalogCleanup": {
+      "passed": 4,
+      "failed": 0
+    },
+    "focusedBugProbes": "passed: asserted and reproduced existing defects"
+  },
+  "liveAIInvocations": 0,
+  "liveWhatsAppSends": 0,
+  "productionWrites": 0,
+  "disposableDatabaseRemoved": true,
+  "sourceFilesSHA256": {
+    "apps/server/src/runtime/conversation.ts": "38e85f1fcc1127b04f1a3df29ed65d02518d0862b9c59a1914dae248cd03a1f3",
+    "apps/server/src/services/product-verification.ts": "a1d0fd9f12c6a7ebdc4ed667bd445701f70613207bb50d4b826d9953a58452cd",
+    "apps/server/src/services/visual-ordering.ts": "9e051a460f9ddf9704c0032297a25c994a663739c64bc15934adb14f56871bc0",
+    "apps/server/src/services/inference-budget.ts": "a586dfb0fae2931a67d867b51bbe62410b89268a0b95d885b27a5f4c4525e511",
+    "apps/server/src/services/tools.ts": "328f78ac3a88cb0ffb998beb24e589c97825fd5be7fd5e9ff0b3c85c315da956",
+    "apps/server/src/adapters/turn-understanding.ts": "7befb34bb84f09c0e4c30b8c96e37ff56bb946eaf18dff4a334505527c9d7b6c",
+    "apps/server/src/adapters/mention-reconciliation.ts": "86e0f22c97c46b8e2e2a84ddfd6df8cab64b0064ecca5866428910c260e6a520",
+    "packages/contracts/index.ts": "0dc3f0e67b92d087ddc335ef991a6b94aee6ce19b3aca5182f081d3f791cddef",
+    "packages/contracts/understanding.ts": "83f2468b3f87c9bc75fe62efca8b0df9a1e04e43636625fc646db5f5f2d52075",
+    "packages/contracts/language.ts": "a2a6f537eedfb29f0a4f10376fe38dbe512461659f90d0db8f236f0d20ea127a",
+    "package-lock.json": "fd87be3c76bb3b9327fb5613ffd89d616390156ef29de1ae3a1cf368f539ed6b"
+  }
+}

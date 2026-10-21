@@ -1,0 +1,50 @@
+{
+  "sourceRows": 300,
+  "draftTargets": 297,
+  "confirmedDuplicatesExcluded": 3,
+  "reviewMarkedTargets": 19,
+  "imagesHeld": 6,
+  "packageImages": 294,
+  "publishableWithoutMerchantConfirmation": 0,
+  "assembledSourceHash": "fb0a27226f2857e27c6bd538fe75e33324a16c51450288fd97d6d234a7b0f87d",
+  "bulkSourceHash": "fbf10bab0ca61a983b446404bc01dd0308a3eb7acc32b707d9118c89499b113c",
+  "offlineValidation": {
+    "batchId": "reviewed-300-pass2-20261017",
+    "sourceHash": "fbf10bab0ca61a983b446404bc01dd0308a3eb7acc32b707d9118c89499b113c",
+    "count": 300,
+    "currentCatalogUniqueCount": null,
+    "expectedCatalogUniqueCount": null,
+    "new": 297,
+    "updates": 0,
+    "excluded": 3,
+    "conflicts": 0,
+    "imagesHeld": 291,
+    "taxonomyConflicts": [],
+    "effectiveUniqueCount": 297,
+    "databaseChecked": false,
+    "published": 0
+  },
+  "sourceFiles": {
+    "canonical-sku-map.json": "bf180cf5f274b784c1a5e4dcdffc993da4ac700aaf96ba660f467b96c1762407",
+    "taxonomy-map.json": "91cb819a7f2d0d7768a5ddf00956a7cbc27a9897e069841ba3fea0bac9f9aeb2",
+    "demo-exclusions.json": "4a87dc02d4fc574258213842df2838bcfc57014b8717cb8a98eed963776c96ab",
+    "01-shop-catalog-100/products.json": "97a17e2df6e37a414bee3e3f62cb140a9b9d2b2bab74c2b007acf7739005558b",
+    "01-shop-catalog-100/catalog-map.json": "0198d057210e71e0bbc5afb991cc1cb5500f85b0663db3e799697a7fe1c7b4b1",
+    "01-shop-catalog-100/research.json": "5b8a559f50d6ad143880255447a2c53cf022aa8a3acbf73e545361c6e45cfcf9",
+    "01-shop-catalog-100/exceptions.json": "3ebdcaba5cf38d90cd76c2543973170e5d9e25da0dd711a4e9189bd339bf14d3",
+    "02-ksmc_hardware_batch/products.json": "95d27dc2ee395d20a8978d6b56350168e7a6c9867febb201745934a5b857aeee",
+    "02-ksmc_hardware_batch/catalog-map.json": "95e5a46831a123f95a19b0494c660108c923be6f464be0fdd077599f3fdc5339",
+    "02-ksmc_hardware_batch/research.json": "1ed82a89b1dbfd85ac95ee5a8d0f976f6d131253aca3d1b3429b52c3a950a44b",
+    "02-ksmc_hardware_batch/exceptions.json": "31cc99e75c8db357d71ab4cd48410bfb258ff1737eeb76c1c0ce9497af8d02da",
+    "03-approved-3/products.json": "590eb15ca2f3dc418867bdc4c33901ff586b82d8437861135191769ec6498338",
+    "03-approved-3/catalog-map.json": "c00b1335c9f3d8973ced49671bb2f044b1000fcb1b40ace6738d49d695c51e35",
+    "03-approved-3/research.json": "484b00d87652a963644d1b9dfe3aea582aa012138465c78b4fd569afed7f233e",
+    "03-approved-3/exceptions.json": "c5e2016359747a95031191b15e1165f6dd54318b157451499cd3edfc6306d11f"
+  },
+  "limitations": [
+    "Structural, selling-basis and local raster checks passed; exact product/photo identity still needs merchant review.",
+    "Source research has no merchant-approved prices or stock.",
+    "Two shade/product-line pairs are deliberately split by the versioned split-overrides.json.",
+    "Offline validation does not indicate staging or publication."
+  ]
+}

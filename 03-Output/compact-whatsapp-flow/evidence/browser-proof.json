@@ -1,0 +1,15 @@
+{
+  "syntheticOnly": true,
+  "desktopWidth": 1440,
+  "mobileWidth": 390,
+  "languages": [
+    "ta",
+    "ta-Latn",
+    "en"
+  ],
+  "extraCartTextPart": false,
+  "previewActionsDisabled": true,
+  "horizontalOverflow": false,
+  "pageErrors": [],
+  "eightItemImageInspected": true
+}

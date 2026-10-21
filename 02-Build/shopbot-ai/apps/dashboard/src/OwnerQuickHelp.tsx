@@ -1,0 +1,29 @@
+import {useEffect,useRef,useState} from 'react';
+import {useOwnerLocale} from './owner-locale.js';
+import {catalogTaskRoute,orderTaskRoute,inboxTaskRoute} from './owner-task-routes.js';
+import {OwnerLink,navigateOwner} from './owner-ui.js';
+const copy={
+ en:{title:'Learn the daily jobs',intro:'Start on Today. Open the job you need and follow its main action. You can reopen this help at any time.',close:'Close help',open:'Open this task',remember:'Remember',rules:['Orange prices are suggestions. Check the item, unit and price in your shop.','Send quote for approval asks the customer to confirm. Save draft keeps your work without sending. Accepting holds stock; collection deducts it.','Unknown stock is not zero. A physical count includes items held for orders.','Record a payment or refund only after checking your bank/UPI app.'],jobs:[
+ {title:'Send a quote',steps:['Orders → Needs review → choose the customer’s order.','Check the photo and item details. Resolve items takes you to the next missing fact. You can enter a store item without a catalog match.','Check the total, then Send quote for approval. Save draft if you need to stop.']},
+ {title:'Prepare a pickup',steps:['After customer approval, check the shelf and any required advance, then Accept order.','Pack the approved quantities and sizes. Mark ready for pickup confirms that check.','Hand the items to the customer, then Mark collected. Recording collection does not record payment.']},
+ {title:'Change price or stock',steps:['Products → Update price → enter the price per selling unit → Save price.','For stock, choose Receive stock, Record walk-in sale or Correct count. If the count is unknown, start with a physical count.','Check the result before saving. For several products, use Update prices & stock in bulk; blank fields keep current facts.']},
+ {title:'Reply to a customer',steps:['Messages → choose the right customer → Take over & reply.','Write and Send reply. Wait for the saved/queued result; delivery status appears in the conversation.','Return to assistant when finished. A shop-wide pause stays on until you resume it in Settings.']}
+ ]},
+ ta:{title:'தினசரி கடை வேலைகள்',intro:'இன்று பக்கத்தில் தொடங்குங்கள். செய்ய வேண்டிய வேலையைத் திறந்து, அதில் காட்டும் முக்கிய செயலைப் பின்பற்றுங்கள். இந்த உதவியை எப்போது வேண்டுமானாலும் திறக்கலாம்.',close:'உதவியை மூடு',open:'இந்த வேலையைத் திற',remember:'நினைவில் கொள்ளுங்கள்',rules:['ஆரஞ்சு விலைகள் பரிந்துரைகள். பொருள், விற்பனை அளவு, கடை விலையைச் சரிபாருங்கள்.','ஒப்புதலுக்கு அனுப்பினால்தான் வாடிக்கையாளர் உறுதி செய்வார். வரைவைச் சேமித்தால் அனுப்பப்படாது. ஆர்டரை ஏற்றால் இருப்பு ஒதுக்கப்படும்; பொருளைக் கொடுத்ததாகப் பதிவு செய்தால் இருப்பு குறையும்.','தெரியாத இருப்பு பூஜ்ஜியம் அல்ல. கடையில் எண்ணும்போது ஆர்டர்களுக்கு ஒதுக்கிய பொருட்களையும் சேருங்கள்.','வங்கியில் பணம் வந்ததையோ திருப்பி அனுப்பியதையோ சரிபார்த்த பிறகே பதிவு செய்யுங்கள்.'],jobs:[
+ {title:'விலைப்பட்டியலை அனுப்பு',steps:['ஆர்டர்கள் → கவனிக்க வேண்டியவை → வாடிக்கையாளரின் ஆர்டரைத் தேர்வு செய்யுங்கள்.','படம் மற்றும் பொருள் விவரங்களைச் சரிபாருங்கள். விவரங்களை நிரப்பு பொத்தான் அடுத்த விடுபட்ட விவரத்துக்கு அழைத்துச் செல்லும். பட்டியலில் பொருள் இல்லாவிட்டாலும் கடைப் பொருளின் விவரத்தை உள்ளிடலாம்.','மொத்தத்தைச் சரிபார்த்து ஒப்புதலுக்கு அனுப்புங்கள். பிறகு தொடர வேண்டுமெனில் வரைவைச் சேமியுங்கள்.']},
+ {title:'பொருட்களைத் தயார் செய்',steps:['வாடிக்கையாளர் ஒப்புதல் அளித்ததும் கடை இருப்பையும் தேவையான முன்பணத்தையும் சரிபார்த்து ஆர்டரை ஏற்கவும்.','ஒப்புதல் பெற்ற அளவு, எண்ணிக்கையைப் பொதி செய்யுங்கள். சரிபார்த்த பிறகு எடுக்கத் தயார் எனக் குறியுங்கள்.','பொருட்களைக் கொடுத்த பிறகு கொடுத்துவிட்டதாகப் பதிவு செய்யுங்கள். இது பணம் பெற்றதற்கான பதிவு அல்ல.']},
+ {title:'விலை அல்லது இருப்பை மாற்று',steps:['பொருட்கள் → விலையை மாற்று → விற்பனை அளவுக்கான விலையை உள்ளிடு → சேமி.','இருப்புக்கு வந்த இருப்பைச் சேர், நேரடி விற்பனை, எண்ணிக்கையைச் சரிசெய் ஆகியவற்றில் ஒன்றைத் தேர்வு செய்யுங்கள். இருப்பு தெரியாவிட்டால் முதலில் கடையில் எண்ணுங்கள்.','சேமிக்கும் முன் முடிவைச் சரிபாருங்கள். பல பொருட்களுக்கு விலை / இருப்பு மாற்று அட்டவணையைப் பயன்படுத்துங்கள். காலியாக விட்டால் தற்போதைய விவரம் மாறாது.']},
+ {title:'வாடிக்கையாளருக்குப் பதில் அளி',steps:['செய்திகள் → சரியான வாடிக்கையாளர் → நான் பதில் அளிக்கிறேன்.','பதிலை எழுதி அனுப்புங்கள். சேமித்த / அனுப்பக் காத்திருக்கும் நிலையைப் பாருங்கள். சென்றடைந்த நிலை உரையாடலில் காட்டப்படும்.','முடிந்ததும் உதவியாளரிடம் ஒப்படையுங்கள். கடை முழுவதற்கும் நிறுத்தியிருந்தால் அமைப்புகளில் மீண்டும் தொடங்க வேண்டும்.']}
+ ]}
+};
+const routes:Record<string,string|null>[]=[orderTaskRoute,orderTaskRoute,catalogTaskRoute,inboxTaskRoute];
+export function OwnerQuickHelp({onClose}:{onClose:()=>void}){
+ const {locale}=useOwnerLocale(),text=copy[locale],[task,setTask]=useState(0),dialog=useRef<HTMLDialogElement>(null),opener=useRef(document.activeElement as HTMLElement|null);
+ useEffect(()=>{const element=dialog.current;element?.showModal();return()=>{element?.close();opener.current?.focus();};},[]);
+ return <dialog ref={dialog} className="owner-dialog owner-quick-help" aria-labelledby="owner-help-title" onCancel={event=>{event.preventDefault();onClose();}}>
+  <header><h2 id="owner-help-title">{text.title}</h2><button type="button" onClick={onClose} autoFocus>{text.close}</button></header><p>{text.intro}</p>
+  <div className="owner-help-jobs" aria-label={text.title}>{text.jobs.map((job,index)=><button type="button" key={index} aria-pressed={task===index} onClick={()=>setTask(index)}>{job.title}</button>)}</div>
+  <section className="owner-help-task"><h3>{text.jobs[task]!.title}</h3><ol>{text.jobs[task]!.steps.map(step=><li key={step}>{step}</li>)}</ol><OwnerLink className="owner-button" values={routes[task]!} onNavigate={()=>{navigateOwner(routes[task]!);onClose();requestAnimationFrame(()=>document.getElementById('owner-content')?.focus());}}>{text.open}</OwnerLink></section>
+  <details><summary>{text.remember}</summary><ul>{text.rules.map(rule=><li key={rule}>{rule}</li>)}</ul></details>
+ </dialog>;
+}

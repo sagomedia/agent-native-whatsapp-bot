@@ -1,0 +1,283 @@
+/* The app fits the viewport. Only named content regions may scroll. */
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.app {
+  min-height: 0;
+  height: 100%;
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
+}
+
+nav {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.page-head,
+.stage-filters {
+  flex-shrink: 0;
+}
+
+/* The order already has its own heading; avoid a duplicate page header. */
+main[data-view="orders"] > .page-head {
+  display: none;
+}
+
+.workbench,
+.guide-layout,
+.stock-layout {
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.queue,
+.sheet,
+.stock-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.queue > label,
+.sheet-head,
+.banner,
+.stock-list > label,
+.stock-header {
+  flex-shrink: 0;
+}
+
+.queue-scroll,
+.order-scroll,
+.stock-rows {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.lines thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  box-shadow: 0 1px 0 var(--border);
+}
+
+.actionbar {
+  position: relative;
+  inset: auto;
+  flex-shrink: 0;
+  box-shadow: none;
+}
+
+.order-scroll :is(input, button, summary) {
+  scroll-margin-block: 16px;
+}
+
+.guide,
+.order-so-far,
+.stock-task-pane {
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.guide,
+.order-so-far {
+  align-self: stretch;
+}
+
+.stock-task-pane {
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: white;
+}
+
+.stock-task-pane .stock-card {
+  border: 0;
+}
+
+.stock-task-pane .stock-history {
+  margin: 0 22px 20px;
+}
+
+.stock-list > .stock-note {
+  flex-shrink: 0;
+}
+
+.close-stock-picker {
+  display: none;
+}
+
+.toast {
+  bottom: 110px;
+}
+
+@media (max-width: 900px) {
+  .queue {
+    display: none;
+  }
+
+  .stock-layout {
+    display: block;
+  }
+
+  .stock-list {
+    display: none;
+  }
+
+  .stock-layout[data-picker="true"] .stock-list {
+    display: flex;
+  }
+
+  .stock-layout[data-picker="true"] .stock-task-pane {
+    display: none;
+  }
+
+  .close-stock-picker {
+    display: block;
+    align-self: flex-start;
+    margin: 8px 12px 0;
+  }
+}
+
+@media (max-width: 650px) {
+  .demo-bar {
+    justify-content: flex-start;
+    align-items: center;
+    min-height: 42px;
+    padding-block: 6px;
+    overflow-x: auto;
+    overscroll-behavior: contain;
+    white-space: nowrap;
+  }
+
+  .demo-bar > div {
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+  }
+
+  .demo-bar strong {
+    display: none;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  main {
+    padding: 12px;
+  }
+
+  .actionbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    position: relative;
+    inset: auto;
+    padding: 12px 14px max(12px, env(safe-area-inset-bottom));
+    border: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .actionbar > div:first-child {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 4px 12px;
+  }
+
+  .actionbar .actions > .save {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .actionbar .actions > .primary {
+    flex: 1;
+  }
+
+  .sheet-head {
+    padding: 12px;
+  }
+
+  .banner {
+    margin-bottom: 10px;
+  }
+
+  .order-scroll {
+    scrollbar-gutter: auto;
+  }
+
+  .stock-task-pane .stock-card {
+    padding: 18px;
+  }
+
+  .stock-task-pane .stock-history {
+    margin: 0 18px 18px;
+  }
+}
+
+@media (max-height: 700px) {
+  main {
+    padding-block: 10px;
+  }
+
+  .page-head {
+    margin-bottom: 12px;
+  }
+
+  .page-head p {
+    display: none;
+  }
+
+  .stage-filters {
+    margin-bottom: 10px;
+  }
+
+  .sheet-head {
+    padding-block: 12px;
+  }
+
+  .banner {
+    padding-block: 8px;
+    margin-bottom: 10px;
+  }
+
+  .actionbar {
+    padding-block: 10px;
+  }
+}
+
+@media (max-height: 550px) {
+  .stage-filters {
+    display: none;
+  }
+}

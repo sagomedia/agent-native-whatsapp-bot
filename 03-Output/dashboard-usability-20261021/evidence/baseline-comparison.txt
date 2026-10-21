@@ -1,0 +1,8 @@
+not ok 8 - Tamil list additions are acknowledged before the pending missing item, and voice clearing gets explicit feedback
+not ok 31 - a fresh recorded list asks pipe type before product and quantity choices
+# tests 42
+# pass 40
+# fail 2
+# cancelled 0
+# skipped 0
+# duration_ms 9379.719432

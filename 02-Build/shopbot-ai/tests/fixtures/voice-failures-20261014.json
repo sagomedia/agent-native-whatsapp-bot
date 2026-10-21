@@ -1,0 +1,224 @@
+{
+  "source": "Synthetic TTS QA of source 77fac180, prompt 2026-10-14.1. Target IDs are replaced by fixture SKUs.",
+  "calls": [
+    {
+      "case": "two 10L cans",
+      "step": "two-ten-litre-cans",
+      "response": {
+        "schemaVersion": 2,
+        "inputKind": "audio",
+        "transcript": "எனக்கு 10 லிட்டர் வெள்ளை பெயிண்ட் டப்பா இரண்டு வேணும்.",
+        "intents": [
+          "add"
+        ],
+        "requestedItems": [
+          {
+            "ordinal": 1,
+            "sourceText": "10 லிட்டர் வெள்ளை பெயிண்ட் டப்பா இரண்டு",
+            "query": "white paint",
+            "purchaseCount": 2,
+            "requestedContainer": "dabba",
+            "colour": "white",
+            "packSize": {
+              "value": 10,
+              "unit": "litre"
+            },
+            "unresolved": []
+          }
+        ],
+        "proposedEdits": [],
+        "shopQuestions": [],
+        "unresolved": []
+      }
+    },
+    {
+      "case": "Tanglish pack count",
+      "step": "tanglish-pack",
+      "response": {
+        "schemaVersion": 2,
+        "inputKind": "audio",
+        "transcript": "Enakku 10 litre white paint cans venum",
+        "intents": [
+          "add"
+        ],
+        "requestedItems": [
+          {
+            "ordinal": 1,
+            "sourceText": "10 litre white paint cans",
+            "query": "white paint can",
+            "purchaseCount": null,
+            "colour": "white",
+            "packSize": {
+              "value": 10,
+              "unit": "litre"
+            },
+            "requestedAmount": {
+              "value": 10,
+              "unit": "litre"
+            },
+            "amountMode": "total",
+            "unresolved": []
+          }
+        ],
+        "proposedEdits": [],
+        "shopQuestions": [],
+        "unresolved": []
+      }
+    },
+    {
+      "case": "Tamil rejected PVC replacement",
+      "step": "replace-pvc-with-hose",
+      "response": {
+        "schemaVersion": 2,
+        "inputKind": "audio",
+        "transcript": "அந்த பிவிசி பைப்பு வேண்டாம். அதுக்கு 10 மீட்டர் ஹோஸ்ட் பைப்பு ஒன்னு வேணும்.",
+        "intents": [
+          "edit",
+          "add"
+        ],
+        "requestedItems": [
+          {
+            "ordinal": 1,
+            "sourceText": "10 மீட்டர் ஹோஸ்ட் பைப்பு ஒன்னு",
+            "query": "hose pipe",
+            "requestMode": "set",
+            "purchaseCount": 1,
+            "dimensions": [
+              {
+                "value": 10,
+                "unit": "meter",
+                "role": "length"
+              }
+            ],
+            "unresolved": []
+          }
+        ],
+        "proposedEdits": [
+          {
+            "kind": "remove_item",
+            "targetLineId": "H02",
+            "sourceText": "அந்த பிவிசி பைப்பு வேண்டாம்"
+          }
+        ],
+        "shopQuestions": [],
+        "unresolved": [],
+        "clarifyQuestion": ""
+      }
+    },
+    {
+      "case": "ambiguous target preserves old lines",
+      "step": "ambiguous-pipe-edit",
+      "response": {
+        "schemaVersion": 2,
+        "inputKind": "audio",
+        "transcript": "pipe mottam moonu aakkunga",
+        "intents": [
+          "edit"
+        ],
+        "requestedItems": [],
+        "proposedEdits": [],
+        "shopQuestions": [],
+        "unresolved": [
+          "identity"
+        ],
+        "clarifyQuestion": "어 எந்த பைப்பை 3 எண்ணிக்கையாக மாற்ற வேண்டும்?"
+      }
+    },
+    {
+      "case": "ambiguous target preserves old lines",
+      "step": "ambiguous-and-independent",
+      "response": {
+        "schemaVersion": 2,
+        "inputKind": "audio",
+        "transcript": "பைப் இன்னம் இரண்டு சேர்த்துக்கோ. அடுத்து டெப்லான் டேப் இரண்டு வேணும்.",
+        "intents": [
+          "add",
+          "edit"
+        ],
+        "requestedItems": [
+          {
+            "ordinal": 1,
+            "sourceText": "டெப்லான் டேப் இரண்டு வேணும்",
+            "query": "teflon tape",
+            "purchaseCount": 2,
+            "unresolved": []
+          }
+        ],
+        "proposedEdits": [
+          {
+            "kind": "increment_quantity",
+            "targetLineId": "H01",
+            "sourceText": "பைப் இன்னம் இரண்டு சேர்த்துக்கோ",
+            "quantity": 2
+          }
+        ],
+        "shopQuestions": [],
+        "unresolved": [],
+        "clarifyQuestion": ""
+      }
+    },
+    {
+      "case": "continuous 50m needs shop check",
+      "step": "fifty-metres-continuous",
+      "response": {
+        "schemaVersion": 2,
+        "inputKind": "audio",
+        "transcript": "இந்த தோட்ட hose pipe ஒரே துண்டா 50 மீட்டர் நீளம் வேணும்",
+        "intents": [
+          "add"
+        ],
+        "requestedItems": [
+          {
+            "ordinal": 1,
+            "sourceText": "இந்த தோட்ட hose pipe ஒரே துண்டா 50 மீட்டர் நீளம் வேணும்",
+            "query": "garden hose pipe",
+            "purchaseCount": null,
+            "material": "rubber",
+            "dimensions": [
+              {
+                "value": 50,
+                "unit": "meter",
+                "role": "length"
+              }
+            ],
+            "requestedAmount": {
+              "value": 50,
+              "unit": "meter"
+            },
+            "amountMode": "continuous",
+            "unresolved": []
+          }
+        ],
+        "proposedEdits": [],
+        "shopQuestions": [],
+        "unresolved": []
+      }
+    },
+    {
+      "case": "mild background noise",
+      "step": "tape-two-noisy",
+      "response": {
+        "schemaVersion": 2,
+        "inputKind": "audio",
+        "transcript": "தேப் டைப் ரெண்டு வேணும்",
+        "intents": [
+          "add"
+        ],
+        "requestedItems": [
+          {
+            "ordinal": 1,
+            "sourceText": "தேப் டைப் ரெண்டு வேணும்",
+            "query": "tape",
+            "requestMode": "set",
+            "purchaseCount": 2,
+            "unresolved": []
+          }
+        ],
+        "proposedEdits": [],
+        "shopQuestions": [],
+        "unresolved": [],
+        "clarifyQuestion": ""
+      }
+    }
+  ]
+}

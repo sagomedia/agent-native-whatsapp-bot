@@ -1,0 +1,13 @@
+{
+  "fixtureOnly": true,
+  "desktopWidth": 1440,
+  "mobileWidth": 390,
+  "horizontalOverflow": false,
+  "pageErrors": [],
+  "checkoutSeparateFromOrder": true,
+  "invoiceVisible": true,
+  "ownerAcceptedAndMarkedReady": true,
+  "manualRefreshPreservedOrder": true,
+  "staleResponseCannotResurrectCollectedOrder": true,
+  "catalogAndConnectionsInspected": true
+}

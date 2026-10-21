@@ -1,0 +1,102 @@
+{
+  "sourceCommit": "2403f76e0c770b9217fc191d2dc88ff8581560d3",
+  "missingCount": {
+    "quantity": null,
+    "resolution": "needs_quantity",
+    "completeReview": true,
+    "finishOrderButton": true
+  },
+  "lostMeasureDisplay": "PVC pipe",
+  "choiceStatus": [
+    "தெரிந்த விலை கூட்டுத்தொகை: ₹0.00 (0 பொருட்கள்). தெரியாத விவரங்கள் இதில் சேர்க்கப்படவில்லை.",
+    "PVC pipe: கடை சரிபார்க்க வேண்டும்"
+  ],
+  "invalidPlaybookIntents": [
+    "order",
+    "Clarify"
+  ],
+  "invalidMeasureJoin": "[object Object]",
+  "extendedRateRejected": true,
+  "worstCaseReservationMicrousd": 324813,
+  "renderedMissingCount": {
+    "version": 1,
+    "kind": "text",
+    "text": "பொருட்கள் 1–1 / 1\nபக்கமா நகர்த்தி எல்லா படங்களையும் பாருங்க.\nபில் பார்க்கலாம் அல்லது “கடைக்கு அனுப்புங்க” என்று சொல்லலாம்.",
+    "stage": "products",
+    "parts": [
+      {
+        "id": "65c3cf9e-58ef-439d-a3ba-c60bb7cd25ef",
+        "cards": [
+          {
+            "kind": "product",
+            "lineId": "1299827e-ae99-4197-8dc6-973de2717ac0",
+            "product": {
+              "sku": "H15",
+              "name": "White paint 10 litre",
+              "unit": "can",
+              "stock": 4,
+              "pricePaise": 120000,
+              "priceStatus": "priced",
+              "sellingUnitVerified": true,
+              "version": 1,
+              "aliases": [],
+              "quantityStep": 1
+            },
+            "caption": "1. White paint 10 லிட்டர்\nஎண்ணிக்கை: சொல்ல வேண்டும்\n₹1,200.00 / 1 டப்பா\nஇருக்கு: 4 டப்பா\nஎண்ணிக்கை சொல்ல வேண்டும்",
+            "buttons": [
+              {
+                "label": "இதை மாற்று",
+                "event": {
+                  "id": "90633079-2b20-4f1a-99b6-1b30a460c343",
+                  "type": "edit_item",
+                  "lineId": "1299827e-ae99-4197-8dc6-973de2717ac0",
+                  "expectedVersion": 1
+                }
+              },
+              {
+                "label": "கடையிடம் பேசு",
+                "event": {
+                  "id": "dc7a96e9-958b-4bdd-b811-049bcc592087",
+                  "type": "shopping_action",
+                  "action": "handoff",
+                  "expectedVersion": 1
+                }
+              }
+            ]
+          },
+          {
+            "kind": "instruction",
+            "title": "பொருட்களைப் பாருங்க",
+            "lines": [
+              "பொருட்களைச் சரிபாருங்கள். மாற்றங்களை எழுத்து அல்லது குரலில் சொல்லுங்கள்.",
+              "ஆர்டரை அனுப்பும் முன் உத்தேச பில்லைப் பாருங்கள்."
+            ],
+            "caption": "எல்லா படங்களையும் பாருங்க",
+            "buttons": [
+              {
+                "label": "கடைக்கு அனுப்பு",
+                "event": {
+                  "id": "c206e353-1ef8-48af-aeb2-decf7af735fc",
+                  "type": "shopping_action",
+                  "action": "finish_order",
+                  "expectedVersion": 1
+                }
+              },
+              {
+                "label": "பில் பார்க்கலாம்",
+                "event": {
+                  "id": "23328fa0-f1f9-4937-8a09-448dce637c53",
+                  "type": "confirm_products",
+                  "batchId": "6af46b25-a9c2-41ce-92aa-67ca5dbcc1a5"
+                }
+              }
+            ]
+          }
+        ],
+        "text": "பொருட்கள் 1–1 / 1\nபக்கமா நகர்த்தி எல்லா படங்களையும் பாருங்க.\nபில் பார்க்கலாம் அல்லது “கடைக்கு அனுப்புங்க” என்று சொல்லலாம்."
+      }
+    ],
+    "outboundMessages": 1,
+    "presentation": "carousel_preview"
+  }
+}

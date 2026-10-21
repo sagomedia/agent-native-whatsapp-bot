@@ -1,0 +1,26 @@
+[
+  {
+    "recording": "Latin Tamil",
+    "originalProviderObservation": true,
+    "correctRemovals": 3,
+    "unrelatedRowsRetained": 4,
+    "screwdriverPreserved": true,
+    "currentTurnValidationPassed": true,
+    "noInference": true,
+    "noToolExecution": true,
+    "noCartMutation": true,
+    "noMessageSend": true
+  },
+  {
+    "recording": "Tamil",
+    "originalProviderObservation": true,
+    "correctRemovals": 3,
+    "unrelatedRowsRetained": 4,
+    "screwdriverPreserved": true,
+    "currentTurnValidationPassed": true,
+    "noInference": true,
+    "noToolExecution": true,
+    "noCartMutation": true,
+    "noMessageSend": true
+  }
+]

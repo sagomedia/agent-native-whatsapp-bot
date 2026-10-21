@@ -1,5 +1,7 @@
 # ShopBot demo and hosting handover — 4 October 2026
 
+Historical planning record. GitHub is now connected at [sagomedia/agent-native-whatsapp-bot](https://github.com/sagomedia/agent-native-whatsapp-bot); use `CONTRIBUTING.md` for publication and `03-Output/customer-ordering-finish/RELEASE-REPORT.md` for the later recorded deployment and owner acceptance checks. The pending fields below describe the state on 4 October.
+
 ## Current status
 
 Tamil-first customer implementation is local. GitHub CLI sign-in was verified for **sagomedia**; the shared workspace still has no Git remote. The user may create an empty private repository and send its URL, or give an exact private repository name for creation with the existing account. Do not initialize an existing target with a second README/history; inspect it before pushing. API keys, .env, database/media volumes and SSH keys stay outside Git. Record the final repo URL and deployed commit below when connected.

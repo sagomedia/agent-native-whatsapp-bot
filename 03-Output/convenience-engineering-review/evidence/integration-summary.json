@@ -1,0 +1,11 @@
+{
+  "tests": 553,
+  "pass": 553,
+  "fail": 0,
+  "cancelled": 0,
+  "skipped": 0,
+  "sourceCommit": "7bdb45a1e39e95386da3aec19528f712b91f2130",
+  "concurrency": 1,
+  "mode": "disposable PostgreSQL and mocked providers",
+  "logSha256": "8068236cb49999230aa8fef236c17158c43ea9e58cedda9840124a670a12c00d"
+}

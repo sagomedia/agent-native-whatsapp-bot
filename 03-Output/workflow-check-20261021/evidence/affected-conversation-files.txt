@@ -1,0 +1,6 @@
+# tests 42
+# pass 42
+# fail 0
+# cancelled 0
+# skipped 0
+# duration_ms 8818.314157

@@ -1,0 +1,26 @@
+{
+  "name": "shopbot_catalog",
+  "enabled": false,
+  "disabled_reason": null,
+  "transport": {
+    "type": "stdio",
+    "command": "node",
+    "args": [
+      "--env-file=/ABSOLUTE/PRIVATE/shopbot-mcp.env",
+      "/ABSOLUTE/RELEASE/app/dist/apps/server/src/mcp/stdio.js"
+    ],
+    "env": null,
+    "env_vars": [],
+    "cwd": "/ABSOLUTE/RELEASE/app"
+  },
+  "enabled_tools": [
+    "catalog_search",
+    "catalog_drafts",
+    "catalog_propose",
+    "catalog_edit_draft",
+    "catalog_stage_photo"
+  ],
+  "disabled_tools": null,
+  "startup_timeout_sec": 20.0,
+  "tool_timeout_sec": 30.0
+}

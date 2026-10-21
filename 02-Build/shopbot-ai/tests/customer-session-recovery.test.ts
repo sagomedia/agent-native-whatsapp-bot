@@ -29,7 +29,7 @@ function provider(plan:(input:InterpretationInput)=>Interpretation,recognize:()=
   return {name:'customer-session-fixture',mode:'mock',supportsAudio:true,interpret:async input=>({output:input.stage==='recognize'?{transcript:recognize(),operations:[],next:'continue'}:plan(input),truncated:false,usage:null})};
 }
 const last=(s:Snapshot)=>s.messages.at(-1)!.rich!;
-const actions=(r:RichReply)=>r.parts?.flatMap(p=>p.cards.flatMap(c=>c.buttons??p.buttons??[]))??r.buttons??[];
+const actions=(r:RichReply)=>r.parts?.flatMap(p=>[...p.buttons??[],...p.cards.flatMap(c=>c.buttons??[])])??r.buttons??[];
 const choose=(s:Snapshot,type:SimulatorEvent['type'])=>actions(last(s)).find(a=>a.event.type===type)!.event;
 async function send(inbox:SimulatorService,runtime:ConversationRuntime,event:SimulatorEvent){await inbox.ingest(event);await runtime.processNext(inbox.context);return inbox.snapshot();}
 const text=(inbox:SimulatorService,runtime:ConversationRuntime,value:string)=>send(inbox,runtime,{id:randomUUID(),type:'text',text:value});
@@ -48,7 +48,8 @@ test('ambiguous spoken tube asks product type, keeps other items, and completes 
   let s=await voice(inbox,runtime);
   assert.equal(s.conversation.replyLanguage,'ta');assert.equal(s.conversation.draft.length,3);
   assert.equal(last(s).clarificationReason,'product_meaning');assert.equal(s.conversation.draft[0].sku,undefined);
-  assert.deepEqual(last(s).parts![0].cards.flatMap(c=>c.kind==='product'?[c.product.familyId]:[]),['pvc-pipes','hose']);
+  assert.equal(last(s).parts![0].cards.length,0,'a category clarification uses short native choices rather than repeating product photos');
+  assert.deepEqual(actions(last(s)).filter(b=>b.event.type==='refine_search').map(b=>b.event.type==='refine_search'?b.event.value:undefined),['pvc-pipes','hose']);
   const hose=actions(last(s)).find(b=>b.event.type==='refine_search'&&b.event.value==='hose')!;
   const ids=s.conversation.draft.map(l=>l.id);
   s=await send(inbox,runtime,hose.event);
@@ -59,7 +60,7 @@ test('ambiguous spoken tube asks product type, keeps other items, and completes 
   assert.equal(last(s).stage,'products');
   s=await send(inbox,runtime,choose(s,'confirm_products'));
   assert.equal(last(s).stage,'bill');assert.equal(s.requests.length,0);
-  const bill=last(s).parts![0].cards[0];assert.ok(bill.kind==='bill');
+  const bill=s.messages.filter(m=>m.rich?.groupId===last(s).groupId).flatMap(m=>m.rich?.parts?.flatMap(p=>p.cards)??[]).find(c=>c.kind==='bill')!;assert.ok(bill.kind==='bill');
   assert.equal(bill.billRows![0].packSize,'0.5 இன்ச் x 10 மீட்டர்');assert.match(bill.billRows![0].count,/1/);
   assert.equal(s.conversation.pending?.kind==='review'&&s.conversation.pending.totalPaise,55500);
   const confirm=choose(s,'confirm');s=await send(inbox,runtime,confirm);
@@ -139,7 +140,8 @@ for(const failures of [1,2])test(`${failures} recognition 503s: bounded retry an
   assert.deepEqual(attempts.slice(0,2).map(a=>a.state),failures===1?['failed','succeeded']:['failed','failed']);
   if(failures===2){
     assert.equal(last(s).stage,'error');assert.equal(last(s).clarificationReason,'voice_processing_failed');
-    assert.ok(last(s).parts!.every(p=>p.cards.every(c=>c.kind!=='bill')));
+    assert.equal(last(s).parts,undefined);
+    assert.equal(last(s).presentation,'list');
     const retry=actions(last(s)).find(b=>b.event.type==='retry_voice')!;assert.ok(retry);
     s=await send(inbox,runtime,retry.event);assert.equal(calls,3);assert.equal(s.requests.length,0);
   }else{assert.equal(last(s).clarificationReason,'intent_clarification');assert.equal(last(s).stage,'identify');}
@@ -160,8 +162,8 @@ test('voice approval submits the current delivered bill without requiring a butt
 test('per-product change opens that item directly, and new-draft copy does not claim submission',()=>fixture(async(pool,inbox)=>{
   const runtime=new ConversationRuntime(pool,provider(()=>({operations:three,next:'review'})),{visualOrdering:true});
   let s=await text(inbox,runtime,'shopping list');const id=s.conversation.draft[1].id;
-  const card=last(s).parts![0].cards.find(c=>c.kind==='product'&&c.lineId===id)!;
-  assert.equal(card.buttons![0].event.type,'edit_item');s=await send(inbox,runtime,card.buttons![0].event);
+  const card=s.messages.filter(m=>m.rich?.groupId===last(s).groupId).flatMap(m=>m.rich?.parts?.flatMap(p=>p.cards)??[]).find(c=>c.kind==='product'&&c.lineId===id)!;
+  const edit=card.buttons!.find(b=>b.event.type==='edit_item');assert.ok(edit);s=await send(inbox,runtime,edit.event);
   assert.equal(s.conversation.editingLineId,id);assert.equal(last(s).parts![0].cards[0].kind,'product');
   s=await send(inbox,runtime,{id:randomUUID(),type:'shopping_action',action:'new_list',expectedVersion:s.conversation.version});
   assert.equal(s.conversation.draft.length,0);assert.equal(s.requests.length,0);assert.doesNotMatch(last(s).text,/previous.*shop|முந்தைய|Munthaya/i);

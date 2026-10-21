@@ -1,0 +1,11 @@
+{
+  "decoder": "independent libzbar",
+  "decoded": true,
+  "amount": "10.00",
+  "currency": "INR",
+  "recipientMatchesConfiguredVpa": true,
+  "referenceLength": 35,
+  "minimumAmountParameterPresent": false,
+  "bankPaymentMade": false,
+  "universalPayerAppAmountLockClaimed": false
+}

@@ -1,9 +1,9 @@
 import type { Pool, PoolClient } from 'pg';
-export type ActorContext = { storeId: string; conversationId: string; actor: string; role: 'customer' | 'staff'; consentReviewId?: string;consentProductBatchId?:string;selectedCatalogSku?:string;selectedCatalogProduct?:import('../../../../packages/contracts/index.js').Product };
+export type ActorContext = { storeId: string; conversationId: string; actor: string; role: 'customer' | 'staff'; amendmentHolds?:Record<string,string>;consentReviewId?: string;consentProductBatchId?:string;selectedCatalogSku?:string;selectedCatalogProduct?:import('../../../../packages/contracts/index.js').Product };
 export class ToolError extends Error { constructor(message: string, public code = 'invalid_action') { super(message); } }
 export async function withConversation<T>(pool: Pool, context: ActorContext, fn: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await pool.connect();
-  try { await client.query('BEGIN'); await authorize(client, context); const result = await fn(client); await client.query('COMMIT'); return result; }
+  try { await client.query('BEGIN'); await client.query("SET LOCAL statement_timeout='15s'");await client.query("SET LOCAL lock_timeout='5s'");await authorize(client, context); const result = await fn(client); await client.query('COMMIT'); return result; }
   catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }
 }

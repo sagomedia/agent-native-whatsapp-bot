@@ -75,3 +75,13 @@ test('a brand borrowed from the old cart is removed when the customer did not sa
  assert.match(plan.clarifyQuestion??'',/existing|different/);
  assert.ok(plan.understanding?.unresolved.includes('cart_target'));
 });
+
+test('a model pointer cannot select one of several pipes even with an already-said cue',()=>{
+ const second={...line,id:randomUUID()};const multi={...state,draft:[line,second]};
+ const source='the pipe already listed, two extra';const plan=understandingToInterpretation({schemaVersion:2,inputKind:'text',intents:['edit'],requestedItems:[{...item(source,'PVC pipe',2,line.id),requestMode:'additional'}],proposedEdits:[],shopQuestions:[],unresolved:[]},{text:source,state:multi},true);
+ assert.deepEqual(plan.operations,[]);assert.ok(plan.understanding?.unresolved.includes('cart_target'));
+});
+test('an extra request for a different brand cannot increment a focused old SKU',()=>{
+ const source='two extra BSA water pumping pipes';const plan=understandingToInterpretation({schemaVersion:2,inputKind:'text',intents:['add'],requestedItems:[{...item(source,'BSA water pumping pipe',2,line.id),requestMode:'additional'}],proposedEdits:[],shopQuestions:[],unresolved:[]},{text:source,state:{...state,editingLineId:line.id}},true);
+ assert.deepEqual(plan.operations,[]);assert.match(plan.clarifyQuestion??'',/different product/);
+});

@@ -1,0 +1,128 @@
+{
+  "date": "2026-10-17",
+  "server": {
+    "release": "preview-4722ac672acd",
+    "sourceCommit": "4a3054d7dff09b745b425cbd759c77076bdabad1",
+    "artifactHash": "1ff15c4118351e1c42a04a71c202cf7c556b17850feb1cf6fefccc44ce8dcefe",
+    "schemaVersion": 36,
+    "readiness": {
+      "httpStatus": 200,
+      "body": {
+        "status": "ready",
+        "mode": "mock"
+      }
+    },
+    "ownerUnauthenticatedStatus": 403,
+    "workerEnvironment": {
+      "planning": "default",
+      "media": "default",
+      "outbound": "default"
+    }
+  },
+  "backgroundTool": {
+    "release_id": "preview-cbfc555901df",
+    "sourceCommit": "5da6a546819ac1fa7d3bdbc75bb2bb301ec2065b",
+    "artifactHash": "57dae08b53ae6add5351b825b056cd1b15319f7078eb4cbd9748accadb5135a5",
+    "sha256": "eabd0c54edd4728b93d813660ad9bfd3b1a4eae71123989c7edac4c7daf5ff78",
+    "changedCompiledFiles": [
+      "dist/apps/server/src/services/catalog-bulk.js",
+      "dist/apps/server/src/services/catalog-proposals.js",
+      "dist/apps/server/src/services/image-media.js"
+    ]
+  },
+  "catalog": {
+    "batchId": "reviewed-300-pass2-20261017",
+    "sourceHash": "fbf10bab0ca61a983b446404bc01dd0308a3eb7acc32b707d9118c89499b113c",
+    "drafts": 297,
+    "reviewMarkedVariants": 19,
+    "omittedImageHolds": 6,
+    "assets": {
+      "n": 291,
+      "unconfirmed": 291,
+      "original_bytes": "54866582",
+      "normalized_bytes": "19250439"
+    },
+    "sourceStates": {
+      "excluded": 3,
+      "staged": 297
+    },
+    "ownerDraftPages": 12,
+    "completedProposalsPreservedAcrossResume": 226,
+    "maximumPageSize": 25,
+    "unpublished": true,
+    "existingProductsUnchanged": {
+      "n": 39,
+      "checksum": "930eb1fadb5ad197ebe09422a38a0b9f"
+    },
+    "readinessStatus": 200,
+    "environmentUnchanged": true,
+    "providerCalls": 0
+  },
+  "capacity": {
+    "targetProducts": 3000,
+    "products": {
+      "total": 39,
+      "active": 39,
+      "withoutPhoto": 6
+    },
+    "proposalAssets": {
+      "rows": 291,
+      "originalBytes": 54866582,
+      "normalizedBytes": 19250439,
+      "distinctOriginalHashes": 291,
+      "reusedOriginalHashRows": 0
+    },
+    "filesystem": {
+      "path": "/",
+      "totalBytes": 31461457920,
+      "availableBytes": 20172386304,
+      "reserveBytes": 3146145792,
+      "availableAfterReserveBytes": 17026240512
+    },
+    "projection": {
+      "additionalProducts": 2961,
+      "sampleSource": "supplied_final_photo_sample",
+      "sample": {
+        "bytes": 19250439,
+        "count": 291
+      },
+      "meanOriginalBytes": 188544.95532646048,
+      "meanNormalizedBytes": 66152.71134020618,
+      "meanPublishedBytes": 66152.71134020618,
+      "logicalAdditionalBytes": 950037970,
+      "databaseAdditionalBytes": 1187547463,
+      "projectedAdditionalBytes": 4750189852,
+      "status": "projected_space_available"
+    },
+    "assumptions": {
+      "photosPerAdditionalProduct": 1,
+      "retainOriginalAndNormalized": true,
+      "fallbackOriginalToFinalRatio": 3,
+      "databaseOverheadFactor": 1.25,
+      "walCopies": 1,
+      "backupCopies": 2,
+      "defaultReserve": "maximum of 2 GiB or 10% of filesystem total bytes",
+      "countsIncludeRetainedDraftsAndInactiveProducts": true,
+      "existingPhotoBackfillIncluded": false,
+      "deduplicationSavingsAssumed": false
+    },
+    "unknowns": [
+      "BYTEA lengths are logical payload bytes, not measured PostgreSQL/TOAST/index disk usage.",
+      "WAL, backups, caches, filesystem copies and rollback retention are not measured by these store-scoped SQL totals.",
+      "Final-photo averages may differ across future source batches; one photo per additional product is a planning assumption.",
+      "Hash reuse is measured within each available hash domain; original and normalized/published hashes are not assumed comparable.",
+      "A projected space fit does not establish restore health, memory/CPU/connection headroom, real-provider latency or production readiness."
+    ]
+  },
+  "codeCi": {
+    "sourceCommit": "5da6a546819ac1fa7d3bdbc75bb2bb301ec2065b",
+    "run": 39038438921,
+    "conclusion": "success"
+  },
+  "limits": [
+    "All imported entries are unpublished research drafts. Merchant prices, stock, identity, selling basis and photo approval remain pending.",
+    "The 609 actual-identity retrieval checks cover SQL and a small written-language sample, not speech/model accuracy.",
+    "Target-host restoration and executable compatibility were tested with providers/channels disabled. Real-device Tamil/WhatsApp pilot remains open.",
+    "Storage projection uses 291 normalized draft photos, original and normalized retention, planning overhead, WAL and two backup copies; it is not CPU/memory/throughput acceptance."
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "task": "Owner-authorized publish together, review in Products",
+  "githubIssue": 27,
+  "githubPR": 28,
+  "codeCommit": "e23625709b63a9dadc8e4d30fafbd78cfa9a182b",
+  "release": "preview-ea4972f7b4b9",
+  "artifactHash": "ece5b83205495856a99335aaaa39011b88a0f142eac2aecfa1523568ae91f306",
+  "tests": {
+    "integration": {
+      "passed": 614,
+      "failed": 0,
+      "skipped": 0
+    },
+    "python": {
+      "passed": 4
+    },
+    "syntheticBrowser": {
+      "passed": true,
+      "products": 3000,
+      "maximumProductsPerTransfer": 25,
+      "viewportWidths": [
+        1440,
+        390
+      ],
+      "newChecks": [
+        "pending review labels",
+        "pending price label and blank editor",
+        "private source reference preview",
+        "First page navigation"
+      ]
+    }
+  },
+  "livePreview": {
+    "ready": 296,
+    "blocked": 0,
+    "existingProducts": 40,
+    "snapshotId": "6fd54158-58b6-4963-9cab-3807713a2343"
+  },
+  "backup": {
+    "path": "/var/backups/shopbot-migration/review-later-20261017T142137Z",
+    "dumpBytes": 147221438
+  },
+  "status": "complete",
+  "activationBackup": {
+    "path": "/var/backups/shopbot-migration/review-later-activation-20261017T143318Z",
+    "dumpBytes": 315841519,
+    "compression": 0,
+    "fullyDecoded": true
+  },
+  "githubChecks": {
+    "runId": 39040731344,
+    "status": "completed",
+    "conclusion": "success"
+  },
+  "verifiedAt": "2026-10-17T14:42:35.997137+00:00",
+  "liveVerification": {
+    "release": "preview-ea4972f7b4b9",
+    "sourceCommit": "e23625709b63a9dadc8e4d30fafbd78cfa9a182b",
+    "artifactHash": "ece5b83205495856a99335aaaa39011b88a0f142eac2aecfa1523568ae91f306",
+    "schemaVersion": 36,
+    "published": 296,
+    "products": 336,
+    "active": 336,
+    "drafts": 0,
+    "existingProductsPreserved": 40,
+    "sourceDraftsPreserved": 296,
+    "sourceAssetsPreserved": 291,
+    "auditRows": 296,
+    "ownerPages": 14,
+    "maximumPageSize": 25,
+    "ownerPendingReviewCount": 335,
+    "customerCatalogSearchesPassed": 12,
+    "privateReferencePhotoUnauthenticatedStatus": 403,
+    "unknownPricesAndStockPreserved": true,
+    "verificationFlagsRemainFalse": true,
+    "customerPhotosPublished": 0,
+    "environmentUnchanged": true,
+    "readinessStatus": 200,
+    "runtimeRecorded": true,
+    "providerCallsFromVerification": 0,
+    "backup": "/var/backups/shopbot-migration/review-later-20261017T142137Z"
+  }
+}

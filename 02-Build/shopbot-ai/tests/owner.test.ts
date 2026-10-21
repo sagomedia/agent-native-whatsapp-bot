@@ -44,6 +44,28 @@ test('Access validates signatures, exact merchant owner, issuer, audience, expir
  await assert.rejects(verify('bad-token'));
  assert.throws(()=>readConfig({DATABASE_URL:'postgres://unused',OWNER_EMAIL:owner.email}),/Complete owner/);
 });
+test('owner snapshot retains the recent inbox and store-scoped metadata for an older deep-linked conversation',async()=>{
+ const schema='owner_deeplink_'+randomUUID().replaceAll('-',''),admin=new pg.Pool({connectionString:process.env.DATABASE_URL});await admin.query(`CREATE SCHEMA "${schema}"`);const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:`-c search_path=${schema}`});let app:Awaited<ReturnType<typeof createApp>>|undefined;
+ try{
+  await setupDatabase(pool,'mock');const older=randomUUID(),foreign=randomUUID(),otherStore=randomUUID(),recent=Array.from({length:100},()=>randomUUID());
+  await pool.query("INSERT INTO conversations(id,store_id,actor,operator_mode,operator_revision,reply_language) VALUES($1,$2,'older-shopper','owner',7,'ta')",[older,fixtureStore]);
+  await pool.query("INSERT INTO messages(id,conversation_id,direction,text,status,created_at) VALUES($1,$2,'inbound','Earlier request needs review','pending','2020-01-01')",[randomUUID(),older]);
+  await pool.query("INSERT INTO conversations(id,store_id,actor) SELECT id,$1,'recent-'||id FROM unnest($2::uuid[]) AS id",[fixtureStore,recent]);
+  await pool.query("INSERT INTO messages(id,conversation_id,direction,text,status) SELECT gen_random_uuid(),id,'inbound','Recent message','processed' FROM unnest($1::uuid[]) AS id",[recent]);
+  await pool.query("INSERT INTO stores(id,name,synthetic) VALUES($1,'Other shop','true')",[otherStore]);await pool.query("INSERT INTO conversations(id,store_id,actor) VALUES($1,$2,'private-other-shop')",[foreign,otherStore]);
+  app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,port:3017,host:'127.0.0.1',mediaDir:'/tmp/owner-deeplink-test',owner},pool,undefined,undefined,createAccessVerifier(owner,async()=>[jwk]));
+  const headers={host:owner.hostname,'cf-access-jwt-assertion':jwt()},snapshot=async(id?:string)=>app!.inject({url:'/api/owner/snapshot'+(id?'?conversation='+id:''),headers});
+  const lite=await app.inject({url:'/api/owner/snapshot?details=0',headers});assert.equal(lite.statusCode,200);assert.equal(lite.json().detailsIncluded,false);assert.equal(lite.json().usage,null);assert.equal(lite.json().messaging,null);assert.deepEqual(lite.json().audit,[]);
+  const before=(await snapshot()).json();assert.equal(before.detailsIncluded,true);assert.equal(before.conversations.length,100);assert.ok(!before.conversations.some((c:any)=>c.id===older));
+  const selectedResponse=await snapshot(older);assert.equal(selectedResponse.statusCode,200);const selected=selectedResponse.json();
+  assert.deepEqual(selected.conversations.slice(0,100),before.conversations);assert.equal(selected.conversations.length,101);
+  const metadata=selected.conversations.find((c:any)=>c.id===older);assert.equal(metadata.operator_mode,'owner');assert.equal(metadata.operator_revision,7);assert.equal(metadata.reply_language,'ta');assert.equal(metadata.last_text,'Earlier request needs review');assert.equal(metadata.pending,1);
+  assert.equal((await snapshot(recent[0])).json().conversations.length,100);
+  assert.deepEqual((await snapshot(foreign)).json().conversations,before.conversations);
+  assert.equal((await snapshot('invalid-id')).statusCode,400);
+  assert.equal((await pool.query('SELECT count(*)::int AS n FROM owner_audit')).rows[0].n,0);
+ }finally{await app?.close();await pool.end();await admin.query(`DROP SCHEMA "${schema}" CASCADE`);await admin.end();}
+});
 test('owner isolation, CSRF, takeover, stale controls, pause and request decisions are durable and audited',async()=>{
  const admin=new pg.Pool({connectionString:process.env.DATABASE_URL}),schema='owner_'+randomUUID().replaceAll('-','');await admin.query(`CREATE SCHEMA "${schema}"`);
  const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:`-c search_path=${schema}`});

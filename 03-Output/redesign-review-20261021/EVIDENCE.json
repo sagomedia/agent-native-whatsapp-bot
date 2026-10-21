@@ -1,0 +1,240 @@
+{
+  "date": "2026-10-21",
+  "timezone": "America/Adak",
+  "scope": "Detailed review and implementation plan first; explicitly selected by user.",
+  "inputs": [
+    {
+      "id": "M",
+      "path": "/home/gk-pc/Downloads/temp_files/ShopBot-Mobile-First-V2.pdf",
+      "bytes": 20913689,
+      "sha256": "f3b48179ebbbb72bd6b91ea7d4c2babfc263fa99d2f23d44741703fd3b266574",
+      "pages": 15
+    },
+    {
+      "id": "D",
+      "path": "/home/gk-pc/Downloads/temp_files/ShopBot-Desktop-Complete-V3.pdf",
+      "bytes": 17898051,
+      "sha256": "7fbd8442380af066891f73d13163be74007cc708244022f01a5884843ee61c9b",
+      "pages": 15
+    }
+  ],
+  "localCheckout": "/home/gk-pc/whatsapp-bot-finish",
+  "inspectedCommit": "f3a982747e95e37bbe58e678ea43209b696f5b54",
+  "branch": "codex/order-review-workbench-20261020",
+  "method": {
+    "pagesRendered": 30,
+    "screenConcepts": 27,
+    "completeContactSheetReview": true,
+    "principalWorkflowsInspectedEnlarged": true,
+    "textExtractionUsedForNotes": true,
+    "screenshotContentReviewedVisually": true,
+    "companionImagePackReviewed": false,
+    "selectedSourceInspected": true,
+    "liveAppAudited": false,
+    "applicationTestsRun": false,
+    "applicationSourceChanged": false,
+    "deploymentsPerformed": false,
+    "customerMessagesSent": 0
+  },
+  "findingsNature": "Static design choices, specification/coverage gaps and selected source observations. No unexecuted behavior is represented as a reproduced production failure.",
+  "sourceAnchors": [
+    {
+      "path": "02-Build/shopbot-ai/apps/dashboard/src/OwnerDashboard.tsx",
+      "lines": [
+        51,
+        94,
+        102,
+        112
+      ]
+    },
+    {
+      "path": "02-Build/shopbot-ai/apps/dashboard/src/owner-model.ts",
+      "lines": [
+        6
+      ]
+    },
+    {
+      "path": "02-Build/shopbot-ai/apps/dashboard/src/OwnerOrders.tsx",
+      "lines": [
+        15,
+        38,
+        44
+      ]
+    },
+    {
+      "path": "02-Build/shopbot-ai/apps/dashboard/src/OrderQuoteEditor.tsx",
+      "lines": [
+        29,
+        39,
+        52,
+        64,
+        74
+      ]
+    },
+    {
+      "path": "02-Build/shopbot-ai/apps/dashboard/src/OrderWorkflow.tsx",
+      "lines": [
+        10
+      ]
+    },
+    {
+      "path": "02-Build/shopbot-ai/apps/dashboard/src/OwnerCatalog.tsx",
+      "lines": [
+        20,
+        53
+      ]
+    },
+    {
+      "path": "02-Build/shopbot-ai/apps/dashboard/src/OwnerStock.tsx",
+      "lines": [
+        10,
+        14,
+        16
+      ]
+    },
+    {
+      "path": "02-Build/shopbot-ai/apps/dashboard/src/OwnerQuickPrice.tsx",
+      "lines": [
+        15,
+        16
+      ]
+    },
+    {
+      "path": "02-Build/shopbot-ai/apps/dashboard/src/OwnerBulkFacts.tsx",
+      "lines": [
+        33
+      ]
+    },
+    {
+      "path": "02-Build/shopbot-ai/apps/dashboard/src/owner-ui.tsx",
+      "lines": [
+        20,
+        35,
+        46,
+        52
+      ]
+    },
+    {
+      "path": "02-Build/shopbot-ai/apps/dashboard/src/owner-polling.ts",
+      "lines": [
+        2
+      ]
+    },
+    {
+      "path": "02-Build/shopbot-ai/apps/server/src/http/owner.ts",
+      "lines": [
+        116,
+        126,
+        131
+      ]
+    },
+    {
+      "path": "02-Build/shopbot-ai/apps/server/src/services/inventory.ts",
+      "lines": [
+        71,
+        88
+      ]
+    },
+    {
+      "path": "02-Build/shopbot-ai/apps/server/src/http/owner-facts.ts",
+      "lines": [
+        9
+      ]
+    },
+    {
+      "path": "02-Build/shopbot-ai/apps/server/src/services/catalog-fact-imports.ts",
+      "lines": [
+        60,
+        97
+      ]
+    }
+  ],
+  "references": [
+    "https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/command.md",
+    "https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html",
+    "https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html",
+    "https://www.w3.org/WAI/WCAG22/Understanding/reflow.html",
+    "https://developer.mozilla.org/en-US/docs/Web/API/Visual_Viewport_API"
+  ],
+  "acceptanceStatus": "All proposed acceptance tests remain unexecuted.",
+  "renderedEvidence": [
+    {
+      "path": "evidence/mobile-contact-01.jpg",
+      "type": "PDF contact sheet",
+      "sourceId": "M",
+      "pages": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "sha256": "ccac944c0482e617414ffd939d3b876ddfad82eb67a1a4204e5d8ab80af82a3d"
+    },
+    {
+      "path": "evidence/mobile-contact-07.jpg",
+      "type": "PDF contact sheet",
+      "sourceId": "M",
+      "pages": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "sha256": "0410aca4d0d5248685834b204e68371f48a66832830fd5da69fd44d078fa9cb0"
+    },
+    {
+      "path": "evidence/mobile-contact-13.jpg",
+      "type": "PDF contact sheet",
+      "sourceId": "M",
+      "pages": [
+        13,
+        14,
+        15
+      ],
+      "sha256": "d0ef34b5a86ffc3f589935061dddb03fd528e45f57c4c84d1b2c6a7e141c8a13"
+    },
+    {
+      "path": "evidence/desktop-contact-01.jpg",
+      "type": "PDF contact sheet",
+      "sourceId": "D",
+      "pages": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "sha256": "0701bac1a44d3c1262ea24d2108d87ea70ac3754c1300212d12bfdf1c5711390"
+    },
+    {
+      "path": "evidence/desktop-contact-07.jpg",
+      "type": "PDF contact sheet",
+      "sourceId": "D",
+      "pages": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "sha256": "d223d8612a6c49bb4452778c1c27bffe95932f1dd85f404834e37d749e08f29d"
+    },
+    {
+      "path": "evidence/desktop-contact-13.jpg",
+      "type": "PDF contact sheet",
+      "sourceId": "D",
+      "pages": [
+        13,
+        14,
+        15
+      ],
+      "sha256": "d888bfd868ec1108bb937137728e7fede540e213f047b997a7eede1f56ece00b"
+    }
+  ]
+}

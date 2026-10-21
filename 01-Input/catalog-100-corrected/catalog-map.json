@@ -1,0 +1,828 @@
+{
+ "nodes": [
+  {
+   "aliases": [
+    "plumbing",
+    "குழாய்",
+    "kuzhai"
+   ],
+   "id": "plumbing",
+   "kind": "department",
+   "label": "Plumbing",
+   "localNames": {
+    "ta": "குழாய் பொருட்கள்",
+    "ta-Latn": "Kuzhai porutkal"
+   },
+   "parentId": null
+  },
+  {
+   "aliases": [
+    "tools",
+    "கருவி",
+    "karuvi"
+   ],
+   "id": "tools",
+   "kind": "department",
+   "label": "Tools and cutting",
+   "localNames": {
+    "ta": "கருவிகள்",
+    "ta-Latn": "Karuvigal"
+   },
+   "parentId": null
+  },
+  {
+   "aliases": [
+    "paints",
+    "பெயிண்ட்",
+    "paint"
+   ],
+   "id": "paints",
+   "kind": "department",
+   "label": "Paints, finishes and supplies",
+   "localNames": {
+    "ta": "பெயிண்ட் பொருட்கள்",
+    "ta-Latn": "Paint porutkal"
+   },
+   "parentId": null
+  },
+  {
+   "aliases": [
+    "fasteners",
+    "ஆணி ஸ்க்ரூ",
+    "aani screw"
+   ],
+   "id": "fasteners",
+   "kind": "department",
+   "label": "Fasteners and hardware",
+   "localNames": {
+    "ta": "இணைப்பு பொருட்கள்",
+    "ta-Latn": "Inaippu porutkal"
+   },
+   "parentId": null
+  },
+  {
+   "aliases": [
+    "garden",
+    "தோட்டம்",
+    "thottam"
+   ],
+   "id": "garden",
+   "kind": "department",
+   "label": "Garden",
+   "localNames": {
+    "ta": "தோட்டப் பொருட்கள்",
+    "ta-Latn": "Thotta porutkal"
+   },
+   "parentId": null
+  },
+  {
+   "aliases": [
+    "safety",
+    "பாதுகாப்பு",
+    "padhukappu"
+   ],
+   "id": "safety",
+   "kind": "department",
+   "label": "Safety",
+   "localNames": {
+    "ta": "பாதுகாப்பு பொருட்கள்",
+    "ta-Latn": "Padhukappu porutkal"
+   },
+   "parentId": null
+  },
+  {
+   "aliases": [
+    "pvc pipe",
+    "pvc kuzhai",
+    "பிவிசி குழாய்"
+   ],
+   "id": "pvc-pipes",
+   "kind": "family",
+   "label": "PVC pipes (rigid)",
+   "localNames": {
+    "ta": "PVC குழாய்கள்",
+    "ta-Latn": "PVC kuzhaigal"
+   },
+   "parentId": "plumbing"
+  },
+  {
+   "aliases": [
+    "cpvc pipe",
+    "hot water pipe"
+   ],
+   "id": "cpvc-pipes",
+   "kind": "family",
+   "label": "CPVC pipes (hot water)",
+   "localNames": {
+    "ta": "CPVC குழாய்கள்",
+    "ta-Latn": "CPVC kuzhaigal"
+   },
+   "parentId": "plumbing"
+  },
+  {
+   "aliases": [
+    "pvc fitting",
+    "elbow",
+    "tee",
+    "coupler",
+    "முழங்கை",
+    "elbow fitting"
+   ],
+   "id": "pvc-fittings",
+   "kind": "family",
+   "label": "PVC pipe fittings",
+   "localNames": {
+    "ta": "PVC ஃபிட்டிங்குகள்",
+    "ta-Latn": "PVC fittingugal"
+   },
+   "parentId": "plumbing"
+  },
+  {
+   "aliases": [
+    "solvent cement",
+    "pvc gum",
+    "pipe adhesive",
+    "குழாய் பசை"
+   ],
+   "id": "solvent-cement",
+   "kind": "family",
+   "label": "PVC solvent cement",
+   "localNames": {
+    "ta": "பிவிசி குழாய் பசை",
+    "ta-Latn": "PVC kuzhai pasai"
+   },
+   "parentId": "plumbing"
+  },
+  {
+   "aliases": [
+    "tap",
+    "faucet",
+    "bib tap",
+    "டேப்",
+    "tap"
+   ],
+   "id": "taps-faucets",
+   "kind": "family",
+   "label": "Taps and faucets",
+   "localNames": {
+    "ta": "டேப்கள் மற்றும் ஃபாசெட்கள்",
+    "ta-Latn": "Tapgal matrum faucetgal"
+   },
+   "parentId": "plumbing"
+  },
+  {
+   "aliases": [
+    "valve",
+    "ball valve",
+    "gate valve",
+    "வால்வு"
+   ],
+   "id": "valves",
+   "kind": "family",
+   "label": "Valves",
+   "localNames": {
+    "ta": "வால்வுகள்",
+    "ta-Latn": "Valveugal"
+   },
+   "parentId": "plumbing"
+  },
+  {
+   "aliases": [
+    "teflon tape",
+    "ptfe tape",
+    "thread tape",
+    "டெஃப்லான் டேப்"
+   ],
+   "id": "thread-seal-tape",
+   "kind": "family",
+   "label": "Thread seal (PTFE/Teflon) tape",
+   "localNames": {
+    "ta": "திரெட் சீல் டேப்",
+    "ta-Latn": "Thread seal tape"
+   },
+   "parentId": "plumbing"
+  },
+  {
+   "aliases": [
+    "pipe clip",
+    "hose clip",
+    "clamp",
+    "கிளாம்பு"
+   ],
+   "id": "pipe-clamps",
+   "kind": "family",
+   "label": "Pipe and hose clamps",
+   "localNames": {
+    "ta": "பைப் கிளாம்புகள்",
+    "ta-Latn": "Pipe clampugal"
+   },
+   "parentId": "plumbing"
+  },
+  {
+   "aliases": [
+    "epoxy putty",
+    "m-seal",
+    "leak repair",
+    "பழுது பசை"
+   ],
+   "id": "plumbing-repair",
+   "kind": "family",
+   "label": "Plumbing repair compounds",
+   "localNames": {
+    "ta": "பிளம்பிங் பழுதுபார்க்கும் பொருட்கள்",
+    "ta-Latn": "Plumbing repair porutkal"
+   },
+   "parentId": "plumbing"
+  },
+  {
+   "aliases": [
+    "hacksaw blade",
+    "cutting blade",
+    "பிளேடு",
+    "blade"
+   ],
+   "id": "cutting-blades",
+   "kind": "family",
+   "label": "Cutting blades",
+   "localNames": {
+    "ta": "வெட்டும் பிளேடுகள்",
+    "ta-Latn": "Vettum bladegal"
+   },
+   "parentId": "tools"
+  },
+  {
+   "aliases": [
+    "cutting wheel",
+    "grinding disc",
+    "cutoff wheel",
+    "டிஸ்க்"
+   ],
+   "id": "abrasive-discs",
+   "kind": "family",
+   "label": "Grinding and cutting discs",
+   "localNames": {
+    "ta": "கிரைண்டிங் டிஸ்க்குகள்",
+    "ta-Latn": "Grinding discugal"
+   },
+   "parentId": "tools"
+  },
+  {
+   "aliases": [
+    "drill bit",
+    "hss bit",
+    "டிரில் பிட்"
+   ],
+   "id": "drill-bits",
+   "kind": "family",
+   "label": "Drill bits",
+   "localNames": {
+    "ta": "டிரில் பிட்டுகள்",
+    "ta-Latn": "Drill bitugal"
+   },
+   "parentId": "tools"
+  },
+  {
+   "aliases": [
+    "hammer",
+    "claw hammer",
+    "சுத்தியல்"
+   ],
+   "id": "hand-hammers",
+   "kind": "family",
+   "label": "Hammers",
+   "localNames": {
+    "ta": "சுத்தியல்கள்",
+    "ta-Latn": "Suthiyalgal"
+   },
+   "parentId": "tools"
+  },
+  {
+   "aliases": [
+    "plier",
+    "combination plier",
+    "nose plier",
+    "பிளையர்"
+   ],
+   "id": "pliers",
+   "kind": "family",
+   "label": "Pliers",
+   "localNames": {
+    "ta": "பிளையர்கள்",
+    "ta-Latn": "Playaergal"
+   },
+   "parentId": "tools"
+  },
+  {
+   "aliases": [
+    "spanner",
+    "wrench",
+    "adjustable wrench",
+    "ஸ்பானர்"
+   ],
+   "id": "wrenches-spanners",
+   "kind": "family",
+   "label": "Wrenches and spanners",
+   "localNames": {
+    "ta": "ஸ்பானர்கள்",
+    "ta-Latn": "Spannerugal"
+   },
+   "parentId": "tools"
+  },
+  {
+   "aliases": [
+    "screwdriver",
+    "line tester",
+    "tester",
+    "ஸ்க்ரூடிரைவர்"
+   ],
+   "id": "screwdrivers",
+   "kind": "family",
+   "label": "Screwdrivers and testers",
+   "localNames": {
+    "ta": "ஸ்க்ரூடிரைவர்கள்",
+    "ta-Latn": "Screwdrivergal"
+   },
+   "parentId": "tools"
+  },
+  {
+   "aliases": [
+    "measuring tape",
+    "spirit level",
+    "try square",
+    "டேப் அளவு"
+   ],
+   "id": "measuring-tools",
+   "kind": "family",
+   "label": "Measuring tools",
+   "localNames": {
+    "ta": "அளவிடும் கருவிகள்",
+    "ta-Latn": "Alavidum karuvigal"
+   },
+   "parentId": "tools"
+  },
+  {
+   "aliases": [
+    "drill machine",
+    "angle grinder",
+    "power tool",
+    "டிரில் மெஷின்"
+   ],
+   "id": "power-tools",
+   "kind": "family",
+   "label": "Power tools",
+   "localNames": {
+    "ta": "மின்சார கருவிகள்",
+    "ta-Latn": "Minsara karuvigal"
+   },
+   "parentId": "tools"
+  },
+  {
+   "aliases": [
+    "file",
+    "chisel",
+    "flat file",
+    "ஃபைல்"
+   ],
+   "id": "files-chisels",
+   "kind": "family",
+   "label": "Files and chisels",
+   "localNames": {
+    "ta": "ஃபைல்கள் மற்றும் உளிகள்",
+    "ta-Latn": "Filegal matrum uligal"
+   },
+   "parentId": "tools"
+  },
+  {
+   "aliases": [
+    "interior paint",
+    "wall emulsion",
+    "உள் சுவர் பெயிண்ட்"
+   ],
+   "id": "interior-wall-paint",
+   "kind": "family",
+   "label": "Interior wall paint",
+   "localNames": {
+    "ta": "உள்சுவர் பெயிண்ட்",
+    "ta-Latn": "Ul-suvar paint"
+   },
+   "parentId": "paints"
+  },
+  {
+   "aliases": [
+    "exterior paint",
+    "weather paint",
+    "வெளி சுவர் பெயிண்ட்"
+   ],
+   "id": "exterior-wall-paint",
+   "kind": "family",
+   "label": "Exterior wall paint",
+   "localNames": {
+    "ta": "வெளிச்சுவர் பெயிண்ட்",
+    "ta-Latn": "Veli-suvar paint"
+   },
+   "parentId": "paints"
+  },
+  {
+   "aliases": [
+    "enamel",
+    "gloss paint",
+    "எனாமல்"
+   ],
+   "id": "enamel-paint",
+   "kind": "family",
+   "label": "Enamel paint",
+   "localNames": {
+    "ta": "எனாமல் பெயிண்ட்",
+    "ta-Latn": "Enamel paint"
+   },
+   "parentId": "paints"
+  },
+  {
+   "aliases": [
+    "primer",
+    "wall base coat",
+    "பிரைமர்"
+   ],
+   "id": "wall-primer",
+   "kind": "family",
+   "label": "Wall primer",
+   "localNames": {
+    "ta": "சுவர் பிரைமர்",
+    "ta-Latn": "Suvar primer"
+   },
+   "parentId": "paints"
+  },
+  {
+   "aliases": [
+    "varnish",
+    "wood polish",
+    "வார்னிஷ்"
+   ],
+   "id": "wood-finish",
+   "kind": "family",
+   "label": "Wood finish and varnish",
+   "localNames": {
+    "ta": "மர வார்னிஷ்",
+    "ta-Latn": "Mara varnish"
+   },
+   "parentId": "paints"
+  },
+  {
+   "aliases": [
+    "putty",
+    "wallcare putty",
+    "புட்டி"
+   ],
+   "id": "wall-putty",
+   "kind": "family",
+   "label": "Wall putty",
+   "localNames": {
+    "ta": "சுவர் புட்டி",
+    "ta-Latn": "Suvar putty"
+   },
+   "parentId": "paints"
+  },
+  {
+   "aliases": [
+    "thinner",
+    "turpentine",
+    "தின்னர்"
+   ],
+   "id": "paint-thinner",
+   "kind": "family",
+   "label": "Paint thinner",
+   "localNames": {
+    "ta": "பெயிண்ட் தின்னர்",
+    "ta-Latn": "Paint thinner"
+   },
+   "parentId": "paints"
+  },
+  {
+   "aliases": [
+    "paint brush",
+    "brush",
+    "பிரஷ்"
+   ],
+   "id": "paint-brushes",
+   "kind": "family",
+   "label": "Paint brushes",
+   "localNames": {
+    "ta": "பெயிண்ட் பிரஷ்கள்",
+    "ta-Latn": "Paint brushugal"
+   },
+   "parentId": "paints"
+  },
+  {
+   "aliases": [
+    "paint roller",
+    "roller",
+    "ரோலர்"
+   ],
+   "id": "paint-rollers",
+   "kind": "family",
+   "label": "Paint rollers",
+   "localNames": {
+    "ta": "பெயிண்ட் ரோலர்கள்",
+    "ta-Latn": "Paint rollergal"
+   },
+   "parentId": "paints"
+  },
+  {
+   "aliases": [
+    "sandpaper",
+    "emery paper",
+    "abrasive paper",
+    "சாண்ட்பேப்பர்"
+   ],
+   "id": "sandpaper",
+   "kind": "family",
+   "label": "Sandpaper and abrasives",
+   "localNames": {
+    "ta": "சாண்ட் பேப்பர்",
+    "ta-Latn": "Sand paper"
+   },
+   "parentId": "paints"
+  },
+  {
+   "aliases": [
+    "masking tape",
+    "paint tray",
+    "putty knife",
+    "மாஸ்கிங் டேப்"
+   ],
+   "id": "paint-accessories",
+   "kind": "family",
+   "label": "Paint accessories",
+   "localNames": {
+    "ta": "பெயிண்ட் துணைப் பொருட்கள்",
+    "ta-Latn": "Paint thunai porutkal"
+   },
+   "parentId": "paints"
+  },
+  {
+   "aliases": [
+    "wood screw",
+    "screw",
+    "மர ஸ்க்ரூ"
+   ],
+   "id": "wood-screws",
+   "kind": "family",
+   "label": "Wood screws",
+   "localNames": {
+    "ta": "மர ஸ்க்ரூக்கள்",
+    "ta-Latn": "Mara screwgal"
+   },
+   "parentId": "fasteners"
+  },
+  {
+   "aliases": [
+    "nail",
+    "wire nail",
+    "ஆணி"
+   ],
+   "id": "nails",
+   "kind": "family",
+   "label": "Nails",
+   "localNames": {
+    "ta": "ஆணிகள்",
+    "ta-Latn": "Aanigal"
+   },
+   "parentId": "fasteners"
+  },
+  {
+   "aliases": [
+    "bolt",
+    "nut",
+    "hex bolt",
+    "போல்ட்"
+   ],
+   "id": "bolts-nuts",
+   "kind": "family",
+   "label": "Bolts and nuts",
+   "localNames": {
+    "ta": "போல்ட் மற்றும் நட்டுகள்",
+    "ta-Latn": "Bolt matrum nutugal"
+   },
+   "parentId": "fasteners"
+  },
+  {
+   "aliases": [
+    "wall plug",
+    "anchor",
+    "rawl plug",
+    "ஆங்கர்"
+   ],
+   "id": "wall-anchors",
+   "kind": "family",
+   "label": "Wall anchors and plugs",
+   "localNames": {
+    "ta": "சுவர் ஆங்கர்கள்",
+    "ta-Latn": "Suvar anchorgal"
+   },
+   "parentId": "fasteners"
+  },
+  {
+   "aliases": [
+    "hinge",
+    "butt hinge",
+    "கீல்"
+   ],
+   "id": "door-hinges",
+   "kind": "family",
+   "label": "Door hinges",
+   "localNames": {
+    "ta": "கதவு கீல்கள்",
+    "ta-Latn": "Kadhavu keelgal"
+   },
+   "parentId": "fasteners"
+  },
+  {
+   "aliases": [
+    "lock",
+    "padlock",
+    "night latch",
+    "பூட்டு"
+   ],
+   "id": "locks-padlocks",
+   "kind": "family",
+   "label": "Locks and padlocks",
+   "localNames": {
+    "ta": "பூட்டுகள்",
+    "ta-Latn": "Poottugal"
+   },
+   "parentId": "fasteners"
+  },
+  {
+   "aliases": [
+    "tower bolt",
+    "latch",
+    "aldrop",
+    "தாழ்ப்பாள்"
+   ],
+   "id": "door-latches",
+   "kind": "family",
+   "label": "Door latches and tower bolts",
+   "localNames": {
+    "ta": "கதவு தாழ்ப்பாள்கள்",
+    "ta-Latn": "Kadhavu thaazhpaalgal"
+   },
+   "parentId": "fasteners"
+  },
+  {
+   "aliases": [
+    "garden hose",
+    "watering hose",
+    "ஹோஸ் பைப்",
+    "hose pipe"
+   ],
+   "id": "garden-hoses",
+   "kind": "family",
+   "label": "Garden hoses",
+   "localNames": {
+    "ta": "தோட்ட ஹோஸ் பைப்புகள்",
+    "ta-Latn": "Thotta hose pipegal"
+   },
+   "parentId": "garden"
+  },
+  {
+   "aliases": [
+    "sprayer",
+    "pressure sprayer",
+    "pesticide pump",
+    "ஸ்ப்ரேயர்"
+   ],
+   "id": "garden-sprayers",
+   "kind": "family",
+   "label": "Garden sprayers",
+   "localNames": {
+    "ta": "ஸ்ப்ரேயர்கள்",
+    "ta-Latn": "Sprayergal"
+   },
+   "parentId": "garden"
+  },
+  {
+   "aliases": [
+    "pruning shear",
+    "secateur",
+    "கத்தரி"
+   ],
+   "id": "pruning-tools",
+   "kind": "family",
+   "label": "Pruning tools",
+   "localNames": {
+    "ta": "செடி கத்தரிக்கும் கருவிகள்",
+    "ta-Latn": "Sedi katharikum karuvigal"
+   },
+   "parentId": "garden"
+  },
+  {
+   "aliases": [
+    "trowel",
+    "garden fork",
+    "khurpa",
+    "கை கருவி"
+   ],
+   "id": "garden-hand-tools",
+   "kind": "family",
+   "label": "Garden hand tools",
+   "localNames": {
+    "ta": "தோட்ட கைக்கருவிகள்",
+    "ta-Latn": "Thotta kaikaruvigal"
+   },
+   "parentId": "garden"
+  },
+  {
+   "aliases": [
+    "watering can",
+    "rose can",
+    "தண்ணீர் கேன்"
+   ],
+   "id": "watering-equipment",
+   "kind": "family",
+   "label": "Watering equipment",
+   "localNames": {
+    "ta": "தண்ணீர் ஊற்றும் கருவிகள்",
+    "ta-Latn": "Thanni oothrum karuvigal"
+   },
+   "parentId": "garden"
+  },
+  {
+   "aliases": [
+    "plant pot",
+    "flower pot",
+    "தொட்டி"
+   ],
+   "id": "plant-pots",
+   "kind": "family",
+   "label": "Plant pots",
+   "localNames": {
+    "ta": "செடி தொட்டிகள்",
+    "ta-Latn": "Sedi thottigal"
+   },
+   "parentId": "garden"
+  },
+  {
+   "aliases": [
+    "safety gloves",
+    "work gloves",
+    "கையுறை"
+   ],
+   "id": "safety-gloves",
+   "kind": "family",
+   "label": "Safety gloves",
+   "localNames": {
+    "ta": "பாதுகாப்பு கையுறைகள்",
+    "ta-Latn": "Padhukappu kaiyuraigal"
+   },
+   "parentId": "safety"
+  },
+  {
+   "aliases": [
+    "safety goggles",
+    "safety glasses",
+    "கண்ணாடி"
+   ],
+   "id": "eye-protection",
+   "kind": "family",
+   "label": "Eye protection",
+   "localNames": {
+    "ta": "கண் பாதுகாப்பு கண்ணாடிகள்",
+    "ta-Latn": "Kann padhukappu kannadigal"
+   },
+   "parentId": "safety"
+  },
+  {
+   "aliases": [
+    "dust mask",
+    "n95 mask",
+    "respirator",
+    "மாஸ்க்"
+   ],
+   "id": "respiratory-masks",
+   "kind": "family",
+   "label": "Dust and respiratory masks",
+   "localNames": {
+    "ta": "தூசி மாஸ்க்குகள்",
+    "ta-Latn": "Thoosi maskugal"
+   },
+   "parentId": "safety"
+  },
+  {
+   "aliases": [
+    "safety helmet",
+    "hard hat",
+    "ஹெல்மெட்"
+   ],
+   "id": "safety-helmets",
+   "kind": "family",
+   "label": "Safety helmets",
+   "localNames": {
+    "ta": "பாதுகாப்பு ஹெல்மெட்கள்",
+    "ta-Latn": "Padhukappu helmetgal"
+   },
+   "parentId": "safety"
+  }
+ ],
+ "schemaVersion": 1,
+ "storeType": "hardware"
+}

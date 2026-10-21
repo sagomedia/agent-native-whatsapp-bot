@@ -1,0 +1,50 @@
+Excerpt from integration.log; original test numbers are preserved.
+
+# Subtest: missing pack count offers product confirmation and quantity, never send or a zero bill
+ok 75 - missing pack count offers product confirmation and quantity, never send or a zero bill
+  ---
+  duration_ms: 1136.521439
+  type: 'test'
+  ...
+# Subtest: pipe choice retains the diameter and progresses this line before the second pipe
+ok 76 - pipe choice retains the diameter and progresses this line before the second pipe
+  ---
+  duration_ms: 1284.547004
+  type: 'test'
+  ...
+# Subtest: read-only cutter price answers the question without cart noise or changing its pending choice
+ok 77 - read-only cutter price answers the question without cart noise or changing its pending choice
+  ---
+  duration_ms: 892.137412
+  type: 'test'
+  ...
+# Subtest: early send asks the pending quantity instead of handing the conversation to the shop
+ok 78 - early send asks the pending quantity instead of handing the conversation to the shop
+  ---
+  duration_ms: 791.358809
+  type: 'test'
+  ...
+# Subtest: an unverified price answer retains the product and known stock without showing a zero quote
+ok 79 - an unverified price answer retains the product and known stock without showing a zero quote
+  ---
+  duration_ms: 821.118582
+  type: 'test'
+  ...
+# Subtest: negative keep-list retains every line and the current question
+ok 80 - negative keep-list retains every line and the current question
+  ---
+  duration_ms: 886.846484
+  type: 'test'
+  ...
+# Subtest: an explicitly free product can reach a zero bill and still needs final consent
+ok 81 - an explicitly free product can reach a zero bill and still needs final consent
+  ---
+  duration_ms: 1170.406492
+  type: 'test'
+  ...
+# Subtest: five-item conversation matches the full phone transcript and submits exactly once
+ok 82 - five-item conversation matches the full phone transcript and submits exactly once
+  ---
+  duration_ms: 1264.40015
+  type: 'test'
+  ...

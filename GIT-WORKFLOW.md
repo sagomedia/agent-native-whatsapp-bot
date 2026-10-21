@@ -2,7 +2,7 @@
 
 The private GitHub repository is [sagomedia/agent-native-whatsapp-bot](https://github.com/sagomedia/agent-native-whatsapp-bot). `origin` uses its HTTPS URL. `main` contains the current application plus repository setup; `feature/catalog-mindmap` retains the pre-setup application state. New changes should use a separate branch and pull request, with the automated checks passing before merge. See `CONTRIBUTING.md`.
 
-The project source stays on the shared workspace. SMB does not support the chmod operations required to initialize Git metadata, so `.git` points to `/home/gk-pc/.local/share/shopbot-ai/project-git` on this computer. `git status`, `git log`, branch switching and commits work from the project directory. A GitHub clone on a normal local filesystem has its own portable `.git` directory.
+Use a normal local-disk Git checkout for active development. The recovered checkout on this computer is `/home/gk-pc/whatsapp-bot-finish`; its working branch tracks the matching branch on `origin`. The historical SMB workspace can be disconnected. SMB does not support the chmod operations required to initialize Git metadata, so that older workspace's `.git` points to `/home/gk-pc/.local/share/shopbot-ai/project-git` on this computer. That pointer is specific to this machine. A GitHub clone on a normal local filesystem has its own portable `.git` directory.
 
 - `checkpoint/visual-confirmation`: verified visual-confirmation baseline (`7dd651b`).
 - `checkpoint/catalog-mindmap-voice`: the original verified catalog/recorded-voice phase.

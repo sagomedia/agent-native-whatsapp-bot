@@ -1,3 +1,7 @@
+import {estimateLines,estimateText,partialReview} from './order-estimate.js';
+import {counterLine} from './counter-state.js';
+import {sellingBasisIssues} from '../../../../packages/contracts/selling-basis.js';
+import {createUpiAdvance,type UpiAdvanceConfig} from './upi-advance.js';
 import {requestStoreAssistance} from './store-assistance.js';
 import {discoverProductMeanings} from './product-meaning.js';
 import {normalizeAmountEdits} from './amount-edits.js';
@@ -13,8 +17,9 @@ import { authorize, ToolError, withConversation, type ActorContext } from './con
 import {catalogEnabled} from './catalog.js';
 import {getCatalogMap,discoverProducts,needsPipeType} from './catalog-discovery.js';
 import {productIdentity,productConfirmed,preserveConfirmation,markProductConfirmed,makeProductCheck} from './product-verification.js';
+import {nextCounterLine,productCheckCoversDraft} from './counter-state.js';
 
-export type ToolResult = { estimate?:{knownSubtotalPaise:number;complete:boolean;missingLineIds:string[]}; handoffRequested?:true;state?: ConversationState; products?: Product[];discovery?:DiscoveryResult;catalogMap?:CatalogMap;discoveryBindingId?:string; request?: OrderRequest | null; totalCount?:number; quote?:{quantity:number;unit:string;totalPaise:number}; message: string };
+export type ToolResult = { estimate?:{knownSubtotalPaise:number;complete:boolean;missingLineIds:string[];lines?:DraftLine[]}; handoffRequested?:true;state?: ConversationState; products?: Product[];discovery?:DiscoveryResult;catalogMap?:CatalogMap;discoveryBindingId?:string; request?: OrderRequest | null; totalCount?:number; quote?:{quantity:number;unit:string;totalPaise:number}; message: string };
 export const toolDefinitions = [
   { name: 'search_products', purpose: 'Find actual products and variants in the verified store' },
   { name: 'get_catalog_map', purpose:'Read this store’s departments and product families without loading every SKU' },
@@ -31,7 +36,7 @@ export const toolDefinitions = [
 function canonical(value: any): any { return Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value; }
 export function digest(value: unknown) { return createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex'); }
 export async function loadState(client: PoolClient, ctx: ActorContext): Promise<ConversationState> {
-  const { rows } = await client.query('SELECT c.visual_ordering,c.product_review,c.reply_language_explicit,c.reply_language,c.version,c.draft,c.pending,c.fulfillment,c.last_request_id,c.editing_line_id,c.handoff_requested,p.require_product_confirmation,cp.store_type FROM conversations c LEFT JOIN store_policies p ON p.store_id=c.store_id LEFT JOIN catalog_profiles cp ON cp.store_id=c.store_id WHERE c.id=$1 AND c.store_id=$2 AND c.actor=$3', [ctx.conversationId,ctx.storeId,ctx.actor]);
+  const { rows } = await client.query('SELECT c.partial_reviews,c.visual_ordering,c.product_review,c.reply_language_explicit,c.reply_language,c.version,c.draft,c.pending,c.fulfillment,c.last_request_id,c.editing_line_id,c.handoff_requested,p.require_product_confirmation,cp.store_type FROM conversations c LEFT JOIN store_policies p ON p.store_id=c.store_id LEFT JOIN catalog_profiles cp ON cp.store_id=c.store_id WHERE c.id=$1 AND c.store_id=$2 AND c.actor=$3', [ctx.conversationId,ctx.storeId,ctx.actor]);
   if (!rows[0]) throw new ToolError('Conversation unavailable', 'forbidden');
   const c = rows[0];
   if(c.visual_ordering)for(const line of c.draft as DraftLine[]){
@@ -48,7 +53,7 @@ export async function loadState(client: PoolClient, ctx: ActorContext): Promise<
     }
   }
 
-  return {visualOrdering:c.visual_ordering,productReview:c.product_review, languageExplicit:c.reply_language_explicit,replyLanguage:c.reply_language,version:c.version,draft:c.draft,pending:c.pending,fulfillment:c.fulfillment,lastRequestId:c.last_request_id,editingLineId:c.editing_line_id,handoffRequested:c.handoff_requested,...(c.store_type?{catalogDiscovery:true as const}:{}),...(c.require_product_confirmation||c.visual_ordering?{requireProductConfirmation:true as const}:{}) };
+  return {allowPartialReview:c.partial_reviews,visualOrdering:c.visual_ordering,productReview:c.product_review, languageExplicit:c.reply_language_explicit,replyLanguage:c.reply_language,version:c.version,draft:c.draft,pending:c.pending,fulfillment:c.fulfillment,lastRequestId:c.last_request_id,editingLineId:c.editing_line_id,handoffRequested:c.handoff_requested,...(c.store_type?{catalogDiscovery:true as const}:{}),...(c.require_product_confirmation||c.visual_ordering?{requireProductConfirmation:true as const}:{}) };
 }
 async function saveState(client: PoolClient, ctx: ActorContext, state: ConversationState) {
   await client.query('UPDATE conversations SET draft=$1::jsonb,version=$2,pending=$3::jsonb,fulfillment=$4,last_request_id=$5,product_review=$9::jsonb WHERE id=$6 AND store_id=$7 AND actor=$8', [JSON.stringify(state.draft),state.version,JSON.stringify(state.pending),state.fulfillment,state.lastRequestId,ctx.conversationId,ctx.storeId,ctx.actor,JSON.stringify(state.productReview??null)]);
@@ -59,8 +64,8 @@ function validateQuantity(product: Product, quantity: number | null) {
   const step = Math.round(product.quantityStep * 1000);
   if (scaled <= 0 || quantity > 100 || !step || scaled % step !== 0) throw new ToolError(`Use increments of ${product.quantityStep} ${product.unit} for ${product.name}.`);
 }
-type LineEvidence=Pick<DraftLine,'budgetCountDerived'|'sourceUncertainty'|'requestedBudgetPaise'|'packSize'|'productMeasures'|'productIntent'|'requestedAmount'|'amountMode'|'supportingPhrase'|'quantityEvidenceVersion'>;
-function lineEvidence(value:LineEvidence):LineEvidence {return Object.fromEntries(['budgetCountDerived','sourceUncertainty','requestedBudgetPaise','packSize','productMeasures','productIntent','requestedAmount','amountMode','supportingPhrase','quantityEvidenceVersion'].flatMap(key=>value[key as keyof LineEvidence]===undefined?[]:[[key,value[key as keyof LineEvidence]]])) as LineEvidence;}
+type LineEvidence=Pick<DraftLine,'packUnitAlternative'|'budgetCountDerived'|'sourceUncertainty'|'requestedBudgetPaise'|'packSize'|'productMeasures'|'productIntent'|'requestedAmount'|'amountMode'|'supportingPhrase'|'quantityEvidenceVersion'>;
+function lineEvidence(value:LineEvidence):LineEvidence {return Object.fromEntries(['packUnitAlternative','budgetCountDerived','sourceUncertainty','requestedBudgetPaise','packSize','productMeasures','productIntent','requestedAmount','amountMode','supportingPhrase','quantityEvidenceVersion'].flatMap(key=>value[key as keyof LineEvidence]===undefined?[]:[[key,value[key as keyof LineEvidence]]])) as LineEvidence;}
 function resolvedLine(product: Product, quantity: number | null, query: string, id: string = randomUUID(), requestedUnit?:string,evidence:LineEvidence={}): DraftLine {
   evidence=lineEvidence(evidence);
   if(evidence.productMeasures&&!matchesProductMeasures(product,evidence.productMeasures))throw new ToolError('The shop must verify the requested product dimensions.');
@@ -84,10 +89,12 @@ function resolvedLine(product: Product, quantity: number | null, query: string, 
   const verifiedPack=catalogPack(product);
   if(evidence.packSize&&(!verifiedPack||!sameUnit(pack!.unit,verifiedPack.unit)))throw new ToolError('The shop must verify this pack size before it can be selected.');
   if(pack&&verifiedPack&&sameUnit(pack.unit,verifiedPack.unit)&&pack.value!==verifiedPack.value)throw new ToolError('That catalog pack has a different size. Tell me which pack size you need.');
+  if(requestedUnit&&normalizeUnit(requestedUnit)==='container'&&product.sellingUnitVerified&&verifiedPack&&pack&&sameUnit(pack.unit,verifiedPack.unit)&&pack.value===verifiedPack.value&&['can','tin','bucket','box','bottle','pack'].includes(product.unit))requestedUnit=product.unit;
   if(verifiedPack&&pack&&sameUnit(pack.unit,verifiedPack.unit)&&pack.value===verifiedPack.value&&['can','tin','bucket','box'].includes(requestedUnit??'')&&['can','tin','bucket','box'].includes(product.unit))requestedUnit=product.unit;
   if(requestedUnit&&!sameUnit(requestedUnit,product.unit)) return {...evidence,...(pack?{packSize:pack}:{}),id,query,sku:product.sku,name:product.name,quantity:null,unit:product.unit,pricePaise:product.pricePaise,productVersion:product.version,requestedUnit:normalizeUnit(requestedUnit),...(quantity!==null?{requestedQuantity:quantity}:{}),resolution:'needs_unit',candidates:[product]};
   validateQuantity(product,quantity);
   if(pack&&['litre','kg'].includes(product.unit)&&(!product.sellingUnitVerified||!requestedUnit&&!evidence.requestedAmount))return {...evidence,packSize:pack,id,query,sku:product.sku,name:product.name,quantity:null,requestedQuantity:quantity??undefined,unit:product.unit,pricePaise:product.pricePaise,productVersion:product.version,resolution:'needs_unit',catalogIssue:'selling_unit_unverified',candidates:[product]};
+  if(sellingBasisIssues(product).length)return {...evidence,...(pack?{packSize:pack}:{}),id,query,sku:product.sku,name:product.name,quantity:null,requestedQuantity:quantity??undefined,unit:product.unit,pricePaise:product.pricePaise,productVersion:product.version,resolution:'needs_unit',catalogIssue:'selling_unit_unverified',candidates:[product]};
   if(product.priceStatus==='confirm'||product.pricePaise===0&&product.priceStatus!=='free')return {...evidence,...(pack?{packSize:pack}:{}),id,query,sku:product.sku,name:product.name,quantity,unit:product.unit,pricePaise:product.pricePaise,productVersion:product.version,resolution:'unavailable',catalogIssue:'price_unverified',candidates:[product]};
   return {...evidence,...(pack?{packSize:pack}:{}), id,query,sku:product.sku,quantity,name:product.name,unit:product.unit,pricePaise:product.pricePaise,productVersion:product.version,
     ...(requestedUnit?{requestedUnit:normalizeUnit(requestedUnit)}:{}),...(product.stock===0?{catalogIssue:'out_of_stock' as const}:{}),resolution:quantity===null?'needs_quantity':product.stock===0?'unavailable':'matched',candidates:[product] };
@@ -110,12 +117,37 @@ async function resolveLine(client: PoolClient, ctx: ActorContext, query: string,
     if(previous&&!replacement){const supplied=evidence;evidence={...lineEvidence(previous),...supplied};if(query!==previous.query&&!supplied.productIntent)delete evidence.productIntent;if(query!==previous.query&&supplied.supportingPhrase)delete evidence.sourceUncertainty;requestedUnit??=previous.requestedUnit;}
     if(evidence.productIntent?.kind==='ambiguous')return {...evidence,id,query,quantity,name:query,...(requestedUnit?{requestedUnit:normalizeUnit(requestedUnit)}:{}),resolution:'needs_choice',candidates:discovery.products,discovery};
     if(evidence.productMeasures){discovery.products=discovery.products.filter(p=>matchesProductMeasures(p,evidence.productMeasures!));const allowed=new Set(discovery.products.map(p=>p.sku));discovery.rankings=discovery.rankings.filter(r=>allowed.has(r.sku));if(!discovery.products.length)discovery.noExactMatch=true;}
+    let retrievedProducts=[...discovery.products];
     if(evidence.packSize){
       const requested=evidence.packSize;
       discovery.products=discovery.products.filter(product=>{const verified=catalogPack(product);return verified&&sameUnit(requested.unit,verified.unit)&&requested.value===verified.value;});
       const allowed=new Set(discovery.products.map(product=>product.sku));
       discovery.rankings=discovery.rankings.filter(ranking=>allowed.has(ranking.sku));
       if(!discovery.products.length)discovery.noExactMatch=true;
+    }
+    if(!discovery.products.length&&evidence.packSize&&!evidence.productMeasures?.length){
+      const pack=evidence.packSize;
+      const strip=(text:string)=>packSearchQuery(packSearchQuery(text,parsePackSize(text),true),pack,true);
+      const specifications=Object.fromEntries(Object.entries(search?.specifications??{}).filter(([,value])=>{const m=parsePackSize(value);return !m||m.value!==pack.value||!sameUnit(m.unit,pack.unit);}));
+      const alternativePlan={...search,keywords:(search?.keywords??[query]).map(strip),specifications};
+      const related=await discoverProducts(client,ctx,strip(query),alternativePlan);
+      retrievedProducts=[...new Map([...retrievedProducts,...related.products].map(p=>[p.sku,p])).values()];
+      if(related.products.length){
+        const exact=related.products.filter(p=>{const actual=catalogPack(p);return actual&&sameUnit(actual.unit,pack.unit)&&actual.value===pack.value;});
+        const allowed=new Set(exact.map(p=>p.sku));
+        discovery={...related,products:exact,rankings:related.rankings.filter(r=>allowed.has(r.sku)),noExactMatch:!exact.length};
+      }
+    }
+    // Keep a real identity match visible when only the pack dimension differs.
+    // This is an alternative requiring a fresh customer choice, never a
+    // litre/kg conversion or an automatically selected/quoted catalog item.
+    if(!discovery.products.length&&evidence.packSize&&!evidence.productMeasures?.length){
+      const requested=evidence.packSize;
+      const alternatives=retrievedProducts.filter(product=>{const actual=catalogPack(product);return actual&&actual.value===requested.value&&!sameUnit(actual.unit,requested.unit)&&convertAmount(actual,requested.unit)===null;});
+      if(alternatives.length){
+        discovery={...discovery,products:alternatives,rankings:alternatives.map(p=>({sku:p.sku,score:0,match:'related' as const,reason:'Same requested product identity; pack unit differs and needs explicit selection'})),noExactMatch:true};
+        return {...evidence,id,query,quantity,name:query,...(requestedUnit?{requestedUnit:normalizeUnit(requestedUnit)}:{}),resolution:'needs_choice',catalogIssue:'pack_unit_mismatch',packUnitAlternative:{requested},candidates:alternatives,discovery};
+      }
     }
     const exact=discovery.products.filter(p=>exactProductMatch(searchQuery,p));
     if(!exact.length&&discovery.products.length===1&&evidence.packSize&&(!search?.familyId||search.familyId===discovery.products[0].familyId))exact.push(discovery.products[0]);
@@ -141,11 +173,11 @@ export function renderBill(state:ConversationState){
   return state.draft.map((line,index)=>`${index+1}. ${lineName(line,state)}\n   ${line.quantity} ${unitName(line.unit??'unit',state,line.quantity??1)} × ${formatMoney(line.pricePaise!)} = ${formatMoney(lineTotal(line.pricePaise!,line.quantity!))}`).join('\n\n');
 }
 function requestFromRow(row: Record<string,any>): OrderRequest {
-  return {id:row.id,acceptance:row.acceptance,payment:row.payment,fulfillment:row.fulfillment,totalPaise:Number(row.total_paise),lines:row.lines};
+  return {id:row.id,acceptance:row.acceptance,payment:row.payment,fulfillment:row.fulfillment,totalPaise:Number(row.effective_total_paise??row.total_paise),lines:row.effective_lines??row.lines,originalLines:row.lines,estimateComplete:row.estimate_complete,excludedLineIds:row.excluded_line_ids,advanceRequired:row.advance_required,advanceState:row.advance_state,effectiveRevision:row.effective_revision};
 }
 
 export class RetailTools {
-  constructor(private pool: Pool,private options:{sequentialItems?:boolean;maxDraftLines?:number}={}) {}
+  constructor(private pool: Pool,private options:{advance?:UpiAdvanceConfig;sequentialItems?:boolean;maxDraftLines?:number}={}) {}
   // All surfaces (simulator, future channel/owner adapters) share this boundary.
   async invoke(ctx: ActorContext, input: unknown, operationKey: string): Promise<ToolResult> {
     const call=toolCallSchema.parse(input);
@@ -176,10 +208,11 @@ export class RetailTools {
       let knownSubtotalPaise=0;const missingLineIds:string[]=[];
       for(const line of state.draft){const product=line.sku?products.get(line.sku):undefined;if(product&&sameUnit(product.unit,line.unit??'')&&line.quantity!==null&&product.priceStatus!=='confirm'&&(product.pricePaise>0||product.priceStatus==='free'))knownSubtotalPaise+=lineTotal(product.pricePaise,line.quantity);else missingLineIds.push(line.id);}
       const complete=state.draft.length>0&&!missingLineIds.length;
-      return {state,estimate:{knownSubtotalPaise,complete,missingLineIds},message:say(state,complete?`Estimated total: ${formatMoney(knownSubtotalPaise)}.`:`Known-price subtotal: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} item(s) still need a price or quantity. You can send the list to the store for checking.`,complete?`உத்தேச மொத்தம்: ${formatMoney(knownSubtotalPaise)}.`:`தெரிந்த விலைகளின் கூட்டுத்தொகை: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} பொருட்களுக்கு விலை அல்லது எண்ணிக்கை தேவை. சரிபார்க்கப் பட்டியலைக் கடைக்கு அனுப்பலாம்.`,complete?`Estimate moththam: ${formatMoney(knownSubtotalPaise)}.`:`Therintha vilaikal subtotal: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} porutkalukku vilai illa count venum. List-ai kadaikku check panna anuppalaam.`)};
+      const lines=state.draft.map(line=>{const product=line.sku?products.get(line.sku):undefined;return product?{...line,pricePaise:product.pricePaise,productVersion:product.version,candidates:[product]}:{...line,candidates:[]};});
+      return {state,estimate:{knownSubtotalPaise,complete,missingLineIds,lines},message:say(state,complete?`Estimated total: ${formatMoney(knownSubtotalPaise)}.`:`Known-price subtotal: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} item(s) still need a price or quantity. You can send the list to the store for checking.`,complete?`உத்தேச மொத்தம்: ${formatMoney(knownSubtotalPaise)}.`:`தெரிந்த விலைகளின் கூட்டுத்தொகை: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} பொருட்களுக்கு விலை அல்லது எண்ணிக்கை தேவை. சரிபார்க்கப் பட்டியலைக் கடைக்கு அனுப்பலாம்.`,complete?`Estimate moththam: ${formatMoney(knownSubtotalPaise)}.`:`Therintha vilaikal subtotal: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} porutkalukku vilai illa count venum. List-ai kadaikku check panna anuppalaam.`)};
     }
     if(call.name==='request_store_assistance')return requestStoreAssistance(client,ctx,state,call.args.expectedVersion);
-    if(call.name==='get_catalog_map')return {catalogMap:await getCatalogMap(client,ctx,call.args.departmentId),message:'Store departments and product families.'};
+    if(call.name==='get_catalog_map')return {catalogMap:await getCatalogMap(client,ctx,call.args.departmentId,call.args),message:'Store departments and product families.'};
     if(call.name==='discover_products'){const discovery=await discoverProducts(client,ctx,call.args.query,call.args.search);return {discovery,products:discovery.products,totalCount:discovery.totalCount,message:'Check these catalog suggestions.'};}
     if(call.name==='search_products') {
       const products=await searchProducts(client,ctx,call.args.query);
@@ -196,7 +229,7 @@ export class RetailTools {
     if(call.name==='get_order_status') {
       const id=call.args.requestId??state.lastRequestId;
       if(!id) return {request:null,message:'No submitted request in this conversation.'};
-      const row=await client.query('SELECT * FROM order_requests WHERE id=$1 AND store_id=$2 AND conversation_id=$3 AND actor=$4',[id,ctx.storeId,ctx.conversationId,ctx.actor]);
+      const row=await client.query('SELECT r.*,(SELECT state FROM order_advances a WHERE a.request_id=r.id) AS advance_state FROM order_requests r WHERE r.id=$1 AND r.store_id=$2 AND r.conversation_id=$3 AND r.actor=$4',[id,ctx.storeId,ctx.conversationId,ctx.actor]);
       if(!row.rows[0]) throw new ToolError('Request is not accessible to this customer','forbidden');
       const request=requestFromRow(row.rows[0]);
       return {request,message:`Request ${request.id}: waiting for shop approval. Payment has not been requested; items are not ready for pickup.`};
@@ -213,14 +246,17 @@ export class RetailTools {
         if(!product||productIdentity(product)!==productIdentity(displayed))throw new ToolError('The product details changed. Review the latest photo and name before adding it.','stale_confirmation');
         const old=state.draft[index];
         if(state.catalogDiscovery&&old.discovery){
-          const eligible=await discoverProducts(client,ctx,old.query??old.name,old.discovery.plan);
+          const eligible=await discoverProducts(client,ctx,old.discovery.query,old.discovery.plan);
           if(!eligible.products.some(p=>p.sku===choice.sku))throw new ToolError('That option no longer matches the requested item. Review the latest choices.','stale_confirmation');
         }
-        const line=resolvedLine(product,old.requestedQuantity??old.quantity,old.query??product.name,old.id,old.requestedUnit,old);
+        const alternative=old.packUnitAlternative&&!old.packUnitAlternative.acceptedSku;
+        const evidence=alternative?{...old,packSize:catalogPack(product)}:old;
+        const line=resolvedLine(product,old.requestedQuantity??old.quantity,old.query??product.name,old.id,old.requestedUnit,evidence);
+        if(old.packUnitAlternative)line.packUnitAlternative={...old.packUnitAlternative,acceptedSku:product.sku};
         markProductConfirmed(line,product);state.draft[index]=line;
       }
       state.version++;
-      if(state.visualOrdering&&pending.completeReview&&call.args.choices.length===state.draft.length){state.productReview={version:state.version,hash:productListHash(state)};}
+      if(state.visualOrdering&&productCheckCoversDraft(state,pending)&&call.args.choices.length===state.draft.length){state.productReview={version:state.version,hash:productListHash(state)};}
       state.pending=null;await saveState(client,ctx,state);
       return {state,message:'Product choices accepted. Nothing has been sent to the shop.'};
     }
@@ -336,14 +372,38 @@ export class RetailTools {
         if(digest(current)!==digest(line)) {state.draft[state.draft.findIndex(l=>l.id===line.id)]=current;refreshed=true;}
       }
       if(refreshed) state.version++;
+      if(call.args.allowPartial){
+        if(!state.allowPartialReview)throw new ToolError('Partial order review is not enabled for this conversation.');
+        const unconfirmed=!!state.requireProductConfirmation&&state.draft.some(line=>counterLine(line).product&&!productConfirmed(line));
+        if(unconfirmed){
+          const check=makeProductCheck(state,!!this.options.sequentialItems);
+          if(check){state.pending=check;await saveState(client,ctx,state);return {state,message:'Check the product photos before reviewing the estimate.'};}
+          throw new ToolError('Check the product photos before reviewing the estimate.');
+        }
+        const estimate=estimateLines(state.draft);
+        const snapshot={lines:state.draft,fulfillment:state.fulfillment,totalPaise:estimate.knownSubtotalPaise,excludedLineIds:estimate.excludedLineIds,...(this.options.advance?{advanceRequired:true}:{} )};
+        state.pending={kind:'review',id:randomUUID(),version:state.version,hash:digest(snapshot),expiresAt:new Date(Date.now()+15*60*1000).toISOString(),...snapshot};
+        await saveState(client,ctx,state);
+        return {state,message:estimateText(state,state.draft,!!this.options.advance)};
+      }
+
       // A missing pipe type cannot be settled by approving the current PVC
       // photos. Ask for that type before showing any product-review batch.
-      const pipeTypeLine=state.draft.find(l=>!l.sku&&l.productIntent?.kind!=='ambiguous'&&needsPipeType(l.query??l.name));
+      const active=state.visualOrdering?nextCounterLine(state):undefined;
+      const pipeTypeLine=state.visualOrdering
+        ?active&&!active.sku&&active.productIntent?.kind!=='ambiguous'&&needsPipeType(active.query??active.name)?active:undefined
+        :state.draft.find(l=>!l.sku&&l.productIntent?.kind!=='ambiguous'&&needsPipeType(l.query??l.name));
+      const missingCount=state.visualOrdering&&!pipeTypeLine&&!state.draft.some(l=>!l.sku&&!l.shopCheckDeferred&&l.candidates?.length||l.productIntent?.kind==='ambiguous')
+        ?state.draft.find(l=>l.sku&&!l.shopCheckDeferred&&l.resolution==='needs_quantity'&&l.quantity===null&&l.requestedQuantity===undefined&&!l.requestedAmount):undefined;
+      if(missingCount){
+        state.pending={kind:'question',id:randomUUID(),lineId:missingCount.id,version:state.version};await saveState(client,ctx,state);
+        return {state,message:say(state,`How many ${missingCount.unit??'packs'} of ${lineName(missingCount,state)}?`,`${lineName(missingCount,state)} — எத்தனை ${unitName(missingCount.unit??'unit',state)} வேணும்?`,`${lineName(missingCount,state)} — eththanai ${missingCount.unit??'packs'} venum?`)};
+      }
       if(state.requireProductConfirmation&&!pipeTypeLine) {
         const check=makeProductCheck(state,!!this.options.sequentialItems);
         if(check){state.pending=check;await saveState(client,ctx,state);return {state,message:'Check the products before adding them to your list.'};}
       }
-      const unresolved=pipeTypeLine??(state.visualOrdering?state.draft.find(l=>!l.shopCheckDeferred&&l.sku&&['needs_quantity','needs_unit'].includes(l.resolution)):undefined)??state.draft.find(l=>l.resolution!=='matched'&&!l.shopCheckDeferred)??state.draft.find(l=>l.resolution!=='matched');
+      const unresolved=pipeTypeLine??(state.visualOrdering?active:undefined)??state.draft.find(l=>l.resolution!=='matched'&&!l.shopCheckDeferred)??state.draft.find(l=>l.resolution!=='matched');
       if(unresolved) {
         state.pending={kind:'question',id:randomUUID(),lineId:unresolved.id,version:state.version};
         await saveState(client,ctx,state);
@@ -351,7 +411,7 @@ export class RetailTools {
         return {state,message:`${renderDraft(state)}\n\n${question} Other lines are retained. No request submitted.`};
       }
       const totalPaise=state.draft.reduce((sum,l)=>sum+lineTotal(l.pricePaise!,l.quantity!),0);
-      const snapshot={lines:state.draft,fulfillment:state.fulfillment,totalPaise};
+      const snapshot={lines:state.draft,fulfillment:state.fulfillment,totalPaise,...(this.options.advance?{advanceRequired:true}:{} )};
       state.pending={kind:'review',id:randomUUID(),version:state.version,hash:digest(snapshot),expiresAt:new Date(Date.now()+15*60*1000).toISOString(),...snapshot};
       await saveState(client,ctx,state);
       return {state,message:`${refreshed?'Catalog facts changed; please review the updated request.\n':''}${renderDraft(state)}\nTotal: ${formatMoney(totalPaise)}. Pickup.\nShall I send this request to the shop? Reply yes or confirm this review. Availability needs shop approval; stock is not reserved.`};
@@ -359,20 +419,27 @@ export class RetailTools {
     // Only this tool can create a request. No staff/payment/readiness action exists in this customer registry.
     if(call.name!=='submit_order_request')throw new ToolError('Unsupported customer tool.');
     const pending=state.pending;
-    if(state.visualOrdering&&state.productReview?.hash!==productListHash(state))throw new ToolError('Check the complete product list again.','stale_confirmation');
+    if(state.visualOrdering&&!partialReview(state.pending)&&state.productReview?.hash!==productListHash(state))throw new ToolError('Check the complete product list again.','stale_confirmation');
     if(!pending||pending.kind!=='review'||pending.id!==call.args.reviewId||pending.version!==state.version||Date.parse(pending.expiresAt)<=Date.now()) throw new ToolError('There is no current unexpired review for that confirmation. Review the draft first.','stale_confirmation');
-    if(digest({lines:state.draft,fulfillment:state.fulfillment,totalPaise:pending.totalPaise})!==pending.hash) throw new ToolError('Review snapshot changed; review again.','stale_confirmation');
+    if(digest({lines:state.draft,fulfillment:state.fulfillment,totalPaise:pending.totalPaise,...(pending.excludedLineIds?{excludedLineIds:pending.excludedLineIds}:{}),...(pending.advanceRequired?{advanceRequired:true}:{})})!==pending.hash) throw new ToolError('Review snapshot changed; review again.','stale_confirmation');
+    if(pending.advanceRequired&&!this.options.advance)throw new ToolError('Advance payment configuration changed. Review the list again.');
     for(const line of state.draft) {
+      if(pending.excludedLineIds?.includes(line.id)){
+        if(line.sku){const [current]=await searchProducts(client,ctx,line.sku);if(!current||current.version!==line.productVersion||state.requireProductConfirmation&&!productConfirmed(line,current))throw new ToolError('Product details changed. Review the list again.','stale_confirmation');}
+        continue;
+      }
       const [product]=await searchProducts(client,ctx,line.sku!);
-      if(line.resolution!=='matched'||!product||(state.requireProductConfirmation&&!productConfirmed(line,product))||product.version!==line.productVersion||product.pricePaise!==line.pricePaise||(product.stock!==null&&product.stock<line.quantity!)) {
+      if(line.resolution!=='matched'||!product||sellingBasisIssues(product).length||(state.requireProductConfirmation&&!productConfirmed(line,product))||product.version!==line.productVersion||product.pricePaise!==line.pricePaise||(product.stock!==null&&product.stock<line.quantity!)) {
         state.pending=null; await saveState(client,ctx,state);
         return {state,message:'Price or availability changed after the review. No request submitted. Review the draft again.'};
       }
     }
     const id=randomUUID();
     const row=await client.query('INSERT INTO order_requests(id,store_id,conversation_id,actor,review_id,lines,total_paise,pickup_method) VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8) RETURNING *',[id,ctx.storeId,ctx.conversationId,ctx.actor,pending.id,JSON.stringify(pending.lines),pending.totalPaise,pending.fulfillment]);
+    await client.query('UPDATE order_requests SET estimate_complete=$1,excluded_line_ids=$2::jsonb WHERE id=$3',[!pending.excludedLineIds?.length,JSON.stringify(pending.excludedLineIds??[]),id]);
+    if(pending.advanceRequired&&this.options.advance)await createUpiAdvance(client,ctx,id,pending.id,this.options.advance);
     state.pending=null;state.lastRequestId=id;state.version++;
     await saveState(client,ctx,state);
-    return {state,request:requestFromRow(row.rows[0]),message:`Request ${id} received. Waiting for the shop to confirm. Payment has not been requested; packing and readiness require shop actions.`};
+    return {state,request:requestFromRow((await client.query('SELECT * FROM order_requests WHERE id=$1',[id])).rows[0]),message:`Request ${id} received. Waiting for the shop to confirm. Payment has not been requested; packing and readiness require shop actions.`};
   }
 }

@@ -50,8 +50,8 @@ test('targeted quantity edits retain every other item, and keeping the list inva
  await turn(channel,tap(await action(pool,'shopping_action','keep_list')));assert.equal((await pool.query('SELECT draft FROM conversations WHERE id=$1',[item.conversation_id])).rows[0].draft.length,2);
 }));
 test('handoff pauses AI, cancels assistant work, and authenticated owner replies are idempotent and window-bound',async()=>fixture(async(pool,channel,sent)=>{
- await turn(channel,{type:'text',text:{body:'hello'}});await turn(channel,tap(await action(pool,'shopping_action','handoff')));
- const c=(await pool.query('SELECT * FROM conversations WHERE id IN (SELECT conversation_id FROM whatsapp_conversations)')).rows[0];assert.equal(c.operator_mode,'owner');assert.equal(c.handoff_requested,true);assert.match(sent.at(-1).text.body,/Shop assistance requested/);
+ await turn(channel,{type:'text',text:{body:'hello'}});await turn(channel,tap(await action(pool,'shopping_action','options')));await turn(channel,tap(await action(pool,'shopping_action','handoff')));
+ const c=(await pool.query('SELECT * FROM conversations WHERE id IN (SELECT conversation_id FROM whatsapp_conversations)')).rows[0];assert.equal(c.operator_mode,'owner');assert.equal(c.handoff_requested,true);assert.match(sent.at(-1).text.body,/Your message is with the shop owner/);
  await channel.receive(inbound({type:'text',text:{body:'Could you check this size?'}}));assert.equal(await channel.processNext(),false);
  const owner={hostname:'owner.example.test',issuer:'https://test.cloudflareaccess.com',audience:'offline-audience',email:'owner@example.test',storeId:fixtureStore};
  const app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,port:3017,host:'127.0.0.1',mediaDir:'/tmp/offline-media',owner,whatsapp:cfg},pool,undefined,undefined,async()=>({email:owner.email,subject:'offline-owner'}),channel);
@@ -93,7 +93,7 @@ test('opt-in voice recommendations use fresh facts, ask above photos, preserve q
   if(recommendation){
    const context=JSON.parse(params.contents as string);assert.ok(!JSON.stringify(context).includes('inlineData'));assert.match(JSON.stringify(context),/H19/);assert.match(JSON.stringify(context),/பைப் கட்டர்/);
    assert.match(String(params.config?.systemInstruction),/Do not re-ask/);
-  }else if(recognition){assert.match(JSON.stringify(params.contents),/audio\/wav/);assert.equal(params.config?.httpOptions?.timeout,19000);assert.equal(params.config?.audioTranscriptionConfig,undefined);assert.equal(params.model,geminiTextRate.model);assert.ok(!JSON.stringify(params.contents).includes('currentDraft'));}else assert.ok(!JSON.stringify(params.contents).includes('audio/wav'));
+  }else if(recognition){assert.match(JSON.stringify(params.contents),/audio\/wav/);assert.equal(params.config?.httpOptions?.timeout,44000);assert.equal(params.config?.audioTranscriptionConfig,undefined);assert.equal(params.model,geminiTextRate.model);assert.ok(!JSON.stringify(params.contents).includes('currentDraft'));}else assert.ok(!JSON.stringify(params.contents).includes('audio/wav'));
   return {modelVersion:recognition?geminiSpeechRate.model:geminiTextRate.model,candidates:[{finishReason:'STOP',content:{parts:[{text:recognition?JSON.stringify({transcript:'எனக்கு இரண்டு பைப் கட்டர் வேண்டும்'}):JSON.stringify(recommendation?{skus:['H19','INVENTED'],question:'எந்த அளவு பைப் வெட்ட வேண்டும்?'}:{operations:[{kind:'add_item',query:'PVC pipe cutter',quantity:2}],next:'review'})}]}}],usageMetadata:{promptTokenCount:1000,candidatesTokenCount:100,totalTokenCount:1100}} as GenerateContentResponse;
  }});
  const channel=new WhatsAppChannel(pool,{...cfg,defaultReplyLanguage:'ta',aiEnabled:true,paidEnabled:true,budgetMicrousd:1000000,mediaEnabled:true,mediaRecommendations:true,discoveryStages:false},async url=>String(url).includes('graph.facebook.com')?new Response(JSON.stringify({url:'https://lookaside.fbsbx.com/voice',mime_type:'audio/wav',file_size:wav.length})):new Response(JSON.stringify({messages:[{id:'wamid.offline-media-recommendation'}]})),provider);
@@ -109,7 +109,7 @@ test('a failed voice attachment offers bound browse and handoff buttons without 
  const provider:Interpreter={name:'offline-unreadable-voice',mode:'live',billing:geminiTextRate,supportsAudio:true,interpret:async()=>{throw new Error('Must not call AI for undecoded media');}};
  const channel=new WhatsAppChannel(pool,{...cfg,defaultReplyLanguage:'ta',aiEnabled:true,paidEnabled:true,budgetMicrousd:500000,mediaEnabled:true,mediaRecommendations:true},async()=>new Response('{}',{status:404}),provider);await channel.setup();
  await channel.receive(inbound({type:'audio',audio:{id:'123456'}}));await channel.processNext();
- const reply=(await pool.query("SELECT text,payload FROM messages WHERE direction='outbound' ORDER BY sequence DESC LIMIT 1")).rows[0];assert.match(reply.text,/குரல் பதிவைத் திறக்க முடியவில்லை/);assert.equal(reply.text.split('\n').length,1);assert.equal(reply.payload.cards?.length??0,0);
+ const reply=(await pool.query("SELECT text,payload FROM messages WHERE direction='outbound' ORDER BY sequence DESC LIMIT 1")).rows[0];assert.match(reply.text,/Voice-ஐ open பண்ண முடியல/);assert.equal(reply.text.split('\n').length,1);assert.equal(reply.payload.cards?.length??0,0);
  assert.ok(await action(pool,'shopping_action','browse'));assert.ok(await action(pool,'shopping_action','handoff'));assert.equal((await pool.query('SELECT * FROM provider_attempts')).rowCount,0);
 }));
 test('provider rejection codes are diagnosable without saving secrets or retrying the request',async()=>fixture(async(pool)=>{
@@ -324,4 +324,19 @@ test('paid multimodal voice bills recognition and planning separately and durabl
  const input=inbound({type:'audio',audio:{id:'123456'}});await channel.receive(input);await channel.processNext();await channel.receive(input);await channel.processNext();assert.equal(calls,2);
  const budget=(await pool.query('SELECT * FROM inference_budgets WHERE store_id=$1',[cfg.storeId])).rows[0];assert.equal(Number(budget.held_microusd),0);assert.equal(Number(budget.committed_microusd),1340);assert.equal(Number(budget.limit_microusd),500000);
  const reply=(await pool.query("SELECT payload FROM messages WHERE direction='outbound' ORDER BY sequence DESC LIMIT 1")).rows[0].payload;assert.equal(reply.replyLanguage,'ta');assert.ok(reply.cards.length>=1);assert.equal((await pool.query('SELECT * FROM voice_media')).rowCount,1);assert.equal((await pool.query('SELECT * FROM order_requests')).rowCount,0);
+}));
+
+
+test('a downloaded recording survives normalization failure without calling AI or losing private playback',async()=>fixture(async(pool)=>{
+ const bytes=Buffer.from('This is a corrupt audio fixture, not spoken audio');let calls=0;
+ const provider:Interpreter={name:'offline-corrupt-audio',mode:'live',billing:geminiTextRate,supportsAudio:true,interpret:async()=>{calls++;throw new Error('Must not infer from undecoded audio');}};
+ const channel=new WhatsAppChannel(pool,{...cfg,aiEnabled:true,paidEnabled:true,budgetMicrousd:500000,mediaEnabled:true},async url=>String(url).includes('graph.facebook.com')?new Response(JSON.stringify({url:'https://lookaside.fbsbx.com/audio',mime_type:'audio/ogg; codecs=opus',file_size:bytes.length})):new Response(new Uint8Array(bytes)),provider);
+ await channel.setup();await channel.receive(inbound({type:'audio',audio:{id:'123456'}}));await channel.processNext();
+ const row=(await pool.query('SELECT * FROM whatsapp_media')).rows[0];assert.equal(row.state,'failed');assert.equal(row.last_error,'media_decode_failed');assert.deepEqual(row.original_audio,bytes);assert.equal(row.original_mime_type,'audio/ogg');assert.ok(row.downloaded_at);assert.equal(calls,0);assert.equal((await pool.query('SELECT id FROM voice_media')).rowCount,0);
+ const conversation=(await pool.query('SELECT conversation_id FROM whatsapp_conversations')).rows[0].conversation_id;
+ const owner={hostname:'shopbot-owner.example.test',issuer:'https://offline.cloudflareaccess.com',audience:'offline-audience',email:'offline-owner@example.test',storeId:fixtureStore};
+ const app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,port:3017,host:'127.0.0.1',mediaDir:'/tmp/audio-failure-test',owner},pool,undefined,undefined,async()=>({email:owner.email,subject:'offline-owner'}));
+ try{const headers={host:owner.hostname,'cf-access-jwt-assertion':'offline-owner'},history=(await app.inject({url:'/api/owner/conversations/'+conversation,headers})).json();assert.equal(history.messages.find((m:any)=>m.id===row.message_id).media_available,true);assert.equal(history.messages.find((m:any)=>m.id===row.message_id).media_error,'media_decode_failed');const playback=await app.inject({url:`/api/owner/conversations/${conversation}/media/voice/${row.message_id}`,headers});assert.equal(playback.statusCode,200);assert.equal(playback.headers['content-type'],'audio/ogg');assert.equal(playback.headers['cache-control'],'private, no-store');assert.deepEqual(playback.rawPayload,bytes);
+ const foreign=randomUUID();await pool.query("INSERT INTO conversations(id,store_id,actor) VALUES($1,$2,'foreign-recording')",[foreign,fixtureStore]);assert.equal((await app.inject({url:`/api/owner/conversations/${foreign}/media/voice/${row.message_id}`,headers})).statusCode,404);
+ }finally{await app.close();}
 }));

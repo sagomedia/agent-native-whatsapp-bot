@@ -1,0 +1,88 @@
+[
+ {
+  "sku": "CAT100-002",
+  "sourceHash": "f285fb8f7e10acb96b485f7567140087f1dd664b108ac60083d537cb725263a8",
+  "outputHash": "d0f3be63fe7d6448ed3d8ceb782b8d24c9b9e462ba4f69c0d0d41389643b2e25",
+  "operations": [
+   "watermark: small lowercase \"sago automation\", bottom-right, white with black stroke"
+  ],
+  "comparisonChecks": [
+   "brand markings, labels, logos and product geometry unchanged (only resize + corner watermark added)",
+   "no product pixels altered beyond downscale resampling; watermark placed in corner clear of product",
+   "output <2MB JPEG; source resolution below 800px, kept native (not upscaled per no-thumbnail-enlargement rule)"
+  ],
+  "sourceFile": "/tmp/imgwork/finolex_cand3.jpg",
+  "outputSize": "400x500",
+  "outputKB": 12.0,
+  "note": "re-source: Finolex-branded white UPVC pipe photo"
+ },
+ {
+  "sku": "CAT100-016",
+  "sourceHash": "3c35d3f26b45d7c17f9524178e2a865249dbb00a5a4854eb33a53b5937a2a08c",
+  "outputHash": "221233acba23b4f3b4030e19ff90867ecb49bfcef9d9f7d9b06eb085f3d71c82",
+  "operations": [
+   "watermark: small lowercase \"sago automation\", bottom-right, white with black stroke"
+  ],
+  "comparisonChecks": [
+   "brand markings, labels, logos and product geometry unchanged (only resize + corner watermark added)",
+   "no product pixels altered beyond downscale resampling; watermark placed in corner clear of product",
+   "output <2MB JPEG; source resolution below 800px, kept native (not upscaled per no-thumbnail-enlargement rule)"
+  ],
+  "sourceFile": "/tmp/imgwork/weldon_8oz.jpg",
+  "outputSize": "700x700",
+  "outputKB": 113.7,
+  "note": "re-source: Weld-On 705 1/2-pint exact can photo"
+ },
+ {
+  "sku": "CAT100-053",
+  "sourceHash": "aee20d0ec64e31d133c38385099d2d600495f845bbcabd09630f4f948041ffaa",
+  "outputHash": "f6120e53a367e6119439143581adfd32db61095ce65fb92e03b8dd50b60beabb",
+  "operations": [
+   "downscale 1500x1500 -> 1280x1280",
+   "watermark: small lowercase \"sago automation\", bottom-right, white with black stroke"
+  ],
+  "comparisonChecks": [
+   "brand markings, labels, logos and product geometry unchanged (only resize + corner watermark added)",
+   "no product pixels altered beyond downscale resampling; watermark placed in corner clear of product",
+   "output <2MB JPEG, longest side within 800-1280px"
+  ],
+  "sourceFile": "/tmp/imgwork/dulux10l_amz.jpg",
+  "outputSize": "1280x1280",
+  "outputKB": 217.2,
+  "note": "re-source: Dulux Promise Interior 10L pack photo"
+ },
+ {
+  "sku": "CAT100-061",
+  "sourceHash": "dddfefff2eab45fd12cf667d2ef6688da7225dec7d79e1eb9053e41ad78c5c90",
+  "outputHash": "2a03ef939c38df43d4e3a9bbb0e5d0802d90e5347758f7273cd9b5ee2df57df4",
+  "operations": [
+   "watermark: small lowercase \"sago automation\", bottom-right, white with black stroke"
+  ],
+  "comparisonChecks": [
+   "brand markings, labels, logos and product geometry unchanged (only resize + corner watermark added)",
+   "no product pixels altered beyond downscale resampling; watermark placed in corner clear of product",
+   "output <2MB JPEG; source resolution below 800px, kept native (not upscaled per no-thumbnail-enlargement rule)"
+  ],
+  "sourceFile": "/tmp/imgwork/johnson_cand1.jpg",
+  "outputSize": "500x500",
+  "outputKB": 21.6,
+  "note": "re-source: genuine Johnson 2in brush photo"
+ },
+ {
+  "sku": "CAT100-086",
+  "sourceHash": "93aa7c56e63a9b23a7c111d15cc2e9dcd7704c462e7a08041f7db6e214a8d9e8",
+  "outputHash": "9a275a574eb486705c12ee0b035c249ae93e87732c561ef62caa64e490005257",
+  "operations": [
+   "watermark: small lowercase \"sago automation\", bottom-right, white with black stroke"
+  ],
+  "comparisonChecks": [
+   "brand markings, labels, logos and product geometry unchanged (only resize + corner watermark added)",
+   "no product pixels altered beyond downscale resampling; watermark placed in corner clear of product",
+   "output <2MB JPEG; source resolution below 800px, kept native (not upscaled per no-thumbnail-enlargement rule)"
+  ],
+  "sourceFile": "/tmp/imgwork/agriansh_cand1.jpg",
+  "outputSize": "679x679",
+  "outputKB": 107.7,
+  "note": "re-source: Agriansh-branded hose photo"
+ }
+]

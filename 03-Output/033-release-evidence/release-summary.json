@@ -1,0 +1,22 @@
+{
+  "releaseId": "preview-f72c8fbfc04e",
+  "sourceCommit": "95083e07e6cc031cc5e2ad30eb5e25a7f4206545",
+  "archive": "/tmp/shopbot-verified-release/shopbot-vps-preview-f72c8fbfc04e.tar.gz",
+  "bytes": 71698378,
+  "sha256": "436fc7f95e73a5ad727a8947bda35cf7fd2de2d7bc02ce94e4da5eb64562ba69",
+  "artifactFingerprint": "4716fbfd2f6a7586f495a2f6e1baaffb5110011e5da987e916bd8c34182f2b9a",
+  "localChecks": {
+    "integrationPassed": 505,
+    "pythonPassed": 4,
+    "releaseProofPassed": 1,
+    "actualRestore": true,
+    "packagedStartupAndRestart": true,
+    "packagedMcp": true
+  },
+  "deployed": false,
+  "hostedCiVerified": false,
+  "realCodexConnected": false,
+  "paymentsConnected": false,
+  "githubPush": "rejected_missing_workflow_scope",
+  "ssh": "existing_keys_rejected"
+}

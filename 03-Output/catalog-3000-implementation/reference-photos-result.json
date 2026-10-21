@@ -1,0 +1,66 @@
+{
+  "status": "complete",
+  "issue": 29,
+  "pullRequest": 30,
+  "codeCommit": "bf383f6fd316b054b07b441d131b25e6dfe5502d",
+  "release": "preview-2e89d4a469b2",
+  "artifactHash": "b5b641451e376afcc4cf8003e82b334fd0e90c4f5c962c2c5bebca79cef7230e",
+  "tests": {
+    "integrationPassed": 623,
+    "integrationFailed": 0,
+    "pythonPassed": 4,
+    "syntheticBrowserProducts": 3000
+  },
+  "preview": {
+    "total": 297,
+    "ready": 291,
+    "held": 6,
+    "noAsset": 0,
+    "existingImage": 0,
+    "snapshotId": "457e735f-ed19-4801-a083-c507896dbb0e"
+  },
+  "backup": {
+    "path": "/var/backups/shopbot-migration/reference-photos-20261017T151922Z",
+    "bytes": 316829263,
+    "fullyDecoded": true
+  },
+  "verifiedAt": "2026-10-17T15:35:02.531623+00:00",
+  "liveVerification": {
+    "release": "preview-2e89d4a469b2",
+    "sourceCommit": "bf383f6fd316b054b07b441d131b25e6dfe5502d",
+    "artifactHash": "b5b641451e376afcc4cf8003e82b334fd0e90c4f5c962c2c5bebca79cef7230e",
+    "products": 336,
+    "active": 336,
+    "referencePhotos": 291,
+    "heldImportedImages": 6,
+    "productsWithImages": 324,
+    "productsWithoutImages": 12,
+    "existingImagesPreserved": 33,
+    "unchangedProducts": 45,
+    "sourceProposalsPreserved": 298,
+    "sourceAssetsPreserved": 291,
+    "allPublicApplicationImagesVerified": 291,
+    "publicHttpsImagesVerified": 12,
+    "ownerThumbnailsVerified": 12,
+    "photoHashesVerified": true,
+    "sourceOriginalUnauthenticatedStatus": 403,
+    "oppositeNamespaceStatus": 404,
+    "referenceLabelsVerified": true,
+    "singleAndCarouselPayloadsVerified": true,
+    "pricesStockUnitsPreserved": true,
+    "merchantPhotoVerificationRemainsPending": true,
+    "auditRows": 291,
+    "replayPublished": 0,
+    "replayAlreadyPublished": 291,
+    "readinessStatus": 200,
+    "environmentUnchanged": true,
+    "runtimeRecorded": true,
+    "providerMessagesSent": 0,
+    "backup": "/var/backups/shopbot-migration/reference-photos-20261017T151922Z"
+  },
+  "githubChecks": {
+    "runId": 39044547340,
+    "codeCommit": "bf383f6fd316b054b07b441d131b25e6dfe5502d",
+    "conclusion": "success"
+  }
+}

@@ -2,7 +2,7 @@
 
 Private repository: [sagomedia/agent-native-whatsapp-bot](https://github.com/sagomedia/agent-native-whatsapp-bot).
 
-Status: reusable tools/runtime, photo confirmation, indexed catalog hierarchy and free-tier recorded voice are implemented locally. WhatsApp delivery remains a separate milestone. Started 2 October 2026.
+Status: the source includes the retail runtime, catalog hierarchy, multimodal input, WhatsApp channel and protected owner dashboard. The customer ordering release adds unknown-item estimates, owner quotes, a manually verified ₹10 UPI advance and post-order amendments. See the [deployment handoff](03-Output/customer-ordering-finish/RELEASE-REPORT.md) for the recorded deployed checkpoint and remaining owner acceptance. A subsequent [voice-processing repair](03-Output/customer-ordering-finish/AUDIO-INCIDENT.md) is also included in this branch; its verification and deployment status are separate from that earlier handoff. Started 2 October 2026.
 
 Build a retail assistant that interprets whole customer requests and proposes typed business actions. Application services own identity, catalog facts, drafts, order confirmation, staff approval and payment truth.
 
@@ -31,12 +31,12 @@ cp .env.example .env
 docker compose up --build -d
 ```
 
-Open http://localhost:3017. The optional AI test page is at http://localhost:3017/native-test; provider configuration and explicit opt-in are described in [NATIVE-AI.md](02-Build/shopbot-ai/NATIVE-AI.md). WhatsApp delivery is still a future milestone.
+Open http://localhost:3017. The optional AI test page is at http://localhost:3017/native-test; provider configuration and explicit opt-in are described in [NATIVE-AI.md](02-Build/shopbot-ai/NATIVE-AI.md). Mock messages stay local. Deployment reports are historical evidence; a local source change does not update the connected VPS.
 
 ## Development and verification
 
 `main` is the current application baseline. Create a `codex/<change>` or `feature/<change>` branch for further work and open a pull request. Historical rollback points are retained as `checkpoint/*` tags. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and [GIT-WORKFLOW.md](GIT-WORKFLOW.md) for recovery.
 
-The proposed GitHub Actions workflow at `03-Output/ci-proposal/project-checks.yml` installs locked dependencies and runs TypeScript checks, the production build, PostgreSQL integration tests and catalog cleanup tests using a disposable database and mocked AI providers. CI is not active yet; activation requires moving it to `.github/workflows/ci.yml` with GitHub workflow permission.
+The [GitHub Actions workflow](.github/workflows/project-checks.yml) runs the build, PostgreSQL integration tests and catalog checks on pushes and pull requests, with a disposable database and mocked AI providers. Check the current commit's [Actions result](https://github.com/sagomedia/agent-native-whatsapp-bot/actions) before merging. Earlier reports and the saved CI proposal describe historical permission restrictions; workflow publishing was authorized on 15 October 2026.
 
 Source, reference documents, demo catalog fixtures and verification evidence are versioned. Credentials, local databases, customer uploads, dependencies and build outputs stay outside Git. This private source repository does not back up runtime database or media volumes.

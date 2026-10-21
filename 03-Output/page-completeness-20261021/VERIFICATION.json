@@ -1,0 +1,267 @@
+{
+  "date": "2026-10-21",
+  "baseline": "bd07b97",
+  "scopeCommit": "8bbbea2",
+  "pullRequest": 54,
+  "trackingIssue": 52,
+  "deployed": false,
+  "fullRegression": {
+    "total": 843,
+    "passed": 843,
+    "failed": 0,
+    "skipped": 0
+  },
+  "build": "passed",
+  "catalogChecks": {
+    "passed": 4,
+    "failed": 0
+  },
+  "completenessBrowser": {
+    "synthetic": true,
+    "writes": [],
+    "passed": [
+      "Today exposes send failures and disabled channel truth; task shortcuts clear unrelated filters and selections",
+      "Failed shop checks have a visible retry outside the closed diagnostics section",
+      "All applied product filters remain visible when controls are closed; clear and draft retry recover in place",
+      "Failed product reads never leave the previous product editable; stock history errors never masquerade as no movements; both retry in place",
+      "Order acceptance, pickup, payment and stock are visible; stock repair opens the actual product even after a CSV task",
+      "Message filters have truthful empty states; read failures retry; all 405 retained messages are reachable in bounded pages with a direct order link",
+      "Evidence and preview errors offer retry; empty preview filters can reset; conflicting-only charges retain the incomplete-total warning",
+      "Six pages fit desktop, tablet and 320/390-pixel phones; every seeded order state retains usable content and actions in English and Tamil"
+    ],
+    "viewports": [
+      1440,
+      768,
+      390,
+      320
+    ],
+    "pageErrors": []
+  },
+  "quoteBrowser": {
+    "passed": true,
+    "viewports": [
+      [
+        1920,
+        1080
+      ],
+      [
+        1536,
+        1024
+      ],
+      [
+        1366,
+        768
+      ],
+      [
+        1024,
+        600
+      ],
+      [
+        768,
+        1024
+      ],
+      [
+        390,
+        844
+      ],
+      [
+        360,
+        640
+      ],
+      [
+        320,
+        640
+      ]
+    ],
+    "notificationOffRecovery": true,
+    "duplicateQuoteWrites": false
+  },
+  "realLocalApiBrowser": {
+    "synthetic": true,
+    "realLocalApi": true,
+    "views": 6,
+    "viewports": [
+      1440,
+      390
+    ],
+    "quoteDraftSaveReload": true,
+    "offeredQuoteRequiresApproval": true,
+    "missingChannelNotClaimedSent": true,
+    "priceSavedPaise": 3150,
+    "physicalCountSaved": 18,
+    "approvalToCollection": true,
+    "readyOrderCollection": true,
+    "reservationsViaRealServices": true,
+    "pauseResume": true,
+    "takeoverWithSendingDisabled": true,
+    "quickHelp": true,
+    "pageErrors": []
+  },
+  "productionPhoneLayout": {
+    "synthetic": true,
+    "productionAssets": true,
+    "viewport": [
+      320,
+      640
+    ],
+    "rows": [
+      {
+        "language": "en",
+        "state": "ready_for_pickup",
+        "complete": true,
+        "height": 194.3125,
+        "buttons": {
+          "width": 282,
+          "scroll": 282
+        }
+      },
+      {
+        "language": "en",
+        "state": "awaiting_approval",
+        "complete": true,
+        "height": 194.3125,
+        "buttons": {
+          "width": 282,
+          "scroll": 282
+        }
+      },
+      {
+        "language": "en",
+        "state": "awaiting_approval",
+        "complete": false,
+        "height": 194.3125,
+        "buttons": {
+          "width": 282,
+          "scroll": 282
+        }
+      },
+      {
+        "language": "en",
+        "state": "awaiting_approval",
+        "complete": false,
+        "height": 194.3125,
+        "buttons": {
+          "width": 282,
+          "scroll": 282
+        }
+      },
+      {
+        "language": "en",
+        "state": "awaiting_approval",
+        "complete": false,
+        "height": 194.3125,
+        "buttons": {
+          "width": 282,
+          "scroll": 282
+        }
+      },
+      {
+        "language": "en",
+        "state": "collected",
+        "complete": true,
+        "height": 244.3125,
+        "buttons": {
+          "width": 282,
+          "scroll": 282
+        }
+      },
+      {
+        "language": "ta",
+        "state": "ready_for_pickup",
+        "complete": true,
+        "height": 147.75,
+        "buttons": {
+          "width": 282,
+          "scroll": 282
+        }
+      },
+      {
+        "language": "ta",
+        "state": "awaiting_approval",
+        "complete": true,
+        "height": 165.9375,
+        "buttons": {
+          "width": 282,
+          "scroll": 282
+        }
+      },
+      {
+        "language": "ta",
+        "state": "awaiting_approval",
+        "complete": false,
+        "height": 143.25,
+        "buttons": {
+          "width": 282,
+          "scroll": 282
+        }
+      },
+      {
+        "language": "ta",
+        "state": "awaiting_approval",
+        "complete": false,
+        "height": 143.25,
+        "buttons": {
+          "width": 282,
+          "scroll": 282
+        }
+      },
+      {
+        "language": "ta",
+        "state": "awaiting_approval",
+        "complete": false,
+        "height": 143.25,
+        "buttons": {
+          "width": 282,
+          "scroll": 282
+        }
+      },
+      {
+        "language": "ta",
+        "state": "collected",
+        "complete": true,
+        "height": 244.3125,
+        "buttons": {
+          "width": 282,
+          "scroll": 282
+        }
+      }
+    ],
+    "errors": []
+  },
+  "customerSends": 0,
+  "liveAiCalls": 0,
+  "moneyTransfers": 0,
+  "remaining": [
+    "Actual novice/staff exercise and native Tamil copy review",
+    "Physical phone keyboard/safe areas/zoom/screen reader",
+    "Intended older-device and weak-network timing",
+    "Fresh live channel and payment acceptance",
+    "Controlled release acceptance"
+  ],
+  "dailyTaskBrowser": {
+    "synthetic": true,
+    "passed": [
+      "Daily navigation and direct work shortcuts",
+      "Lost manual-send response and a closed reply window retain the draft and replay the same operation",
+      "Manual reply, unsent-draft guard, takeover and return preserve global pause",
+      "Bounded catalog pages and unknown-stock opening count avoid an invalid restock or false zero",
+      "Optional four-job help works by keyboard at desktop, tablet and 320-pixel phone widths",
+      "Two-click price path, unchanged stock, lost-response retry uses identical batch",
+      "Stock tasks preview holds and available units, with stable retry identity",
+      "Mixed inline updates write only edited price/count and retain reservations",
+      "Clearing a field keeps other edits; off-page edits remain visible; partial save reloads only remaining products",
+      "Full product editor and AI details preserve merchant price and selling unit",
+      "Uncertain stock retry freezes the entire payload even after product metadata refresh",
+      "Photo and Tamil alias draft reload, safe clone, publication confirmation, hide/search and draft rejection",
+      "Advance verification, explicit cancellation confirmation and a separate actual refund reference",
+      "Settings, pause, billing analytics and unknown-charge warnings retained",
+      "Message previews render without sending or interactive commerce actions",
+      "All six views and inline grid fit 320/360/390/768/1024/1536/1920 widths with internal scrolling",
+      "Tamil daily controls and saved owner-language preference",
+      "Expired sign-in retains the live draft and restores access in the original tab"
+    ],
+    "newPricePathClicks": 2,
+    "clickMeasurements": {},
+    "pageErrors": []
+  }
+}

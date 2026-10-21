@@ -182,6 +182,293 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       ALTER TABLE image_media ADD CONSTRAINT image_media_height_check CHECK(height>0 AND height<=2048);
       INSERT INTO schema_migrations(version) VALUES(26);
     `);}
+    const v27=await client.query('SELECT version FROM schema_migrations WHERE version=27');
+    if(!v27.rowCount){await client.query(`
+      ALTER TABLE messages ADD COLUMN inference_deadline_at timestamptz;
+      ALTER TABLE provider_attempts ADD COLUMN input_admission jsonb;
+      ALTER TABLE catalog_suggestions ADD COLUMN input_admission jsonb;
+      ALTER TABLE whatsapp_statuses ADD COLUMN pricing jsonb;
+      CREATE TABLE whatsapp_pricing_events (
+        store_id uuid NOT NULL REFERENCES stores(id), phone_id text NOT NULL, provider_id text NOT NULL,
+        recipient text NOT NULL, state text NOT NULL, provider_timestamp bigint NOT NULL,
+        pricing jsonb, pricing_hash text NOT NULL, received_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY(phone_id,provider_id,recipient,state,provider_timestamp,pricing_hash)
+      );
+      CREATE TABLE whatsapp_delivery_costs (
+        store_id uuid NOT NULL REFERENCES stores(id),phone_id text NOT NULL,provider_id text NOT NULL,
+        recipient text NOT NULL,delivered_at timestamptz NOT NULL,account_timezone text,billing_month text,
+        category text,pricing_type text,billable boolean,pricing_model text,
+        currency text,market text,estimated_microunits bigint CHECK(estimated_microunits>=0),rate_snapshot jsonb,
+        state text NOT NULL CHECK(state IN ('free','estimated','unknown','conflicting')),source text NOT NULL DEFAULT 'signed_webhook',
+        PRIMARY KEY(phone_id,provider_id)
+      );
+      CREATE INDEX whatsapp_delivery_costs_month ON whatsapp_delivery_costs(store_id,phone_id,billing_month,category);
+      CREATE TABLE whatsapp_delivery_cost_history (
+        id bigserial PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),phone_id text NOT NULL,provider_id text NOT NULL,
+        prior_snapshot jsonb NOT NULL,recorded_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE TABLE whatsapp_pricing_analytics (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),phone_id text NOT NULL,
+        account_timezone text NOT NULL,currency text NOT NULL,range_start bigint NOT NULL,range_end bigint NOT NULL,
+        response_hash text NOT NULL,payload jsonb NOT NULL,received_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE(phone_id,range_start,range_end,response_hash)
+      );
+      INSERT INTO schema_migrations(version) VALUES(27);
+    `);}
+    const v28=await client.query('SELECT version FROM schema_migrations WHERE version=28');
+    if(!v28.rowCount){await client.query(`ALTER TABLE provider_attempts ADD COLUMN observation jsonb; INSERT INTO schema_migrations(version) VALUES(28);`);}
+    const v29=await client.query('SELECT version FROM schema_migrations WHERE version=29');
+    if(!v29.rowCount){await client.query(`
+      ALTER TABLE products ADD COLUMN merchant_verification jsonb NOT NULL DEFAULT '{"identity":false,"photo":false,"sellingUnit":false,"price":false,"stock":false}';
+      ALTER TABLE products ADD COLUMN selling_policy jsonb NOT NULL DEFAULT '{"cutAllowed":false,"continuousLengthAvailable":null}';
+      CREATE TABLE catalog_proposals (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),batch_id text NOT NULL,client_item_id text NOT NULL,
+        input_hash text NOT NULL,details jsonb NOT NULL,provenance jsonb NOT NULL,actor text NOT NULL,
+        base_sku text,base_version integer,version integer NOT NULL DEFAULT 1,
+        state text NOT NULL DEFAULT 'draft' CHECK(state IN ('draft','published','rejected')),
+        published_sku text,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE(store_id,batch_id,client_item_id),UNIQUE(store_id,id)
+      );
+      CREATE INDEX catalog_proposals_pending ON catalog_proposals(store_id,state,created_at);
+      CREATE TABLE catalog_proposal_assets (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL,proposal_id uuid NOT NULL,
+        original bytea NOT NULL CHECK(octet_length(original)<=2097152),mime_type text NOT NULL,sha256 text NOT NULL,
+        image bytea NOT NULL CHECK(octet_length(image)<=2097152),width integer NOT NULL,height integer NOT NULL,
+        match_kind text NOT NULL CHECK(match_kind IN ('exact','family_only','unconfirmed')),
+        created_at timestamptz NOT NULL DEFAULT now(),
+        FOREIGN KEY(store_id,proposal_id) REFERENCES catalog_proposals(store_id,id),
+        UNIQUE(store_id,proposal_id,sha256)
+      );
+      INSERT INTO schema_migrations(version) VALUES(29);
+    `);}
+    const v30=await client.query('SELECT version FROM schema_migrations WHERE version=30');
+    if(!v30.rowCount){await client.query(`
+      CREATE TABLE payment_quotes (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),request_id uuid NOT NULL REFERENCES order_requests(id),
+        amount_paise integer NOT NULL CHECK(amount_paise>0),currency text NOT NULL CHECK(currency='INR'),
+        original_total_paise bigint NOT NULL,lines jsonb NOT NULL,reason text NOT NULL,input_hash text NOT NULL,
+        state text NOT NULL CHECK(state IN ('offered','accepted','superseded','expired')),
+        consent_message_id uuid UNIQUE REFERENCES messages(id),expires_at timestamptz NOT NULL,created_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE TABLE payment_attempts (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),quote_id uuid NOT NULL REFERENCES payment_quotes(id),request_id uuid NOT NULL REFERENCES order_requests(id),
+        provider text NOT NULL,account_id text NOT NULL,amount_paise integer NOT NULL CHECK(amount_paise>0),currency text NOT NULL CHECK(currency='INR'),
+        state text NOT NULL CHECK(state IN ('creating','pending','paid','failed','expired','cancelled','unknown','refund_pending','refunded','conflicting')),
+        provider_link_id text,checkout_url text,payment_id text,refund_id text,cancel_requested boolean NOT NULL DEFAULT false,
+        expires_at timestamptz NOT NULL,last_error text,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE(provider,account_id,provider_link_id)
+      );
+      CREATE UNIQUE INDEX payment_attempts_one_open ON payment_attempts(quote_id) WHERE state IN ('creating','pending','unknown','paid','refund_pending','refunded','conflicting');
+      CREATE TABLE payment_events (
+        provider text NOT NULL,account_id text NOT NULL,event_id text NOT NULL,store_id uuid NOT NULL REFERENCES stores(id),attempt_id uuid NOT NULL REFERENCES payment_attempts(id),
+        payload_hash text NOT NULL,fact jsonb NOT NULL,received_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(provider,account_id,event_id)
+      );
+      INSERT INTO schema_migrations(version) VALUES(30);
+    `);}
+    const v31=await client.query('SELECT version FROM schema_migrations WHERE version=31');
+    if(!v31.rowCount){await client.query(`
+      ALTER TABLE stores ADD COLUMN inventory_policy text NOT NULL DEFAULT 'manual_confirm' CHECK(inventory_policy='manual_confirm');
+      CREATE TABLE runtime_releases(artifact_hash text PRIMARY KEY CHECK(artifact_hash ~ '^[a-f0-9]{64}$'),metadata jsonb NOT NULL,recorded_at timestamptz NOT NULL DEFAULT now());
+      ALTER TABLE messages ADD COLUMN release_fingerprint text REFERENCES runtime_releases(artifact_hash);
+      INSERT INTO schema_migrations(version) VALUES(31);
+    `);}
+    const v32=await client.query('SELECT version FROM schema_migrations WHERE version=32');
+    if(!v32.rowCount){await client.query(`
+      ALTER TABLE conversations ADD COLUMN partial_reviews boolean NOT NULL DEFAULT false;
+      ALTER TABLE conversations ADD COLUMN welcome_audio_queued boolean NOT NULL DEFAULT false;
+      ALTER TABLE messages ADD COLUMN reply_decision text;
+      ALTER TABLE order_requests ADD COLUMN estimate_complete boolean NOT NULL DEFAULT true;
+      ALTER TABLE order_requests ADD COLUMN excluded_line_ids jsonb NOT NULL DEFAULT '[]';
+      ALTER TABLE order_requests ADD COLUMN advance_required boolean NOT NULL DEFAULT false;
+      ALTER TABLE order_requests ADD COLUMN effective_revision integer NOT NULL DEFAULT 1 CHECK(effective_revision>0);
+      ALTER TABLE order_requests ADD COLUMN effective_lines jsonb;
+      ALTER TABLE order_requests ADD COLUMN effective_total_paise bigint;
+      CREATE TABLE order_advances (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),request_id uuid NOT NULL UNIQUE REFERENCES order_requests(id),
+        amount_paise integer NOT NULL CHECK(amount_paise=1000),currency text NOT NULL DEFAULT 'INR' CHECK(currency='INR'),
+        payee_vpa text NOT NULL,payee_name text NOT NULL,upi_uri text NOT NULL,review_id uuid NOT NULL,
+        state text NOT NULL DEFAULT 'requested' CHECK(state IN ('requested','claimed','verified','refund_pending','refunded')),
+        transaction_reference text,verified_by text,verified_at timestamptz,claimed_at timestamptz,
+        created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),
+        CHECK(state NOT IN ('verified','refund_pending','refunded') OR (transaction_reference IS NOT NULL AND verified_by IS NOT NULL AND verified_at IS NOT NULL))
+      );
+      CREATE UNIQUE INDEX order_advances_bank_reference ON order_advances(transaction_reference) WHERE transaction_reference IS NOT NULL;
+      CREATE TABLE order_amendments (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),request_id uuid NOT NULL REFERENCES order_requests(id),
+        conversation_id uuid NOT NULL REFERENCES conversations(id),source_message_id uuid NOT NULL UNIQUE REFERENCES messages(id),
+        source_version integer NOT NULL,expected_revision integer NOT NULL,
+        kind text NOT NULL DEFAULT 'change' CHECK(kind IN ('change','cancel')),
+        operations jsonb NOT NULL,proposed_lines jsonb NOT NULL,known_subtotal_paise bigint NOT NULL CHECK(known_subtotal_paise>=0),
+        estimate_complete boolean NOT NULL,summary text NOT NULL,
+        state text NOT NULL DEFAULT 'proposed' CHECK(state IN ('proposed','owner_pending','accepted','rejected','withdrawn','superseded')),
+        customer_message_id uuid REFERENCES messages(id),decided_by text,decided_at timestamptz,
+        created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE UNIQUE INDEX order_amendments_one_pending ON order_amendments(request_id) WHERE state IN ('proposed','owner_pending');
+      ALTER TABLE order_advances ADD COLUMN refund_reference text;
+      CREATE TABLE order_quotes (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),request_id uuid NOT NULL REFERENCES order_requests(id),
+        amendment_id uuid REFERENCES order_amendments(id),expected_revision integer NOT NULL,lines jsonb NOT NULL,total_paise bigint NOT NULL CHECK(total_paise>=0),input_hash text NOT NULL,actor text NOT NULL,
+        state text NOT NULL DEFAULT 'offered' CHECK(state IN ('offered','accepted','superseded')),
+        consent_message_id uuid REFERENCES messages(id),created_at timestamptz NOT NULL DEFAULT now(),accepted_at timestamptz
+      );
+      CREATE UNIQUE INDEX order_quotes_one_offered ON order_quotes(request_id) WHERE state='offered';
+      INSERT INTO schema_migrations(version) VALUES(32);
+    `);}
+    const v33=await client.query('SELECT version FROM schema_migrations WHERE version=33');
+    if(!v33.rowCount){await client.query(`
+      ALTER TABLE whatsapp_media ADD COLUMN original_audio bytea CHECK(original_audio IS NULL OR octet_length(original_audio) BETWEEN 1 AND 1048576);
+      ALTER TABLE whatsapp_media ADD COLUMN original_mime_type text CHECK(original_mime_type IS NULL OR original_mime_type IN ('audio/webm','audio/ogg','audio/mp4','audio/wav','audio/mpeg'));
+      ALTER TABLE whatsapp_media ADD COLUMN downloaded_at timestamptz;
+      ALTER TABLE whatsapp_media ADD CONSTRAINT whatsapp_media_original_pair CHECK((original_audio IS NULL)=(original_mime_type IS NULL));
+      INSERT INTO schema_migrations(version) VALUES(33);
+    `);}
+    const v34=await client.query('SELECT version FROM schema_migrations WHERE version=34');
+    if(!v34.rowCount){await client.query(`
+      ALTER TABLE order_advances DROP CONSTRAINT order_advances_state_check;
+      ALTER TABLE order_advances ADD CONSTRAINT order_advances_state_check CHECK(state IN ('requested','claimed','verified','refund_pending','refunded','pay_at_shop'));
+      ALTER TABLE order_advances ADD COLUMN demo_pay_at_shop_allowed boolean NOT NULL DEFAULT false;
+      ALTER TABLE order_advances ADD COLUMN offered_at timestamptz;
+      INSERT INTO schema_migrations(version) VALUES(34);
+    `);}
+    const v35=await client.query('SELECT version FROM schema_migrations WHERE version=35');
+    if(!v35.rowCount){await client.query(`
+      ALTER TABLE products ALTER COLUMN stock TYPE numeric(14,3);
+      ALTER TABLE stores DROP CONSTRAINT stores_inventory_policy_check;
+      ALTER TABLE stores ALTER COLUMN inventory_policy SET DEFAULT 'reserve_on_accept';
+      UPDATE stores SET inventory_policy='reserve_on_accept';
+      ALTER TABLE stores ADD CHECK(inventory_policy='reserve_on_accept');
+      ALTER TABLE products ADD COLUMN reserved_stock numeric(14,3) NOT NULL DEFAULT 0 CHECK(reserved_stock>=0);
+      ALTER TABLE products ADD COLUMN inventory_version integer NOT NULL DEFAULT 1;
+      ALTER TABLE products ADD CONSTRAINT products_inventory_available CHECK((stock IS NULL AND reserved_stock=0) OR (stock IS NOT NULL AND stock>=reserved_stock));
+      ALTER TABLE order_requests ADD COLUMN inventory_state text NOT NULL DEFAULT 'legacy' CHECK(inventory_state IN ('legacy','pending','reserved','untracked','consumed','released'));
+      ALTER TABLE order_requests ALTER COLUMN inventory_state SET DEFAULT 'pending';
+      ALTER TABLE order_requests ADD COLUMN packed_revision integer;
+      ALTER TABLE order_requests ADD COLUMN inventory_untracked_line_ids jsonb NOT NULL DEFAULT '[]';
+      CREATE TABLE inventory_reservations (
+        store_id uuid NOT NULL,request_id uuid NOT NULL REFERENCES order_requests(id),sku text NOT NULL,
+        quantity numeric(14,3) NOT NULL CHECK(quantity>0),revision integer NOT NULL,
+        state text NOT NULL CHECK(state IN ('active','consumed','released')),
+        created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY(store_id,request_id,sku),FOREIGN KEY(store_id,sku) REFERENCES products(store_id,sku)
+      );
+      CREATE TABLE inventory_movements (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL,sku text NOT NULL,request_id uuid REFERENCES order_requests(id),
+        operation_key text NOT NULL,input_hash text NOT NULL,kind text NOT NULL CHECK(kind IN ('opening','reserve','release','collect','restock','sale','count')),
+        on_hand_before numeric(14,3),on_hand_after numeric(14,3),reserved_before numeric(14,3) NOT NULL,reserved_after numeric(14,3) NOT NULL,
+        actor text NOT NULL,reason text NOT NULL,inventory_version integer NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE(store_id,operation_key),FOREIGN KEY(store_id,sku) REFERENCES products(store_id,sku)
+      );
+      CREATE INDEX inventory_reservations_active ON inventory_reservations(store_id,sku) WHERE state='active';
+      INSERT INTO schema_migrations(version) VALUES(35);
+    `);}
+    const v36=await client.query('SELECT version FROM schema_migrations WHERE version=36');
+    if(!v36.rowCount){await client.query(`
+      CREATE TABLE catalog_intake_batches (
+        store_id uuid NOT NULL REFERENCES stores(id),batch_id text NOT NULL CHECK(length(batch_id) BETWEEN 1 AND 100),
+        source_hash text NOT NULL CHECK(source_hash ~ '^[a-f0-9]{64}$'),manifest jsonb NOT NULL CHECK(jsonb_typeof(manifest)='object'),
+        created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY(store_id,batch_id)
+      );
+      CREATE TABLE catalog_intake_items (
+        store_id uuid NOT NULL,batch_id text NOT NULL,source_sku text NOT NULL CHECK(length(source_sku) BETWEEN 1 AND 100),
+        canonical_sku text CHECK(canonical_sku IS NULL OR length(canonical_sku) BETWEEN 1 AND 64),
+        input_hash text NOT NULL CHECK(input_hash ~ '^[a-f0-9]{64}$'),
+        state text NOT NULL CHECK(state IN ('pending','staged','failed','excluded','conflict')),
+        proposal_id uuid REFERENCES catalog_proposals(id),proposal_version integer CHECK(proposal_version IS NULL OR proposal_version>0),error text,
+        updated_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(store_id,batch_id,source_sku),
+        FOREIGN KEY(store_id,batch_id) REFERENCES catalog_intake_batches(store_id,batch_id)
+      );
+      CREATE INDEX catalog_intake_items_state ON catalog_intake_items(store_id,batch_id,state,source_sku);
+      CREATE INDEX catalog_proposals_canonical_pending ON catalog_proposals(store_id,(details->>'sku')) WHERE state='draft';
+      CREATE INDEX products_owner_name ON products(store_id,name,sku);
+      CREATE INDEX products_owner_brand_name ON products(store_id,brand,name,sku);
+      CREATE INDEX products_owner_family_name ON products(store_id,family_id,name,sku);
+      CREATE INDEX products_owner_updated ON products(store_id,(coalesce(inventory_updated_at,'epoch'::timestamptz)) DESC,sku);
+      CREATE INDEX catalog_proposals_owner_state ON catalog_proposals(store_id,state,created_at,id);
+      CREATE INDEX messages_unfinished_conversation_sequence ON messages(conversation_id,sequence) WHERE status IN ('pending','processing');
+      CREATE INDEX messages_conversation_sequence ON messages(conversation_id,sequence);
+      ALTER TABLE catalog_photos ADD COLUMN content_hash text CHECK(content_hash IS NULL OR content_hash ~ '^[a-f0-9]{64}$');
+      CREATE INDEX catalog_photos_content ON catalog_photos(store_id,content_hash) WHERE content_hash IS NOT NULL;
+      INSERT INTO schema_migrations(version) VALUES(36);
+    `);}
+    const v37=await client.query('SELECT version FROM schema_migrations WHERE version=37');
+    if(!v37.rowCount){await client.query(`
+      ALTER TABLE products ADD COLUMN indicative_price jsonb;
+      ALTER TABLE products ADD CONSTRAINT products_indicative_price_check CHECK(indicative_price IS NULL OR coalesce(CASE WHEN
+        jsonb_typeof(indicative_price)='object'
+        AND indicative_price ?& ARRAY['pricePaise','lowPaise','highPaise','unit','currency','asOf','source','generation']
+        AND jsonb_typeof(indicative_price->'pricePaise')='number'
+        AND jsonb_typeof(indicative_price->'lowPaise')='number'
+        AND jsonb_typeof(indicative_price->'highPaise')='number'
+        AND jsonb_typeof(indicative_price->'generation')='object'
+      THEN (indicative_price->>'pricePaise')::numeric BETWEEN 1 AND 2147483647
+        AND (indicative_price->>'lowPaise')::numeric BETWEEN 1 AND (indicative_price->>'pricePaise')::numeric
+        AND (indicative_price->>'highPaise')::numeric BETWEEN (indicative_price->>'pricePaise')::numeric AND 2147483647
+        AND trunc((indicative_price->>'pricePaise')::numeric)=(indicative_price->>'pricePaise')::numeric
+        AND trunc((indicative_price->>'lowPaise')::numeric)=(indicative_price->>'lowPaise')::numeric
+        AND trunc((indicative_price->>'highPaise')::numeric)=(indicative_price->>'highPaise')::numeric
+        AND indicative_price->>'unit' IN ('piece','box','pack','pair','roll','bottle','can','tin','bucket','metre','foot','kg','litre')
+        AND indicative_price->>'currency'='INR'
+        AND indicative_price->>'source'='model-low-indicative'
+        AND indicative_price->>'asOf' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+        AND indicative_price->'generation' ?& ARRAY['model','effort','inputHash','proposalHash']
+        AND length(indicative_price->'generation'->>'model') BETWEEN 1 AND 100
+        AND indicative_price->'generation'->>'effort'='low'
+        AND indicative_price->'generation'->>'inputHash' ~ '^[a-f0-9]{64}$'
+        AND indicative_price->'generation'->>'proposalHash' ~ '^[a-f0-9]{64}$'
+      ELSE false END,false));
+      CREATE FUNCTION clear_stale_indicative_price() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        IF NEW.name IS DISTINCT FROM OLD.name OR NEW.unit IS DISTINCT FROM OLD.unit
+          OR NEW.brand IS DISTINCT FROM OLD.brand OR NEW.specifications IS DISTINCT FROM OLD.specifications
+          OR NEW.selling_policy IS DISTINCT FROM OLD.selling_policy OR NEW.quantity_step IS DISTINCT FROM OLD.quantity_step
+          OR NEW.price_paise IS DISTINCT FROM OLD.price_paise OR NEW.price_status IS DISTINCT FROM OLD.price_status
+        THEN NEW.indicative_price=NULL; END IF;
+        RETURN NEW;
+      END $$;
+      CREATE TRIGGER products_clear_indicative_price BEFORE UPDATE ON products
+        FOR EACH ROW WHEN (OLD.indicative_price IS NOT NULL) EXECUTE FUNCTION clear_stale_indicative_price();
+      INSERT INTO schema_migrations(version) VALUES(37);
+    `);}
+    const v38=await client.query('SELECT version FROM schema_migrations WHERE version=38');
+    if(!v38.rowCount){await client.query(`
+      CREATE TABLE catalog_fact_batches (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),
+        file_hash text NOT NULL CHECK(file_hash ~ '^[a-f0-9]{64}$'),filename text,
+        expires_at timestamptz NOT NULL,status text NOT NULL CHECK(status IN ('preview','invalid','applying','complete','blocked')),
+        rows jsonb NOT NULL CHECK(jsonb_typeof(rows)='array' AND jsonb_array_length(rows) BETWEEN 1 AND 3000),
+        chunks jsonb NOT NULL DEFAULT '[]' CHECK(jsonb_typeof(chunks)='array'),
+        next_row integer NOT NULL DEFAULT 0 CHECK(next_row BETWEEN 0 AND 3000),error text,
+        created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX catalog_fact_batches_store_created ON catalog_fact_batches(store_id,created_at DESC,id);
+      INSERT INTO schema_migrations(version) VALUES(38);
+    `);}
+    const v39=await client.query('SELECT version FROM schema_migrations WHERE version=39');
+    if(!v39.rowCount){await client.query(`
+      ALTER TABLE catalog_proposal_assets ADD COLUMN image_hash text CHECK(image_hash IS NULL OR image_hash ~ '^[a-f0-9]{64}$');
+      CREATE TABLE catalog_image_variants (
+        store_id uuid NOT NULL REFERENCES stores(id),source_hash text NOT NULL CHECK(source_hash ~ '^[a-f0-9]{64}$'),
+        max_side integer NOT NULL CHECK(max_side IN (128,256,640)),
+        image bytea NOT NULL CHECK(octet_length(image) BETWEEN 1 AND 2097152),
+        content_hash text NOT NULL CHECK(content_hash ~ '^[a-f0-9]{64}$'),created_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY(store_id,source_hash,max_side)
+      );
+      INSERT INTO schema_migrations(version) VALUES(39);
+    `);}
+    const v40=await client.query('SELECT version FROM schema_migrations WHERE version=40');
+    if(!v40.rowCount){await client.query(`
+      CREATE TABLE order_quote_drafts (
+        request_id uuid PRIMARY KEY REFERENCES order_requests(id) ON DELETE CASCADE,
+        store_id uuid NOT NULL REFERENCES stores(id),expected_revision integer NOT NULL CHECK(expected_revision>0),
+        amendment_id uuid REFERENCES order_amendments(id) ON DELETE CASCADE,
+        lines jsonb NOT NULL CHECK(jsonb_typeof(lines)='array' AND jsonb_array_length(lines) BETWEEN 1 AND 50),
+        version integer NOT NULL DEFAULT 1 CHECK(version>0),updated_by text NOT NULL,
+        updated_at timestamptz NOT NULL DEFAULT now()
+      );
+      INSERT INTO schema_migrations(version) VALUES(40);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

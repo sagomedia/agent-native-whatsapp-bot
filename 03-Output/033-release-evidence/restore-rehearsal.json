@@ -1,0 +1,61 @@
+{
+  "status": "restore_verified",
+  "databaseVersion": 31,
+  "dumpBytes": 274006,
+  "dumpSha256": "c8efa554610a16c5455c1df287dfc9ca30b78ac6e32bb80a216f29e9c2f308f0",
+  "tables": {
+    "stores": {
+      "count": 1,
+      "sha256": "62e3743c8764ca463a19398877be3e1e58b4244e71873e1facc156600f012d63"
+    },
+    "products": {
+      "count": 6,
+      "sha256": "46ffd986a2f04e232db58fc87a710e0bc0c2b2318d896bbc598abfb0f1fa2141"
+    },
+    "conversations": {
+      "count": 1,
+      "sha256": "625fc9e553dcea45bb25829f595b7285d9d55fddf3d40f607464e0a36b940c53"
+    },
+    "messages": {
+      "count": 1,
+      "sha256": "385e8393f44339357c18841e20bec4e3f2f327085c17b16dbb0e90e97c3b2a4b"
+    },
+    "provider_attempts": {
+      "count": 1,
+      "sha256": "65d63e183457a4679f9f5774fe63b1cce4409739dadc54f9ba632771cf0ee8cd"
+    },
+    "inference_budgets": {
+      "count": 1,
+      "sha256": "b9c5a56dec91e6109e6e8cd887f19020db3750c086a7b18fad3ef7e16b869851"
+    },
+    "order_requests": {
+      "count": 1,
+      "sha256": "87cca7e8cc095ea9b3597b418bbfd16fba3e24b19ea49511ab1cbc4e73c8d11e"
+    },
+    "catalog_proposals": {
+      "count": 1,
+      "sha256": "84da881308b52f4ca14229f88a507b6420d3f813d5cafe727795c92cfc0fb65a"
+    },
+    "catalog_proposal_assets": {
+      "count": 1,
+      "sha256": "c2838be20faae912bd2ca7182e8baf232cd196f9a5c776ce515199ed66d86498"
+    },
+    "owner_audit": {
+      "count": 2,
+      "sha256": "265baf98fdb3646fd432183c407a11a1c65a8cef717044e19a0678f6c76e82eb"
+    },
+    "runtime_releases": {
+      "count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    }
+  },
+  "checks": [
+    "custom pg_dump and actual pg_restore",
+    "idempotent migrations after restore",
+    "original and normalized photos preserved",
+    "unknown inference hold preserved",
+    "owner product version and request preserved",
+    "previous pickup SQL remains compatible"
+  ],
+  "limitation": "Local disposable database rehearsal; production backup restoration and previous executable rollback must also be checked on the target host."
+}

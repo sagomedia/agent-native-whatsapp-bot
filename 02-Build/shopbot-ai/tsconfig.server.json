@@ -8,6 +8,14 @@
   "include": [
     "apps/server/**/*.ts",
     "packages/**/*.ts",
-    "profiles/**/*.ts"
+    "profiles/**/*.ts",
+    "scripts/import-bulk-catalog.ts",
+    "scripts/catalog-capacity.ts",
+    "scripts/promote-catalog-review-later.ts",
+    "scripts/publish-catalog-reference-photos.ts",
+    "scripts/import-indicative-prices.ts",
+    "scripts/import-shop-facts.ts",
+    "scripts/demo-evidence.ts",
+    "scripts/backfill-catalog-image-variants.ts"
   ]
 }

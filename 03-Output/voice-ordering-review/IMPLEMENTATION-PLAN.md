@@ -1,0 +1,25 @@
+# Correct product identity and recover the current task
+
+## Evidence from both new recordings
+
+The 20:52 recording shows a nine-line legacy cart, an ambiguous pipe-target prompt and then a hose-quantity card. At 20:51 IST the 16.88-second voice interpretation added PVC to the first pipe even though PVC was spoken only for the later cutter. The backend retained the eight old lines and added a cutter; it did not replace the list with the new request. At 20:55 IST a 16.54-second voice failed evidence validation, producing an unhelpful retry. At 20:56 IST a 4.34-second clear-all request was interpreted as cancel and mapped to shop handover, retaining all nine lines.
+
+The root causes are independent of URL delivery: a shared pipe noun and diameter were treated as identity; the catalog's broad water-pipe alias meant PVC; the model borrowed material from an adjacent item; current ambiguity lost priority to the old cart's next missing quantity; rejected action evidence discarded an otherwise usable transcript; clear-all and cancel/human-help were conflated. H02 and H13 image URLs returned HTTP 200.
+
+## Implementation and acceptance criteria
+
+1. **Preserve customer identity.** Product type, material, brand and dimensions remain separate constraints. A pump/suction pipe or BSA request cannot inherit PVC or garden-hose identity. An unspecified pipe asks type, even if PVC is the only catalog family. A selected exact SKU/name or a real curated pump-product alias remains eligible. PVC spoken for a cutter cannot qualify another row. Source evidence and count remain visible.
+2. **Prioritize the current question.** A cart-target ambiguity shows the question in both text and image, offers current item choices, retains other clear additions and invalidates the old pending quantity/review. A bare number cannot answer the old hose prompt. Item selection creates a focused correction rather than an unrelated cart cycle.
+3. **Recover useful speech safely.** When the full structured understanding and transcript are valid but a target/evidence relation is rejected, retain the transcript and ask for item/type/count. Execute none of the rejected shopping operations. Invalid JSON, wrong modality and invalid structure remain errors. This recovery never approves an order.
+4. **Separate clear, cancel and human help.** In visual WhatsApp ordering, a spoken clear-all proposal creates Clear/Keep buttons bound to the current version and displayed action. The cart remains until confirmation. Old quantity/order buttons are invalidated. A noisy Tamil all-clear phrase is recognized without handing control to the owner. Explicit text clear and nonvisual legacy flow retain their existing behavior.
+5. **Reproduce and verify.** Capture exact failure-shaped cases, run relevant regressions and the complete suite, then replay the approved three stored voice notes and six targeted text cases on an isolated schema with the existing Gemini 3.5 Flash Lite model. Apply the cumulative $0.10 reservation cap across reruns. No WhatsApp sends or order creation. Validate preserved requested counts, missing pump catalog items, deliberate photo choices, extra versus total, negated clear, and guarded clear confirmation.
+6. **Review, publish branch and deploy.** Fetch current GitHub main without pulling the dirty checkout. Import the verified deployed baseline into a clean feature worktree, then commit this repair separately. Add reproducible CI checks and create a draft PR with exact evidence. Build an immutable bundle from that reviewed source, checksum-stage it, back up database/config, activate only after tests/replay pass, and verify records, budget, URLs and readiness. Keep previous release for rollback.
+7. **Teach the operating model.** Provide an illustrated overview plus editable diagrams and a practical guide: code versus running release, fetch/pull/push/PR/merge, SSH and service checks, public webhook/media versus protected owner URLs, and when a hosting migration is justified. Hosting is Google VPS, not Drupal; changing hosts does not fix incorrect product identity.
+
+## Agent ownership and review
+
+Semantic agent drafted mention and item-grounding changes; catalog agent drafted ambiguity/discovery safeguards; architecture agent drafted current-question and voice-clear recovery; GitHub agent verified repository/history and import provenance. The root agent reviews and integrates all patches and completes verification. No agent commits to the dirty shared checkout or sends customer messages. GitHub's existing private owner-only metadata remains on its source branch and is excluded from deployable bundles.
+
+## Limitations to keep explicit
+
+A pump pipe absent from the store catalog must remain a shop check; the assistant cannot manufacture availability, price, diameter, length or compatibility. A request with fewer mentioned items does not silently delete a previous saved list. Historical duplicate carts are not rewritten during deployment; clear/new-list actions and explicit target correction let the customer resolve them. A three-note replay is targeted evidence, not a guarantee for every dialect or recording.

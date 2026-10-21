@@ -1,4 +1,28 @@
-# Current runtime — 13 October 2026
+## 21 October 2026 — owner interface visual revision
+
+Reworked all six owner views around stable desktop navigation, compact phone controls, readable forms and semantic status colors. Today brings real orders onto the first phone screen; Products groups price/stock/actions; full editor and Settings gain section navigation; CSV previews become phone cards. Order/message filters show loading instead of a false empty result from previous data. Full PostgreSQL suite **843/843**, build/typecheck, catalog **4/4**, existing workflow/quote/completeness browser checks, 36 production page layouts, 12 English/Tamil short-phone order combinations and actual isolated API workflows pass. See [design, before/after screens and verification](../../03-Output/owner-design-20261021/README.md). Draft PR #54; no deployment. Staff, physical-device, native copy and live-provider acceptance remain open under issue #52.
+
+## 21 October 2026 — page completeness and recovery follow-up
+
+Reviewed all six owner pages for information lost through simplification. Restored visible message exceptions, applied filters and order payment/stock context; added all-order customer navigation and bounded older transcripts; fixed saved-quote notification control, failed-record/history recovery, conflicting-cost warnings and short-phone/Tamil action clipping. Full PostgreSQL suite **843/843**, build/typecheck, catalog checks, expanded browser checks and synthetic real API workflows pass. Detailed evidence and remaining acceptance: [page review](../../03-Output/page-completeness-20261021/README.md). Draft PR #54; not deployed. Actual novice, physical device and live provider acceptance remain open.
+
+# Complete local workflow check — 21 October 2026
+
+The UTF-8 PostgreSQL suite passes 842/842 with zero skips, plus build/typecheck, four catalog checks, expanded phone/desktop browser workflows and actual local owner API checks. The earlier two conversation failures were traced to the local SQL_ASCII test database; no conversation engine change was needed. Resolve focuses the correct fact, pack basis stays editable, unknown stock starts with counting, bulk edits recover remaining rows, cancellation/refund controls are clearer, saved quotes do not imply delivery, and optional English/Tamil task help supports a brief teaching session. See [function matrix and teaching guide](../../03-Output/workflow-check-20261021/README.md). Human learning, physical device/channel/bank acceptance and release remain open. Not deployed.
+
+# Local dashboard usability candidate — 21 October 2026
+
+Four daily destinations, direct work shortcuts, adaptive quote guidance, two-click routine price updates, explicit stock tasks, inline bulk facts, bounded queue search/pagination and daily Tamil controls are implemented locally. Existing owner commerce functions are retained. Build/typecheck, 19 focused owner tests, four catalog checks, synthetic browser checks and a real local API browser check pass. Full regression is 838/840; the same two customer-conversation failures reproduce on the untouched baseline and are tracked in issue #53. See [implementation and verification](../../03-Output/dashboard-usability-20261021/README.md). Physical-device/staff acceptance remains open under issue #52. This candidate is not deployed.
+
+# Local P2 safeguards — 15 October 2026
+
+The local branch now admits the actual multimodal generation request before reservation, persists deadlines across customer-message deferrals/reclaims, rolls back shopping effects when rendering/outbox work passes the deadline, exposes Gemini rate freshness, and records authenticated WhatsApp delivery pricing with exact micro-INR estimates and optional account analytics. Additive migration 27 preserves earlier budgets, holds, attempts and requests. All 483 integration/regression tests, build/typecheck and four catalog cleanup tests pass. See [P2 implementation and verification](../../03-Output/032-p2-cost-and-admission.md) for configuration, evidence and limits. Smaller token holds and live account-rate reconciliation require a controlled pilot; this package has not been deployed.
+
+# Local counter-flow reconciliation — 14 October 2026
+
+The local `codex/reconciled-counter-flow` branch separates product approval from missing-count/unit checks and final bill consent, keeps independent price answers clear, preserves named pipe sizes and all list lines, and aligns audio deadlines with the processing lease. See [implementation and verification](../../03-Output/031-counter-flow-implementation.md) for exact scope, test evidence and remaining plan packages. These source changes have not been deployed; the deployment notes below are historical reports.
+
+# Reported runtime — 13 October 2026
 
 The connected WhatsApp application runs on the Google VPS with Node 22, Fastify, React/Vite and PostgreSQL 17. All application inference uses Gemini 3.5 Flash Lite. WhatsApp ingress/sending, media understanding, visual ordering and the protected owner UI are implemented; deployment and readiness are recorded in the task's release report. A GitHub push/merge and a VPS deployment are separate operations.
 

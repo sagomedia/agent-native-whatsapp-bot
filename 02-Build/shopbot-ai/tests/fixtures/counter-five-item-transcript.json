@@ -1,0 +1,240 @@
+[
+  {
+    "stage": "identify",
+    "text": "1 inch pipe — Which type of pipe do you need?",
+    "cards": [],
+    "actions": [
+      {
+        "label": "Rigid PVC",
+        "type": "choose_pipe_type",
+        "pipeType": "pvc"
+      },
+      {
+        "label": "Flexible hose",
+        "type": "choose_pipe_type",
+        "pipeType": "hose"
+      },
+      {
+        "label": "Pump pipe",
+        "type": "choose_pipe_type",
+        "pipeType": "pump"
+      }
+    ]
+  },
+  {
+    "stage": "identify",
+    "text": "Changed 1 inch PVC pipe\nWhich 1 inch PVC pipe do you need?",
+    "cards": [
+      {
+        "kind": "product",
+        "caption": "1 inch PVC Heavy Pipe Local\n₹245.00 / 1 piece",
+        "sku": "H01",
+        "name": "1 inch PVC Heavy Pipe Local"
+      },
+      {
+        "kind": "product",
+        "caption": "1 inch PVC Pipe Blueguard ISI\n₹380.00 / 1 piece",
+        "sku": "H02",
+        "name": "1 inch PVC Pipe Blueguard ISI"
+      }
+    ],
+    "actions": [
+      {
+        "label": "Choose this",
+        "type": "select_product",
+        "sku": "H01"
+      },
+      {
+        "label": "Choose this",
+        "type": "select_product",
+        "sku": "H02"
+      }
+    ]
+  },
+  {
+    "text": "Ratchet PVC Pipe Cutter 42 mm — ₹350.00 / 1 piece | Available · shop record",
+    "cards": [],
+    "actions": []
+  },
+  {
+    "stage": "identify",
+    "text": "0.75 inch pipe — Which type of pipe do you need?",
+    "cards": [],
+    "actions": [
+      {
+        "label": "Rigid PVC",
+        "type": "choose_pipe_type",
+        "pipeType": "pvc"
+      },
+      {
+        "label": "Flexible hose",
+        "type": "choose_pipe_type",
+        "pipeType": "hose"
+      },
+      {
+        "label": "Pump pipe",
+        "type": "choose_pipe_type",
+        "pipeType": "pump"
+      }
+    ]
+  },
+  {
+    "stage": "products",
+    "text": "Changed 0.75 inch PVC Pipe Local (1 piece)\n5 items",
+    "cards": [
+      {
+        "kind": "instruction",
+        "caption": "Swipe to check → Then tap Show bill.",
+        "title": "5 items",
+        "lines": [
+          "Check every item",
+          "Estimated total: ₹2,040.00"
+        ]
+      },
+      {
+        "kind": "product",
+        "caption": "1. 1 inch PVC Heavy Pipe Local\n₹245.00 / 1 piece\n1 piece",
+        "sku": "H01",
+        "name": "1 inch PVC Heavy Pipe Local"
+      },
+      {
+        "kind": "product",
+        "caption": "2. 0.75 inch PVC Pipe Local\n₹180.00 / 1 piece\n1 piece",
+        "sku": "H03",
+        "name": "0.75 inch PVC Pipe Local"
+      },
+      {
+        "kind": "product",
+        "caption": "Wall scraper 4 inch\n₹65.00 / 1 piece\n3. Wall scraper 4 inch · 1 piece\nPhoto unavailable",
+        "sku": "COUNTER-SCRAPER-4",
+        "name": "Wall scraper 4 inch"
+      },
+      {
+        "kind": "product",
+        "caption": "4. Ratchet PVC Pipe Cutter 42 mm · 0-42 mm\n₹350.00 / 1 piece\n1 piece",
+        "sku": "H19",
+        "name": "Ratchet PVC Pipe Cutter 42mm"
+      },
+      {
+        "kind": "product",
+        "caption": "White paint 10 litre\n₹1,200.00 / 1 can\n5. White paint 10 litre · 1 can\nPhoto unavailable",
+        "sku": "PAINT10",
+        "name": "White paint 10 litre"
+      }
+    ],
+    "actions": [
+      {
+        "label": "Correct, show bill",
+        "type": "confirm_products"
+      },
+      {
+        "label": "Change items",
+        "type": "shopping_action",
+        "action": "edit_list"
+      },
+      {
+        "label": "Correct, show bill",
+        "type": "confirm_products"
+      },
+      {
+        "label": "Change this",
+        "type": "edit_item"
+      },
+      {
+        "label": "Correct, show bill",
+        "type": "confirm_products"
+      },
+      {
+        "label": "Change this",
+        "type": "edit_item"
+      },
+      {
+        "label": "Correct, show bill",
+        "type": "confirm_products"
+      },
+      {
+        "label": "Change this",
+        "type": "edit_item"
+      },
+      {
+        "label": "Correct, show bill",
+        "type": "confirm_products"
+      },
+      {
+        "label": "Change this",
+        "type": "edit_item"
+      },
+      {
+        "label": "Correct, show bill",
+        "type": "confirm_products"
+      },
+      {
+        "label": "Change this",
+        "type": "edit_item"
+      }
+    ]
+  },
+  {
+    "stage": "bill",
+    "text": "Estimated total: ₹2,040.00",
+    "cards": [
+      {
+        "kind": "bill",
+        "caption": "Estimated invoice 1 / 1",
+        "title": "Estimated invoice",
+        "lines": [
+          "Final availability is checked by the shop"
+        ],
+        "billRows": [
+          {
+            "name": "1 inch PVC Heavy Pipe Local",
+            "count": "1 piece",
+            "total": "₹245.00",
+            "packSize": "1 inch",
+            "unitPrice": "₹245.00"
+          },
+          {
+            "name": "0.75 inch PVC Pipe Local",
+            "count": "1 piece",
+            "total": "₹180.00",
+            "packSize": "0.75 inch",
+            "unitPrice": "₹180.00"
+          },
+          {
+            "name": "Wall scraper 4 inch",
+            "count": "1 piece",
+            "total": "₹65.00",
+            "packSize": "4 inch",
+            "unitPrice": "₹65.00"
+          },
+          {
+            "name": "Ratchet PVC Pipe Cutter 42 mm",
+            "count": "1 piece",
+            "total": "₹350.00",
+            "packSize": "0-42 mm",
+            "unitPrice": "₹350.00"
+          },
+          {
+            "name": "White paint 10 litre",
+            "count": "1 can",
+            "total": "₹1,200.00",
+            "packSize": "10 litre",
+            "unitPrice": "₹1,200.00"
+          }
+        ],
+        "total": "Estimated total: ₹2,040.00"
+      }
+    ],
+    "actions": [
+      {
+        "label": "Send order to shop",
+        "type": "confirm"
+      },
+      {
+        "label": "Change items",
+        "type": "shopping_action",
+        "action": "edit_list"
+      }
+    ]
+  }
+]

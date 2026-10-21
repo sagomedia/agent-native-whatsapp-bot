@@ -1,0 +1,143 @@
+{
+  "startedAt": "2026-10-17T11:43:21.954Z",
+  "appCommit": "953984a",
+  "fixture": {
+    "database": "disposable Docker postgres:17",
+    "synthetic": true,
+    "merchantApproved": false,
+    "livePublished": false,
+    "providersCalled": 0,
+    "recordCount": 297,
+    "knownPriceCount": 0
+  },
+  "limits": {
+    "returnedProducts": 10,
+    "retainedCandidates": 120,
+    "language": "small grounded written alias sample; no speech/model calls",
+    "imageIdentity": "not audited by this retrieval test"
+  },
+  "package": {
+    "hash": "fbf10bab0ca61a983b446404bc01dd0308a3eb7acc32b707d9118c89499b113c",
+    "sourceRows": 300,
+    "canonicalTargets": 297,
+    "excluded": [
+      {
+        "sourceSku": "SRC-d589fa0b4c1a5192abf36dab",
+        "reason": "Confirmed duplicate of SRC-50998d952abe99de8c855496 (CANON-CAT100-028): Identical Pidilite M-Seal Regular 2-part epoxy compound sealing putty, 100g pack."
+      },
+      {
+        "sourceSku": "SRC-4ca2c8ae92d8f6eabf320771",
+        "reason": "Confirmed duplicate of SRC-ddbea7a7ec2d5b16f38eb5eb (CANON-CAT100-055): Identical Berger WeatherCoat Smooth Exterior Emulsion, 4L bucket, White."
+      },
+      {
+        "sourceSku": "SRC-bfb1de61674527922f0e6407",
+        "reason": "Confirmed duplicate of SRC-2bf32933bf6d7d22c1425543 (CANON-CAT100-045): Identical Bosch GSB 13 RE Professional 600W corded impact drill, 13mm chuck."
+      }
+    ],
+    "imageHolds": [
+      {
+        "sku": "CANON-CAT100-002",
+        "matchKind": "missing"
+      },
+      {
+        "sku": "CANON-CAT100-052",
+        "matchKind": "missing"
+      },
+      {
+        "sku": "CANON-CAT100-081",
+        "matchKind": "missing"
+      },
+      {
+        "sku": "CANON-CAT100-094",
+        "matchKind": "missing"
+      },
+      {
+        "sku": "CANON-CAT100-099",
+        "matchKind": "missing"
+      },
+      {
+        "sku": "CANON-KSMC-0055",
+        "matchKind": "missing"
+      }
+    ],
+    "imageReadErrors": [],
+    "imageIdentityCounts": {
+      "exact": 0,
+      "family_only": 0,
+      "unconfirmed": 291,
+      "missing": 6
+    }
+  },
+  "summary": {
+    "exact_sku": {
+      "count": 297,
+      "passed": 297,
+      "failed": 0
+    },
+    "unique_exact_name": {
+      "count": 297,
+      "passed": 297,
+      "failed": 0
+    },
+    "tamil_tanglish_alias": {
+      "count": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    "shared_alias_ambiguity": {
+      "count": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    "paint_volume": {
+      "count": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "paint_wrong_mass": {
+      "count": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "paint_wrong_volume": {
+      "count": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "putty_mass": {
+      "count": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "putty_wrong_volume": {
+      "count": 1,
+      "passed": 1,
+      "failed": 0
+    }
+  },
+  "misses": [],
+  "boundsPassed": true,
+  "finishedAt": "2026-10-17T11:43:31.167Z",
+  "summaryTotals": {
+    "checks": 609,
+    "passed": 609,
+    "failed": 0,
+    "maximumReturnedProducts": 3,
+    "maximumRetainedCandidates": 3
+  },
+  "preciseLimits": [
+    "All 297 exact names are unique under trim/lowercase; no duplicate exact-name fixture exists. Four actual shared aliases test ambiguity instead.",
+    "Alias sample is two Tamil-script aliases, one Tanglish alias and three shortened English aliases drawn verbatim from the package.",
+    "No model interpretation, speech recognition, WhatsApp/UI, concurrency, merchant identity approval, image visual audit, stock/payment/order flow, production capacity or 3000-real-product evaluation was performed.",
+    "Test-only active rows were inserted directly into a synthetic store to expose retrieval; no proposal publication or merchant verification path was exercised.",
+    "Price remained confirm/0 and stock null; selling_unit_verified remained false for all 297 identities.",
+    "Incorrect mass/volume searches returned no candidates; the two correct ambiguous pack searches retained their actual matching variants without selecting one."
+  ],
+  "cleanup": {
+    "container": "shopbot-real-retrieval-sol",
+    "removed": true,
+    "checkedAt": "2026-10-17T11:44:56.492476+00:00",
+    "method": "docker stop on --rm container; subsequent docker ps -a name filter empty"
+  },
+  "evidenceSha256": "fea5ad19fb2795b196516c99732e1c135cffbabfc8507483bd9caaf5cf8aca91"
+}

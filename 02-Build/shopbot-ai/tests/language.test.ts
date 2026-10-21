@@ -44,7 +44,7 @@ test('customer controls use Tamil script or spoken Tanglish while retaining Engl
 
 test('Tamil is persisted through an English greeting, localized catalog discovery and Tamil quantity response without inference',async()=>fixture(async(pool,inbox)=>{
  const runtime=noAI(pool);let s=await turn(inbox,runtime,{type:'text',text:'hi'});assert.equal(s.conversation.replyLanguage,'ta');assert.match(s.messages.at(-1)!.text,/வணக்கம்/);assert.equal(s.interpretationAttempts,0);
- s=await turn(inbox,runtime,{id:randomUUID(),type:'browse',query:'cutting-discs',expectedVersion:0});assert.match(s.messages.at(-1)!.text,/[\u0b80-\u0bff]/);const rich=s.messages.at(-1)!.rich!;assert.deepEqual(rich.cards!.map(c=>c.product.sku),['H14','H15']);assert.equal(rich.cards![0].label,'இதைத் தேர்வு செய்');assert.match(productName(rich.cards![0].product,'ta'),/கட்டிங் வீல்/);
+ s=await turn(inbox,runtime,{id:randomUUID(),type:'browse',query:'cutting-discs',expectedVersion:0});assert.match(s.messages.at(-1)!.text,/[\u0b80-\u0bff]/);const rich=s.messages.at(-1)!.rich!;assert.deepEqual(rich.cards!.map(c=>c.product.sku),['H14','H15']);assert.equal(rich.cards![0].label,'இது வேணும்');assert.match(productName(rich.cards![0].product,'ta'),/கட்டிங் வீல்/);
  s=await turn(inbox,runtime,rich.cards![0].action!);assert.match(s.messages.at(-1)!.text,/எத்தனை/);s=await turn(inbox,runtime,{type:'text',text:'ரெண்டு பீஸ்'});assert.equal(s.conversation.draft[0].quantity,2);assert.equal(s.conversation.pending?.kind,'review');assert.match(s.messages.at(-1)!.text,/மொத்தம்: ₹70.00/);assert.equal(s.messages.at(-1)!.rich!.buttons![0].label,'கடைக்கு அனுப்பு');assert.equal(s.requests.length,0);assert.equal(s.interpretationAttempts,0);
 }));
 
@@ -65,7 +65,7 @@ test('Tamil short consent remains bound to the current review; a stale answer ca
 test('Tamil failed inference and submitted-request guards are localized and retain business state',async()=>fixture(async(pool,inbox)=>{
  const runtime=new ConversationRuntime(pool,{name:'bad-plan',mode:'mock',interpret:async()=>({output:{operations:[{kind:'add_item',query:'H14',quantity:null}],next:'review',pricePaise:1},truncated:false,usage:null})});
  let s=await turn(inbox,runtime,{type:'text',text:'பிளேடு வேண்டும்'});assert.equal(s.conversation.draft.length,0);assert.match(s.messages.at(-1)!.text,/பட்டியல் அப்படியே/);
- const known=noAI(pool);s=await turn(inbox,known,{id:randomUUID(),type:'choose_product',sku:'H14',quantity:2,expectedVersion:0});s=await turn(inbox,known,{type:'text',text:'இதை சேர்'});s=await turn(inbox,known,{type:'text',text:'கடைக்கு அனுப்பு'});assert.equal(s.requests.length,1);assert.match(s.messages.at(-1)!.text,/ஒப்புதலுக்காக/);const snapshot=s.requests[0];
+ const known=noAI(pool);s=await turn(inbox,known,{id:randomUUID(),type:'choose_product',sku:'H14',quantity:2,expectedVersion:0});s=await turn(inbox,known,{type:'text',text:'இதை சேர்'});s=await turn(inbox,known,{type:'text',text:'கடைக்கு அனுப்பு'});assert.equal(s.requests.length,1);assert.match(s.messages.at(-1)!.text,/கடை இன்னும் confirm பண்ணல/);const snapshot=s.requests[0];
  s=await turn(inbox,known,{id:randomUUID(),type:'choose_product',sku:'H07',quantity:1,expectedVersion:s.conversation.version});assert.deepEqual(s.requests[0],snapshot);assert.equal(s.requests.length,1);assert.match(s.messages.at(-1)!.text,/ஏற்கனவே/);
 }));
 

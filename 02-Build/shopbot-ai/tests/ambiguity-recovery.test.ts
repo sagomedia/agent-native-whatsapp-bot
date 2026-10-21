@@ -15,6 +15,35 @@ const settings:NativeSettings={allowPaidInference:true,apiKey:'offline-only',mod
 const base=(kind='text')=>({schemaVersion:2,inputKind:kind,intents:['edit'],requestedItems:[],proposedEdits:[],shopQuestions:[],unresolved:[]});
 const response=(output:unknown)=>({modelVersion:settings.model,candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(output)}]}}],usageMetadata:{promptTokenCount:1000,candidatesTokenCount:200,totalTokenCount:1200}} as any);
 const actions=(r:RichReply)=>[...r.buttons??[],...(r.parts??[]).flatMap(p=>[...p.buttons??[],...p.cards.flatMap(c=>c.buttons??[])])];
+test('semantic clear intent keeps the list until a current confirmation is selected',()=>fixture(async(pool,inbox)=>{
+ await new RetailTools(pool).invoke(inbox.context,{name:'apply_draft_changes',args:{expectedVersion:0,operations:[{kind:'add_item',query:'H13',quantity:1}]}},'seed');
+ const transcript='discard everything in this basket';
+ const provider=new GoogleInterpreter(settings,{generateContent:async()=>response({...base('audio'),transcript,intents:['clear_list']})});
+ const runtime=new ConversationRuntime(pool,provider,{allowPaidInference:true,visualOrdering:true});
+ let snapshot=await voice(inbox,runtime);
+ assert.equal(snapshot.conversation.draft.length,1);assert.equal(snapshot.conversation.handoffRequested,false);
+ const confirmation=actions(snapshot.messages.at(-1)!.rich!).find(b=>b.event.type==='shopping_action'&&b.event.action==='confirm_clear')!.event;
+ assert.ok(confirmation);assert.equal(snapshot.requests.length,0);
+ snapshot=await send(inbox,runtime,confirmation);
+ assert.equal(snapshot.conversation.draft.length,0);assert.equal(snapshot.requests.length,0);
+}));
+
+test('audio repair uses retained transcript and receives the exact rejected proposal and feedback',()=>fixture(async(pool,inbox)=>{
+ const transcript="I don't want PVC pipe, I want garden hose";let calls=0;
+ const bad={...base('audio'),transcript,intents:['add'],requestedItems:[{ordinal:0,sourceText:"I don't want PVC pipe",query:'PVC pipe',purchaseCount:1,unresolved:[]}]};
+ const provider=new GoogleInterpreter(settings,{generateContent:async params=>{
+  calls++;const content=params.contents as any[];const context=JSON.parse(content[0].parts[0].text);
+  if(calls===1){assert.ok(content[0].parts.some((p:any)=>p.inlineData));return response(bad);}
+  assert.equal(calls,2);assert.equal(context.inputKind,'text');assert.equal(context.customerText,transcript);
+  assert.equal(context.repair.originalInputKind,'audio');assert.match(context.repair.feedback,/negated|declined/);
+  assert.equal(context.repair.priorProposal.operations[0].query,'PVC pipe');
+  assert.equal(content[0].parts.some((p:any)=>p.inlineData),false);
+  return response({...base(),intents:['add'],requestedItems:[{ordinal:0,sourceText:'I want garden hose',query:'garden hose',purchaseCount:1,unresolved:[]}]});
+ }});
+ const snapshot=await voice(inbox,new ConversationRuntime(pool,provider,{allowPaidInference:true,visualOrdering:true}));
+ assert.equal(calls,2);assert.equal(snapshot.conversation.draft.length,1);assert.equal(snapshot.conversation.draft[0].sku,'H13');
+ assert.equal(snapshot.conversation.draft[0].quantity,1);assert.equal(snapshot.requests.length,0);
+}));
 async function fixture(run:(pool:pg.Pool,inbox:SimulatorService)=>Promise<void>){
  const admin=new pg.Pool({connectionString:process.env.DATABASE_URL}),schema='recovery_'+randomUUID().replaceAll('-','');await admin.query(`CREATE SCHEMA "${schema}"`);
  const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:`-c search_path=${schema}`});
@@ -56,4 +85,30 @@ test('a negated typed clear never asks the model or hands control to the owner',
  await new RetailTools(pool).invoke(inbox.context,{name:'apply_draft_changes',args:{expectedVersion:0,operations:[{kind:'add_item',query:'H13',quantity:1}]}},'seed');
  let calls=0;const r=new ConversationRuntime(pool,new GoogleInterpreter(settings,{generateContent:async()=>{calls++;return response({...base(),intents:['cancel']});}}),{allowPaidInference:true,visualOrdering:true});
  const s=await send(inbox,r,{id:randomUUID(),type:'text',text:"don't clear my list"});assert.equal(calls,0);assert.equal(s.conversation.draft.length,1);assert.equal(s.conversation.handoffRequested,false);assert.equal(s.requests.length,0);
+}));
+
+const nativeBroadcast=(ids:string[])=>({"schemaVersion": 2, "inputKind": "audio", "transcript": "எனக்கு வந்து சேர நான் சொல்லியிருக்கேன். எனக்கு வந்து பைப் வேணும். PVC பைப். ஆல்ரெடி லிஸ்ட்ல இருக்கு, எக்ஸ்ட்ரா ரெண்டு ஆட் பண்ணிக்கோ. அண்ட் அவ்ளோதான். டேப் இருக்கா, டெப்லான் டேப் ஒரு ரெண்டு.", "intents": ["add"], "requestedItems": [{"ordinal": 1, "sourceText": "பைப் வேணும். PVC பைப்", "query": "PVC pipe", "purchaseCount": null, "material": "PVC", "unresolved": ["quantity"]}, {"ordinal": 2, "sourceText": "டேப் இருக்கா, டெப்லான் டேப் ஒரு ரெண்டு", "query": "teflon tape", "purchaseCount": 2, "brand": "Teflon", "unresolved": []}], "proposedEdits": [{"kind": "increment_quantity", "targetLineId": ids[0], "sourceText": "எக்ஸ்ட்ரா ரெண்டு ஆட் பண்ணிக்கோ", "quantity": 2}, {"kind": "increment_quantity", "targetLineId": ids[1], "sourceText": "எக்ஸ்ட்ரா ரெண்டு ஆட் பண்ணிக்கோ", "quantity": 2}, {"kind": "increment_quantity", "targetLineId": ids[2], "sourceText": "எக்ஸ்ட்ரா ரெண்டு ஆட் பண்ணிக்கோ", "quantity": 2}], "shopQuestions": [], "unresolved": [], "clarifyQuestion": "எந்த பைப்பைக் குறிப்பிடுகிறீர்கள்?"});
+test('one spoken extra phrase cannot increment three legacy pipes; the independent tape still adds',()=>fixture(async(pool,inbox)=>{
+ const old=(await new RetailTools(pool).invoke(inbox.context,{name:'apply_draft_changes',args:{expectedVersion:0,operations:[{kind:'add_item',query:'H02',quantity:2},{kind:'add_item',query:'H01',quantity:null},{kind:'add_item',query:'H03',quantity:2}]}},'seed')).state!;
+ const counts=old.draft.map(l=>l.quantity);const r=new ConversationRuntime(pool,new GoogleInterpreter(settings,{generateContent:async()=>response(nativeBroadcast(old.draft.map(l=>l.id)))}),{allowPaidInference:true,visualOrdering:true});
+ const s=await voice(inbox,r);assert.deepEqual(s.conversation.draft.slice(0,3).map(l=>l.quantity),counts);assert.equal(s.conversation.draft.length,4);assert.equal(s.conversation.draft[3].sku,'H08');assert.equal(s.conversation.draft[3].quantity,2);assert.equal(s.messages.at(-1)!.rich?.stage,'identify');assert.equal(s.requests.length,0);
+}));
+test('global change ASR variation offers edit or clear confirmation and never hands over',()=>fixture(async(pool,inbox)=>{
+ await new RetailTools(pool).invoke(inbox.context,{name:'apply_draft_changes',args:{expectedVersion:0,operations:[{kind:'add_item',query:'H13',quantity:1}]}},'seed');
+ const transcript='அதே மாதிரி வேண்டா. எல்லாத்தையும் சேஞ்ச் பண்ணிடு.';const r=new ConversationRuntime(pool,new GoogleInterpreter(settings,{generateContent:async()=>response({...base('audio'),transcript,intents:['edit','cancel'],clarifyQuestion:'எந்த பொருளை மாற்ற வேண்டும்?'})}),{allowPaidInference:true,visualOrdering:true});
+ const s=await voice(inbox,r);assert.equal(s.conversation.draft.length,1);assert.equal(s.conversation.handoffRequested,false);const a=actions(s.messages.at(-1)!.rich!).map(b=>b.event).filter(e=>e.type==='shopping_action');assert.ok(a.some(e=>e.action==='edit_list'));assert.ok(a.some(e=>e.action==='confirm_clear'));assert.equal(s.requests.length,0);
+}));
+
+test('empty optional clarify text is absence and does not discard a valid spoken list',()=>fixture(async(pool,inbox)=>{
+ const output={...base('audio'),transcript:'two water pumping pipes',intents:['add'],requestedItems:[{ordinal:0,sourceText:'two water pumping pipes',query:'water pumping pipe',purchaseCount:2,unresolved:[],brand:null}],clarifyQuestion:''};
+ const r=new ConversationRuntime(pool,new GoogleInterpreter(settings,{generateContent:async()=>response(output)}),{allowPaidInference:true,visualOrdering:true});const s=await voice(inbox,r);assert.equal(s.conversation.draft.length,1);assert.equal(s.conversation.draft[0].quantity,2);assert.equal(s.conversation.draft[0].sku,undefined);assert.notEqual(s.messages.at(-1)!.rich?.stage,'error');assert.equal(s.requests.length,0);
+}));
+test('Latin Tanglish clear-all variation creates a confirmation rather than a handover',()=>fixture(async(pool,inbox)=>{
+ await new RetailTools(pool).invoke(inbox.context,{name:'apply_draft_changes',args:{expectedVersion:0,operations:[{kind:'add_item',query:'H13',quantity:1}]}},'seed');const transcript='athu mael venaam, ellaam clear panniru';assert.equal(spokenClearCommand(transcript),'clear my list');
+ const r=new ConversationRuntime(pool,new GoogleInterpreter(settings,{generateContent:async()=>response({...base('audio'),transcript,intents:['cancel'],clarifyQuestion:'எதை நீக்க வேண்டும்?'})}),{allowPaidInference:true,visualOrdering:true});const s=await voice(inbox,r);assert.equal(s.conversation.handoffRequested,false);assert.equal(s.conversation.draft.length,1);assert.ok(actions(s.messages.at(-1)!.rich!).some(b=>b.event.type==='shopping_action'&&b.event.action==='confirm_clear'));
+}));
+
+test('unspecified cancellation offers guarded list choices without requiring exact ASR spelling',()=>fixture(async(pool,inbox)=>{
+ await new RetailTools(pool).invoke(inbox.context,{name:'apply_draft_changes',args:{expectedVersion:0,operations:[{kind:'add_item',query:'H13',quantity:1}]}},'seed');
+ const r=new ConversationRuntime(pool,new GoogleInterpreter(settings,{generateContent:async()=>response({...base('audio'),transcript:'ithu venda cancel pannu',intents:['cancel']})}),{allowPaidInference:true,visualOrdering:true});const s=await voice(inbox,r);assert.equal(s.conversation.draft.length,1);assert.equal(s.conversation.handoffRequested,false);assert.ok(actions(s.messages.at(-1)!.rich!).some(b=>b.event.type==='shopping_action'&&b.event.action==='confirm_clear'));assert.equal(s.requests.length,0);
 }));

@@ -59,7 +59,7 @@ test('customer photo choice and bound submission continue through owner approval
   const request=async()=>(await pool.query('SELECT * FROM order_requests WHERE id=$1',[submitted.id])).rows[0];
   assert.deepEqual(submitted.lines,review.lines);assert.equal(Number(submitted.total_paise),review.totalPaise);
   assert.equal(submitted.acceptance,'awaiting_approval');assert.equal(submitted.fulfillment,'awaiting_approval');assert.equal(submitted.payment,'not_requested');
-  assert.equal((await post(requestUrl+'/fulfillment',{expected:'awaiting_approval',status:'ready_for_pickup',notify:true})).statusCode,409);
+  assert.equal((await post(requestUrl+'/fulfillment',{expected:'awaiting_approval',status:'ready_for_pickup',packedChecked:true,notify:true})).statusCode,409);
   assert.equal((await pool.query('SELECT * FROM request_notifications')).rowCount,0);
 
   // Another authenticated merchant must not decide this customer's request.
@@ -75,10 +75,11 @@ test('customer photo choice and bound submission continue through owner approval
   assert.equal((await post(requestUrl+'/decision',{decision:'rejected',notify:true})).statusCode,409);
   await turn(channel,tap(await action(pool,{type:'shopping_action',action:'status'})));assert.match(sent.at(-1).interactive.body.text,/preparing/i);
   assert.equal((await post(requestUrl+'/fulfillment',{expected:'preparing',status:'collected',notify:true})).statusCode,409);
-  assert.equal((await post(requestUrl+'/fulfillment',{expected:'awaiting_approval',status:'ready_for_pickup',notify:true})).statusCode,409);
-  assert.equal((await foreign.inject({method:'POST',url:requestUrl+'/fulfillment',headers,payload:{expected:'preparing',status:'ready_for_pickup',notify:true}})).statusCode,409);
+  assert.equal((await post(requestUrl+'/fulfillment',{expected:'awaiting_approval',status:'ready_for_pickup',packedChecked:true,notify:true})).statusCode,409);
+  assert.equal((await foreign.inject({method:'POST',url:requestUrl+'/fulfillment',headers,payload:{expected:'preparing',status:'ready_for_pickup',packedChecked:true,notify:true}})).statusCode,409);
 
-  const readyPayload={expected:'preparing',status:'ready_for_pickup',notify:true};
+  assert.equal((await post(requestUrl+'/fulfillment',{expected:'preparing',status:'ready_for_pickup',notify:true})).statusCode,409,'Physical packing confirmation is required');
+  const readyPayload={expected:'preparing',status:'ready_for_pickup',packedChecked:true,notify:true};
   const ready=await post(requestUrl+'/fulfillment',readyPayload);assert.equal(ready.statusCode,200,ready.body);assert.equal(ready.json().customerNotification,'queued');
   const repeated=await post(requestUrl+'/fulfillment',readyPayload);assert.equal(repeated.statusCode,200,repeated.body);assert.equal(repeated.json().duplicate,true);assert.equal(repeated.json().messageId,ready.json().messageId);
   assert.equal((await pool.query('SELECT * FROM request_notifications WHERE request_id=$1',[submitted.id])).rowCount,2);
@@ -86,7 +87,7 @@ test('customer photo choice and bound submission continue through owner approval
   await turn(channel,tap(await action(pool,{type:'shopping_action',action:'status'})));assert.match(sent.at(-1).interactive.body.text,/ready for pickup/i);
   const snapshot=(await app.inject({url:'/api/owner/snapshot',headers})).json();assert.equal(snapshot.requests.find((r:any)=>r.id===submitted.id).fulfillment,'ready_for_pickup');
 
-  await turn(channel,tap(await action(pool,{type:'shopping_action',action:'handoff'})));
+  await turn(channel,{type:'text',text:{body:'talk to shop'}});
   const handedOff=await state();assert.equal(handedOff.operator_mode,'owner');assert.equal(handedOff.handoff_requested,true);
   assert.deepEqual(handedOff.draft,review.lines);assert.equal(handedOff.last_request_id,submitted.id);assert.deepEqual((await request()).lines,review.lines);
   const followup=inbound({type:'text',text:{body:'Where should I collect this?'}});
@@ -102,7 +103,7 @@ test('customer photo choice and bound submission continue through owner approval
   assert.equal(collected.statusCode,200,collected.body);assert.equal(collected.json().customerNotification,'not_sent');
   assert.equal(await channel.sendNext(),false);assert.equal(sent.length,sendsBefore);
   const final=await request();assert.equal(final.fulfillment,'collected');assert.equal(final.payment,'not_requested');assert.deepEqual(final.lines,review.lines);assert.equal(final.total_paise,submitted.total_paise);
-  assert.equal((await post(requestUrl+'/fulfillment',{expected:'collected',status:'ready_for_pickup',notify:true})).statusCode,409);
+  assert.equal((await post(requestUrl+'/fulfillment',{expected:'collected',status:'ready_for_pickup',packedChecked:true,notify:true})).statusCode,409);
   assert.equal((await pool.query('SELECT * FROM order_requests')).rowCount,1);assert.equal((await pool.query('SELECT * FROM provider_attempts')).rowCount,0);
  }finally{for(const app of apps)await app.close();await pool.end();await admin.query(`DROP SCHEMA "${schema}" CASCADE`);await admin.end();}
 });
@@ -134,7 +135,7 @@ test('owner controls and newer statuses invalidate queued notifications; explici
   const accepted=await post(url+'/decision',{decision:'accepted',notify:true});assert.equal(accepted.statusCode,200,accepted.body);
   const acceptanceId=accepted.json().messageId;assert.ok(acceptanceId);assert.equal(await delivery(acceptanceId),'queued');
   await control('owner');assert.equal(await delivery(acceptanceId),'cancelled');
-  const readyPayload={expected:'preparing',status:'ready_for_pickup',notify:true};
+  const readyPayload={expected:'preparing',status:'ready_for_pickup',packedChecked:true,notify:true};
   const ready=await post(url+'/fulfillment',readyPayload);assert.equal(ready.statusCode,200,ready.body);
   const firstReadyId=ready.json().messageId;assert.ok(firstReadyId);assert.equal(await delivery(firstReadyId),'queued');
   await control('assistant');assert.equal(await delivery(firstReadyId),'cancelled');
@@ -170,16 +171,16 @@ test('staff acknowledges a handoff with a scoped visual receipt, rejects stale c
   await setupDatabase(pool,'mock');await setupImageDemo(pool,fixtureStore);
   const visualCfg={...cfg,visualOrdering:true};
   const channel=new WhatsAppChannel(pool,visualCfg,async(_url,init)=>{sent.push(JSON.parse(String(init!.body)));return new Response(JSON.stringify({messages:[{id:'wamid.ack.'+sent.length}]}),{status:200});});await channel.setup();
-  await turn(channel,{type:'text',text:{body:'hello'}});await turn(channel,tap(await action(pool,{type:'shopping_action',action:'handoff'})));
+  await turn(channel,{type:'text',text:{body:'hello'}});await turn(channel,{type:'text',text:{body:'talk to shop'}});
   const c=(await pool.query("SELECT * FROM conversations WHERE handoff_requested=true")).rows[0];assert.ok(c);
   app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,port:3017,host:'127.0.0.1',mediaDir:'/tmp/offline-handoff-ack',owner,whatsapp:visualCfg},pool,undefined,undefined,async()=>({email:owner.email,subject:'offline-owner'}),channel);
   const post=(id:string,payload:object)=>app!.inject({method:'POST',url:'/api/owner/conversations/'+id+'/control',headers,payload});
   assert.equal((await post(randomUUID(),{mode:'owner',revision:c.operator_revision,acknowledge:true})).statusCode,409);
   const ack=await post(c.id,{mode:'owner',revision:c.operator_revision,acknowledge:true});assert.equal(ack.statusCode,200,ack.body);assert.equal(ack.json().customerNotification,'queued');
   assert.equal((await post(c.id,{mode:'owner',revision:c.operator_revision,acknowledge:true})).statusCode,409);
-  const status=(await pool.query('SELECT * FROM whatsapp_outbox WHERE message_id=$1',[ack.json().messageId])).rows[0];assert.equal(status.sender_kind,'system');assert.equal(status.reply_payload.type,'image');assert.match(status.reply_payload.image.caption,/checking your list/);
+  const status=(await pool.query('SELECT * FROM whatsapp_outbox WHERE message_id=$1',[ack.json().messageId])).rows[0];assert.equal(status.sender_kind,'system');assert.equal(status.reply_payload.type,'text');assert.match(status.reply_payload.text.body,/checking your list/);
   assert.equal((await pool.query('SELECT handoff_requested FROM conversations WHERE id=$1',[c.id])).rows[0].handoff_requested,false);assert.equal(await channel.sendNext(),true);
-  const resume=await post(c.id,{mode:'assistant',revision:ack.json().operator_revision,notify:true});assert.equal(resume.statusCode,200,resume.body);assert.equal(resume.json().customerNotification,'queued');assert.equal(await channel.sendNext(),true);assert.match(sent.at(-1).image.caption,/assistant is available again/);
+  const resume=await post(c.id,{mode:'assistant',revision:ack.json().operator_revision,notify:true});assert.equal(resume.statusCode,200,resume.body);assert.equal(resume.json().customerNotification,'queued');assert.equal(await channel.sendNext(),true);assert.match(sent.at(-1).text.body,/assistant is available again/);
   const hold=await post(c.id,{mode:'owner',revision:resume.json().operator_revision});assert.equal(hold.statusCode,200);
   const state=(await pool.query('SELECT * FROM conversations WHERE id=$1',[c.id])).rows[0];
   await channel.runtime.tools.invoke({storeId:fixtureStore,conversationId:c.id,actor:c.actor,role:'customer'},{name:'apply_draft_changes',args:{expectedVersion:state.version,operations:[{kind:'add_item',query:'H08',quantity:1}]}},randomUUID());

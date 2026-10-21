@@ -2,6 +2,8 @@
 
 Reusable retail runtime with a local mock simulator and a connected WhatsApp VPS channel. See workspace `VISION.md` for direction and original references in `01-Input/starter-vision/`.
 
+The local 15 October package adds request admission, durable deadlines and delivery-cost accounting. See [P2 configuration and verification](../../03-Output/032-p2-cost-and-admission.md). Apply additive migration 27 before running this version against an existing database. These changes have not been deployed; the connected-deployment notes below describe the earlier runtime.
+
 ## Current connected deployment
 
 WhatsApp runs on Google VPS `sago-counter-ksmc`; the owner dashboard is at `https://shopbot-preview.sagoautomation.tech/owner` and public webhook/media use `https://demo.sagoautomation.tech`. All inference uses Gemini 3.5 Flash Lite. The mock setup below is for development; its messages do not prove WhatsApp delivery. See [voice repair plan](VOICE-ORDER-REPAIR.md) and the repository’s visual operating guide.
@@ -54,7 +56,7 @@ Try a five-item request such as “I need three half-inch PVC elbows, two PTFE t
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for tool/runtime boundaries and [STATUS.md](STATUS.md) for actual progress. The KSMC pack remains optional fixture data, not a prerequisite or a hardcoded dependency.
 
-The simulator is unauthenticated and loopback-only. It supports one submitted request per demo conversation; reset intentionally with the documented mock-only command to start another test. Submitted requests cannot be edited. Approval, payment, stock reservation and readiness are future staff workflows. Real AI, WhatsApp, owner authentication and MCP are not connected. Cross-store scope tests are not a production isolation certification.
+The mock simulator is unauthenticated and loopback-only. It supports one submitted request per demo conversation; reset intentionally with the documented mock-only command to start another test. Submitted requests cannot be edited. Mock messages do not contact customers or invoke live AI. The server also contains the configured WhatsApp channel and owner authentication/fulfillment workflows described above; MCP and payment integration remain separate milestones. Cross-store scope tests are not a production isolation certification.
 
 ## Native development
 

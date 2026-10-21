@@ -97,7 +97,8 @@ test('four-item corrections retain the active line, avoid unrelated images and r
  assert.equal(last(state).cards?.length??0,0);
  assert.equal(last(state).buttons?.some(button=>button.event.type==='confirm_products')??false,false);
  const rendered=renderWhatsAppReply(last(state),randomUUID(),'catalog.example.test');
- assert.doesNotMatch(JSON.stringify(rendered.payload),/H22|H23|H24|H25|stencil|scraper/i);
+ // Opaque callback IDs can randomly contain a SKU substring; inspect customer content.
+ assert.doesNotMatch(JSON.stringify(rendered.payload,(key,value)=>key==='id'?'[callback-id]':value),/H22|H23|H24|H25|stencil|scraper/i);
  const before=state.conversation;
  state=await turn(inbox,runtime,{...oldPhoto,id:randomUUID()});
  assert.deepEqual(state.conversation,before);
@@ -174,7 +175,7 @@ test('empty discovery acknowledges the named request and quantity instead of rep
   assert.match(last(s).text,/Asian Paints wall paint/);assert.match(last(s).text,/1/);
   assert.doesNotMatch(last(s).text,/What size|What will you use|not in stock|brand|என்ன வேலை|Enna velaikku/i);
   assert.equal(last(s).cards?.length??0,0);assert.equal(s.requests.length,0);
-  assert.ok(last(s).buttons?.some(button=>button.event.type==='shopping_action'&&button.event.action==='handoff'));
+  assert.ok(last(s).buttons?.some(button=>button.event.type==='shopping_action'&&button.event.action==='options'));
  }
 }));
 

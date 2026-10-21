@@ -1,32 +1,47 @@
+import {cartChangeFeedback} from '../services/cart-change-feedback.js';
+import {listViewRequest} from '../services/list-view-intent.js';
+import {canAddToOrder,orderListChoice,askOrderItems,refreshOrderListChoice} from '../services/order-list-choice.js';
+import {acceptOrderQuote} from '../services/order-quotes.js';
+import {actionDeliveryReady} from '../services/review-delivery.js';
+import {acknowledgementOnly,amendmentIntent,explicitNewOrder,cancellationIntent,proposeAmendment,customerAmendmentAction,amendmentReviewReply} from '../services/order-amendments.js';
+import {upiAdvanceReply,claimUpiAdvance,chooseDemoPayAtShop,paymentClaimText,demoPayAtShopText,type UpiAdvanceConfig} from '../services/upi-advance.js';
+import {customerCopy} from '../../../../packages/contracts/customer-copy.js';
 import {discoverProducts as lookupGroundedProducts} from '../services/catalog-discovery.js';
 import {validateCurrentTurn,submissionIntent,namedRemovalsExplicit} from '../services/current-turn.js';
-import {bindExplicitCorrection} from '../services/shopping-corrections.js';
+import {bindExplicitCorrection,compileKeepOnly,keepTargetCandidates} from '../services/shopping-corrections.js';
+import {understandingToInterpretation} from '../adapters/turn-understanding.js';
 import {validateProductMeaningEvidence} from '../services/product-meaning.js';
-import {reviewDeliveryReady} from '../services/review-delivery.js';
-import {visualReply,returningReply,cartProgress} from '../services/visual-ordering.js';
+import {reviewDeliveryReady,cancelSupersededReviews} from '../services/review-delivery.js';
+import {inferenceTiming,providerCallTimeout,processingLeaseSeconds} from '../services/inference-timing.js';
+import {productCheckCoversDraft} from '../services/counter-state.js';
+import {visualReply,visualListView,visualCartMutation,returningReply,cartProgress} from '../services/visual-ordering.js';
+import {productIdentity} from '../services/product-confirmation.js';
 import {materializeVisualReply} from '../services/visual-images.js';
-import {protectQuantityEvidence} from '../services/quantity-evidence.js';
+import {protectQuantityEvidence,explicitPurchaseCount} from '../services/quantity-evidence.js';
+import {namedEditLines} from '../adapters/mention-reconciliation.js';
+import {additionalMention} from '../../../../packages/contracts/intent-language.js';
 import {phrasingLanguage} from '../../../../packages/contracts/language.js';
 import {normalizeAmountEdits} from '../services/amount-edits.js';
 import {shoppingActions} from '../services/shopping-actions.js';
 import {handleShoppingAction,shoppingButton} from '../services/shopping-flow.js';
-import {say,canonicalShortcut,languageRequest,languageAcknowledgement,customerError,safeQuestion,unitName,draftIssueText,requestedAmountText,lineName} from '../../../../packages/contracts/language.js';
+import {say,canonicalShortcut,languageRequest,languageAcknowledgement,customerError,safeQuestion,unitName,draftIssueText,requestedAmountText,lineName,productName,productPriceText,productStockText} from '../../../../packages/contracts/language.js';
 import {formatMoney,lineTotal} from '../../../../packages/contracts/money.js';
 import {loadImage} from '../services/image-media.js';
 import {loadVoice} from '../services/voice-media.js';
-import {priceInquiry,quantityReply,spokenClearCommand,negatedSpokenClear} from '../services/shopping-language.js';
+import {priceInquiry,quantityReply,spokenClearCommand,negatedSpokenClear,spokenWholeListChange} from '../services/shopping-language.js';
 import {socialIntent,shopInquiry,shopAnswers,presentReply,plainReply} from '../services/replies.js';
 import {FreeQuotaError} from '../adapters/google-interpreter.js';
 import { randomUUID } from 'node:crypto';
 import type { Pool,PoolClient } from 'pg';
 import { interpretationSchema, type ConversationState, type Interpretation, type SimulatorEvent, type ToolCall, type Product, type RichReply } from '../../../../packages/contracts/index.js';
 import type { Interpreter,InterpretationInput } from '../adapters/interpreter.js';
-import {reserveAttempt,settleAttempt,validateRateCard,coolDownFreeQuota} from '../services/inference-budget.js';
+import {reserveAttempt,settleAttempt,rateHealth,validateRateCard,coolDownFreeQuota} from '../services/inference-budget.js';
 import {getProducts,catalogEnabled,catalogContext,sameUnit,normalizeUnit,tokens,exactProductMatch} from '../services/catalog.js';
 import {getCatalogMap,refinementPlan,discoverProducts} from '../services/catalog-discovery.js';
 import { loadState, RetailTools,digest,referenceLine, type ToolResult } from '../services/tools.js';
 import { ToolError, withConversation, type ActorContext } from '../services/context.js';
 import {loadAssistantMemory,saveAssistantMemory,observeCatalog,observationQueries,recheckQueries,isRecheck,pendingItem,assistanceReply,conversationBinding,type AssistantMemory,type CatalogObservation} from '../services/agent-assistance.js';
+import {currentReleaseFingerprint} from '../services/release-manifest.js';
 
 function quantityAnswer(state:ConversationState,lineId:string,amount:{quantity:number;unit?:string},text:string):Interpretation['operations'][number] {
  const line=state.draft.find(l=>l.id===lineId);
@@ -34,8 +49,34 @@ function quantityAnswer(state:ConversationState,lineId:string,amount:{quantity:n
  if(line?.sku&&(!amount.unit||!line.unit||sameUnit(amount.unit,line.unit)))return line.resolution==='needs_unit'&&!line.requestedAmount?{kind:'resolve_line',lineId,quantity:amount.quantity,requestedUnit:amount.unit}:{kind:'set_quantity',reference:lineId,quantity:amount.quantity,supportingPhrase:text.slice(0,200)};
  return {kind:'resolve_line',lineId,quantity:amount.quantity,...(amount.unit?{requestedUnit:amount.unit}:{})};
 }
-type Claimed = { id:string; token:string; event:SimulatorEvent; bindingId:string|null; state:ConversationState; catalog:Product[];catalogMap?:import('../../../../packages/contracts/index.js').CatalogMap;memory:AssistantMemory|null;displayedActions:SimulatorEvent[];displayedProducts:{event:SimulatorEvent;product:Product}[] };
+type Claimed = { lastReplyWasListView?:boolean;evidenceRepair?:import('../adapters/interpreter.js').EvidenceRepair;cartEditResumed?:boolean; deadlineAt:number; id:string; token:string; event:SimulatorEvent; bindingId:string|null; state:ConversationState; catalog:Product[];catalogMap?:import('../../../../packages/contracts/index.js').CatalogMap;memory:AssistantMemory|null;displayedActions:SimulatorEvent[];displayedProducts:{event:SimulatorEvent;product:Product;delivered?:boolean}[] };
 class DeferredRecommendation extends Error {}
+function correctionDescription(claim:Claimed,interpretation:Interpretation|undefined,description:string){
+ if(claim.cartEditResumed&&claim.memory?.purpose==='cart_edit'&&claim.memory.sourceVersion===claim.state.version)return claim.memory.cartEdit?.description??description;
+ const saved=claim.memory?.purpose==='cart_correction'&&claim.memory.sourceVersion===claim.state.version?claim.memory.correction:undefined;
+ return saved&&interpretation?.understanding?.keepOnly&&digest(interpretation.understanding.keepOnly)===digest(saved.understanding.keepOnly)?saved.description:description;
+}
+function resumeCartTarget(claim:Claimed,selection?:{kind:'edit'|'item';index:number;lineId:string}):Interpretation {
+ const memory=claim.memory,goal=memory?.cartEdit;
+ if(memory?.purpose!=='cart_edit'||memory.sourceVersion!==claim.state.version||!goal||claim.state.lastRequestId)throw new ToolError('Use the latest item choices. Your list is kept.','stale_question');
+ if(selection&&!goal.targets.some(target=>target.kind===selection.kind&&target.index===selection.index&&target.candidateLineIds.includes(selection.lineId)))throw new ToolError('Choose a current item from this question.','stale_question');
+ const selections=selection?[...goal.selections.filter(previous=>previous.kind!==selection.kind||previous.index!==selection.index),selection]:goal.selections;
+ const understanding={...goal.understanding,inputKind:'text' as const,transcript:undefined,observedText:undefined,cartTargetAnswer:undefined,unresolved:goal.understanding.unresolved.filter(reason=>reason!=='cart_target'),clarifyQuestion:undefined};
+ const result=understandingToInterpretation(understanding,{text:goal.description,state:claim.state,cartTargetSelections:selections},false);
+ goal.selections=selections;claim.cartEditResumed=true;
+ return result;
+}
+function resumeKeepCorrection(claim:Claimed,selection?:{targetIndex:number;lineId:string}):Interpretation {
+ const memory=claim.memory,goal=memory?.correction;
+ if(memory?.purpose!=='cart_correction'||memory.sourceVersion!==claim.state.version||!goal?.understanding.keepOnly)throw new ToolError('Use the latest keep-item question. Your list is kept.','stale_question');
+ const pending=compileKeepOnly(goal.understanding.keepOnly,claim.state,goal.description,goal.selections);
+ if(selection&&(selection.targetIndex!==pending.targetIndex||!pending.choices?.some(line=>line.id===selection.lineId)))throw new ToolError('Choose one of the offered keep-item choices.','stale_question');
+ const selections=selection?[...goal.selections.filter(s=>s.targetIndex!==selection.targetIndex),selection]:goal.selections;
+ const understanding={...goal.understanding,inputKind:'text' as const,transcript:undefined,observedText:undefined,unresolved:goal.understanding.unresolved.filter(reason=>reason!=='keep_only_target')};
+ const result=understandingToInterpretation(understanding,{text:goal.description,state:claim.state,keepSelections:selections},false);
+ goal.selections=selections;
+ return result;
+}
 // A repeated generic noun is not evidence that a previous brand or size was
 // withdrawn. Keep the more specific request unless the customer changes it.
 function retainRefinementIdentity(op:Interpretation['operations'][number],state:ConversationState,text:string,map?:Claimed['catalogMap']) {
@@ -82,12 +123,12 @@ function discoverySelection(item:Extract<Interpretation['operations'][number],{k
 }
 export class ConversationRuntime {
   readonly tools:RetailTools;
-  constructor(private pool:Pool,private provider:Interpreter,private options:{allowPaidInference?:boolean;allowFreeInference?:boolean;discoveryStages?:boolean;mediaRecommendations?:boolean;sequentialItems?:boolean;visualOrdering?:boolean;maxDraftLines?:number;queueReply?:(client:PoolClient,ctx:ActorContext,id:string,reply:RichReply)=>Promise<void>}={}) {
+  constructor(private pool:Pool,private provider:Interpreter,private options:{advance?:UpiAdvanceConfig;partialReviews?:boolean;welcomeAudio?:string;allowPaidInference?:boolean;allowFreeInference?:boolean;discoveryStages?:boolean;mediaRecommendations?:boolean;sequentialItems?:boolean;visualOrdering?:boolean;maxDraftLines?:number;queueReply?:(client:PoolClient,ctx:ActorContext,id:string,reply:RichReply)=>Promise<void>}={}) {
     if(provider.mode==='live') {
       if(!(provider.freeQuota?options.allowFreeInference:options.allowPaidInference)||!provider.billing) throw new ToolError('Live interpretation is disabled until explicitly authorized metered configuration is supplied');
-      validateRateCard(provider.billing);
+      if(rateHealth(provider.billing).status==='invalid')validateRateCard(provider.billing);
     }
-    this.tools=new RetailTools(pool,{sequentialItems:provider.unifiedUnderstanding?false:options.sequentialItems,maxDraftLines:options.maxDraftLines});
+    this.tools=new RetailTools(pool,{advance:options.advance,sequentialItems:provider.unifiedUnderstanding?false:options.sequentialItems,maxDraftLines:options.maxDraftLines});
   }
   async processNext(ctx:ActorContext):Promise<boolean> {
     const claimed=await withConversation(this.pool,ctx,async client=>{
@@ -99,12 +140,14 @@ export class ConversationRuntime {
       if(row.rows[0]&&(await client.query("SELECT not_before>now() OR EXISTS(SELECT 1 FROM whatsapp_media WHERE message_id=$1 AND state IN ('pending','fetching')) AS waiting FROM messages WHERE id=$1",[row.rows[0].id])).rows[0].waiting)return null;
       if(!row.rows[0]) return null;
       const token=randomUUID(),m=row.rows[0];
-      await client.query("UPDATE messages SET status='processing',claim_token=$1,lease_until=now()+$3*interval '1 second' WHERE id=$2",[token,m.id,this.options.visualOrdering?90:m.payload?.type==='voice'?45:30]);
+      const claimedDeadline=await client.query("UPDATE messages SET status='processing',claim_token=$1,lease_until=clock_timestamp()+$3*interval '1 second',inference_deadline_at=coalesce(inference_deadline_at,to_timestamp($4/1000.0)) WHERE id=$2 RETURNING inference_deadline_at",[token,m.id,processingLeaseSeconds(),Date.now()+inferenceTiming.turnMs]);
+      await client.query('UPDATE messages SET release_fingerprint=$1 WHERE id=$2',[currentReleaseFingerprint(),m.id]);
       if(this.options.visualOrdering!==undefined)await client.query('UPDATE conversations SET visual_ordering=$2 WHERE id=$1',[ctx.conversationId,this.options.visualOrdering]);
-      const shown=(await client.query("SELECT payload FROM messages WHERE conversation_id=$1 AND direction='outbound' ORDER BY sequence DESC LIMIT 20",[ctx.conversationId])).rows;
-      const displayedProducts=shown.flatMap(r=>[...(r.payload?.parts??[]).flatMap((p:any)=>p.cards.flatMap((c:any)=>c.kind==='product'?(c.buttons??[]).map((b:any)=>({event:b.event,product:c.product})):[])),...(r.payload?.cards??[]).flatMap((c:any)=>c.action&&c.product?[{event:c.action,product:c.product}]:[])]);
+      if(this.options.partialReviews!==undefined)await client.query('UPDATE conversations SET partial_reviews=$2 WHERE id=$1',[ctx.conversationId,this.options.partialReviews]);
+      const shown=(await client.query("SELECT payload,coalesce((SELECT o.state FROM whatsapp_outbox o WHERE o.message_id=messages.id),'delivered') AS delivery FROM messages WHERE conversation_id=$1 AND direction='outbound' ORDER BY sequence DESC LIMIT 20",[ctx.conversationId])).rows;
+      const displayedProducts=shown.flatMap(r=>[...(r.payload?.parts??[]).flatMap((p:any)=>p.cards.flatMap((c:any)=>c.kind==='product'?(c.buttons??[]).map((b:any)=>({event:b.event,product:c.product,delivered:['delivered','read'].includes(r.delivery)})):[])),...(r.payload?.cards??[]).flatMap((c:any)=>c.action&&c.product?[{event:c.action,product:c.product}]:[])]);
       const displayedActions=shown.flatMap(r=>[...(r.payload?.parts??[]).flatMap((p:any)=>[...(p.buttons??[]).map((b:any)=>b.event),...(p.cards??[]).flatMap((c:any)=>(c.buttons??[]).map((b:any)=>b.event))]),...(r.payload?.cards??[]).flatMap((c:any)=>c.action?[c.action]:[]),...(r.payload?.buttons??[]).map((b:any)=>b.event)]);
-      return {id:m.id,token,event:m.payload,bindingId:m.binding_id,state:await loadState(client,ctx),catalog:await catalogEnabled(client,ctx)?await catalogContext(client,ctx):await getProducts(client,ctx),catalogMap:await catalogEnabled(client,ctx)?await getCatalogMap(client,ctx):undefined,memory:await loadAssistantMemory(client,ctx),displayedActions,displayedProducts} as Claimed;
+      return {deadlineAt:new Date(claimedDeadline.rows[0].inference_deadline_at).getTime(),id:m.id,token,event:m.payload,bindingId:m.binding_id,lastReplyWasListView:shown[0]?.payload?.readOnly===true&&shown[0]?.payload?.stage==='products',state:await loadState(client,ctx),catalog:await catalogEnabled(client,ctx)?await catalogContext(client,ctx):await getProducts(client,ctx),catalogMap:await catalogEnabled(client,ctx)?await getCatalogMap(client,ctx):undefined,memory:await loadAssistantMemory(client,ctx),displayedActions,displayedProducts} as Claimed;
     });
     if(!claimed) return false;
     let requestedLanguage=claimed.event.type==='change_language'?claimed.event.language:claimed.event.type==='text'?languageRequest(claimed.event.text):undefined;
@@ -112,23 +155,38 @@ export class ConversationRuntime {
     let failure:string|undefined;let failureReason:string|undefined;
     let voiceFailureKind:'unreadable'|'processing'|undefined;
     let deterministic:ToolCall|undefined;
-    let clearConfirmation=false;
+    let viewRequested=claimed.event.type==='text'&&listViewRequest(claimed.event.text);
+    let clearConfirmation=false,changeWholeList=false;
     if(claimed.event.type==='retry_voice'){
       const retry=claimed.event;
       if(retry.expectedVersion!==claimed.state.version||!claimed.displayedActions.some(a=>digest(a)===digest(retry)))failure='That retry belongs to an earlier question. Please send your current request again.';
       else claimed.event={id:retry.id,type:'voice',mediaId:retry.mediaId};
     }
-    if(!failure)try {deterministic=this.knownAction(claimed);} catch(error) {failure=error instanceof Error?error.message:'Invalid callback';}
+    if(!failure)try {
+      if(viewRequested)deterministic={name:'get_draft',args:{}};
+      else if(claimed.event.type==='resolve_cart_target'){
+        const event=claimed.event,memory=claimed.memory,goal=memory?.cartEdit;
+        const target=goal?.targets.find(target=>target.kind===event.targetKind&&target.index===event.targetIndex);
+        if(event.expectedVersion!==claimed.state.version||claimed.state.lastRequestId||memory?.purpose!=='cart_edit'||memory.sourceVersion!==claimed.state.version||memory.id!==event.memoryId||claimed.bindingId!==memory.id||!target?.candidateLineIds.includes(event.lineId)||!claimed.displayedActions.some(action=>digest(action)===digest(event)))throw new ToolError('Use the latest item choices. Your list is kept.','stale_question');
+        interpretation=resumeCartTarget(claimed,{kind:event.targetKind,index:event.targetIndex,lineId:event.lineId});
+      }else if(claimed.event.type==='resolve_keep_target'){
+        const event=claimed.event;
+        if(event.expectedVersion!==claimed.state.version||claimed.memory?.purpose!=='cart_correction'||claimed.memory.id!==event.memoryId||claimed.bindingId!==claimed.memory.id||!claimed.displayedActions.some(action=>digest(action)===digest(event)))throw new ToolError('Use the latest keep-item choices. Your list is kept.','stale_question');
+        interpretation=resumeKeepCorrection(claimed,{targetIndex:event.targetIndex,lineId:event.lineId});
+      }else deterministic=this.knownAction(claimed);
+    } catch(error) {failure=error instanceof Error?error.message:'Invalid callback';}
     const quoteRecheck=claimed.event.type==='text'&&isRecheck(claimed.event.text)&&claimed.memory?.purpose==='quote'&&claimed.memory.sourceVersion===claimed.state.version;
     if(quoteRecheck)interpretation={operations:[],next:'price',priceQuery:claimed.memory!.queries[0],priceQuantity:claimed.memory!.quoteQuantity,priceUnit:claimed.memory!.quoteUnit};
     if(!deterministic&&claimed.event.type==='text'&&submissionIntent(claimed.event.text))deterministic=this.knownAction({...claimed,event:{...claimed.event,text:'send it'}});
     let social=claimed.event.type==='text'?socialIntent(claimed.event.text):undefined;
+    if(claimed.state.lastRequestId&&!claimed.state.pending&&claimed.event.type==='text'&&acknowledgementOnly(claimed.event.text))social='thanks';
     if(claimed.event.type==='text'&&negatedSpokenClear(claimed.event.text))social='pause';
     if(social==='handoff')deterministic={name:'request_store_assistance',args:{expectedVersion:claimed.state.version}};
     const inquiry=claimed.event.type==='text'?shopInquiry(claimed.event.text):undefined;
     if(inquiry&&!deterministic)interpretation=inquiry;
+    if(claimed.state.lastRequestId&&claimed.event.type==='text'&&(paymentClaimText(claimed.event.text)||demoPayAtShopText(claimed.event.text)))interpretation={operations:[],next:'continue'};
     if(social&&!deterministic)interpretation={operations:[],next:'continue',conversation:social};
-    if(!failure&&!deterministic&&!social&&!inquiry&&!requestedLanguage&&(claimed.event.type==='text'||claimed.event.type==='voice'||claimed.event.type==='image')) {
+    if(!failure&&!deterministic&&!social&&!inquiry&&!interpretation&&!requestedLanguage&&(claimed.event.type==='text'||claimed.event.type==='voice'||claimed.event.type==='image')) {
       try {interpretation=await this.interpret(ctx,claimed);}
       catch(error) {
         if(error instanceof DeferredRecommendation){
@@ -142,12 +200,22 @@ export class ConversationRuntime {
     }
     // A current recording is a customer channel: recognized whole commands
     // share text routing and its version, delivery and review-consent checks.
+    if(!failure&&!deterministic&&claimed.state.visualOrdering&&!claimed.state.lastRequestId&&
+      ['text','voice'].includes(claimed.event.type)&&interpretation?.understanding?.intents.includes('clear_list')&&
+      !interpretation.understanding.unresolved.includes('validation_recovery')&&
+      !negatedSpokenClear(interpretation.transcript??(claimed.event.type==='text'?claimed.event.text:''))){
+      // Model intent can offer a proposal, never authorize erasing the cart.
+      interpretation={...interpretation,operations:[],next:'continue'};clearConfirmation=true;
+    }
     if(!failure&&claimed.event.type==='voice'&&interpretation?.transcript){
       const transcript=interpretation.transcript,spokenClear=spokenClearCommand(transcript),command=spokenClear??canonicalShortcut(transcript);
+      const quote=priceInquiry(transcript);
+      if(quote&&!interpretation.operations.length){deterministic={name:'search_products',args:quote};interpretation={operations:[],next:'price',transcript,priceQuery:quote.query,priceQuantity:quote.quantity,priceUnit:quote.requestedUnit};}
       if(negatedSpokenClear(transcript))interpretation={operations:[],next:'continue',transcript,conversation:'pause'};
       social=socialIntent(transcript);
       if(social==='handoff')deterministic={name:'request_store_assistance',args:{expectedVersion:claimed.state.version}};
-      if(spokenClear&&claimed.state.visualOrdering){
+      changeWholeList=spokenWholeListChange(transcript);
+      if((spokenClear||changeWholeList)&&claimed.state.visualOrdering){
         // Speech can mishear "everything" or a negative lead-in. A clear
         // proposal always waits for a displayed, version-bound button.
         interpretation={operations:[],next:'continue',transcript,...(claimed.state.lastRequestId?{conversation:'pause' as const}:{})};
@@ -161,8 +229,13 @@ export class ConversationRuntime {
         }catch(error){failure=error instanceof Error?error.message:'Invalid spoken list control';}
       }
     }
-    if(!deterministic&&interpretation?.conversation==='handoff'&&!interpretation.operations.length)deterministic={name:'request_store_assistance',args:{expectedVersion:claimed.state.version}};
+    if(!failure&&claimed.event.type!=='image'&&(viewRequested||listViewRequest(interpretation?.transcript??'')||interpretation?.understanding?.intents.includes('view_list')&&!interpretation.operations.length)){
+      viewRequested=true;deterministic={name:'get_draft',args:{}};social=undefined;clearConfirmation=false;changeWholeList=false;
+      interpretation={operations:[],next:'continue',transcript:interpretation?.transcript};
+    }
+    if(!deterministic&&interpretation?.conversation==='handoff'&&!interpretation.operations.length&&!interpretation.understanding?.intents.includes('estimate'))deterministic={name:'request_store_assistance',args:{expectedVersion:claimed.state.version}};
     if(!failure&&!deterministic&&claimed.event.type!=='image'&&interpretation?.understanding?.intents.includes('status')&&!interpretation.operations.length)deterministic={name:'get_order_status',args:{}};
+    if(!failure&&!deterministic&&!claimed.state.lastRequestId&&claimed.state.draft.length&&!interpretation?.operations.length&&(interpretation?.understanding?.intents.includes('estimate')||interpretation?.understanding?.intents.includes('submit')))deterministic={name:'preview_order',args:{expectedVersion:claimed.state.version,allowPartial:claimed.state.allowPartialReview}};
     const explicitSend=claimed.event.type==='shopping_action'&&claimed.event.action==='finish_order'||(claimed.event.type==='text'?submissionIntent(claimed.event.text):claimed.event.type==='voice'&&!!interpretation?.transcript&&submissionIntent(interpretation.transcript));
     // A job answer during read-only exploration is still a product proposal.
     // The model cannot turn that phase into a cart write or default its amount.
@@ -172,36 +245,91 @@ export class ConversationRuntime {
       const proposal=interpretation.operations[0];
       interpretation={operations:[],next:'assist',transcript:interpretation.transcript,assistance:{rootQuery:proposal.query,queries:[proposal.query],search:proposal.search,...discoverySelection(proposal,claimed.event.type==='text'?claimed.event.text:claimed.event.type==='image'?interpretation.understanding?.observedText??'':interpretation.transcript??'',claimed.memory),question:interpretation.clarifyQuestion}};
     }
-    if(claimed.state.visualOrdering&&interpretation?.operations.length)try{interpretation={...interpretation,operations:protectQuantityEvidence(validateProductMeaningEvidence(interpretation.operations,claimed.event.type==='text'?claimed.event.text:claimed.event.type==='image'?interpretation.understanding?.observedText??'':interpretation.transcript??''),claimed.event.type==='text'?claimed.event.text:claimed.event.type==='image'?interpretation.understanding?.observedText??'':interpretation.transcript??'')};}catch(error){failure=error instanceof Error?error.message:'Product meaning could not be validated.';}
+    if(claimed.state.visualOrdering&&interpretation?.operations.length)try{const evidence=correctionDescription(claimed,interpretation,claimed.event.type==='text'?claimed.event.text:claimed.event.type==='image'?interpretation.understanding?.observedText??'':interpretation.transcript??'');interpretation={...interpretation,operations:protectQuantityEvidence(validateProductMeaningEvidence(interpretation.operations,evidence),evidence)};}catch(error){failure=error instanceof Error?error.message:'Product meaning could not be validated.';}
     if(claimed.event.type==='voice'&&interpretation?.transcript&&interpretation.operations.length===0&&interpretation.next==='continue')requestedLanguage=languageRequest(interpretation.transcript);
+    if(claimed.state.visualOrdering&&!failure&&!claimed.state.lastRequestId&&claimed.state.draft.length&&interpretation?.understanding?.intents.includes('cancel')&&!interpretation.operations.length&&!negatedSpokenClear(interpretation.transcript??(claimed.event.type==='text'?claimed.event.text:''))){
+      // Unsent-list cancellation proposes choices; it is neither deletion nor
+      // a human handover. No exact ASR spelling is needed for confirmation.
+      clearConfirmation=true;changeWholeList=!spokenClearCommand(interpretation.transcript??(claimed.event.type==='text'?claimed.event.text:''));
+      interpretation={...interpretation,conversation:undefined};social=undefined;deterministic=undefined;
+    }
     await withConversation(this.pool,ctx,async client=>{
       const controls=await client.query('SELECT c.operator_mode,s.operator_paused FROM conversations c JOIN stores s ON s.id=c.store_id WHERE c.id=$1',[ctx.conversationId]);
       if(controls.rows[0].operator_mode==='owner'||controls.rows[0].operator_paused){
         await client.query("UPDATE messages SET status='pending',claim_token=NULL,lease_until=NULL WHERE id=$1 AND claim_token=$2",[claimed.id,claimed.token]);
         return;
       }
-      const held=await client.query("SELECT id FROM messages WHERE id=$1 AND conversation_id=$2 AND status='processing' AND claim_token=$3",[claimed.id,ctx.conversationId,claimed.token]);
+      const held=await client.query("SELECT id FROM messages WHERE id=$1 AND conversation_id=$2 AND status='processing' AND claim_token=$3 AND lease_until>clock_timestamp()",[claimed.id,ctx.conversationId,claimed.token]);
       if(!held.rowCount) return; // Another worker acquired the expired lease; old result is discarded.
+      await client.query('SAVEPOINT turn_effects');
+      if(Date.now()>=claimed.deadlineAt){failure='The turn deadline was reached. Your list is retained.';failureReason='turn_deadline';}
       const current=await loadState(client,ctx);
       const inferred=claimed.state.visualOrdering&&claimed.event.type==='text'?phrasingLanguage(claimed.event.text):undefined;
       if(inferred&&!requestedLanguage&&!current.languageExplicit){current.replyLanguage=inferred;await client.query('UPDATE conversations SET reply_language=$1 WHERE id=$2',[inferred,ctx.conversationId]);}
       let newListProposal:AssistantMemory['newList'];
-      if(current.lastRequestId&&interpretation?.operations.length&&interpretation.operations.every(op=>op.kind==='add_item')){
+      const turnText=claimed.event.type==='text'?claimed.event.text:interpretation?.transcript??'';
+      if(current.lastRequestId&&['text','voice'].includes(claimed.event.type)&&['yes','confirm'].includes(canonicalShortcut(turnText))){
+        const actionable=(await client.query("SELECT id,'confirm_amendment' AS type FROM order_amendments WHERE request_id=$1 AND conversation_id=$2 AND state='proposed' UNION ALL SELECT id,'confirm_order_quote' AS type FROM order_quotes WHERE request_id=$1 AND state='offered'",[current.lastRequestId,ctx.conversationId])).rows;
+        const action=claimed.displayedActions.find(a=>['confirm_amendment','confirm_order_quote'].includes(a.type)&&'expectedVersion' in a&&a.expectedVersion===current.version&&actionable.some(row=>row.type===a.type&&row.id===('amendmentId' in a?a.amendmentId:'quoteId' in a?a.quoteId:undefined)));
+        if(action){claimed.event=action;interpretation={operations:[],next:'continue'};}
+      }
+      let postOrderChange=!!current.lastRequestId&&!explicitNewOrder(turnText)&&(amendmentIntent(turnText)||!!interpretation?.operations.some(op=>!['add_item','set_fulfillment'].includes(op.kind)));
+      const requestedItems=interpretation?.operations.length&&interpretation.operations.every(op=>op.kind==='add_item');
+      const chosenExisting=claimed.memory?.purpose==='list_choice'&&claimed.memory.orderTarget==='existing'&&claimed.memory.sourceVersion===current.version;
+      if(current.visualOrdering&&current.lastRequestId&&requestedItems)postOrderChange=!!chosenExisting&&!explicitNewOrder(turnText);
+      if(!failure&&['text','voice'].includes(claimed.event.type)&&current.lastRequestId&&!current.pending&&(acknowledgementOnly(turnText)||interpretation?.conversation==='unrelated'&&interpretation.understanding?.intents.every(i=>['unrelated','thanks'].includes(i)))&&!interpretation?.operations.length&&!requestedLanguage){
+        const proposed=await client.query("SELECT id FROM order_amendments WHERE conversation_id=$1 AND state='proposed' LIMIT 1",[ctx.conversationId]);
+        if(!proposed.rowCount){await client.query("UPDATE messages SET status='processed',reply_decision=$3,claim_token=NULL,lease_until=NULL WHERE id=$1 AND claim_token=$2",[claimed.id,claimed.token,acknowledgementOnly(turnText)?'acknowledgement_only':'unrelated']);return;}
+      }
+
+      if(current.lastRequestId&&!postOrderChange&&interpretation?.operations.length&&interpretation.operations.every(op=>op.kind==='add_item')){
         const items=interpretation.operations as NonNullable<AssistantMemory['newList']>;
-        if(items.length>1)newListProposal=items;
+        if(current.visualOrdering||items.length>1||explicitNewOrder(turnText))newListProposal=items;
         else{
           const first=items[0];
           interpretation={operations:[],next:'assist',transcript:interpretation.transcript,assistance:{rootQuery:first.query,queries:[first.query],search:first.search,...(first.quantity!==null?{quantity:first.quantity}:{}),requestedUnit:first.requestedUnit}};
         }
       }
       if(claimed.event.type==='voice'&&interpretation?.transcript)await client.query('UPDATE messages SET text=$1 WHERE id=$2 AND conversation_id=$3',[interpretation.transcript,claimed.id,ctx.conversationId]);
-      if(failure)failure=voiceFailureKind==='unreadable'?say(current,'I could not make out the recording. Please record it again or type your request.','குரல் தெளிவாகப் புரியவில்லை.\nமீண்டும் voice அனுப்புங்க அல்லது text-ல சொல்லுங்க.','Voice theliva puriyala. Marubadi voice anuppunga illa text-la sollunga.'):voiceFailureKind==='processing'?say(current,'Could not process that voice message.\nYour list is kept.\nTry again or send text.','குரல் செய்தியைச் செயலாக்க முடியவில்லை.\nபட்டியல் அப்படியே இருக்கு.\nமீண்டும் முயலுங்க அல்லது text அனுப்புங்க.','Voice message-ai process panna mudiyala.\nList appadiye irukku.\nMarubadi try pannunga illa text anuppunga.'):customerError(failure,current);
+      if(failure)failure=voiceFailureKind==='unreadable'?customerCopy('voiceUnclear',current):voiceFailureKind==='processing'?customerCopy('voiceProcessing',current):customerError(failure,current);
+      const cartBefore=structuredClone(current);let cartMutated=false;
+      const retainedCartGoal=claimed.memory&&['cart_edit','cart_correction'].includes(claimed.memory.purpose)&&claimed.memory.sourceVersion===current.version&&!current.lastRequestId?claimed.memory:undefined;
       let replyRequest:import('../../../../packages/contracts/index.js').OrderRequest|null|undefined;
       let message=failure??'';let rich:RichReply={...plainReply(message),...(failure?{stage:'error' as const,clarificationReason:failureReason??(claimed.event.type==='voice'?'voice_processing_failed':'processing_failed')}:{})};
       // The savepoint ensures invalid dependent operations cannot partially mutate the draft.
       await client.query('SAVEPOINT turn_actions');
       try {
-        if(requestedLanguage&&!failure) {
+
+        if(!failure&&viewRequested){
+          const result=await this.tools.invokeInTransaction(client,ctx,{name:'get_draft',args:{}},claimed.id);
+          rich=visualListView(result.state??current);message=rich.text;
+        } else if(!failure&&current.lastRequestId&&(claimed.event.type==='confirm_amendment'||claimed.event.type==='discard_amendment')){
+          if(!claimed.displayedActions.some(a=>digest(a)===digest(claimed.event)))throw new ToolError('Use the displayed amendment choices.','stale_confirmation');
+          if(claimed.event.type==='confirm_amendment'&&!await actionDeliveryReady(client,ctx.conversationId,claimed.event.id,true))throw new ToolError('Wait for the complete amendment review.','review_incomplete');
+          rich=await customerAmendmentAction(client,ctx,current,claimed.event,claimed.id);message=rich.text;
+        } else if(!failure&&current.lastRequestId&&claimed.event.type==='confirm_order_quote'){
+          if(!claimed.displayedActions.some(a=>digest(a)===digest(claimed.event))||!await actionDeliveryReady(client,ctx.conversationId,claimed.event.id,true))throw new ToolError('Use the complete current quote.','stale_confirmation');
+          const approved=await acceptOrderQuote(client,ctx,current,claimed.event,claimed.id);
+          rich={...plainReply(formatMoney(approved.totalPaise)+'\n'+say(current,'Your final bill is approved. The shop can now confirm and prepare your order.','Bill confirm ஆகியிருக்கு.\nகடை order-ஐ check பண்ணி தயார்படுத்தும்.','Bill confirm aagiyirukku.\nKadai order-ai check panni thayaarpaduththum.')),readOnly:true};message=rich.text;
+        } else if(!failure&&current.lastRequestId&&claimed.event.type==='show_payment_qr'){
+          if(claimed.event.expectedVersion!==current.version||claimed.event.requestId!==current.lastRequestId||!claimed.displayedActions.some(a=>digest(a)===digest(claimed.event)))throw new ToolError('Use the latest order payment button.','stale_confirmation');
+          rich=(this.options.advance?await upiAdvanceReply(client,ctx,current,this.options.advance.hostname,{demoPayAtShop:this.options.advance.demoPayAtShop}):null)??{...plainReply(say(current,'This order has no pending advance. Ask for its current status.','இந்த order-க்கு advance pending இல்ல. Order status பாருங்க.','Intha order-ku advance pending illa. Order status paarunga.')),readOnly:true};message=rich.text;
+        } else if(!failure&&current.lastRequestId&&(claimed.event.type==='pay_at_shop'||demoPayAtShopText(turnText))){
+          if(claimed.event.type==='pay_at_shop'&&(claimed.event.expectedVersion!==current.version||claimed.event.requestId!==current.lastRequestId||!claimed.displayedActions.some(a=>digest(a)===digest(claimed.event))))throw new ToolError('Use the latest payment choice.','stale_confirmation');
+          await chooseDemoPayAtShop(client,ctx,current.lastRequestId,!!this.options.advance?.demoPayAtShop);
+          rich={...plainReply(customerCopy('demoPayAtShop',current)),readOnly:true};message=rich.text;
+        } else if(!failure&&current.lastRequestId&&(claimed.event.type==='payment_claim'||paymentClaimText(turnText))){
+          if(claimed.event.type==='payment_claim'&&(claimed.event.expectedVersion!==current.version||claimed.event.requestId!==current.lastRequestId||!claimed.displayedActions.some(a=>digest(a)===digest(claimed.event))))throw new ToolError('Use the latest payment choice.','stale_confirmation');
+          const paymentState=await claimUpiAdvance(client,ctx,current.lastRequestId);
+          const paymentText=['verified','refund_pending','refunded'].includes(paymentState)?say(current,paymentState==='verified'?'The shop has already verified your ₹10 advance.':paymentState==='refunded'?'The shop has recorded your ₹10 refund.':'Your advance was received for a closed order. The shop needs to arrange its refund.',paymentState==='verified'?'₹10 advance வந்திருக்குனு கடை confirm பண்ணியிருக்கு.':paymentState==='refunded'?'₹10 refund complete ஆகியிருக்குனு கடை confirm பண்ணியிருக்கு.':'இந்த order முடிஞ்சிருக்கு. வந்த ₹10 advance-ஐ கடை refund பண்ணணும்.','Advance status-ai kadai confirm panniyirukku.'):customerCopy('paymentClaimed',current);
+          rich={...plainReply(paymentState==='pay_at_shop'?customerCopy('demoPayAtShop',current):paymentText),readOnly:true};message=rich.text;
+        } else if(!failure&&current.visualOrdering&&current.lastRequestId&&interpretation?.conversation==='greeting'&&!interpretation.operations.length){
+          rich=claimed.memory?.purpose==='list_choice'&&claimed.memory.sourceVersion!==current.version?await refreshOrderListChoice(client,ctx,current,claimed.memory):orderListChoice(current,await canAddToOrder(client,ctx,current),claimed.memory?.purpose==='list_choice'?claimed.memory.newList?.length:undefined);message=rich.text;
+        } else if(!failure&&current.lastRequestId&&(postOrderChange||cancellationIntent(turnText))){
+          if(!interpretation?.operations.length&&!cancellationIntent(turnText))rich={...plainReply(customerCopy('amendmentTarget',current)),readOnly:true};
+          else rich=await proposeAmendment(client,ctx,current,claimed.id,interpretation?.operations??[],this.tools,cancellationIntent(turnText));
+          message=rich.text;
+        } else if(requestedLanguage&&!failure) {
           current.replyLanguage=requestedLanguage;current.languageExplicit=true;
           await client.query('UPDATE conversations SET reply_language=$1,reply_language_explicit=true WHERE id=$2 AND store_id=$3 AND actor=$4',[requestedLanguage,ctx.conversationId,ctx.storeId,ctx.actor]);
           rich=presentReply({state:current,message:''},current);
@@ -209,10 +337,19 @@ export class ConversationRuntime {
         } else if(!failure&&clearConfirmation){
           await client.query('UPDATE conversations SET pending=NULL,product_review=NULL,assistant_memory=NULL,editing_line_id=NULL,version=version+1 WHERE id=$1',[ctx.conversationId]);
           current.pending=null;current.productReview=null;current.editingLineId=null;current.version++;
-          rich={...plainReply(say(current,`I heard “clear the whole list.” Remove all ${current.draft.length} items? Nothing has been sent.`,`“முழு பட்டியலையும் காலி செய்” என்று கேட்டேன். ${current.draft.length} பொருட்களையும் நீக்கவா? ஆர்டர் அனுப்பவில்லை.`,`“Muzhu list-ai clear pannu” nu ketten. ${current.draft.length} porutkalaiyum neekkava? Order anuppala.`)),stage:'identify',clarificationReason:'intent_clarification',buttons:[shoppingButton(current,'confirm_clear',say(current,'Clear all items','எல்லாம் நீக்கு','Ellam neekku')),shoppingButton(current,'keep_list',say(current,'Keep my list','பட்டியல் வை','List vaikkavum'))]};message=rich.text;
+          rich={...plainReply(changeWholeList?say(current,'Do you want to edit items or clear the whole saved list? Your list stays until you choose.','பொருட்களை மாற்றவா, முழு பட்டியலை காலி செய்யவா? நீங்கள் தேர்வு செய்யும் வரை பட்டியல் அப்படியே இருக்கும்.','Porutkalai maaththava, muzhu list-ai clear pannava? Neenga choose pannum varai list appadiye irukkum.'):say(current,`I heard “clear the whole list.” Remove all ${current.draft.length} items? Nothing has been sent.`,`“முழு பட்டியலையும் காலி செய்” என்று கேட்டேன். ${current.draft.length} பொருட்களையும் நீக்கவா? ஆர்டர் அனுப்பவில்லை.`,`“Muzhu list-ai clear pannu” nu ketten. ${current.draft.length} porutkalaiyum neekkava? Order anuppala.`)),stage:'identify',clarificationReason:'intent_clarification',buttons:[...(changeWholeList?[shoppingButton(current,'edit_list',say(current,'Edit items','பொருட்களை மாற்று','Porutkalai maathu'))]:[]),shoppingButton(current,'confirm_clear',say(current,'Clear all items','எல்லாம் நீக்கு','Ellam neekku')),shoppingButton(current,'keep_list',say(current,'Keep my list','பட்டியல் வை','List vaikkavum'))]};message=rich.text;
         } else if(!failure&&current.visualOrdering&&current.draft.length&&!current.lastRequestId&&!deterministic&&interpretation?.operations.length===0&&interpretation?.conversation==='greeting'){
           rich=returningReply(current);message=rich.text;
         } else if(!failure&&newListProposal){
+          if(current.visualOrdering){
+            const limit=this.options.maxDraftLines??50;
+            if(newListProposal.length>limit)rich={...plainReply(say(current,`Send at most ${limit} items per list. Your earlier order is kept.`,`ஒரு list-ல ${limit} items வரைக்கும் சொல்லுங்க. முந்தைய order அப்படியே இருக்கு.`,`Oru list-la ${limit} items varaikkum sollunga. Munthaya order appadiye irukku.`)),readOnly:true,stage:'error',clarificationReason:'draft_limit'};
+            else{
+            await client.query('UPDATE conversations SET version=version+1 WHERE id=$1',[ctx.conversationId]);current.version++;
+            await saveAssistantMemory(client,ctx,{purpose:'list_choice',orderTarget:'choose',sourceMessageId:claimed.id,newList:newListProposal,queries:newListProposal.slice(0,3).map(item=>item.query),lineId:null,sourceVersion:current.version,observations:[]});
+            rich=orderListChoice(current,await canAddToOrder(client,ctx,current),newListProposal.length);
+            }
+          }else{
           const observations:CatalogObservation[]=[];
           for(const [index,item] of newListProposal.slice(0,3).entries())observations.push(...await observeCatalog(client,ctx,this.tools,[item.query],`${claimed.id}:new-list-options:${index}`,item.search));
           await saveAssistantMemory(client,ctx,{purpose:'discovery',queries:newListProposal.map(item=>item.query).slice(0,3),lineId:null,sourceVersion:current.version,observations,newList:newListProposal});
@@ -228,13 +365,26 @@ export class ConversationRuntime {
             return {...card,quantityLabel:item?.quantity?say(current,`Requested: ${item.quantity} ${item.requestedUnit??'units'}`,`கேட்டது: ${item.quantity} ${unitName(item.requestedUnit??'unit',current,item.quantity)}`,`Kettathu: ${item.quantity} ${unitName(item.requestedUnit??'unit',current,item.quantity)}`):undefined,...(!item?{label:rich.buttons![0].label,action:rich.buttons![0].event}:{} )};
           });
           rich={...rich,...(cards?.length?{kind:'product_choices' as const,cards,presentation:cards.length===1?'single_product' as const:cards.every(c=>c.product.imageUrl)?'carousel_preview' as const:'list' as const}:{}),text:(question?question+'\n':'')+rich.text};
+          }
           message=rich.text;
         } else if(!failure&&(claimed.event.type==='edit_item'||claimed.event.type==='shopping_action'&&!['status','handoff','finish_order'].includes(claimed.event.action)||social==='handoff'&&!deterministic||(claimed.event.type==='text'&&canonicalShortcut(claimed.event.text)==='edit my list'||claimed.event.type==='voice'&&canonicalShortcut(interpretation?.transcript??'')==='edit my list'))) {
           const event=claimed.event.type==='edit_item'||claimed.event.type==='shopping_action'?claimed.event:{id:claimed.id,type:'shopping_action' as const,action:social==='handoff'?'handoff' as const:'edit_list' as const,expectedVersion:claimed.state.version};
-          const proposed=event.type==='shopping_action'&&event.action==='new_list'&&current.lastRequestId&&claimed.memory?.sourceVersion===current.version?claimed.memory.newList:undefined;
+          const choice=event.type==='shopping_action'&&['new_list','continue_list'].includes(event.action)&&current.lastRequestId&&claimed.memory?.purpose==='list_choice';
+          if(choice&&(claimed.memory!.sourceVersion!==current.version||claimed.bindingId!==claimed.memory!.id||!claimed.displayedActions.some(action=>digest(action)===digest(event))))throw new ToolError('Use the latest list choices. Your request is saved.','stale_question');
+          const proposed=event.type==='shopping_action'&&(event.action==='new_list'||choice&&event.action==='continue_list')&&current.lastRequestId&&claimed.memory?.sourceVersion===current.version?claimed.memory.newList:undefined;
           if(proposed&&(!claimed.memory||claimed.bindingId!==claimed.memory.id||!claimed.displayedActions.some(action=>digest(action)===digest(event))))throw new ToolError('Use the latest new-list button.','stale_question');
-          if(event.type==='shopping_action'&&event.action==='next_item'&&!claimed.displayedActions.some(action=>digest(action)===digest(event)))throw new ToolError('Use the displayed next-item button.','stale_question');
+          if(event.type==='shopping_action'&&['next_item','view_products','edit_quote'].includes(event.action)&&!claimed.displayedActions.some(action=>digest(action)===digest(event)))throw new ToolError('Use the displayed next-item button.','stale_question');
           if(event.type==='shopping_action'&&event.action==='confirm_clear'&&!claimed.displayedActions.some(action=>digest(action)===digest(event)))throw new ToolError('Use the current clear-list confirmation. Your list is unchanged.','stale_confirmation');
+          if(event.type==='shopping_action'&&event.action==='continue_list'&&current.visualOrdering&&current.lastRequestId){
+            if(!await canAddToOrder(client,ctx,current))rich=orderListChoice(current,false,proposed?.length);
+            else if(proposed&&claimed.memory?.sourceMessageId){
+              rich=await proposeAmendment(client,ctx,current,claimed.memory.sourceMessageId,proposed,this.tools);
+              await saveAssistantMemory(client,ctx,null);
+            }else{
+              await saveAssistantMemory(client,ctx,{purpose:'list_choice',orderTarget:'existing',queries:['existing order'],lineId:null,sourceVersion:current.version,observations:[]});
+              rich=askOrderItems(current);
+            }
+          }else{
           rich=await handleShoppingAction(client,ctx,current,event,claimed.catalogMap);
           if(event.type==='shopping_action'&&event.action==='continue_list'){const next=await this.tools.invokeInTransaction(client,ctx,{name:'preview_order',args:{expectedVersion:current.version}},claimed.id+':continue');rich=presentReply(next,next.state!);}
           if(proposed){
@@ -242,6 +392,7 @@ export class ConversationRuntime {
             const changed=await this.tools.invokeInTransaction(client,ctx,{name:'apply_draft_changes',args:{expectedVersion:state.version,operations:proposed}},claimed.id+':new-list');
             const reviewed=await this.tools.invokeInTransaction(client,ctx,{name:'preview_order',args:{expectedVersion:changed.state!.version}},claimed.id+':new-list-preview');
             rich=presentReply(reviewed,reviewed.state!);
+          }
           }
           message=rich.text;
         } else if(!failure) {
@@ -271,8 +422,8 @@ export class ConversationRuntime {
             Object.assign(current,await loadState(client,ctx));
             deterministic={...deterministic,args:{...deterministic.args,operations,expectedVersion:current.version}};
           }
-          const invoke=async(call:ToolCall)=>{if(current.visualOrdering&&(call.name==='submit_order_request'||call.name==='confirm_product_choices'&&current.pending?.kind==='products'&&current.pending.completeReview)){const binding=call.name==='submit_order_request'?call.args.reviewId:call.args.batchId;if(!await reviewDeliveryReady(client,ctx.conversationId,binding))throw new ToolError('All review images must finish sending before approval. Please ask to review again.','review_incomplete');}
-          return this.tools.invokeInTransaction(client,{...ctx,...(call.name==='submit_order_request'&&(deterministic?.name==='submit_order_request'||explicitSend&&deterministic?.name==='confirm_product_choices')?{consentReviewId:call.args.reviewId}:{}),...(call.name==='confirm_product_choices'&&deterministic?.name==='confirm_product_choices'?{consentProductBatchId:call.args.batchId}:{}),...(selectedCatalogSku?{selectedCatalogSku,selectedCatalogProduct}:{})},call,claimed.id);};
+          const invoke=async(call:ToolCall)=>{if(current.visualOrdering&&(call.name==='submit_order_request'||call.name==='confirm_product_choices'&&current.pending?.kind==='products'&&(current.pending.completeReview||claimed.event.type!=='select_product'))){const binding=call.name==='submit_order_request'?call.args.reviewId:call.args.batchId;if(!await reviewDeliveryReady(client,ctx.conversationId,binding,claimed.event.type==='confirm'||claimed.event.type==='confirm_products',claimed.event.type==='confirm'||claimed.event.type==='confirm_products'?claimed.event.id:undefined))throw new ToolError('All review parts must be delivered before approval. Please ask to review again.','review_incomplete');}
+          const outcome=await this.tools.invokeInTransaction(client,{...ctx,...(call.name==='submit_order_request'&&(deterministic?.name==='submit_order_request'||explicitSend&&deterministic?.name==='confirm_product_choices')?{consentReviewId:call.args.reviewId}:{}),...(call.name==='confirm_product_choices'&&deterministic?.name==='confirm_product_choices'?{consentProductBatchId:call.args.batchId}:{}),...(selectedCatalogSku?{selectedCatalogSku,selectedCatalogProduct}:{})},call,claimed.id);if(call.name==='apply_draft_changes')cartMutated=true;return outcome;};
           let result:ToolResult;
           let assistance:CatalogObservation[]|undefined;
           let assistanceLineId:string|undefined;let assistanceBindingId:string|undefined;
@@ -290,18 +441,16 @@ export class ConversationRuntime {
             assistanceBindingId=await saveAssistantMemory(client,ctx,queries.length?{purpose:assistanceLineId?'pending':'discovery',queries,lineId:assistanceLineId??null,sourceVersion:current.version,requestedQuantity:rechecking?claimed.memory?.requestedQuantity:interpretation?.assistance?.quantity,requestedUnit:rechecking?claimed.memory?.requestedUnit:interpretation?.assistance?.requestedUnit,observations:assistance}:null);
           } else if(deterministic) {
             result=await invoke(deterministic);
-            if(deterministic.name==='confirm_product_choices'||deterministic.name==='apply_draft_changes'&&(current.requireProductConfirmation||claimed.event.type==='select_candidate'||claimed.event.type==='choose_product'||(claimed.event.type==='text'&&claimed.state.pending?.kind==='question'))) result=await invoke({name:'preview_order',args:{expectedVersion:result.state!.version}});
-            if(explicitSend&&deterministic.name==='confirm_product_choices'){
-              const reviewed=result.state!;
-              if(reviewed.pending?.kind==='review')result=await invoke({name:'submit_order_request',args:{reviewId:reviewed.pending.id}});
-              else if(reviewed.pending?.kind==='question')result=await invoke({name:'request_store_assistance',args:{expectedVersion:reviewed.version}});
-            }
+            if(deterministic.name==='confirm_product_choices'||deterministic.name==='apply_draft_changes'&&(current.requireProductConfirmation||claimed.event.type==='select_candidate'||claimed.event.type==='choose_product'||(claimed.event.type==='text'&&claimed.state.pending?.kind==='question'))) result=await invoke({name:'preview_order',args:{expectedVersion:result.state!.version,...(deterministic.name==='confirm_product_choices'&&current.allowPartialReview&&(claimed.event.type==='confirm_products'||claimed.event.type==='text')?{allowPartial:true}:{})}});
+            // Product identity approval presents the bill. Submission requires
+            // another explicit consent bound to that current bill.
+
           }
           else if(interpretation) {
             if(interpretation.next==='price') result=await invoke({name:'search_products',args:{query:interpretation.priceQuery!,quantity:interpretation.priceQuantity,requestedUnit:interpretation.priceUnit}});
             else {
               let state=current;
-              if(state.editingLineId&&interpretation.operations.length){
+              if(state.editingLineId&&interpretation.operations.length&&!interpretation.understanding?.keepOnly){
                 const lineId=state.editingLineId;
                 interpretation={...interpretation,operations:interpretation.operations.map(op=>{
                   if(op.kind==='add_item')return {kind:'resolve_line' as const,lineId,query:op.query,...(op.quantity!==null?{quantity:op.quantity}:{}),requestedUnit:op.requestedUnit,search:op.search,packSize:op.packSize,productMeasures:op.productMeasures,productIntent:op.productIntent,requestedAmount:op.requestedAmount,supportingPhrase:op.supportingPhrase};
@@ -309,8 +458,16 @@ export class ConversationRuntime {
                   throw new ToolError('Please change only the selected item. Your other items are unchanged.');
                 })};
               }
-              const description=claimed.event.type==='text'?claimed.event.text:claimed.event.type==='image'?interpretation.understanding?.observedText??'':interpretation.transcript??'';
-              interpretation={...interpretation,operations:bindExplicitCorrection(interpretation.operations,state,description)};
+              const description=correctionDescription(claimed,interpretation,claimed.event.type==='text'?claimed.event.text:claimed.event.type==='image'?interpretation.understanding?.observedText??'':interpretation.transcript??'');
+              if(interpretation.understanding?.keepOnly){
+                const compiled=compileKeepOnly(interpretation.understanding.keepOnly,state,description,claimed.memory?.correction?.selections);
+                const removes=interpretation.operations.filter(op=>op.kind==='remove_item');
+                if(compiled.question&&interpretation.operations.length||!compiled.question&&digest(removes)!==digest(compiled.operations))throw new ToolError('The linked keep correction needs current targets. Your list is kept.','correction_target');
+              }
+              // The stored goal was recompiled against a validated, displayed
+              // target choice. Re-parsing its formerly ambiguous noun would
+              // discard that explicit selection and ask the same question again.
+              if(!claimed.cartEditResumed)interpretation={...interpretation,operations:bindExplicitCorrection(interpretation.operations,state,description)};
               interpretation={...interpretation,operations:interpretation.operations.map(op=>retainRefinementIdentity(op,state,description,claimed.catalogMap))};
               if((state.pending?.kind==='question'||state.pending?.kind==='products')&&interpretation.operations.some(op=>op.kind==='remove_item')){
                 const removals=interpretation.operations.filter(op=>op.kind==='remove_item');
@@ -331,14 +488,17 @@ export class ConversationRuntime {
             if(result.products) {
               const query=deterministic?.name==='search_products'||deterministic?.name==='discover_products'?deterministic.args.query:interpretation?.priceQuery;
               const quantity=deterministic?.name==='search_products'?deterministic.args.quantity:interpretation?.priceQuantity,unit=deterministic?.name==='search_products'?deterministic.args.requestedUnit:interpretation?.priceUnit;
-              if(query)result.discoveryBindingId=await saveAssistantMemory(client,ctx,{purpose:!!result.discovery||claimed.event.type==='browse'||interpretation?.conversation==='browse'?'discovery':'quote',queries:[query],lineId:null,sourceVersion:current.version,quoteQuantity:quantity,quoteUnit:unit,...(deterministic?.name==='discover_products'&&claimed.memory?.sourceVersion===current.version?{requestedQuantity:claimed.memory.requestedQuantity,requestedUnit:claimed.memory.requestedUnit}:{}),observations:[{tool:result.discovery?'discover_products':'search_products',query,products:result.products,totalCount:result.totalCount??result.products.length,discovery:result.discovery}]});
+              // A price interruption must not erase the current version-bound edit.
+              const preserveGoal=retainedCartGoal&&!interpretation?.operations.length&&(interpretation?.next==='price'||deterministic?.name==='search_products');
+              if(query&&!preserveGoal)result.discoveryBindingId=await saveAssistantMemory(client,ctx,{purpose:!!result.discovery||claimed.event.type==='browse'||interpretation?.conversation==='browse'?'discovery':'quote',queries:[query],lineId:null,sourceVersion:current.version,quoteQuantity:quantity,quoteUnit:unit,...(deterministic?.name==='discover_products'&&claimed.memory?.sourceVersion===current.version?{requestedQuantity:claimed.memory.requestedQuantity,requestedUnit:claimed.memory.requestedUnit}:{}),observations:[{tool:result.discovery?'discover_products':'search_products',query,products:result.products,totalCount:result.totalCount??result.products.length,discovery:result.discovery}]});
             }
             rich=presentReply(result,result.state??current,interpretation,claimed.event);replyRequest=result.request;if(result.request&&(deterministic?.name==='submit_order_request'||explicitSend&&deterministic?.name==='confirm_product_choices'))rich.stage='submitted';
             if(claimed.event.type==='text'&&canonicalShortcut(claimed.event.text)==='yes'&&deterministic?.name==='get_draft'&&claimed.memory?.sourceVersion===current.version) {
               if(claimed.memory.purpose==='quote')rich=plainReply(say(current,'That was a price check; nothing has been added. Use “Add to my list” or tell me which item and quantity you want.','அது விலை விவரம் மட்டுமே; பொருள் சேர்க்கவில்லை. “பட்டியலில் சேர்” என்பதைத் தேர்வு செய்யுங்கள் அல்லது பொருளையும் எண்ணிக்கையையும் சொல்லுங்கள்.','Athu price detail mattum; porul serkkala. “List-la seru” choose pannunga illa porulaiyum quantity-aiyum sollunga.'));
               else if(claimed.memory.observations.flatMap(o=>o.products).length>1)rich=plainReply(say(current,'Which of the options would you like? Choose a product or tell me its name; I haven’t changed your list.','எந்தப் பொருள் வேண்டும்? படத்தில் தேர்வு செய்யுங்கள் அல்லது பெயரைச் சொல்லுங்கள். உங்கள் பட்டியலில் மாற்றம் செய்யவில்லை.','Entha porul venum? Photo-la choose pannunga illa peyarai sollunga. Unga list-la maaththam seyyala.'));
             }
-            if(result.state&&(interpretation?.operations.length||deterministic?.name==='apply_draft_changes'||deterministic?.name==='confirm_product_choices'||deterministic?.name==='preview_order')) {
+            const preserveGoal=retainedCartGoal&&!cartMutated&&result.state?.version===cartBefore.version&&digest(result.state.draft)===digest(cartBefore.draft);
+            if(result.state&&!preserveGoal&&(interpretation?.operations.length||deterministic?.name==='apply_draft_changes'||deterministic?.name==='confirm_product_choices'||deterministic?.name==='preview_order')) {
               const line=pendingItem(result.state);
               if(line) {
                 const queries=[line.query??line.name],observations=await observeCatalog(client,ctx,this.tools,queries,`${claimed.id}:remember`);
@@ -348,8 +508,13 @@ export class ConversationRuntime {
           }
           if((interpretation?.next==='price'||deterministic?.name==='search_products')&&result.products?.length===1){
             const p=result.products[0],q=result.quote;
-            rich.contextLines=[q?say(current,`Estimate: ${q.quantity} ${q.unit} = ${formatMoney(q.totalPaise)}.`,`${q.quantity} ${unitName(q.unit,current,q.quantity)}: ${formatMoney(q.totalPaise)}.`,`${q.quantity} ${q.unit}: ${formatMoney(q.totalPaise)}.`):say(current,`${p.name}: ${formatMoney(p.pricePaise)} per ${p.unit}. The shop must confirm the requested amount and price.`,`${formatMoney(p.pricePaise)} / ${unitName(p.unit,current)}. கேட்ட அளவுக்கான விலையை கடை உறுதி செய்யணும்.`,`${formatMoney(p.pricePaise)} / ${p.unit}. Ketta alavukkaana vilayai kadai confirm pannanum.`)];
-            if(p.priceStatus==='confirm')rich.contextLines=[say(current,'The shop must confirm this product price.','இந்தப் பொருளின் விலையை கடை உறுதி செய்யணும்.','Intha porulin vilayai kadai confirm pannanum.')];
+            const price=q?rich.text:`${productName(p,current)} — ${productPriceText(p,current)} | ${productStockText(p,current)}`;
+            const requested=deterministic?.name==='search_products'?deterministic.args.quantity:interpretation?.priceQuantity;
+            // Keep a conversion warning only for a requested amount that
+            // cannot be quoted. A plain unit-price inquiry is independent of
+            // the draft's pending product or quantity question.
+            const text=!q&&requested!==undefined?rich.text:price;
+            rich=current.visualOrdering?{...plainReply(text),readOnly:true}:{...rich,readOnly:true};
           }
           if(result.state&&interpretation?.operations.some(op=>op.kind==='set_amount'||op.kind==='increment_amount')){
             const edited=interpretation.operations.filter(op=>op.kind==='set_amount'||op.kind==='increment_amount').map(op=>result.state!.draft.find(l=>l.id===op.reference)).filter((l):l is import('../../../../packages/contracts/index.js').DraftLine=>!!l);
@@ -364,8 +529,9 @@ export class ConversationRuntime {
         }
         await client.query('RELEASE SAVEPOINT turn_actions');
       } catch(error) {
-        await client.query('ROLLBACK TO SAVEPOINT turn_actions');
+        await client.query('ROLLBACK TO SAVEPOINT turn_actions');cartMutated=false;
         message=customerError(error instanceof Error?error.message:'Action failed. Your draft is retained.',current,error instanceof ToolError?error.code:undefined);rich={...plainReply(message),stage:'error',clarificationReason:error instanceof ToolError?error.code:'action_failed'};
+        if(current.visualOrdering&&current.lastRequestId&&error instanceof ToolError&&error.code==='stale_question'&&claimed.memory?.purpose==='list_choice')rich=await refreshOrderListChoice(client,ctx,current,claimed.memory);
         if(current.visualOrdering&&error instanceof ToolError&&['stale_confirmation','review_incomplete'].includes(error.code)){const kept=await loadState(client,ctx);if(kept.draft.length&&!kept.lastRequestId){const renewed=await this.tools.invokeInTransaction(client,ctx,{name:'preview_order',args:{expectedVersion:kept.version}},claimed.id+':fresh-review');rich=presentReply(renewed,renewed.state!);}}
       }
       const finalState=await loadState(client,ctx);
@@ -377,47 +543,107 @@ export class ConversationRuntime {
         if(added.length){const details=added.map(({line,quantity})=>`${quantity??''} ${line.query??line.name}`.trim()).join(', ');const retained=claimed.state.draft.every(old=>finalState.draft.some(line=>line.id===old.id));const kept=retained?say(finalState,' Your earlier items are kept.',' முந்தைய பொருட்களும் பட்டியலில் உள்ளன.',' Munthaya porutkalum list-la irukku.'):'';rich={...rich,text:say(finalState,`Added: ${details}.`,`சேர்த்திருக்கிறேன்: ${details}.`,`Serthirukken: ${details}.`)+kept+'\n\n'+rich.text};}
       }
       if(failure&&claimed.event.type==='voice'&&voiceFailureKind==='processing'){rich.buttons=[{label:say(finalState,'Try again','மீண்டும் முயல்','Marubadi try'),event:{id:randomUUID(),type:'retry_voice',mediaId:claimed.event.mediaId,expectedVersion:finalState.version}},shoppingButton(finalState,'handoff',say(finalState,'Talk to shop','கடையிடம் பேசு','Kadaiyila pesu'))];}
-      if(!failure&&!deterministic&&interpretation?.clarifyQuestion&&!interpretation.operations.length&&rich.stage!=='identify'&&rich.kind!=='product_choices'){const q=safeQuestion(interpretation.clarifyQuestion,finalState);if(q)rich={...plainReply(q),stage:'identify',clarificationReason:'intent_clarification'};}
+      if(!failure&&!deterministic&&interpretation?.clarifyQuestion&&!interpretation.operations.length&&rich.stage!=='identify'&&rich.kind!=='product_choices'){const q=safeQuestion(interpretation.clarifyQuestion,finalState,interpretation.transcript??(claimed.event.type==='text'?claimed.event.text:''));if(q)rich={...plainReply(q),stage:'identify',clarificationReason:'intent_clarification'};}
       if(interpretation?.understanding?.inputKind==='handwritten_list'){rich={...rich,contextLines:[say(finalState,'I read your list. Please check every item, including lines marked for shop checking.','உங்கள் பட்டியலைப் படித்தேன். கடை சரிபார்க்க வேண்டிய வரிகள் உட்பட எல்லாப் பொருட்களையும் சரிபாருங்கள்.','Unga list-ai padithen. Kadai check panna vendiya varigal utpada ella porutkalaiyum check pannunga.'),...rich.contextLines??[]]};}
       if(finalState.visualOrdering&&interpretation?.shopQuestions?.length)rich.contextLines=[shopAnswers(finalState,interpretation.shopQuestions),...rich.contextLines??[]];
-      const unclearTarget=!failure&&interpretation?.understanding?.unresolved.includes('cart_target')&&!finalState.lastRequestId;
-      if(finalState.visualOrdering&&!failure&&!rich.handoffRequested&&!finalState.lastRequestId&&!clearConfirmation){
-        const selected=claimed.event.type==='select_product'?finalState.draft.find(l=>l.id===(claimed.event as Extract<SimulatorEvent,{type:'select_product'}>).lineId):undefined;
-        if(selected)rich.contextLines=[say(finalState,`Selected: ${lineName(selected,finalState)}${selected.quantity!==null?` · ${selected.quantity} ${unitName(selected.unit??'unit',finalState,selected.quantity)}`:''}.`,`${lineName(selected,finalState)} தேர்வு செய்யப்பட்டது${selected.quantity!==null?` · ${selected.quantity} ${unitName(selected.unit??'unit',finalState,selected.quantity)}`:''}.`,`${lineName(selected,finalState)} choose panniyachu${selected.quantity!==null?` · ${selected.quantity} ${unitName(selected.unit??'unit',finalState,selected.quantity)}`:''}.`),...rich.contextLines??[]];
-        if(!interpretation?.estimateRequested)rich.contextLines=[...rich.contextLines??[],...cartProgress(finalState)];
+      if(!failure&&!interpretation?.operations.length&&(interpretation?.next==='price'||deterministic?.name==='search_products'||deterministic?.name==='discover_products'))rich.readOnly=true;
+      const unclearKeep=!failure&&interpretation?.understanding?.keepOnly&&interpretation.understanding.unresolved.includes('keep_only_target')&&!finalState.lastRequestId;
+      if(unclearKeep){
+        const description=correctionDescription(claimed,interpretation,interpretation?.transcript??(claimed.event.type==='text'?claimed.event.text:''));
+        const sameGoal=claimed.memory?.purpose==='cart_correction'&&claimed.memory.sourceVersion===finalState.version&&digest(claimed.memory.correction?.understanding.keepOnly)===digest(interpretation!.understanding!.keepOnly);
+        const selections=sameGoal?claimed.memory!.correction!.selections:[];
+        const pending=compileKeepOnly(interpretation!.understanding!.keepOnly!,finalState,description,selections);
+        // This is a declarative goal, not a deferred tool batch. Every answer
+        // recompiles it against the same version and current exact line IDs.
+        await client.query('UPDATE conversations SET pending=NULL,product_review=NULL,editing_line_id=NULL WHERE id=$1',[ctx.conversationId]);
+        finalState.pending=null;finalState.productReview=null;finalState.editingLineId=null;
+        const memoryId=await saveAssistantMemory(client,ctx,{purpose:'cart_correction',queries:interpretation!.understanding!.keepOnly!.targets.slice(0,3).map(target=>target.query),lineId:null,sourceVersion:finalState.version,observations:[],correction:{description,understanding:interpretation!.understanding!,selections}});
+        rich={...plainReply(pending.question??interpretation!.clarifyQuestion!),stage:'identify',clarificationReason:'keep_only_target',buttons:pending.choices?.slice(0,10).map(line=>({label:`${finalState.draft.findIndex(item=>item.id===line.id)+1}. ${line.quantity??'?'} × ${lineName(line,finalState)}`,event:{id:randomUUID(),type:'resolve_keep_target' as const,memoryId:memoryId!,targetIndex:pending.targetIndex!,lineId:line.id,expectedVersion:finalState.version}}))};
       }
+      const unclearTarget=!unclearKeep&&!failure&&interpretation?.understanding?.unresolved.includes('cart_target')&&!finalState.lastRequestId;
       if(unclearTarget){
         // The current turn's identity question supersedes an unrelated old
         // quantity question. A bare number must not answer that stale prompt.
         await client.query('UPDATE conversations SET pending=NULL,product_review=NULL,editing_line_id=NULL,assistant_memory=NULL,version=version+1 WHERE id=$1',[ctx.conversationId]);
         finalState.pending=null;finalState.productReview=null;finalState.editingLineId=null;finalState.version++;
+        const deferred=interpretation?.deferredCartTargets;
+        if(deferred?.length){
+          const original=interpretation!.understanding!,itemOrdinals=new Set(deferred.filter(target=>target.kind==='item').map(target=>target.index));
+          const goalUnderstanding={...original,requestedItems:original.requestedItems.filter(item=>itemOrdinals.has(item.ordinal)),proposedEdits:deferred.some(target=>target.kind==='edit')?original.proposedEdits:[],keepOnly:undefined,keepOnlyAnswer:undefined,cartTargetAnswer:undefined};
+          const description=correctionDescription(claimed,interpretation,claimed.event.type==='text'?claimed.event.text:interpretation?.transcript??'');
+          const target=deferred[0],lines=target.candidateLineIds.map(id=>finalState.draft.find(line=>line.id===id)).filter((line):line is NonNullable<typeof line>=>!!line);
+          const selections=claimed.cartEditResumed?claimed.memory?.cartEdit?.selections??[]:[];
+          const memoryId=await saveAssistantMemory(client,ctx,{purpose:'cart_edit',queries:[original.proposedEdits[target.index]?.targetQuery??original.requestedItems.find(item=>item.ordinal===target.index)?.query??'cart item'],lineId:null,sourceVersion:finalState.version,observations:[],cartEdit:{description,understanding:goalUnderstanding,targets:deferred,selections}});
+          const edit=target.kind==='edit'?original.proposedEdits[target.index]:undefined;
+          const question=edit?.kind==='remove_item'?say(finalState,'Which item should I remove?','எந்த item-ஐ remove பண்ணணும்?','Entha item-ai remove pannanum?'):say(finalState,'Which item should I change?','எந்த item-ஐ மாற்றணும்?','Entha item-ai maathanum?');
+          rich={...plainReply(question),stage:'identify',clarificationReason:'cart_edit_target',buttons:lines.slice(0,10).map(line=>({label:`${finalState.draft.findIndex(item=>item.id===line.id)+1}. ${lineName(line,finalState)}`,event:{id:randomUUID(),type:'resolve_cart_target' as const,memoryId:memoryId!,targetKind:target.kind,targetIndex:target.index,lineId:line.id,expectedVersion:finalState.version}}))};
+        }else{
         const requested=interpretation!.understanding!.requestedItems.find(item=>item.query)?.query??'';
         const words=tokens(requested).filter(word=>!/^(?:one|two|three|1|2)$/.test(word));
-        const matching=finalState.draft.filter(line=>words.length&&words.every(word=>tokens([line.query,line.name].filter(Boolean).join(' ')).includes(word)));
-        const choices=matching.length>0&&matching.length<=2?matching.map(line=>({label:lineName(line,finalState),event:{id:randomUUID(),type:'edit_item' as const,lineId:line.id,expectedVersion:finalState.version}})):[shoppingButton(finalState,'edit_list',say(finalState,'Choose list item','பொருளைத் தேர்வு செய்','Porul choose pannu')),shoppingButton(finalState,'new_list',say(finalState,'Start new list','புதிய பட்டியல்','Pudhu list'))];
-        const question=safeQuestion(interpretation?.clarifyQuestion,finalState)??say(finalState,'Which item on your list did you mean?','பட்டியலில் எந்தப் பொருளைச் சொன்னீர்கள்?','List-la entha porulai sonneenga?');
-        rich={...plainReply((interpretation!.operations.length?say(finalState,'Other clear changes are saved. ','மற்ற தெளிவான மாற்றங்கள் சேமிக்கப்பட்டன. ','Maththa thelivaana maaththangal save aachu. '):'')+question+' '+say(finalState,'Choose the item below or describe its type. Your list is kept.','கீழே தேர்வு செய்யுங்கள் அல்லது பொருளின் வகையைச் சொல்லுங்கள். பட்டியல் அப்படியே உள்ளது.','Keezhe choose pannunga illa type sollunga. List appadiye irukku.')),stage:'identify',clarificationReason:'intent_clarification',buttons:choices};
+        const currentText=interpretation?.transcript??(claimed.event.type==='text'?claimed.event.text:'');
+        const held=interpretation!.understanding!.proposedEdits.find(edit=>['set_quantity','increment_quantity'].includes(edit.kind)&&edit.quantity!==undefined&&currentText.includes(edit.sourceText)&&explicitPurchaseCount(edit.sourceText)===edit.quantity);
+        const named=namedEditLines(held?.sourceText??currentText,finalState);
+        const matching=named.length?named:finalState.draft.filter(line=>words.length&&words.every(word=>tokens([line.query,line.name].filter(Boolean).join(' ')).includes(word)));
+        const explicitTotal=!held&&/(?:மொத்தம்|\b(?:total|moththam|mottam)\b)/i.test(currentText)?explicitPurchaseCount(currentText):undefined;
+        const choices=matching.length>0&&matching.length<=2?matching.map(line=>{
+          const count=held?.kind==='set_quantity'?held.quantity:held?.kind==='increment_quantity'&&additionalMention.test(held.sourceText)&&line.quantity!==null?line.quantity+held.quantity!:explicitTotal;
+          return {label:lineName(line,finalState),event:count!==undefined&&count>0&&count<=100?{id:randomUUID(),type:'set_quantity' as const,lineId:line.id,quantity:count,expectedVersion:finalState.version}:{id:randomUUID(),type:'edit_item' as const,lineId:line.id,expectedVersion:finalState.version}};
+        }):[shoppingButton(finalState,'edit_list',say(finalState,'Choose list item','பொருளைத் தேர்வு செய்','Porul choose pannu')),shoppingButton(finalState,'new_list',say(finalState,'Start new list','புதிய பட்டியல்','Pudhu list'))];
+        const question=safeQuestion(interpretation?.clarifyQuestion,finalState,interpretation?.transcript??(claimed.event.type==='text'?claimed.event.text:''))??say(finalState,'Which item on your list did you mean?','பட்டியலில் எந்தப் பொருளைச் சொன்னீர்கள்?','List-la entha porulai sonneenga?');
+        rich={...plainReply((digest(finalState.draft)!==digest(claimed.state.draft)?say(finalState,'Other clear changes are saved. ','மற்ற தெளிவான மாற்றங்கள் சேமிக்கப்பட்டன. ','Maththa thelivaana maaththangal save aachu. '):'')+question+' '+say(finalState,'Choose the item below or describe its type. Your list is kept.','கீழே தேர்வு செய்யுங்கள் அல்லது பொருளின் வகையைச் சொல்லுங்கள். பட்டியல் அப்படியே உள்ளது.','Keezhe choose pannunga illa type sollunga. List appadiye irukku.')),stage:'identify',clarificationReason:'intent_clarification',buttons:choices};
+        }
       }
-      rich=unclearTarget||clearConfirmation?{...rich,replyLanguage:finalState.replyLanguage??'en'}:shoppingActions({...rich,replyLanguage:finalState.replyLanguage??'en'},finalState,claimed.catalogMap);
+      rich=unclearKeep||unclearTarget||clearConfirmation?{...rich,replyLanguage:finalState.replyLanguage??'en'}:shoppingActions({...rich,replyLanguage:finalState.replyLanguage??'en'},finalState,claimed.catalogMap);
       if(claimed.catalogMap)rich={...rich,storeName:claimed.catalogMap.store.name};
       if(interpretation?.understanding?.unresolved.includes('validation_recovery')&&interpretation.transcript)rich.contextLines=[say(finalState,`Heard: ${interpretation.transcript.slice(0,250)}`,`கேட்டது: ${interpretation.transcript.slice(0,250)}`,`Kettathu: ${interpretation.transcript.slice(0,250)}`),...rich.contextLines??[]];
-      rich=materializeVisualReply({...visualReply(rich,finalState,replyRequest),storeName:claimed.catalogMap?.store.name});
+      if(replyRequest?.advanceRequired&&this.options.advance&&!rich.readOnly)rich=await upiAdvanceReply(client,ctx,finalState,this.options.advance.hostname,{demoPayAtShop:this.options.advance.demoPayAtShop,onlyOnce:true})??rich;
+      const alreadySeen=finalState.draft.length>0&&finalState.draft.every(line=>{const product=line.candidates?.find(p=>p.sku===line.sku);return product&&claimed.displayedProducts.some(p=>p.delivered&&p.event.type==='edit_item'&&p.event.lineId===line.id&&productIdentity(p.product)===productIdentity(product));});
+      const editVisual=finalState.visualOrdering&&cartMutated&&!failure&&rich.stage!=='error'&&!rich.readOnly&&finalState.pending?.kind==='products'&&!['cart_edit_target','keep_only_target','intent_clarification'].includes(rich.clarificationReason??'')?visualCartMutation(cartBefore,finalState,{contextLines:rich.contextLines,fullList:interpretation?.understanding?.intents.includes('view_list')}):undefined;
+      rich=materializeVisualReply({...editVisual??visualReply({...rich,compactReview:alreadySeen&&!cartMutated},finalState,replyRequest),storeName:claimed.catalogMap?.store.name});
+      // Confirm only persisted customer CRUD, after presentation has chosen its
+      // primary question. Read-only refreshes and rejected plans say nothing.
+      const feedback=cartBefore.draft.length>0&&finalState.visualOrdering&&!failure&&rich.stage!=='error'&&cartMutated&&!cartBefore.lastRequestId&&!finalState.lastRequestId?cartChangeFeedback(cartBefore,finalState):undefined;
+      if(feedback)rich={...rich,text:feedback+'\n'+rich.text,parts:rich.parts?.map((part,index)=>index===0?{...part,text:feedback+'\n'+part.text}:part)};
       message=rich.text;
-      if(finalState.visualOrdering){const binding=conversationBinding(finalState,await loadAssistantMemory(client,ctx));const cancelled=await client.query("UPDATE whatsapp_outbox o SET state='cancelled',last_error='review_superseded' WHERE o.conversation_id=$1 AND o.state='queued' AND o.sender_kind='assistant' AND EXISTS(SELECT 1 FROM whatsapp_actions a WHERE a.message_id=o.message_id AND (a.source_version<>$2 OR a.binding_id IS DISTINCT FROM $3::uuid)) RETURNING o.message_id",[ctx.conversationId,finalState.version,binding]);if(cancelled.rowCount)await client.query("UPDATE messages SET status='cancelled' WHERE id=ANY($1::uuid[])",[cancelled.rows.map(r=>r.message_id)]);}
+      if(finalState.visualOrdering)await cancelSupersededReviews(client,ctx.conversationId,finalState.version,conversationBinding(finalState,await loadAssistantMemory(client,ctx)));
       const replyId=randomUUID();
       const parts=rich.parts??[undefined];
       for(const [index,part] of parts.entries()){
         const id=index===0?replyId:randomUUID();
         const payload=part?{...rich,text:part.text,parts:[part],groupId:replyId,partIndex:index,partCount:parts.length}:rich;
         await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,response_to,payload,reply_group_id,part_index,part_count,stage,clarification_reason) VALUES($1,$2,'outbound',$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11)",[id,ctx.conversationId,payload.text,this.options.queueReply?'queued':'sent',claimed.id,JSON.stringify(payload),replyId,index,parts.length,rich.stage??null,rich.clarificationReason??null]);
+        await client.query('UPDATE messages SET release_fingerprint=$1 WHERE id=$2',[currentReleaseFingerprint(),id]);
         await this.options.queueReply?.(client,ctx,id,payload);
       }
-      await client.query("UPDATE messages SET status='processed',claim_token=NULL,lease_until=NULL WHERE id=$1",[claimed.id]);
+
+      if(rich.stage==='welcome'&&this.options.welcomeAudio){
+        const queued=await client.query('UPDATE conversations SET welcome_audio_queued=true WHERE id=$1 AND NOT welcome_audio_queued RETURNING id',[ctx.conversationId]);
+        if(queued.rowCount){
+          const id=randomUUID(),audio:RichReply={...plainReply(customerCopy('welcome',finalState)),readOnly:true,audio:{url:this.options.welcomeAudio},replyLanguage:finalState.replyLanguage};
+          await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,payload,stage) VALUES($1,$2,'outbound',$3,$4,$5::jsonb,'welcome')",[id,ctx.conversationId,audio.text,this.options.queueReply?'queued':'sent',JSON.stringify(audio)]);
+          await client.query('UPDATE messages SET release_fingerprint=$1 WHERE id=$2',[currentReleaseFingerprint(),id]);
+          await this.options.queueReply?.(client,ctx,id,audio);
+        }
+      }
+      if(Date.now()>=claimed.deadlineAt){
+        // Rendering and outbox work also consume the turn budget. Undo their
+        // transaction's shopping effects; inference accounting was committed
+        // separately and must remain intact.
+        await client.query('ROLLBACK TO SAVEPOINT turn_effects');
+        if(!(await client.query("SELECT 1 FROM messages WHERE id=$1 AND claim_token=$2 AND status='processing' AND lease_until>clock_timestamp()",[claimed.id,claimed.token])).rowCount)return;
+        const retained={...plainReply(say(claimed.state,'The turn deadline was reached. Your list is retained. Please try again or ask the shop for help.','செயலாக்க நேரம் முடிந்தது. உங்கள் பட்டியல் அப்படியே உள்ளது. மீண்டும் முயலுங்கள் அல்லது கடையிடம் உதவி கேளுங்கள்.','Processing neram mudinjathu. Unga list appadiye irukku. Marubadi try pannunga illa kadaiyidam help kelunga.')),replyLanguage:claimed.state.replyLanguage??'en',stage:'error' as const,clarificationReason:'turn_deadline'};
+        const id=randomUUID();
+        await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,response_to,payload,stage,clarification_reason) VALUES($1,$2,'outbound',$3,$4,$5,$6::jsonb,'error','turn_deadline')",[id,ctx.conversationId,retained.text,this.options.queueReply?'queued':'sent',claimed.id,JSON.stringify(retained)]);
+        await client.query('UPDATE messages SET release_fingerprint=$1 WHERE id=$2',[currentReleaseFingerprint(),id]);
+        await this.options.queueReply?.(client,ctx,id,retained);
+      }
+      await client.query("UPDATE messages SET status='processed',reply_decision='reply',claim_token=NULL,lease_until=NULL WHERE id=$1",[claimed.id]);
     });
     return true;
   }
   private knownAction(claim:Claimed):ToolCall|undefined {
     const e=claim.event,s=claim.state;
+    if(e.type==='review_partial')return {name:'preview_order',args:{expectedVersion:e.expectedVersion,allowPartial:true}};
     if(e.type==='shopping_action'&&e.action==='finish_order'){if(e.expectedVersion!==s.version)throw new ToolError('Use the latest list before sending.','stale_version');return this.knownAction({...claim,event:{id:e.id,type:'text',text:'send it'}});}
     if(e.type==='shopping_action'&&e.action==='handoff')return {name:'request_store_assistance',args:{expectedVersion:e.expectedVersion}};
     if(e.type==='shopping_action'&&e.action==='status'){if(e.expectedVersion!==s.version)throw new ToolError('Use the latest request status choice.','stale_version');return {name:'get_order_status',args:{}};}
@@ -427,7 +653,7 @@ export class ConversationRuntime {
     if(e.type==='select_product'||e.type==='confirm_products') {
       const pending=s.pending;
       if(pending?.kind!=='products'||pending.id!==e.batchId||pending.version!==s.version)throw new ToolError('That product check is no longer current. Review your list again.','stale_confirmation');
-      if(s.visualOrdering&&e.type==='confirm_products'&&!pending.completeReview)throw new ToolError('Some requested items still need checking.');
+      if(s.visualOrdering&&e.type==='confirm_products'&&!productCheckCoversDraft(s,pending)&&!(s.allowPartialReview&&pending.groups.length&&pending.groups.every(g=>g.products.length===1&&s.draft.find(l=>l.id===g.lineId)?.sku===g.products[0].sku)))throw new ToolError('Some requested items still need checking.');
       if(e.type==='confirm_products'&&pending.groups.some(g=>g.products.length!==1&&!(s.catalogDiscovery&&s.draft.some(l=>l.id===g.lineId&&g.products.some(p=>p.sku===l.sku)))))throw new ToolError('Choose the correct option for each requested item first.');
       return {name:'confirm_product_choices',args:{batchId:e.batchId,choices:e.type==='select_product'?[{lineId:e.lineId,sku:e.sku}]:pending.groups.map(g=>({lineId:g.lineId,sku:s.catalogDiscovery?s.draft.find(l=>l.id===g.lineId)?.sku??g.products[0].sku:g.products[0].sku}))}};
     }
@@ -440,6 +666,10 @@ export class ConversationRuntime {
     if(e.type==='add_item') return {name:'apply_draft_changes',args:{expectedVersion:e.expectedVersion,operations:[{kind:'add_item',query:e.sku,quantity:e.quantity}]}};
     if(e.type==='set_quantity') return {name:'apply_draft_changes',args:{expectedVersion:e.expectedVersion,operations:[e.quantity===0?{kind:'remove_item',reference:e.lineId}:{kind:'set_quantity',reference:e.lineId,quantity:e.quantity}]}};
     if(e.type==='review') return {name:'preview_order',args:{expectedVersion:e.expectedVersion}};
+    if(e.type==='choose_pipe_type'){
+      if(s.pending?.kind!=='question'||s.pending.id!==e.questionId||s.pending.lineId!==e.lineId||s.pending.version!==s.version||!claim.displayedActions.some(action=>digest(action)===digest(e)))throw new ToolError('Use the current pipe-type choices. Your list is kept.','stale_question');
+      return {name:'apply_draft_changes',args:{expectedVersion:e.expectedVersion,operations:[{kind:'resolve_line',lineId:e.lineId,query:{pvc:'PVC pipe',hose:'garden hose',pump:'water pumping pipe'}[e.pipeType]}]}};
+    }
     if(e.type==='confirm') return {name:'submit_order_request',args:{reviewId:e.reviewId}};
     if(e.type==='select_candidate') {
       const line=s.draft.find(l=>l.id===e.lineId),pending=s.pending;
@@ -453,13 +683,16 @@ export class ConversationRuntime {
     if(text==='send it'&&s.visualOrdering&&!s.lastRequestId){
       if(s.pending?.kind==='products'){
         if(claim.bindingId!==s.pending.id&&!(claim.memory?.purpose==='quote'&&claim.memory.sourceVersion===s.version&&claim.bindingId===claim.memory.id)||s.pending.version!==s.version||Date.parse(s.pending.expiresAt)<=Date.now())throw new ToolError('Use the current product review before sending.','stale_confirmation');
-        if(!s.pending.completeReview)return {name:'request_store_assistance',args:{expectedVersion:s.version}};
+        if(!productCheckCoversDraft(s,s.pending)){
+          if(s.allowPartialReview&&s.pending.groups.length&&s.pending.groups.every(g=>g.products.length===1&&s.draft.find(l=>l.id===g.lineId)?.sku===g.products[0].sku))return {name:'confirm_product_choices',args:{batchId:s.pending.id,choices:s.pending.groups.map(g=>({lineId:g.lineId,sku:g.products[0].sku}))}};
+          return {name:'preview_order',args:{expectedVersion:s.version,allowPartial:s.allowPartialReview}};
+        }
         return {name:'confirm_product_choices',args:{batchId:s.pending.id,choices:s.pending.groups.map(g=>({lineId:g.lineId,sku:s.draft.find(l=>l.id===g.lineId)?.sku??g.products[0].sku}))}};
       }
-      if(s.pending?.kind==='question'&&s.draft.length)return {name:'request_store_assistance',args:{expectedVersion:s.version}};
+      if(s.pending?.kind==='question'&&s.draft.length)return {name:'preview_order',args:{expectedVersion:s.version}};
       if(!s.pending&&s.draft.length)return {name:'preview_order',args:{expectedVersion:s.version}};
     }
-    if(['bill','estimated bill','estimate','show bill','bill evvalavu','பில் எவ்வளவு','பில் காட்டு','உத்தேச பில்'].includes(text))return {name:'estimate_order',args:{expectedVersion:s.version}};
+    if(['bill','invoice','estimated bill','estimate','show bill','bill evvalavu','பில் எவ்வளவு','பில் காட்டு','உத்தேச பில்'].includes(text))return s.lastRequestId?{name:'get_order_status',args:{}}:{name:'estimate_order',args:{expectedVersion:s.version}};
     if(text==='edit my list')return {name:'get_draft',args:{}};
     // Text channels can select a code that the backend actually displayed.
     // Never treat an arbitrary model-proposed or stale SKU as trusted consent.
@@ -500,14 +733,14 @@ export class ConversationRuntime {
       const check=s.pending;
       const matching=check.groups.flatMap(g=>(g.discovery?.facets[0]?.values??[]).filter(v=>v.value.toLowerCase()===text||v.label.toLowerCase()===text||Object.values(v.localNames??{}).some(n=>n?.toLowerCase()===text)).map(v=>({group:g,value:v})));
       if(matching.length===1){if(claim.bindingId!==check.id)throw new ToolError('That answer was for an earlier category question.','stale_question');const m=matching[0],line=s.draft.find(l=>l.id===m.group.lineId)!;return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[{kind:'resolve_line',lineId:line.id,query:line.query??line.name,search:refinementPlan(m.group.discovery!,m.group.discovery!.facets[0].key,m.value.value)}]}};}
-      if(s.visualOrdering&&['yes','confirm','add these items','add these','add to my list'].includes(text)&&!check.completeReview)throw new ToolError('Some requested items still need checking.');
+      if(s.visualOrdering&&['yes','confirm','add these items','add these','add to my list'].includes(text)&&!productCheckCoversDraft(s,check))throw new ToolError('Some requested items still need checking.');
       if(['yes','confirm','add these','add these items','add this','add this item','add to my list','add to list','add to catalog','add these to my list','yes add these','yes add these items','yes add to my list','add into catalog','add into the catalog','add to the catalog'].includes(text)) {
         if(claim.bindingId!==check.id)throw new ToolError('That answer was for an earlier product check. Please use the current choices.','stale_question');
         if(check.groups.some(g=>g.products.length!==1&&!(s.catalogDiscovery&&s.draft.some(l=>l.id===g.lineId&&g.products.some(p=>p.sku===l.sku)))))throw new ToolError('Which option did you mean? Please choose the product for each item from the photos. Nothing has been sent to the shop.');
         return {name:'confirm_product_choices',args:{batchId:check.id,choices:check.groups.map(g=>({lineId:g.lineId,sku:s.catalogDiscovery?s.draft.find(l=>l.id===g.lineId)?.sku??g.products[0].sku:g.products[0].sku}))}};
       }
       if(amount) {
-        const targets=check.groups.filter(g=>!amount.unit||g.products.every(p=>sameUnit(amount.unit!,p.unit)));
+        const targets=check.groups.filter(g=>!amount.unit||g.products.every(p=>sameUnit(amount.unit!,p.unit)||normalizeUnit(amount.unit!)==='container'&&p.sellingUnitVerified&&['can','tin','bucket','box','bottle','pack'].includes(p.unit)));
         if(targets.length!==1)throw new ToolError('Which item is that quantity for? Include the product name, or choose its photo first.');
         return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[quantityAnswer(s,targets[0].lineId,amount,e.text)]}};
       }
@@ -520,6 +753,7 @@ export class ConversationRuntime {
         return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[{kind:'add_item',query:found[0].sku,quantity:claim.memory.requestedQuantity??null,...(claim.memory.requestedUnit?{requestedUnit:claim.memory.requestedUnit}:{})}]}};
       }
       if(claim.memory?.sourceVersion===s.version&&claim.memory.purpose==='discovery')return {name:'get_draft',args:{}};
+      if(s.pending?.kind==='review'&&claim.lastReplyWasListView&&['yes','confirm'].includes(text))return {name:'get_draft',args:{}};
       if(s.pending?.kind==='review')return {name:'submit_order_request',args:{reviewId:text==='send it'&&claim.memory?.purpose==='quote'&&claim.memory.sourceVersion===s.version&&claim.bindingId===claim.memory.id?s.pending.id:claim.bindingId??'00000000-0000-4000-8000-000000000000'}};
       if(s.pending?.kind==='question'&&conversationBinding(s,claim.memory)===claim.bindingId&&s.pending.version===s.version){const pending=s.pending;const line=s.draft.find(l=>l.id===pending.lineId);
         if(text==='yes'&&line&&!line.sku&&(line.resolution==='needs_choice'||line.resolution==='unavailable')&&claim.memory?.lineId===line.id&&found.length===1)return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[{kind:'resolve_line',lineId:line.id,query:found[0].sku}]}};
@@ -548,7 +782,7 @@ export class ConversationRuntime {
         throw new ToolError('That numbered choice is not in the current candidate list.');
       }
     }
-    if(/^(?:the )?(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|10|[1-9])(?: one)?$/.test(text)) throw new ToolError('That choice is not bound to the current question. Use the current choices or describe the product.');
+    if(claim.memory?.purpose!=='cart_edit'&&/^(?:the )?(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|10|[1-9])(?: one)?$/.test(text)) throw new ToolError('That choice is not bound to the current question. Use the current choices or describe the product.');
     return undefined;
   }
   private async interpret(ctx:ActorContext,claim:Claimed):Promise<Interpretation> {
@@ -570,6 +804,7 @@ export class ConversationRuntime {
       transcript=recognized.transcript?.trim();
       if(!transcript)throw new ToolError('No clear speech was recognized. Record again or type your request.','voice_unreadable');
       const command=spokenClearCommand(transcript)??canonicalShortcut(transcript);
+      if(listViewRequest(transcript))return {operations:[],next:'continue',transcript};
       if(negatedSpokenClear(transcript))return {operations:[],next:'continue',transcript,conversation:'pause'};
       if(languageRequest(transcript))return {operations:[],next:'continue',transcript};
       if(submissionIntent(transcript)||['yes','confirm','send it','place order','review','checkout','enough','bill','estimated bill','estimate','show bill','bill evvalavu','பில் எவ்வளவு','பில் காட்டு'].includes(command)||socialIntent(transcript)==='handoff')return {operations:[],next:'continue',transcript};
@@ -581,6 +816,34 @@ export class ConversationRuntime {
     let identified=await this.callProvider(ctx,claim,input,'identify');
     if(voice){transcript=this.provider.unifiedUnderstanding?identified.transcript:transcript;if(!transcript)throw new ToolError('No clear speech was recognized. Record again or type your request.','voice_unreadable');identified={...identified,transcript};text=transcript;}
     if(image&&identified.understanding?.inputKind==='handwritten_list')text=identified.understanding.observedText??text;
+    const evidenceRepair=!image&&identified.understanding?.unresolved.includes('validation_recovery')?claim.evidenceRepair:undefined;
+    if(evidenceRepair){
+      const repair=evidenceRepair;delete claim.evidenceRepair;
+      // Preserve the faithful current transcript and reserve a separate repair
+      // attempt. Rejected actions never reach tools; a second rejection stops.
+      try{identified={...await this.callProvider(ctx,claim,{...input,audio:undefined,text,repairSourceKind:voice?'audio':'text',planningFeedback:repair.feedback,proposal:{...identified,understanding:repair.understanding}},'repair'),...(voice?{transcript}:{})};}
+      catch{/* A denied or failed repair retains the original grounded no-op. */}
+    }
+    if(identified.understanding?.cartTargetAnswer){
+      const memory=claim.memory,goal=memory?.cartEdit,answer=identified.understanding.cartTargetAnswer;
+      if(memory?.purpose!=='cart_edit'||memory.sourceVersion!==claim.state.version||!goal)throw new ToolError('Use the latest item question.','stale_question');
+      const target=goal.targets[0],named=namedEditLines(answer.sourceText,claim.state);
+      const positional=/\b(?:first|second|third|last|[1-9]|10)(?:st|nd|rd|th)?\s+(?:item|line|row|entry|product)\b|கடைசி|லாஸ்ட்/iu.test(answer.sourceText);
+      const matches=(named.length?named:positional?[]:namedEditLines(answer.query,claim.state)).filter(line=>target.candidateLineIds.includes(line.id));
+      const selected=matches.length===1&&(!answer.targetLineId||answer.targetLineId===matches[0].id)?matches[0]:undefined;
+      identified={...resumeCartTarget(claim,selected?{kind:target.kind,index:target.index,lineId:selected.id}:undefined),...(voice?{transcript}:{})};
+    }
+    if(identified.understanding?.keepOnlyAnswer){
+      const goal=claim.memory?.purpose==='cart_correction'&&claim.memory.sourceVersion===claim.state.version?claim.memory.correction:undefined;
+      if(!goal?.understanding.keepOnly)throw new ToolError('Use the latest keep-item question.','stale_question');
+      const pending=compileKeepOnly(goal.understanding.keepOnly,claim.state,goal.description,goal.selections);
+      const answer=identified.understanding.keepOnlyAnswer;
+      const matches=keepTargetCandidates(answer,claim.state).filter(line=>pending.choices?.some(choice=>choice.id===line.id));
+      const selection=matches.length===1&&(!answer.targetLineId||answer.targetLineId===matches[0].id)?{targetIndex:pending.targetIndex!,lineId:matches[0].id}:undefined;
+      identified={...resumeKeepCorrection(claim,selection),...(voice?{transcript}:{})};
+    }
+    text=correctionDescription(claim,identified,text);
+
     if(claim.state.visualOrdering&&(!image||identified.understanding?.inputKind==='handwritten_list'))identified=normalizeAmountEdits(identified,text,claim.state);
     if(claim.state.visualOrdering&&(!image||identified.understanding?.inputKind==='handwritten_list')&&identified.operations.length){
       let feedback:string|undefined;
@@ -603,8 +866,9 @@ export class ConversationRuntime {
       });
       if(recovery.length)feedback='The inferred search wording found no SKU. The backend retrieved these real products in the proposed family with the same brand/specification filters. Repair only those search terms using the actual names/SKUs. Preserve every other item, count, explicit brand, dimensions and verbatim evidence. These are photo-check suggestions, not approval.';
       if(feedback){
+        if(evidenceRepair)throw new ToolError('Some cart details need checking. Please rephrase the current change.','interpretation_evidence');
         if(image)throw new ToolError('Some list details need checking. Please correct the unclear lines or ask the shop.','interpretation_evidence');
-        const repaired=await this.callProvider(ctx,claim,{...input,text,audio:undefined,image:undefined,observations:recovery.length?recovery:input.observations,proposal:identified,planningFeedback:feedback},'repair');
+        const repaired=await this.callProvider(ctx,claim,{...input,text,audio:undefined,image:undefined,observations:recovery.length?recovery:input.observations,proposal:identified,planningFeedback:feedback,repairSourceKind:voice?'audio':'text'},'repair');
         const normalized=normalizeAmountEdits(repaired,text,claim.state);
         identified={...normalized,...(voice?{transcript}:{}),operations:validateCurrentTurn(normalized.operations,text,claim.state)};
       }
@@ -616,6 +880,7 @@ export class ConversationRuntime {
       const item=identified.operations[0],exploring=!claim.state.lastRequestId&&claim.memory?.purpose==='discovery'&&claim.memory.sourceVersion===claim.state.version;
       identified={operations:[],next:'assist',transcript:identified.transcript,assistance:{rootQuery:item.query,queries:[item.query],search:item.search,...discoverySelection(item,identified.transcript??'',exploring?claim.memory:null),question:identified.clarifyQuestion}};
     }
+    if(claim.state.visualOrdering&&claim.state.lastRequestId&&identified.operations.some(op=>op.kind==='add_item'))return identified;
     const newList=mediaRecommendations&&claim.state.lastRequestId&&identified.operations.length>1&&identified.operations.every(op=>op.kind==='add_item')?identified.operations as NonNullable<AssistantMemory['newList']>:undefined;
     if(this.provider.unifiedUnderstanding&&(await this.pool.query('SELECT count(*)::int AS calls FROM provider_attempts WHERE message_id=$1',[claim.id])).rows[0].calls>=2)return identified;
     if(identified.next!=='assist'&&!newList||!(mediaRecommendations||(this.options.discoveryStages??(!!this.provider.freeQuota&&claim.event.type==='text'))))return identified;
@@ -647,24 +912,30 @@ export class ConversationRuntime {
     input={...input,stage:stage==='repair'?'identify':stage};
     const provider=stage==='recognize'?(this.provider.recognitionProviderFor?.(input)??this.provider.recognitionProvider??this.provider):this.provider;
     if(provider.mode==='live'&&!(provider.freeQuota?this.options.allowFreeInference:this.options.allowPaidInference))throw new ToolError('This inference stage is not authorized.');
-    provider.validateInput?.(input);
+    if(providerCallTimeout(input,claim.deadlineAt-Date.now())<=inferenceTiming.sdkMarginMs)throw new ToolError('The turn deadline was reached. Your list is retained.','turn_deadline');
+    const prepared=provider.prepareInput?.(input);
+    if(!prepared)provider.validateInput?.(input);
     // A committed reservation precedes every potentially paid invocation.
     const reservation=await withConversation(this.pool,ctx,async client=>{
-      const held=await client.query("SELECT 1 FROM messages WHERE id=$1 AND status='processing' AND claim_token=$2 AND lease_until>now()",[claim.id,claim.token]);
+      const held=await client.query("SELECT 1 FROM messages WHERE id=$1 AND status='processing' AND claim_token=$2 AND lease_until>clock_timestamp()",[claim.id,claim.token]);
       if(!held.rowCount) throw new ToolError('Work lease expired before interpretation.');
       const current=await loadState(client,ctx);
       if(current.version!==claim.state.version) throw new ToolError('Draft changed before interpretation.');
-      return reserveAttempt(client,ctx,claim.id,claim.state.version,provider,stage);
+      return reserveAttempt(client,ctx,claim.id,claim.state.version,provider,stage,prepared?.admission);
     });
     if(reservation.exhausted) throw new ToolError('Interpretation attempt limit reached. Please rephrase or ask the shop.');
     if('denied' in reservation&&reservation.denied){if('defer' in reservation&&reservation.defer)throw new DeferredRecommendation();throw new ToolError('Inference budget unavailable or exhausted. Your draft is retained.',provider.freeQuota?'quota_unavailable':'budget_unavailable');}
     if(reservation.cached) return interpretationSchema.parse(reservation.cached);
     let failureCode='provider_error';
     try {
-      const signal=AbortSignal.timeout(input.audio?20000:input.state.visualOrdering?45000:10000);
-      const output=await Promise.race([provider.interpret(input,signal),new Promise<never>((_,reject)=>{signal.addEventListener('abort',()=>reject(new Error('Interpretation timed out; draft retained.')),{once:true});})]);
+      const timeoutMs=providerCallTimeout(input,claim.deadlineAt-Date.now());
+      if(timeoutMs<=inferenceTiming.sdkMarginMs){failureCode='turn_deadline';throw new ToolError('The turn deadline was reached. Your list is retained.','turn_deadline');}
+      const signal=AbortSignal.timeout(timeoutMs);
+      const output=await Promise.race([prepared?prepared.interpret(signal):provider.interpret(input,signal),new Promise<never>((_,reject)=>{signal.addEventListener('abort',()=>reject(new Error('Interpretation timed out; draft retained.')),{once:true});})]);
+      if(output.observation)await this.pool.query('UPDATE provider_attempts SET observation=$1::jsonb WHERE id=$2 AND store_id=$3 AND conversation_id=$4',[JSON.stringify(output.observation),reservation.id,ctx.storeId,ctx.conversationId]);
       failureCode='usage_validation';
       if(!await settleAttempt(this.pool,ctx,reservation.id!,output)) throw new ToolError('Provider usage exceeded the verified limits. No changes applied.');
+      if(Date.now()>=claim.deadlineAt){failureCode='turn_deadline';throw new ToolError('The turn deadline was reached. Your list is retained.','turn_deadline');}
       if(output.validationIssues?.length)await this.pool.query('UPDATE provider_attempts SET validation_issues=$1::jsonb WHERE id=$2 AND conversation_id=$3',[JSON.stringify(output.validationIssues.slice(0,6).map(i=>({path:i.path.slice(0,100),code:i.code.slice(0,40)}))),reservation.id,ctx.conversationId]);
       failureCode='truncated_or_model_mismatch';
       if(output.truncated) throw new ToolError('Interpretation was truncated. No partial list was applied.');
@@ -673,7 +944,11 @@ export class ConversationRuntime {
       if(!parsed.success||stage==='recognize'&&(parsed.data.operations.length>0||parsed.data.next!=='continue')||input.image&&!(provider.supportsImageLists&&parsed.data.understanding?.inputKind==='handwritten_list'&&parsed.data.operations.every(op=>op.kind==='add_item'))&&(parsed.data.operations.length>0||!['assist','continue'].includes(parsed.data.next))) throw new ToolError('Could not validate all requested actions. Please rephrase; no changes were applied.');
       failureCode='ledger_write';
       const valid=parsed.data;
-      await this.pool.query("UPDATE provider_attempts SET state='succeeded',response=$1::jsonb,usage=$2::jsonb WHERE id=$3",[JSON.stringify(valid),JSON.stringify(output.usage),reservation.id]);
+      // A safe clarification can survive a rejected perception contract. Keep
+      // the paid usage and evidence, but never cache that attempt as a success.
+      const rejected=valid.understanding?.unresolved.includes('validation_recovery')===true;
+      if(stage==='identify'&&rejected&&output.evidenceRepair)claim.evidenceRepair=output.evidenceRepair;
+      await this.pool.query("UPDATE provider_attempts SET state=$4,failure_code=$5,response=$1::jsonb,usage=$2::jsonb WHERE id=$3",[JSON.stringify(valid),JSON.stringify(output.usage),reservation.id,rejected?'failed':'succeeded',rejected?'invalid_evidence':null]);
       return valid;
     } catch(error) {
       if(provider.freeQuota&&error instanceof FreeQuotaError) await coolDownFreeQuota(this.pool,provider.freeQuota);

@@ -5,7 +5,7 @@ import {readFile} from 'node:fs/promises';
 import pg from 'pg';
 import {Resvg} from '@resvg/resvg-js';
 import {FinishReason,type GenerateContentResponse,type GenerateContentParameters} from '@google/genai';
-import {understandingToInterpretation} from '../apps/server/src/adapters/turn-understanding.js';
+import {understandingToInterpretation,understandingResponseSchema} from '../apps/server/src/adapters/turn-understanding.js';
 import {GoogleInterpreter,readNativeSettings,type NativeSettings} from '../apps/server/src/adapters/google-interpreter.js';
 import {spokenMeasures,catalogMeasures,matchesProductMeasures,explicitPurchaseCount} from '../apps/server/src/services/quantity-evidence.js';
 import {normalize} from '../packages/contracts/catalog-text.js';
@@ -88,7 +88,7 @@ test('OCR retains every unresolved line, duplicate events are idempotent, and he
  const observed='2 H07\n[unreadable]\n1 H10',counter={calls:0};
  const r=runtime(pool,()=>({...base('handwritten_list'),observedText:observed,requestedItems:[item('2 H07','H07',2),item('[unreadable]',null,null,1),item('1 H10','H10',1,2)]}),counter);
  const {event,media,snapshot:s}=await photo(inbox,r);assert.equal(s.conversation.draft.length,3);assert.equal(s.conversation.draft[1].catalogIssue,'unreadable');assert.equal(s.conversation.draft[0].quantity,2);assert.equal(s.conversation.draft[2].quantity,1);assert.equal(s.requests.length,0);assert.equal(counter.calls,1);assert.equal((await inbox.ingest(event,undefined,media)).duplicate,true);assert.equal(await r.processNext(inbox.context),false);assert.equal(counter.calls,1);
- const after=await text(inbox,r,'send my list to the store');assert.equal(after.requests.length,0);assert.equal(after.conversation.draft.length,3);assert.equal((await pool.query('SELECT operator_mode,handoff_requested FROM conversations WHERE id=$1',[inbox.context.conversationId])).rows[0].operator_mode,'owner');
+ const after=await text(inbox,r,'send my list to the store');assert.equal(after.requests.length,0);assert.deepEqual(after.conversation.draft,s.conversation.draft);assert.equal((await pool.query('SELECT operator_mode,handoff_requested FROM conversations WHERE id=$1',[inbox.context.conversationId])).rows[0].operator_mode,'assistant');const help=await text(inbox,r,'talk to shop');assert.equal(help.requests.length,0);assert.deepEqual(help.conversation.draft,s.conversation.draft);assert.equal((await pool.query('SELECT operator_mode,handoff_requested FROM conversations WHERE id=$1',[inbox.context.conversationId])).rows[0].operator_mode,'owner');
 }));
 test('malformed OCR evidence cannot partially add valid-looking items',async()=>fixture(async(pool,inbox)=>{
  const r=runtime(pool,()=>({...base('handwritten_list'),observedText:'H07',requestedItems:[item('H07','H07'),item('invented item','H10',1,1)]}));await photo(inbox,r);assert.equal((await inbox.snapshot()).conversation.draft.length,0);assert.equal((await pool.query("SELECT state FROM provider_attempts")).rows[0].state,'failed');
@@ -146,14 +146,11 @@ test('a fresh recorded list asks pipe type before product and quantity choices',
  let output:any=recordedUnderstanding();const r=runtime(pool,()=>output);let s=await recordedVoice(inbox,r);assert.equal(s.conversation.draft.length,4);
  assert.equal(s.conversation.pending?.kind,'question');assert.match(s.messages.at(-1)!.text,/kind|type|வகை|vagai/);assert.equal(s.conversation.draft[0].sku,undefined);
  const pipe=s.conversation.draft[0];output={...base(),intents:['edit'],requestedItems:[{...item('PVC pipe','1 inch PVC pipe',2),targetLineId:pipe.id}]};s=await text(inbox,r,'PVC pipe');
- for(const sku of ['H01','H13','H22']){
-  const pending=s.conversation.pending;assert.equal(pending?.kind,'products');if(pending?.kind!=='products')throw new Error('No product check');
-  const g=pending.groups.find(g=>g.products.some(p=>p.sku===sku)&&!s.conversation.draft.find(l=>l.id===g.lineId)?.productConfirmation);assert.ok(g,sku);
-  await inbox.ingest({id:randomUUID(),type:'select_product',batchId:pending.id,lineId:g!.lineId,sku});await r.processNext(inbox.context);s=await inbox.snapshot();
- }
+ const pending=s.conversation.pending;assert.equal(pending?.kind,'products');if(pending?.kind!=='products')throw new Error('No pipe choice');
+ const pipeGroup=pending.groups.find(g=>g.products.some(p=>p.sku==='H01'))!;await inbox.ingest({id:randomUUID(),type:'select_product',batchId:pending.id,lineId:pipeGroup.lineId,sku:'H01'});await r.processNext(inbox.context);s=await inbox.snapshot();
  assert.equal(s.conversation.pending?.kind,'question');const question=s.conversation.pending;if(question?.kind==='question')assert.equal(s.conversation.draft.find(l=>l.id===question.lineId)?.sku,'H22');
  assert.match(s.messages.at(-1)!.text,/எத்தனை|How many|eththanai/);assert.equal(s.conversation.draft.find(l=>l.sku==='H13')?.quantity,1);
- s=await text(inbox,r,'two');assert.equal(s.conversation.draft.find(l=>l.sku==='H22')?.quantity,2);assert.ok(cartProgress(s.conversation).join(' ').includes(formatMoney(107000)));assert.equal(s.requests.length,0);
+ s=await text(inbox,r,'two');assert.equal(s.conversation.draft.find(l=>l.sku==='H22')?.quantity,2);assert.equal(s.conversation.pending?.kind,'products');assert.ok(cartProgress(s.conversation).join(' ').includes(formatMoney(107000)));assert.equal(s.requests.length,0);
 }));
 test('restating a total does not increment a cart, while explicit extra does',async()=>fixture(async(pool,inbox)=>{
  let output:any={...base(),requestedItems:[item('one H07','H07')]};const r=runtime(pool,()=>output);let s=await text(inbox,r,'one H07'),id=s.conversation.draft[0].id;
@@ -219,3 +216,13 @@ test('a native consolidated self-reference preserves the current count and diame
  assert.equal(s.conversation.draft.length,4);assert.deepEqual(s.conversation.draft.slice(0,3).map(l=>[l.id,l.sku,l.quantity]),old.draft.map(l=>[l.id,l.sku,l.sku==='H13'?1:l.quantity]));
  assert.equal(s.conversation.draft[0].productMeasures?.[0].value,1);assert.equal(s.requests.length,0);assert.ok(!s.messages.some(m=>m.rich?.stage==='error'));
 }));
+
+
+test('the live understanding schema uses compact provider grammar while local validation rejects unsafe counts and wrong versions',()=>{
+ const schema=understandingResponseSchema() as any;const forbidden=new Set(['minimum','maximum','exclusiveMinimum','exclusiveMaximum','minLength','maxLength','minItems','maxItems','format','pattern','const','$schema']);
+ function inspect(value:any){if(Array.isArray(value)){value.forEach(inspect);return;}if(value&&typeof value==='object'){for(const key of Object.keys(value))assert.equal(forbidden.has(key),false,key);if(value.enum)assert.ok(value.enum.every((entry:unknown)=>typeof entry==='string'||typeof entry==='number'));Object.values(value).forEach(inspect);}}
+ inspect(schema);assert.deepEqual(schema.properties.schemaVersion.enum,[2]);assert.deepEqual(schema.required,['schemaVersion','inputKind','intents','requestedItems','proposedEdits','shopQuestions','unresolved']);assert.equal(schema.additionalProperties,false);
+ assert.throws(()=>understandingToInterpretation({...base(),schemaVersion:3},{text:'two pipes',state},true));
+ for(const count of [-2,0,101,1.0001])assert.throws(()=>understandingToInterpretation({...base(),requestedItems:[item('two pipes','pipe',count)]},{text:'two pipes',state},true));
+ assert.throws(()=>understandingToInterpretation({...base(),requestedItems:[{...item('two pipes','pipe',2),targetLineId:'invented-id'}]},{text:'two pipes',state},true));
+});

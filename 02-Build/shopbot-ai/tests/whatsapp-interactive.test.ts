@@ -1,3 +1,4 @@
+import {productName} from '../packages/contracts/language.js';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -156,3 +157,24 @@ test('an oversized review preserves the draft but invalidates undisplayed consen
  assert.match(sent.at(-1).text.body,/too many details/);assert.equal((await pool.query("SELECT 1 FROM whatsapp_actions WHERE event->>'type'='confirm'")).rowCount,0);
  await turn(channel,{type:'text',text:{body:'yes'}});assert.equal((await pool.query('SELECT * FROM order_requests')).rowCount,0);
 }));
+
+
+test('reference photos preserve localized labels, product identity, pending price and actions in legacy and ordered visual replies',()=>{
+ for(const [language,label,pending] of [['en','Reference photo','Price: shop to confirm'],['ta','Reference படம்','கடையில் சரிபார்த்து சொல்லப்படும்'],['ta-Latn','Reference photo','Vilai: kadai sollanum']] as const){
+  const rich={...reply(2),replyLanguage:language,text:'Request context '.repeat(140)};
+  for(const card of rich.cards!){card.product={...card.product,name:'Premium 4 inch cutting wheel',imageUrl:'/catalog-images/reference/'+randomUUID()+'.jpg',imageReference:true,pricePaise:0,priceStatus:'confirm'};card.requestLabel='Requested product '.repeat(30);card.detailLabel='Related item '.repeat(30);}
+  const legacy=renderWhatsAppReply(rich,randomUUID(),cfg.hostname);
+  assert.equal(legacy.format,'carousel');assert.equal(legacy.actions.length,2);
+  const legacyCards=(legacy.payload as any).interactive.action.cards;
+  for(const card of legacyCards){assert.ok(card.body.text.includes(productName(rich.cards![0].product,language)));assert.ok(card.body.text.endsWith(label));assert.ok(card.body.text.includes(pending));assert.ok(!card.body.text.includes('₹0'));assert.ok(Array.from(card.body.text).length<=160);assert.ok(card.header.image.link.includes('/catalog-images/reference/'));}
+  const parts=rich.cards!.map(c=>({kind:'product' as const,product:c.product,caption:'Premium 4 inch cutting wheel\n'+pending+'\n'+'Extra detail '.repeat(80),buttons:[{label:c.label,event:c.action!}]}));
+  const ordered={...rich,cards:undefined,parts:[{id:randomUUID(),text:rich.text,cards:parts}]};
+  const carousel=renderWhatsAppReply(ordered,randomUUID(),cfg.hostname);
+  assert.equal(carousel.format,'carousel');assert.equal(carousel.actions.length,2);
+  for(const card of (carousel.payload as any).interactive.action.cards){assert.ok(card.body.text.startsWith('Premium 4 inch cutting wheel'));assert.ok(card.body.text.includes(pending));assert.ok(card.body.text.endsWith(label));assert.ok(Array.from(card.body.text).length<=160);}
+  for(const single of [{...rich,cards:rich.cards!.slice(0,1)},{...ordered,parts:[{...ordered.parts[0],cards:parts.slice(0,1)}]}]){
+   const result=renderWhatsAppReply(single,randomUUID(),cfg.hostname),body=(result.payload as any).interactive.body.text;
+   assert.equal(result.format,'buttons');assert.ok(body.includes(single.parts?'Premium 4 inch cutting wheel':productName(rich.cards![0].product,language)));assert.ok(body.includes(pending));assert.ok(body.endsWith(label));assert.ok(Array.from(body).length<=1024);assert.equal(result.actions.length,1);
+  }
+ }
+});

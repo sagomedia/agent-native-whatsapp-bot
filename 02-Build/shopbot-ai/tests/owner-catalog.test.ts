@@ -11,11 +11,13 @@ import {discoverProducts} from '../apps/server/src/services/catalog-discovery.js
 import {SimulatorService} from '../apps/server/src/services/simulator.js';
 import {RetailTools} from '../apps/server/src/services/tools.js';
 import {productMediaUrl} from '../apps/server/src/services/whatsapp-reply.js';
+import {saveCatalogPhoto,catalogPhoto,loadSuggestionPhoto} from '../apps/server/src/services/catalog-photos.js';
+import {productFromRow} from '../apps/server/src/services/catalog.js';
 import {renderVisualImage} from '../apps/server/src/services/visual-images.js';
 const owner={hostname:'catalog-owner.example.test',issuer:'https://test.cloudflareaccess.com',audience:'catalog-owner-application',email:'owner@example.test',storeId:fixtureStore};
 const wa={hostname:'catalog-api.example.test',storeId:fixtureStore,appId:'123456789',wabaId:'987654321',phoneId:'123987654',appSecret:'test',verifyToken:'test',accessToken:'synthetic-not-a-key',graphVersion:'v25.0',recipients:['919000000001'],defaultReplyLanguage:'ta' as const,processEnabled:false,sendEnabled:false};
 const headers={host:owner.hostname,'cf-access-jwt-assertion':'synthetic',origin:'https://'+owner.hostname,'x-shopbot-owner':'1','content-type':'application/json'};
-const product={sku:'SHOP-PLIER',version:0,name:'Acme Cutting Plier 8 inch',localNames:{ta:'அக்மி கட்டிங் பிளையர்','ta-Latn':'Acme cutting plier'},aliases:['cutting plier','கட்டிங் பிளையர்'],keywords:['plier'],unit:'piece',pricePaise:25000,stock:5,quantityStep:1,familyId:'shop-pliers',brand:'Acme',specifications:{size:'8 inch'},active:false,verified:false};
+const product={verification:{identity:true,photo:true,sellingUnit:true,price:true,stock:true},sku:'SHOP-PLIER',version:0,name:'Acme Cutting Plier 8 inch',localNames:{ta:'அக்மி கட்டிங் பிளையர்','ta-Latn':'Acme cutting plier'},aliases:['cutting plier','கட்டிங் பிளையர்'],keywords:['plier'],unit:'piece',pricePaise:25000,stock:5,quantityStep:1,familyId:'shop-pliers',brand:'Acme',specifications:{size:'8 inch'},active:false,verified:false};
 async function fixture(run:(pool:pg.Pool,app:Awaited<ReturnType<typeof createApp>>)=>Promise<void>){const admin=new pg.Pool({connectionString:process.env.DATABASE_URL}),schema='catalog_owner_'+randomUUID().replaceAll('-','');await admin.query(`CREATE SCHEMA ${schema}`);const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:`-c search_path=${schema}`});let app;try{await setupDatabase(pool,'mock');await setupImageDemo(pool,fixtureStore);app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,host:'127.0.0.1',port:3017,mediaDir:'/tmp/test',owner,whatsapp:wa},pool,undefined,undefined,async()=>({email:owner.email,subject:'owner'}));await run(pool,app);}finally{await app?.close();await pool.end();await admin.query(`DROP SCHEMA ${schema} CASCADE`);await admin.end();}}
 const post=(app:any,path:string,body:unknown,extra={})=>app.inject({method:'POST',url:'/api/owner/catalog'+path,headers:{...headers,...extra},payload:JSON.stringify(body)});
 async function type(app:any){const r=await post(app,'/nodes',{id:'shop-pliers',kind:'family',parentId:'tools',label:'Cutting pliers',localNames:{ta:'கட்டிங் பிளையர்'},aliases:['cutting plier','கட்டிங் பிளையர்']});assert.equal(r.statusCode,200,r.body);}
@@ -95,4 +97,56 @@ test('saved publication revision is immediately visible to the agent diagnostic;
  const version=r.json().version;r=await post(app,'/products',{...product,version,active:true,verified:true,pricePaise:0,priceStatus:'priced'});assert.equal(r.statusCode,400);
  r=await post(app,'/products',{...product,version,active:true,verified:true,pricePaise:0,priceStatus:'confirm'});assert.equal(r.statusCode,200,r.body);search=await post(app,'/diagnose',{query:'cutting plier'});assert.ok(search.json().products.find((p:any)=>p.sku===product.sku).issues.includes('Shop must confirm price'));
  assert.equal((await post(app,'/products',{...product,version:r.json().version,active:true,verified:true,unit:'litre',specifications:{weight:'10kg'}})).statusCode,400);
+}));
+
+
+test('owner stock routes commit their audit and movement together, replay safely and require current shop access',()=>fixture(async(pool,app)=>{
+ const command={id:randomUUID(),expectedVersion:1,kind:'restock',quantity:2,reason:'Offline receipt 12'};
+ let r=await post(app,'/products/H02/stock',command);assert.equal(r.statusCode,200,r.body);assert.equal(r.json().sku,'H02');assert.equal(r.json().onHand,62);
+ r=await post(app,'/products/H02/stock',command);assert.equal(r.statusCode,200,r.body);assert.equal(r.json().replayed,true);
+ assert.equal((await pool.query("SELECT * FROM inventory_movements WHERE sku='H02' AND kind='restock'")).rowCount,1);
+ const audit=(await pool.query("SELECT * FROM owner_audit WHERE action='inventory_restock' ORDER BY sequence LIMIT 1")).rows[0];assert.equal(audit.target_id,fixtureStore);assert.equal(audit.details.sku,'H02');
+ assert.equal((await post(app,'/products/H02/stock',{...command,id:randomUUID()})).statusCode,409);
+ assert.equal((await post(app,'/products/H02/stock',{...command,id:randomUUID(),expectedVersion:2},{origin:'https://other.test'})).statusCode,403);
+ const history=await app.inject({url:'/api/owner/catalog/products/H02/stock',headers});assert.equal(history.statusCode,200);assert.equal(history.json().movements.length,1);
+}));
+test('message gallery is private, synthetic and read-only against all shop order tables',()=>fixture(async(pool,app)=>{
+ assert.equal((await app.inject({url:'/api/owner/message-gallery',headers:{host:owner.hostname}})).statusCode,403);
+ const tables=['order_requests','messages','whatsapp_actions','order_advances','inventory_movements'];
+ const before=await Promise.all(tables.map(t=>pool.query('SELECT count(*) FROM '+t).then(r=>r.rows[0].count)));
+ const response=await app.inject({url:'/api/owner/message-gallery?language=ta',headers});assert.equal(response.statusCode,200,response.body);assert.equal(response.json().readOnly,true);assert.equal(response.json().synthetic,true);assert.ok(response.json().entries.length>=18);
+ const after=await Promise.all(tables.map(t=>pool.query('SELECT count(*) FROM '+t).then(r=>r.rows[0].count)));assert.deepEqual(after,before);
+ assert.equal((await app.inject({url:'/api/owner/message-gallery/products/H02/image',headers})).statusCode,200);
+ assert.equal((await app.inject({url:'/api/owner/message-gallery/products/SECRET/image',headers})).statusCode,404);
+}));
+
+
+test('published reference photos retain store, namespace and active guards; owners can review hidden references',async()=>fixture(async(pool,app)=>{
+ const bytes=await readFile('resources/catalog/ksmc-demo/images/H19.jpg'),client=await pool.connect();
+ let id:string;try{id=await saveCatalogPhoto(client,fixtureStore,{image:bytes,width:256,height:256});}finally{client.release();}
+ const path='/catalog-images/reference/'+id+'.jpg',custom='/catalog-images/custom/'+id+'.jpg';
+ await pool.query("UPDATE products SET image_path=$1,active=true WHERE store_id=$2 AND sku='H19'",[path,fixtureStore]);
+ const row=(await pool.query("SELECT * FROM products WHERE store_id=$1 AND sku='H19'",[fixtureStore])).rows[0];
+ assert.equal(productFromRow(row).imageReference,true);
+ assert.equal(productFromRow({...row,image_path:'/demo-images/H19.jpg'}).imageReference,undefined);
+ assert.equal(productMediaUrl(path,wa.hostname),'https://'+wa.hostname+path);
+ let r=await app.inject({url:path,headers:{host:wa.hostname}});assert.equal(r.statusCode,200,r.body);assert.ok(r.rawPayload.equals(bytes));assert.equal(r.headers['cache-control'],'no-store');
+ assert.equal((await app.inject({url:custom,headers:{host:wa.hostname}})).statusCode,404);
+ assert.equal(await catalogPhoto(pool,fixtureStore,id),undefined);
+ assert.ok((await catalogPhoto(pool,fixtureStore,id,true,'reference'))?.equals(bytes));
+ assert.equal(await catalogPhoto(pool,randomUUID(),id,true,'reference'),undefined);
+ assert.equal((await app.inject({url:path,headers:{host:'other-shop.test'}})).statusCode,404);
+ assert.equal((await app.inject({url:path,headers:{host:owner.hostname}})).statusCode,404);
+ assert.equal((await app.inject({url:'/catalog-images/reference/'+randomUUID()+'.jpg',headers:{host:wa.hostname}})).statusCode,404);
+ assert.equal((await app.inject({url:'/catalog-images/reference/not-an-id.jpg',headers:{host:wa.hostname}})).statusCode,404);
+ const ownerUrl='/api/owner/products/H19/image';
+ assert.equal((await app.inject({url:ownerUrl,headers:{host:owner.hostname}})).statusCode,403);
+ assert.equal((await app.inject({url:ownerUrl,headers})).statusCode,200);
+ await pool.query("UPDATE products SET active=false WHERE store_id=$1 AND sku='H19'",[fixtureStore]);
+ assert.equal((await app.inject({url:path,headers:{host:wa.hostname}})).statusCode,404);
+ assert.equal((await app.inject({url:ownerUrl,headers})).statusCode,200);
+ assert.ok((await loadSuggestionPhoto(pool,fixtureStore,'H19',row.version))?.image.equals(bytes));
+ await pool.query("UPDATE products SET image_path=$1,active=true WHERE store_id=$2 AND sku='H19'",[custom,fixtureStore]);
+ assert.equal((await app.inject({url:path,headers:{host:wa.hostname}})).statusCode,404);
+ assert.equal((await app.inject({url:custom,headers:{host:wa.hostname}})).statusCode,200);
 }));

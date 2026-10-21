@@ -11,7 +11,7 @@ import {SimulatorService,simulatorContext} from '../apps/server/src/services/sim
 import {ConversationRuntime} from '../apps/server/src/runtime/conversation.js';
 import type {Interpreter} from '../apps/server/src/adapters/interpreter.js';
 import {protectQuantityEvidence,amountToCount} from '../apps/server/src/services/quantity-evidence.js';
-import {visualSvg,renderVisualImage} from '../apps/server/src/services/visual-images.js';
+import {visualSvg,renderVisualImage,INVOICE_ROWS_PER_PAGE} from '../apps/server/src/services/visual-images.js';
 import {renderWhatsAppReply} from '../apps/server/src/services/whatsapp-reply.js';
 import {planWhatsAppReply} from '../apps/server/src/services/whatsapp-plan.js';
 import {WhatsAppChannel} from '../apps/server/src/services/whatsapp-channel.js';
@@ -26,17 +26,19 @@ function planner(operations:Operation[],transcript?:string,truncated=false):Inte
 async function event(inbox:SimulatorService,runtime:ConversationRuntime,e:SimulatorEvent){await inbox.ingest(e);await runtime.processNext(inbox.context);return inbox.snapshot();}
 async function text(inbox:SimulatorService,runtime:ConversationRuntime,value:string){return event(inbox,runtime,{id:randomUUID(),type:'text',text:value});}
 const last=(s:Snapshot)=>s.messages.at(-1)!.rich!;
-const buttons=(r:RichReply)=>r.parts?.flatMap(p=>p.cards.flatMap(c=>c.buttons??p.buttons??[]))??r.buttons??[];
+const buttons=(r:RichReply)=>r.parts?.flatMap(p=>[...p.buttons??[],...p.cards.flatMap(c=>c.buttons??[])])??r.buttons??[];
 const approve=(s:Snapshot)=>buttons(last(s)).find(b=>b.event.type==='confirm_products')!.event;
+const invoiceCards=(s:Snapshot)=>s.messages.filter(m=>m.rich?.groupId===last(s).groupId).flatMap(m=>m.rich?.parts?.flatMap(p=>p.cards)??[]);
 const submit=(s:Snapshot)=>buttons(last(s)).find(b=>b.event.type==='confirm')!.event;
 
-for(const count of [1,9,10,18,20,50])test(`${count} products: complete ordered review and separate quantity approval`,()=>fixture(async(pool,inbox)=>{
+for(const count of [1,5,8,9,10,18,20,50])test(`${count} products: complete ordered carousel review and separate invoice consent`,()=>fixture(async(pool,inbox)=>{
  const ops:Operation[]=Array.from({length:count},(_,i)=>({kind:'add_item',query:'TEST'+i,quantity:1}));const runtime=new ConversationRuntime(pool,planner(ops),{visualOrdering:true});
- let s=await text(inbox,runtime,'shopping list');const rows=s.messages.filter(m=>m.direction==='outbound');assert.equal(rows.length,Math.ceil(count/9));assert.equal(s.conversation.pending?.kind,'products');
+ let s=await text(inbox,runtime,'shopping list');const rows=s.messages.filter(m=>m.direction==='outbound');assert.equal(rows.length,Math.ceil((count+1)/10));assert.equal(s.conversation.pending?.kind,'products');
  const cards=rows.flatMap(m=>m.rich!.parts!.flatMap(p=>p.cards));assert.equal(cards.filter(c=>c.kind==='product').length,count);assert.equal(new Set(cards.filter(c=>c.kind==='product').map(c=>c.lineId)).size,count);
- for(const [i,m] of rows.entries()){assert.equal(m.rich!.partIndex,i);assert.equal(m.rich!.parts![0].cards.at(-1)!.kind,'instruction');assert.ok(m.rich!.parts![0].cards.length<=10);const rendered=renderWhatsAppReply(m.rich!,m.id,'example.test');assert.equal(rendered.format,'carousel');if(i<rows.length-1)assert.ok(!rendered.actions.some(a=>a.event.type==='confirm_products'));}
- s=await event(inbox,runtime,approve(s));assert.equal(s.requests.length,0);assert.equal(s.conversation.pending?.kind,'review');assert.equal(last(s).stage,'bill');const bill=last(s).parts!.flatMap(p=>p.cards);assert.ok(bill.every(c=>c.kind!=='product'&&(c.billRows?.length??0)<=5));
- const final=submit(s);s=await event(inbox,runtime,final);assert.equal(s.requests.length,1);assert.equal(last(s).stage,'submitted');assert.ok(last(s).parts!.flatMap(p=>p.cards).some(c=>c.kind==='status'&&c.billRows?.length));await inbox.ingest(final);assert.equal(await runtime.processNext(inbox.context),false);assert.equal((await inbox.snapshot()).requests.length,1);
+ for(const [i,m] of rows.entries()){assert.equal(m.rich!.partIndex,i);const page=m.rich!.parts![0];assert.ok(page.cards.every(c=>c.kind==='product'||c.kind==='instruction'));assert.ok(page.cards.length<=10);const rendered=renderWhatsAppReply(m.rich!,m.id,'example.test');if(page.cards.length>1)assert.equal(rendered.format,'carousel');if(!page.cards.length)assert.ok(['text','buttons'].includes(rendered.format));if(i<rows.length-1)assert.ok(!rendered.actions.some(a=>a.event.type==='confirm_products'));}
+ assert.equal(cards.filter(c=>c.kind==='instruction').length,count>1?1:0,'a swipe guide accompanies multiple products; one product uses one image');assert.ok(rows.at(-1)!.rich!.parts![0].cards.length>0,'approval travels inside the final image group');
+ s=await event(inbox,runtime,approve(s));assert.equal(s.requests.length,0);assert.equal(s.conversation.pending?.kind,'review');assert.equal(last(s).stage,'bill');const bill=invoiceCards(s);assert.ok(bill.every(c=>c.kind!=='product'&&(c.billRows?.length??0)<=INVOICE_ROWS_PER_PAGE));
+ const final=submit(s);s=await event(inbox,runtime,final);assert.equal(s.requests.length,1);assert.equal(last(s).stage,'submitted');assert.ok(s.messages.filter(m=>m.rich?.stage==='submitted').flatMap(m=>m.rich!.parts?.flatMap(p=>p.cards)??[]).some(c=>c.kind==='status'&&c.billRows?.length));await inbox.ingest(final);assert.equal(await runtime.processNext(inbox.context),false);assert.equal((await inbox.snapshot()).requests.length,1);
 }));
 
 test('pack size and count guard preserves paint/pipe dimensions and original evidence',()=>{
@@ -67,35 +69,35 @@ test('a product-choice question shows only that item, then reviews the complete 
  assert.ok(r.parts![0].cards.every(c=>c.kind==='product'&&c.lineId===s.conversation.draft[1].id));assert.ok(!buttons(r).some(b=>b.event.type==='confirm_products'));
  const select=buttons(r).find(b=>b.event.type==='select_product');assert.ok(select);const ids=s.conversation.draft.map(l=>l.id);
  s=await event(inbox,runtime,select.event);assert.deepEqual(s.conversation.draft.map(l=>l.id),ids);assert.equal(s.conversation.draft[0].quantity,2);assert.equal(last(s).stage,'products');
- assert.equal(last(s).parts!.flatMap(p=>p.cards).filter(c=>c.kind==='product').length,2);assert.ok(approve(s));
+ assert.equal(invoiceCards(s).filter(c=>c.kind==='product').length,2);assert.ok(approve(s));
 }));
 
-test('requested 10L packs cannot select 10kg paint or paint without verified volume',()=>fixture(async(pool)=>{
+test('requested 10L packs show a 10kg alternative without automatically selecting it or guessing volume',()=>fixture(async(pool)=>{
  await setupImageDemo(pool);const id=randomUUID();await pool.query("INSERT INTO conversations(id,store_id,actor) VALUES($1,$2,'pack-test')",[id,demoCatalogStore]);
  await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,brand,specifications) VALUES($1,'PAINT-KG','Asian Paints Distemper 10kg','litre',10000,20,'paint','Asian Paints','{\"weight\":\"10kg\"}'),($1,'PAINT-UNVERIFIED','Asian paint 10L','litre',10000,20,'paint','Asian Paints','{}')",[demoCatalogStore]);
  const inbox=new SimulatorService(pool,{storeId:demoCatalogStore,conversationId:id,actor:'pack-test',role:'customer'});
  const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:'Asian paint',quantity:1,packSize:{value:10,unit:'litre'},requestedUnit:'box'}]),{visualOrdering:true});
- const s=await text(inbox,runtime,'one 10 liter box Asian paint');assert.equal(s.conversation.draft[0].quantity,1);assert.equal(s.conversation.draft[0].resolution,'unavailable');assert.deepEqual(s.conversation.draft[0].candidates,[]);assert.equal(last(s).stage,'shop_check');assert.equal(s.requests.length,0);
+ const s=await text(inbox,runtime,'one 10 liter box Asian paint');assert.equal(s.conversation.draft[0].quantity,1);assert.equal(s.conversation.draft[0].resolution,'needs_choice');assert.equal(s.conversation.draft[0].sku,undefined);assert.equal(s.conversation.draft[0].packSize?.unit,'litre');assert.deepEqual(s.conversation.draft[0].candidates?.map(p=>p.sku),['PAINT-KG']);assert.equal(last(s).stage,'identify');assert.equal(s.requests.length,0);
 }));
 
 test('one remaining candidate progresses through product approval and bill instead of trapping the draft',()=>fixture(async(pool)=>{
  await setupImageDemo(pool);const id=randomUUID();await pool.query("INSERT INTO conversations(id,store_id,actor) VALUES($1,$2,'candidate-test')",[id,demoCatalogStore]);
  const inbox=new SimulatorService(pool,{storeId:demoCatalogStore,conversationId:id,actor:'candidate-test',role:'customer'});
  const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:'blade',quantity:1,search:{keywords:['hacksaw'],familyId:'saw-blades'}}]),{visualOrdering:true});
- let s=await text(inbox,runtime,'one blade');const select=buttons(last(s)).find(b=>b.event.type==='select_product');assert.ok(select);s=await event(inbox,runtime,select.event);s=await event(inbox,runtime,approve(s));assert.equal(last(s).stage,'bill');assert.equal(s.requests.length,0);s=await event(inbox,runtime,submit(s));assert.equal(s.requests.length,1);
+ let s=await text(inbox,runtime,'one blade');const select=buttons(last(s)).find(b=>b.event.type==='select_product');assert.ok(select);s=await event(inbox,runtime,select.event);assert.equal(last(s).stage,'bill');assert.equal(s.requests.length,0);s=await event(inbox,runtime,submit(s));assert.equal(s.requests.length,1);
 }));
 for(const mode of ['text','voice'])test(`${mode}: observed one 10-litre box remains one can, while a size alone asks its count`,()=>fixture(async(pool,inbox)=>{
  const phrase='one 10 liter box';const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:'TEST0',quantity:10,requestedUnit:'litre'}],phrase),{visualOrdering:true,mediaRecommendations:true});
  let s:Snapshot;if(mode==='text')s=await text(inbox,runtime,phrase);else{const id=randomUUID(),pcm=Buffer.alloc(32000);for(let i=0;i<16000;i++)pcm.writeInt16LE(Math.round(Math.sin(i*.17)*1200),i*2);const media=await normalizeVoice({id,mimeType:'audio/wav',data:pcmWav(pcm).toString('base64')});await inbox.ingest({id,type:'voice',mediaId:id},media);await runtime.processNext(inbox.context);s=await inbox.snapshot();}
- assert.equal(s.conversation.draft[0].quantity,1);assert.equal(s.conversation.draft[0].packSize?.value,10);assert.equal(s.conversation.draft[0].supportingPhrase,phrase);s=await event(inbox,runtime,approve(s));const image=last(s).parts![0].cards[0];assert.ok(image.kind!=='product');assert.equal(image.billRows![0].packSize,'10 litre');assert.equal(image.billRows![0].count,'1 can');
+ assert.equal(s.conversation.draft[0].quantity,1);assert.equal(s.conversation.draft[0].packSize?.value,10);assert.equal(s.conversation.draft[0].supportingPhrase,phrase);s=await event(inbox,runtime,approve(s));const image=invoiceCards(s)[0];assert.ok(image.kind!=='product');assert.equal(image.billRows![0].packSize,'10 litre');assert.equal(image.billRows![0].count,'1 can');
 }));
 
-test('unknown count is requested after product approval; quantity answer advances without losing the approved identity',()=>fixture(async(pool,inbox)=>{
- const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:'TEST0',quantity:10,requestedUnit:'litre'}]),{visualOrdering:true});let s=await text(inbox,runtime,'10L paint');assert.equal(s.conversation.draft[0].quantity,null);s=await event(inbox,runtime,approve(s));assert.equal(last(s).stage,'quantity');assert.equal(last(s).parts![0].cards[0].kind,'product');s=await text(inbox,runtime,'2 cans');assert.equal(s.conversation.draft[0].quantity,2);assert.equal(last(s).stage,'bill');assert.equal(s.requests.length,0);
+test('missing count is a focused native question before the product review; the count never implies product consent',()=>fixture(async(pool,inbox)=>{
+ const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:'TEST0',quantity:10,requestedUnit:'litre'}]),{visualOrdering:true});let s=await text(inbox,runtime,'10L paint');assert.equal(s.conversation.draft[0].quantity,null);assert.equal(last(s).stage,'quantity');assert.ok(!last(s).parts?.some(p=>p.cards.length));assert.ok(buttons(last(s)).some(b=>b.event.type==='set_quantity'));s=await text(inbox,runtime,'2 cans');assert.equal(s.conversation.draft[0].quantity,2);assert.equal(s.conversation.draft[0].productConfirmation,undefined);s=await event(inbox,runtime,approve(s));assert.equal(last(s).stage,'bill');assert.ok(s.conversation.draft[0].productConfirmation);assert.equal(s.requests.length,0);
 }));
 
-test('targeted correction retains IDs, invalidates approvals, and redisplays every product; clear all actually resets',()=>fixture(async(pool,inbox)=>{
- const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:'TEST0',quantity:1},{kind:'add_item',query:'TEST1',quantity:2}]),{visualOrdering:true});let s=await text(inbox,runtime,'two items');const ids=s.conversation.draft.map(l=>l.id);s=await event(inbox,runtime,approve(s));const old=submit(s);s=await event(inbox,runtime,{id:randomUUID(),type:'set_quantity',lineId:ids[1],quantity:4,expectedVersion:s.conversation.version});assert.deepEqual(s.conversation.draft.map(l=>l.id),ids);assert.deepEqual(s.conversation.draft.map(l=>l.quantity),[1,4]);assert.equal(last(s).stage,'products');assert.equal(last(s).parts!.flatMap(p=>p.cards).filter(c=>c.kind==='product').length,2);s=await event(inbox,runtime,{...old,id:randomUUID()});assert.equal(s.requests.length,0);s=await text(inbox,runtime,'clear all');assert.deepEqual(s.conversation.draft,[]);assert.equal(s.conversation.pending,null);assert.equal(s.conversation.productReview,null);
+test('targeted correction shows its affected photo and requires fresh consent; clear all actually resets',()=>fixture(async(pool,inbox)=>{
+ const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:'TEST0',quantity:1},{kind:'add_item',query:'TEST1',quantity:2}]),{visualOrdering:true});let s=await text(inbox,runtime,'two items');const ids=s.conversation.draft.map(l=>l.id);s=await event(inbox,runtime,approve(s));const old=submit(s);s=await event(inbox,runtime,{id:randomUUID(),type:'set_quantity',lineId:ids[1],quantity:4,expectedVersion:s.conversation.version});assert.deepEqual(s.conversation.draft.map(l=>l.id),ids);assert.deepEqual(s.conversation.draft.map(l=>l.quantity),[1,4]);assert.equal(last(s).stage,'products');assert.equal(invoiceCards(s).filter(c=>c.kind==='product').length,1);assert.ok(invoiceCards(s).some(c=>c.kind==='product'&&c.lineId===ids[1]));const photos=buttons(last(s)).find(b=>b.event.type==='shopping_action'&&b.event.action==='view_products')!;assert.ok(photos);const kept=structuredClone(s.conversation);s=await event(inbox,runtime,photos.event);assert.deepEqual(s.conversation,kept);assert.equal(invoiceCards(s).filter(c=>c.kind==='product').length,2);s=await event(inbox,runtime,{...old,id:randomUUID()});assert.equal(s.requests.length,0);s=await text(inbox,runtime,'clear all');assert.deepEqual(s.conversation.draft,[]);assert.equal(s.conversation.pending,null);assert.equal(s.conversation.productReview,null);
 }));
 
 test('missing catalog requests survive and block global approval; returning greeting offers continue/new',()=>fixture(async(pool,inbox)=>{
@@ -106,8 +108,8 @@ test('truncated interpretation and configured 50-line overflow never apply a par
  const ops:Operation[]=Array.from({length:51},(_,i)=>({kind:'add_item',query:'TEST'+(i%50),quantity:null}));let runtime=new ConversationRuntime(pool,planner(ops),{visualOrdering:true});let s=await text(inbox,runtime,'long list');assert.equal(s.conversation.draft.length,0);runtime=new ConversationRuntime(pool,planner(ops.slice(0,20),undefined,true),{visualOrdering:true});s=await text(inbox,runtime,'truncated list');assert.equal(s.conversation.draft.length,0);
 }));
 
-test('PNG templates shape mixed Tamil/Latin, cache identical renders and reject more than five rows',()=>{
- const dir=mkdtempSync('/tmp/visual-png-'),card={kind:'instruction' as const,title:'பொருட்களைப் பாருங்க',lines:['எல்லா photo-வும் பாருங்க.','மாற்றம் இருந்தா text / voice-ல சொல்லுங்க.'],caption:'Check'};const svg=visualSvg(card);assert.ok(svg.includes('aria-label="எல்லா photo-வும் பாருங்க."'));assert.ok(!svg.includes('<text'));const url=renderVisualImage(card,dir);assert.equal(renderVisualImage(card,dir),url);assert.ok(readFileSync(dir+'/'+url.split('/').at(-1)).subarray(1,4).equals(Buffer.from('PNG')));assert.throws(()=>visualSvg({...card,billRows:Array(6).fill({name:'x',packSize:'x',count:'1',unitPrice:'₹1',total:'₹1'})}),/five/);
+test('PNG templates shape mixed Tamil/Latin, cache identical renders and reject more than eight rows',()=>{
+ const dir=mkdtempSync('/tmp/visual-png-'),card={kind:'instruction' as const,title:'பொருட்களைப் பாருங்க',lines:['எல்லா photo-வும் பாருங்க.','மாற்றம் இருந்தா text / voice-ல சொல்லுங்க.'],caption:'Check'};const svg=visualSvg(card);assert.ok(svg.includes('aria-label="எல்லா photo-வும் பாருங்க."'));assert.ok(!svg.includes('<text'));const url=renderVisualImage(card,dir);assert.equal(renderVisualImage(card,dir),url);assert.ok(readFileSync(dir+'/'+url.split('/').at(-1)).subarray(1,4).equals(Buffer.from('PNG')));assert.throws(()=>visualSvg({...card,billRows:Array(9).fill({name:'x',packSize:'x',count:'1',unitPrice:'₹1',total:'₹1'})}),/eight/);
 });
 
 test('cost planning uses configured service/category rates for the actual ordered group count',()=>{
@@ -120,11 +122,29 @@ test('partial group send blocks later parts and text approval until a complete r
  let calls=0;const channel=new WhatsAppChannel(pool,cfg,async()=>{calls++;return new Response(JSON.stringify({error:{code:100}}),{status:400});},new GoogleInterpreter({allowPaidInference:false,apiKey:'offline-placeholder',model:'gemini-3.5-flash-lite',budgetMicrousd:0,freeQuota:{scope:'visual-delivery',model:'gemini-3.5-flash-lite'}},{generateContent:async()=>Object.assign(new GenerateContentResponse(),{candidates:[{content:{parts:[{text:JSON.stringify({operations:Array.from({length:10},(_,i)=>({kind:'add_item',query:'TEST'+i,quantity:1})),next:'review'})}]},finishReason:FinishReason.STOP}],modelVersion:'gemini-3.5-flash-lite',usageMetadata:{promptTokenCount:1000,candidatesTokenCount:300,totalTokenCount:1300}})}));await channel.setup();await channel.receive(webhook('shopping list','test-in'));await channel.processNext();let rows=(await pool.query('SELECT m.*,o.state FROM messages m JOIN whatsapp_outbox o ON o.message_id=m.id ORDER BY m.sequence')).rows;assert.equal(rows.length,2);assert.equal(rows[0].part_count,2);assert.equal(await channel.sendNext(),true);assert.equal(await channel.sendNext(),false);assert.equal(calls,1);const conversation=rows[0].conversation_id;const pending=(await pool.query('SELECT pending FROM conversations WHERE id=$1',[conversation])).rows[0].pending;const client=await pool.connect();try{assert.equal(await reviewDeliveryReady(client,conversation,pending.id),false);}finally{client.release();}await channel.receive(webhook('all correct','approve-incomplete'));await channel.processNext();assert.equal((await pool.query('SELECT count(*)::int AS n FROM order_requests')).rows[0].n,0);assert.equal((await pool.query('SELECT product_review FROM conversations WHERE id=$1',[conversation])).rows[0].product_review,null);
 }));
 
+test('multipart approval requires delivery receipts for every part; accepted HTTP responses alone do not prove delivery',()=>fixture(async(pool)=>{
+ const channel=new WhatsAppChannel(pool,cfg,async()=>new Response(JSON.stringify({messages:[{id:'synthetic-'+randomUUID()}]}),{status:200}),new GoogleInterpreter({allowPaidInference:false,apiKey:'offline-placeholder',model:'gemini-3.5-flash-lite',budgetMicrousd:0,freeQuota:{scope:'delivery-proof',model:'gemini-3.5-flash-lite'}},{generateContent:async()=>Object.assign(new GenerateContentResponse(),{candidates:[{content:{parts:[{text:JSON.stringify({operations:Array.from({length:10},(_,i)=>({kind:'add_item',query:'TEST'+i,quantity:1})),next:'review'})}]},finishReason:FinishReason.STOP}],modelVersion:'gemini-3.5-flash-lite',usageMetadata:{promptTokenCount:1000,candidatesTokenCount:300,totalTokenCount:1300}})}));
+ await channel.setup();await channel.receive(webhook('ten item list','delivery-proof'));await channel.processNext();while(await channel.sendNext()){}
+ const rows=(await pool.query('SELECT m.id,m.conversation_id,m.part_count,o.state FROM messages m JOIN whatsapp_outbox o ON o.message_id=m.id ORDER BY m.sequence')).rows;assert.equal(rows.length,2);assert.equal(rows[0].state,'accepted');assert.ok(rows.slice(1).every(r=>r.state==='queued'),'later pages wait for delivered/read, not just accepted');
+ const conversation=rows[0].conversation_id,binding=(await pool.query('SELECT pending FROM conversations WHERE id=$1',[conversation])).rows[0].pending.id,c=await pool.connect();
+ try{
+  assert.equal(await reviewDeliveryReady(c,conversation,binding),false);assert.equal(await reviewDeliveryReady(c,conversation,binding,true),false);
+  await c.query("UPDATE whatsapp_outbox SET state='delivered' WHERE message_id=ANY($1::uuid[])",[rows.slice(1).map(row=>row.id)]);assert.equal(await reviewDeliveryReady(c,conversation,binding),false);
+  for(const state of ['failed','unknown','blocked']){await c.query('UPDATE whatsapp_outbox SET state=$1 WHERE message_id=$2',[state,rows[0].id]);assert.equal(await reviewDeliveryReady(c,conversation,binding),false);}
+  await c.query("UPDATE whatsapp_outbox SET state='read' WHERE message_id=$1",[rows[0].id]);assert.equal(await reviewDeliveryReady(c,conversation,binding),true);
+  // Characterize the separate single-reply rule using one isolated group.
+  // Typed/voice approval still needs delivery; a bound tap proves that reply.
+  await c.query('UPDATE messages SET reply_group_id=$1,part_count=1 WHERE id=$2',[randomUUID(),rows.at(-1)!.id]);await c.query("UPDATE whatsapp_outbox SET state='accepted' WHERE message_id=$1",[rows.at(-1)!.id]);
+  assert.equal(await reviewDeliveryReady(c,conversation,binding),false);assert.equal(await reviewDeliveryReady(c,conversation,binding,true),true);
+  await c.query("UPDATE whatsapp_outbox SET state='unknown' WHERE message_id=$1",[rows.at(-1)!.id]);assert.equal(await reviewDeliveryReady(c,conversation,binding,true),false);
+ }finally{c.release();}
+}));
+
 for(const mode of ['text','voice'])for(const [phrase,count,size,unit,sku] of [['10L paint',null,10,'litre','TEST0'],['two 10L cans',2,10,'litre','TEST0'],['1-inch pipe',null,1,'inch','PIPE-ONE'],['two 1-inch pipes',2,1,'inch','PIPE-ONE']] as const)test(`${mode} preserves ${phrase}`,()=>fixture(async(pool,inbox)=>{
  await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,image_path,specifications) VALUES($1,'PIPE-ONE','1 inch PVC pipe','piece',12500,100,'/demo-images/H01.jpg','{\"size\":\"1 inch\"}')",[simulatorContext.storeId]);
  const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:sku,quantity:size,requestedUnit:unit}],phrase),{visualOrdering:true,mediaRecommendations:true});let s:Snapshot;
  if(mode==='text')s=await text(inbox,runtime,phrase);else{const id=randomUUID(),pcm=Buffer.alloc(32000);for(let i=0;i<16000;i++)pcm.writeInt16LE(Math.round(Math.sin(i*.17)*1200),i*2);await inbox.ingest({id,type:'voice',mediaId:id},await normalizeVoice({id,mimeType:'audio/wav',data:pcmWav(pcm).toString('base64')}));await runtime.processNext(inbox.context);s=await inbox.snapshot();}
- assert.equal(s.conversation.draft[0].quantity,count);if(unit==='inch'){assert.deepEqual(s.conversation.draft[0].productMeasures,[{value:size,unit}]);assert.equal(s.conversation.draft[0].packSize,undefined);}else assert.deepEqual(s.conversation.draft[0].packSize,{value:size,unit});assert.equal(s.requests.length,0);assert.equal(last(s).stage,'products');
+ assert.equal(s.conversation.draft[0].quantity,count);if(unit==='inch'){assert.deepEqual(s.conversation.draft[0].productMeasures,[{value:size,unit}]);assert.equal(s.conversation.draft[0].packSize,undefined);}else assert.deepEqual(s.conversation.draft[0].packSize,{value:size,unit});assert.equal(s.requests.length,0);assert.equal(last(s).stage,count===null?'quantity':'products');
 }));
 
 test('expired reviews and changed prices require a fresh review; late confirmations never submit',()=>fixture(async(pool,inbox)=>{
@@ -132,7 +152,7 @@ test('expired reviews and changed prices require a fresh review; late confirmati
 }));
 
 test('legacy ambiguous litre quantity is kept for fresh clarification, not treated as ten cans',()=>fixture(async(pool,inbox)=>{
- await pool.query('UPDATE conversations SET draft=$1,pending=NULL WHERE id=$2',[JSON.stringify([{id:randomUUID(),query:'TEST0',sku:'TEST0',name:'Test paint 0',quantity:10,unit:'can',requestedUnit:'litre',pricePaise:10000,productVersion:1,resolution:'needs_unit',discovery:{plan:{specifications:{size:'10L'}}}}]),inbox.context.conversationId]);const runtime=new ConversationRuntime(pool,planner([]),{visualOrdering:true});let s=await text(inbox,runtime,'review');assert.equal(s.conversation.draft[0].quantity,null);assert.equal(s.conversation.draft[0].packSize?.value,10);s=await event(inbox,runtime,approve(s));assert.equal(last(s).stage,'quantity');
+ await pool.query('UPDATE conversations SET draft=$1,pending=NULL WHERE id=$2',[JSON.stringify([{id:randomUUID(),query:'TEST0',sku:'TEST0',name:'Test paint 0',quantity:10,unit:'can',requestedUnit:'litre',pricePaise:10000,productVersion:1,resolution:'needs_unit',discovery:{plan:{specifications:{size:'10L'}}}}]),inbox.context.conversationId]);const runtime=new ConversationRuntime(pool,planner([]),{visualOrdering:true});let s=await text(inbox,runtime,'review');assert.equal(s.conversation.draft[0].quantity,null);assert.equal(s.conversation.draft[0].packSize?.value,10);assert.equal(last(s).stage,'quantity');assert.ok(!buttons(last(s)).some(b=>b.event.type==='confirm'));
 }));
 
 test('50-item edit picker covers every stable ID and keeps approval off the product buttons',()=>fixture(async(pool,inbox)=>{
@@ -147,7 +167,7 @@ for(const stage of ['products','bill'])test(`shop handoff during ${stage} delive
  let sends=0;
  const provider=new GoogleInterpreter({allowPaidInference:false,apiKey:'offline-placeholder',model:'gemini-3.5-flash-lite',budgetMicrousd:0,freeQuota:{scope:'visual-handoff',model:'gemini-3.5-flash-lite'}},{generateContent:async()=>Object.assign(new GenerateContentResponse(),{candidates:[{content:{parts:[{text:JSON.stringify({operations:[{kind:'add_item',query:'TEST0',quantity:1}],next:'review'})}]},finishReason:FinishReason.STOP}],modelVersion:'gemini-3.5-flash-lite',usageMetadata:{promptTokenCount:100,candidatesTokenCount:100,totalTokenCount:200}})});
  const channel=new WhatsAppChannel(pool,cfg,async()=>new Response(JSON.stringify({messages:[{id:'wamid.handoff.'+(++sends)}]}),{status:200}),provider);
- await channel.setup();await channel.receive(webhook('one TEST0','handoff-start'));await channel.processNext();assert.equal(await channel.sendNext(),true);
+ await channel.setup();await channel.receive(webhook('one TEST0','handoff-start'));await channel.processNext();while(await channel.sendNext()){await pool.query("UPDATE whatsapp_outbox SET state='delivered' WHERE state='accepted'");}
  const first=(await pool.query("SELECT m.*,o.state FROM messages m JOIN whatsapp_outbox o ON o.message_id=m.id ORDER BY m.sequence DESC LIMIT 1")).rows[0];
  if(stage==='bill'){
   const action=(await pool.query("SELECT id,label FROM whatsapp_actions WHERE message_id=$1 AND event->>'type'='confirm_products' LIMIT 1",[first.id])).rows[0];assert.ok(action);
@@ -157,8 +177,21 @@ for(const stage of ['products','bill'])test(`shop handoff during ${stage} delive
  const before=(await pool.query('SELECT pending FROM conversations WHERE id=$1',[first.conversation_id])).rows[0];assert.equal(before.pending.kind,stage==='bill'?'review':'products');
  await channel.receive(webhook('talk to shop','handoff-help'));await channel.processNext();
  const ack=(await pool.query("SELECT m.*,o.sender_kind,o.state FROM messages m JOIN whatsapp_outbox o ON o.message_id=m.id ORDER BY m.sequence DESC LIMIT 1")).rows[0];
- assert.equal(ack.payload.handoffRequested,true);assert.equal(ack.payload.stage,'status');assert.equal(ack.sender_kind,'system');assert.match(ack.text,/shop assistance requested/i);
+ assert.equal(ack.payload.handoffRequested,true);assert.equal(ack.payload.stage,'status');assert.equal(ack.sender_kind,'system');assert.match(ack.text,/message is with the shop owner/i);
  assert.ok(!buttons(ack.payload).some(b=>['confirm','confirm_products'].includes(b.event.type)));
  const state=(await pool.query('SELECT operator_mode,handoff_requested,jsonb_array_length(draft) AS lines FROM conversations WHERE id=$1',[first.conversation_id])).rows[0];assert.equal(state.operator_mode,'owner');assert.equal(state.handoff_requested,true);assert.equal(state.lines,1);
  assert.equal(await channel.sendNext(),true);assert.equal((await pool.query('SELECT state FROM whatsapp_outbox WHERE message_id=$1',[ack.id])).rows[0].state,'accepted');assert.equal((await pool.query('SELECT count(*)::int AS n FROM order_requests')).rows[0].n,0);
 }));
+
+
+test('reference product captions retain their label and pending price before channel rendering',()=>{
+ for(const [language,label,pending] of [['en','Reference photo','Price: shop to confirm'],['ta','Reference படம்','கடையில் சரிபார்த்து சொல்லப்படும்'],['ta-Latn','Reference photo','Vilai: kadai sollanum']] as const){
+  const state:ConversationState={visualOrdering:true,replyLanguage:language,version:0,draft:[],pending:null,fulfillment:'pickup',lastRequestId:null};
+  const product:Product={sku:'REF',name:'Cutting wheel',unit:'piece',pricePaise:0,priceStatus:'confirm',stock:null,version:1,aliases:[],quantityStep:1,imageUrl:'/catalog-images/reference/'+randomUUID()+'.jpg',imageReference:true,brand:'Brand details '.repeat(30),specifications:{size:'Large size '.repeat(30)}};
+  const action:SimulatorEvent={id:randomUUID(),type:'choose_product',sku:product.sku,expectedVersion:0};
+  const rich=visualReply({version:1,stage:'identify',kind:'product_choices',text:'Choose product',presentation:'carousel_preview',outboundMessages:1,cards:[{product,label:'Choose this',action}]},state);
+  const priced=visualReply({version:1,stage:'identify',kind:'product_choices',text:'Choose product',presentation:'carousel_preview',outboundMessages:1,cards:[{product:{...product,pricePaise:12500,priceStatus:'priced'},label:'Choose this',action}]},state);assert.ok(priced.parts![0].cards[0].caption.includes('₹125.00'));
+  const card=rich.parts![0].cards[0];assert.equal(card.kind,'product');assert.ok(card.caption.startsWith('Cutting wheel'));assert.ok(card.caption.includes(pending));assert.ok(card.caption.endsWith(label));assert.ok(Array.from(card.caption).length<=160);assert.equal(card.buttons![0].event,action);
+  const payload=renderWhatsAppReply(rich,randomUUID(),'example.test').payload as any;assert.ok(payload.interactive.body.text.endsWith(label));
+ }
+});

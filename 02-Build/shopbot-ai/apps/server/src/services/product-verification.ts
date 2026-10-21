@@ -1,29 +1,24 @@
+import {discoveryFacetChoices} from './discovery-facet-actions.js';
 import {say,lineName,unitName,facetLabel,localName,safeQuestion} from '../../../../packages/contracts/language.js';
-import {createHash,randomUUID} from 'node:crypto';
+import {randomUUID} from 'node:crypto';
 import type {ConversationState,DraftLine,Product,ProductCheck,ProductCard,RichReply} from '../../../../packages/contracts/index.js';
-export function productIdentity(product:Product) {
-  return createHash('sha256').update(JSON.stringify([product.sku,product.version,product.name,product.unit,product.localNames??null,product.imageUrl??null,product.brand??null,product.familyId??null,product.specifications??null])).digest('hex');
-}
-export function productConfirmed(line:DraftLine,product=line.candidates?.find(p=>p.sku===line.sku)) {
-  return !!product&&line.productConfirmation?.sku===product.sku&&line.productConfirmation.version===product.version&&line.productConfirmation.identityHash===productIdentity(product);
-}
-export function preserveConfirmation(old:DraftLine,next:DraftLine) {
-  const product=next.candidates?.find(p=>p.sku===next.sku);
-  if(product&&productConfirmed(old,product))next.productConfirmation=old.productConfirmation;
-  return next;
-}
-export function markProductConfirmed(line:DraftLine,product:Product) {
-  line.productConfirmation={sku:product.sku,version:product.version,identityHash:productIdentity(product)};
-}
+import {productConfirmed} from './product-confirmation.js';
+export {productIdentity,productConfirmed,preserveConfirmation,markProductConfirmed} from './product-confirmation.js';
+import {canQuoteDraft,nextCounterLine,productCheckCoversDraft} from './counter-state.js';
 import {productListHash} from './visual-ordering.js';
 export function makeProductCheck(state:ConversationState,sequential=false):ProductCheck|null {
   if(state.visualOrdering){
     const hash=productListHash(state);
     if(state.productReview?.hash===hash)return null;
-    const uncertain=state.draft.find(l=>!l.shopCheckDeferred&&(l.productIntent?.kind==='ambiguous'||!l.sku&&l.candidates?.length));
-    if(!uncertain&&state.draft.some(l=>!l.shopCheckDeferred&&l.sku&&productConfirmed(l)&&['needs_quantity','needs_unit'].includes(l.resolution)))return null;
+    const active=nextCounterLine(state);
+    if(active?.sku&&productConfirmed(active)&&['needs_quantity','needs_unit'].includes(active.resolution))return null;
+    // Exact matches can be approved together after variant choices. A line
+    // already awaiting a quantity above must still keep its focused question.
+    const uncertain=state.draft.find(line=>!line.shopCheckDeferred&&(line.productIntent?.kind==='ambiguous'||!line.sku&&line.candidates?.length));
     const groups=state.draft.flatMap(line=>{const products=line.sku?line.candidates?.filter(p=>p.sku===line.sku)??[]:line.id===uncertain?.id?line.candidates?.slice(0,3)??[]:[];return products.length||line.productIntent?.kind==='ambiguous'?[{lineId:line.id,products,discovery:line.discovery}]:[];});
-    return {kind:'products',id:randomUUID(),version:state.version,expiresAt:new Date(Date.now()+15*60*1000).toISOString(),groups,remaining:state.draft.filter(l=>!l.sku).length,completeReview:groups.length===state.draft.length&&groups.every(g=>g.products.length===1)&&state.draft.every(l=>l.sku&&l.resolution!=='unavailable')?true:undefined,listHash:hash};
+    const check:ProductCheck={kind:'products',id:randomUUID(),version:state.version,expiresAt:new Date(Date.now()+15*60*1000).toISOString(),groups,remaining:state.draft.filter(l=>!l.sku).length,listHash:hash};
+    if(productCheckCoversDraft(state,check)&&canQuoteDraft(state))check.completeReview=true;
+    return check;
   }
   const unfinished=state.draft.filter(l=>l.resolution!=='matched'||!productConfirmed(l));
   const bulk=!state.draft.some(l=>productConfirmed(l))&&unfinished.every(l=>l.resolution==='matched'&&!!l.sku&&!!l.quantity&&!l.discovery?.noExactMatch);
@@ -47,7 +42,7 @@ export function productCheckReply(state:ConversationState,question?:string):Rich
     const request=line.query&&line.query!==line.sku?line.query:lineName(line,state);
     const label=say(state,`Item ${number}: ${request}`,`பொருள் ${number}: ${request}`,`Porul ${number}: ${request}`);
     const quantityLabel=amount===null||amount===undefined?say(state,'Quantity to confirm','எண்ணிக்கையை உறுதி செய்ய வேண்டும்','Quantity confirm pannanum'):say(state,`Requested: ${amount} ${line.requestedUnit??line.unit??'units'}`,`கேட்டது: ${amount} ${unitName(line.requestedUnit??line.unit??'unit',state,amount)}`,`Kettathu: ${amount} ${unitName(line.requestedUnit??line.unit??'unit',state,amount)}`);
-    cards.push(...group.products.map(product=>({product,requestLabel:label,quantityLabel,matchLabel:group.discovery?.rankings.find(r=>r.sku===product.sku)?.match==='related'?say(state,'Related option · please check','தொடர்புடைய பொருள் · சரிபார்க்கவும்','Thodarbudaiya porul · check pannunga'):line.sku===product.sku?say(state,'Suggested product','பரிந்துரைக்கப்பட்ட பொருள்','Parinthuraiththa porul'):undefined,label:group.products.length===1?say(state,'Add this item','இந்தப் பொருளைச் சேர்','Intha porulai seru'):say(state,'Choose this option','இதைத் தேர்வு செய்','Ithai choose pannu'),action:{id:randomUUID(),type:'select_product' as const,batchId:check.id,lineId:line.id,sku:product.sku}})));
+    cards.push(...group.products.map(product=>({product,requestLabel:label,quantityLabel,matchLabel:group.discovery?.rankings.find(r=>r.sku===product.sku)?.match==='related'?say(state,'Related option · please check','தொடர்புடைய பொருள் · சரிபார்க்கவும்','Thodarbudaiya porul · check pannunga'):line.sku===product.sku?say(state,'Suggested product','இந்த item-ஐ check பண்ணுங்க','Parinthuraiththa porul'):undefined,label:group.products.length===1?say(state,'Add this item','இந்தப் பொருளைச் சேர்','Intha porulai seru'):say(state,'Choose this option','இது வேணும்','Ithai choose pannu'),action:{id:randomUUID(),type:'select_product' as const,batchId:check.id,lineId:line.id,sku:product.sku}})));
     if(/^(?:cutter|கட்டர்)$/i.test(request.trim()))return say(state,'What do you need to cut? Check each product name and photo; choose only the type you need.','எதை வெட்ட கட்டர் வேண்டும்? பெயரையும் படத்தையும் பார்த்து, தேவையான வகையை மட்டும் தேர்வு செய்யுங்கள்.','Ethai vetta cutter venum? Peyaraiyum photo-vaiyum paathu thevaiyana type mattum choose pannunga.');
     const facet=group.discovery?.facets[0];
     if(facet)return say(state,`${number}. ${amount===null||amount===undefined?'':amount+' × '}${request}: which ${facet.label} did you mean—${facet.values.map(v=>v.label).join(', ')}?`,`${number}. ${amount===null||amount===undefined?'':amount+' × '}${request}: எந்த ${facetLabel(facet.key,facet.label,state)} வேண்டும் — ${facet.values.map(v=>localName(v.label,v.localNames,state)).join(', ')}?`,`${number}. ${amount===null||amount===undefined?'':amount+' × '}${request}: entha ${facetLabel(facet.key,facet.label,state)} venum — ${facet.values.map(v=>localName(v.label,v.localNames,state)).join(', ')}?`);
@@ -72,9 +67,9 @@ ${check.groups.some(g=>g.discovery?.noExactMatch)?'Ivai exact match-nu confirm p
   }
   const narrowing=check.groups.find(g=>g.discovery?.facets.length);
   const facet=narrowing?.discovery?.facets[0];
-  const filters=facet&&narrowing?facet.values.map(v=>({label:localName(v.label,v.localNames,state),event:{id:randomUUID(),type:'refine_search' as const,batchId:check.id,lineId:narrowing.lineId,facet:facet.key,value:v.value}})):[];
+  const filters=facet&&narrowing?discoveryFacetChoices(facet,state).map(v=>({label:v.label,event:{id:randomUUID(),type:'refine_search' as const,batchId:check.id,lineId:narrowing.lineId,facet:facet.key,value:v.value}})):[];
   const identified=check.groups.every(g=>g.products.length===1&&!g.discovery?.noExactMatch);
   const bulk=identified?[{label:check.groups.length===1&&check.remaining?say(state,'This item is right','இந்தப் பொருள் சரி','Intha porul sari'):say(state,'All correct','அனைத்தும் சரி','Ellaam sari'),event:{id:randomUUID(),type:'confirm_products' as const,batchId:check.id}}]:[];
-  const buttons=identified?[...bulk,{label:say(state,'Change an item','பொருளை மாற்று','Porulai maathu'),event:{id:randomUUID(),type:'shopping_action' as const,action:'edit_list' as const,expectedVersion:state.version}},{label:say(state,'Talk to shop','கடையிடம் பேசு','Kadaiyila pesu'),event:{id:randomUUID(),type:'shopping_action' as const,action:'handoff' as const,expectedVersion:state.version}}]:filters.slice(0,3);
+  const buttons=identified?[...bulk,{label:say(state,'Change an item','மாற்றணும்','Porulai maathu'),event:{id:randomUUID(),type:'shopping_action' as const,action:'edit_list' as const,expectedVersion:state.version}},{label:say(state,'Talk to shop','உதவி வேணும்','Kadaiyila pesu'),event:{id:randomUUID(),type:'shopping_action' as const,action:'handoff' as const,expectedVersion:state.version}}]:filters.slice(0,3);
   return {version:1,kind:'product_choices',text,cards,buttons:buttons.length?buttons:undefined,presentation:cards.length===1?'single_product':cards.every(c=>c.product.imageUrl)?'carousel_preview':'list',outboundMessages:1,remainingChoices:check.remaining};
 }

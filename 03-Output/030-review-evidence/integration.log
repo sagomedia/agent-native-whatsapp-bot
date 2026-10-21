@@ -1,0 +1,3076 @@
+
+> shopbot-ai@0.1.0 test:integration
+> tsx --test tests/*.test.ts
+
+TAP version 13
+# Subtest: rechecking remembers the missing item, searches again without AI, and never substitutes screws for a screwdriver
+ok 1 - rechecking remembers the missing item, searches again without AI, and never substitutes screws for a screwdriver
+  ---
+  duration_ms: 1528.692961
+  type: 'test'
+  ...
+# Subtest: a newly listed compound-name product can be chosen after recheck without duplicating the original request
+ok 2 - a newly listed compound-name product can be chosen after recheck without duplicating the original request
+  ---
+  duration_ms: 2443.237429
+  type: 'test'
+  ...
+# Subtest: model-chosen discovery queries run real tools and feed durable observations into the next decision
+ok 3 - model-chosen discovery queries run real tools and feed durable observations into the next decision
+  ---
+  duration_ms: 2124.74221
+  type: 'test'
+  ...
+# Subtest: an alternative shown for a pending item resolves that item only after an explicit current selection
+ok 4 - an alternative shown for a pending item resolves that item only after an explicit current selection
+  ---
+  duration_ms: 2125.3476
+  type: 'test'
+  ...
+# Subtest: read-only assistance refuses mixed mutations and ungrounded commerce questions
+ok 5 - read-only assistance refuses mixed mutations and ungrounded commerce questions
+  ---
+  duration_ms: 1922.014725
+  type: 'test'
+  ...
+# Subtest: quota denial is described as a limit and a recheck still works without another provider request
+ok 6 - quota denial is described as a limit and a recheck still works without another provider request
+  ---
+  duration_ms: 2076.830135
+  type: 'test'
+  ...
+# Subtest: queued rechecks cannot jump from the earlier item to the next pending question
+ok 7 - queued rechecks cannot jump from the earlier item to the next pending question
+  ---
+  duration_ms: 2066.043063
+  type: 'test'
+  ...
+# Subtest: yes binds to a displayed discovery option but cannot add a price quote or an unseen queued option
+ok 8 - yes binds to a displayed discovery option but cannot add a price quote or an unseen queued option
+  ---
+  duration_ms: 2163.022952
+  type: 'test'
+  ...
+# Subtest: the native planning prompt includes current and remembered tool observations without hidden memory identity or raw pricing
+ok 9 - the native planning prompt includes current and remembered tool observations without hidden memory identity or raw pricing
+  ---
+  duration_ms: 1.873485
+  type: 'test'
+  ...
+# Subtest: unrelated discovery while another item is pending adds the selected new item without replacing the old request
+ok 10 - unrelated discovery while another item is pending adds the selected new item without replacing the old request
+  ---
+  duration_ms: 2314.87597
+  type: 'test'
+  ...
+# Subtest: price rechecks preserve their product and quantity despite an unrelated pending item
+ok 11 - price rechecks preserve their product and quantity despite an unrelated pending item
+  ---
+  duration_ms: 2055.134711
+  type: 'test'
+  ...
+# Subtest: a model cannot attach search alternatives to a nonexistent or unrelated draft line
+ok 12 - a model cannot attach search alternatives to a nonexistent or unrelated draft line
+  ---
+  duration_ms: 1848.617344
+  type: 'test'
+  ...
+# Subtest: five-item text -> complete review -> confirmed request once; known actions use zero calls
+ok 13 - five-item text -> complete review -> confirmed request once; known actions use zero calls
+  ---
+  duration_ms: 1538.565695
+  type: 'test'
+  ...
+# Subtest: unresolved lines survive targeted choice/quantity clarification without silent omissions
+ok 14 - unresolved lines survive targeted choice/quantity clarification without silent omissions
+  ---
+  duration_ms: 2168.990127
+  type: 'test'
+  ...
+# Subtest: uncertain quantities, unmatched lines and price-only requests retain their correct purpose
+ok 15 - uncertain quantities, unmatched lines and price-only requests retain their correct purpose
+  ---
+  duration_ms: 2194.835811
+  type: 'test'
+  ...
+# Subtest: compound edits and yes-but-edit create a fresh review; stale, unrelated and expired yes cannot submit
+ok 16 - compound edits and yes-but-edit create a fresh review; stale, unrelated and expired yes cannot submit
+  ---
+  duration_ms: 2304.182328
+  type: 'test'
+  ...
+# Subtest: price/availability changes require new review; immutable requests preserve prices and state
+ok 17 - price/availability changes require new review; immutable requests preserve prices and state
+  ---
+  duration_ms: 2183.981547
+  type: 'test'
+  ...
+# Subtest: shared tools support a second store/profile and decimal units; tenant/actor/role injection is rejected
+ok 18 - shared tools support a second store/profile and decimal units; tenant/actor/role injection is rejected
+  ---
+  duration_ms: 2209.812331
+  type: 'test'
+  ...
+# Subtest: tool batches roll back on invalid dependencies/line limits; replay cannot repeat a mutation
+ok 19 - tool batches roll back on invalid dependencies/line limits; replay cannot repeat a mutation
+  ---
+  duration_ms: 2034.017176
+  type: 'test'
+  ...
+# Subtest: malformed/truncated/privilege-changing provider output cannot mutate draft; live adapter fails closed
+ok 20 - malformed/truncated/privilege-changing provider output cannot mutate draft; live adapter fails closed
+  ---
+  duration_ms: 8358.493207
+  type: 'test'
+  ...
+# Subtest: expired work lease reuses saved interpretation, recovers once and enforces persisted attempt ceiling
+ok 21 - expired work lease reuses saved interpretation, recovers once and enforces persisted attempt ceiling
+  ---
+  duration_ms: 2352.862812
+  type: 'test'
+  ...
+# Subtest: semantic clear intent keeps the list until a current confirmation is selected
+ok 22 - semantic clear intent keeps the list until a current confirmation is selected
+  ---
+  duration_ms: 1660.203871
+  type: 'test'
+  ...
+# Subtest: audio repair uses retained transcript and receives the exact rejected proposal and feedback
+ok 23 - audio repair uses retained transcript and receives the exact rejected proposal and feedback
+  ---
+  duration_ms: 2737.445919
+  type: 'test'
+  ...
+# Subtest: current ambiguous pipe target replaces the stale hose question without changing old quantities
+ok 24 - current ambiguous pipe target replaces the stale hose question without changing old quantities
+  ---
+  duration_ms: 2545.254995
+  type: 'test'
+  ...
+# Subtest: recorded clear-everything voice asks before deleting and rejects forged/stale confirmation
+ok 25 - recorded clear-everything voice asks before deleting and rejects forged/stale confirmation
+  ---
+  duration_ms: 2183.31178
+  type: 'test'
+  ...
+# Subtest: a valid transcript with an invalid proposed reference yields a grounded no-op clarification
+ok 26 - a valid transcript with an invalid proposed reference yields a grounded no-op clarification
+  ---
+  duration_ms: 1872.290323
+  type: 'test'
+  ...
+# Subtest: a negated typed clear never asks the model or hands control to the owner
+ok 27 - a negated typed clear never asks the model or hands control to the owner
+  ---
+  duration_ms: 1745.92085
+  type: 'test'
+  ...
+# Subtest: one spoken extra phrase cannot increment three legacy pipes; the independent tape still adds
+ok 28 - one spoken extra phrase cannot increment three legacy pipes; the independent tape still adds
+  ---
+  duration_ms: 2404.09074
+  type: 'test'
+  ...
+# Subtest: global change ASR variation offers edit or clear confirmation and never hands over
+ok 29 - global change ASR variation offers edit or clear confirmation and never hands over
+  ---
+  duration_ms: 1937.330865
+  type: 'test'
+  ...
+# Subtest: empty optional clarify text is absence and does not discard a valid spoken list
+ok 30 - empty optional clarify text is absence and does not discard a valid spoken list
+  ---
+  duration_ms: 2503.768782
+  type: 'test'
+  ...
+# Subtest: Latin Tanglish clear-all variation creates a confirmation rather than a handover
+ok 31 - Latin Tanglish clear-all variation creates a confirmation rather than a handover
+  ---
+  duration_ms: 2240.033293
+  type: 'test'
+  ...
+# Subtest: unspecified cancellation offers guarded list choices without requiring exact ASR spelling
+ok 32 - unspecified cancellation offers guarded list choices without requiring exact ASR spelling
+  ---
+  duration_ms: 2263.936222
+  type: 'test'
+  ...
+# Subtest: explicit count survives dimension guard: ஒரு இன்ச் பைப் ஒன்னு
+ok 33 - explicit count survives dimension guard: ஒரு இன்ச் பைப் ஒன்னு
+  ---
+  duration_ms: 16.756306
+  type: 'test'
+  ...
+# Subtest: explicit count survives dimension guard: one 1 inch pipe
+ok 34 - explicit count survives dimension guard: one 1 inch pipe
+  ---
+  duration_ms: 3.330172
+  type: 'test'
+  ...
+# Subtest: explicit count survives dimension guard: 1 inch pipe onnu
+ok 35 - explicit count survives dimension guard: 1 inch pipe onnu
+  ---
+  duration_ms: 0.541529
+  type: 'test'
+  ...
+# Subtest: explicit count survives dimension guard: two 1 inch pipes
+ok 36 - explicit count survives dimension guard: two 1 inch pipes
+  ---
+  duration_ms: 0.406689
+  type: 'test'
+  ...
+# Subtest: verified length contents convert totals while cutting, continuous length and unverified basis stay pending
+ok 37 - verified length contents convert totals while cutting, continuous length and unverified basis stay pending
+  ---
+  duration_ms: 1.515566
+  type: 'test'
+  ...
+# Subtest: saved 50m dimension plan becomes five pieces with the same photo and other stable lines
+ok 38 - saved 50m dimension plan becomes five pieces with the same photo and other stable lines
+  ---
+  duration_ms: 3208.279613
+  type: 'test'
+  ...
+# Subtest: unknown length selling basis keeps recognized hose photo and requested amount, never unavailable
+ok 39 - unknown length selling basis keeps recognized hose photo and requested amount, never unavailable
+  ---
+  duration_ms: 2076.401166
+  type: 'test'
+  ...
+# Subtest: 5m plus bill applies an amount correction; pure price questions remain read-only
+ok 40 - 5m plus bill applies an amount correction; pure price questions remain read-only
+  ---
+  duration_ms: 2364.94356
+  type: 'test'
+  ...
+# Subtest: amount increments use the bound total; fractional cuts and continuous requirements retain the photo
+ok 41 - amount increments use the bound total; fractional cuts and continuous requirements retain the photo
+  ---
+  duration_ms: 2700.191285
+  type: 'test'
+  ...
+# Subtest: unverified amount refresh resolves after merchant verifies basis and clears the old issue
+ok 42 - unverified amount refresh resolves after merchant verifies basis and clears the old issue
+  ---
+  duration_ms: 2608.93951
+  type: 'test'
+  ...
+# Subtest: capacity filter uses an actual size=10L fact, never 10kg; one compatible pack needs no separate variant question
+ok 43 - capacity filter uses an actual size=10L fact, never 10kg; one compatible pack needs no separate variant question
+  ---
+  duration_ms: 2304.697997
+  type: 'test'
+  ...
+# Subtest: twenty catalog variants narrow to an explicit brand and size without unrelated products
+ok 44 - twenty catalog variants narrow to an explicit brand and size without unrelated products
+  ---
+  duration_ms: 2282.570834
+  type: 'test'
+  ...
+# Subtest: repaired paint plan without search metadata still matches the verified pack and retains its explicit can count
+ok 45 - repaired paint plan without search metadata still matches the verified pack and retains its explicit can count
+  ---
+  duration_ms: 2021.934326
+  type: 'test'
+  ...
+# Subtest: repaired paint-can wording and a counted can in requestedAmount recover without replacing a real watering can
+ok 46 - repaired paint-can wording and a counted can in requestedAmount recover without replacing a real watering can
+  ---
+  duration_ms: 2428.600966
+  type: 'test'
+  ...
+# Subtest: romanized Tamil voice retains Tamil preference; a spoken explicit language choice still works
+ok 47 - romanized Tamil voice retains Tamil preference; a spoken explicit language choice still works
+  ---
+  duration_ms: 3061.562491
+  type: 'test'
+  ...
+# Subtest: a direct total-volume request does not turn the total into a pack-size filter
+ok 48 - a direct total-volume request does not turn the total into a pack-size filter
+  ---
+  duration_ms: 1900.895199
+  type: 'test'
+  ...
+# Subtest: invalid amount evidence rejects the complete batch without partially changing other items
+ok 49 - invalid amount evidence rejects the complete batch without partially changing other items
+  ---
+  duration_ms: 2508.851669
+  type: 'test'
+  ...
+# Subtest: legacy lost hose binding is recovered by an amount edit without keeping the wrong length constraint
+ok 50 - legacy lost hose binding is recovered by an amount edit without keeping the wrong length constraint
+  ---
+  duration_ms: 2553.605343
+  type: 'test'
+  ...
+# Subtest: explicit piece counts after an amount clarification override the old amount instead of looping
+ok 51 - explicit piece counts after an amount clarification override the old amount instead of looping
+  ---
+  duration_ms: 2266.413476
+  type: 'test'
+  ...
+# Subtest: insufficient stock keeps the photo and names the real stock issue
+ok 52 - insufficient stock keeps the photo and names the real stock issue
+  ---
+  duration_ms: 1935.43534
+  type: 'test'
+  ...
+# Subtest: fresh review repairs a legacy amount-as-variant error only against its own previously shown photo
+ok 53 - fresh review repairs a legacy amount-as-variant error only against its own previously shown photo
+  ---
+  duration_ms: 2078.63659
+  type: 'test'
+  ...
+# Subtest: unspecified water and pumping pipes retain quantity without inventing a PVC or hose SKU
+ok 54 - unspecified water and pumping pipes retain quantity without inventing a PVC or hose SKU
+  ---
+  duration_ms: 1729.073673
+  type: 'test'
+  ...
+# {"level":30,"time":1791996465026,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/owner/catalog/suggest"},"msg":"incoming request"}
+# {"level":30,"time":1791996465033,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":403},"responseTime":6.3212329999996655,"msg":"request completed"}
+# {"level":30,"time":1791996465034,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/owner/catalog/suggest"},"msg":"incoming request"}
+# {"level":30,"time":1791996465035,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":403},"responseTime":0.8768879999997807,"msg":"request completed"}
+# {"level":30,"time":1791996465036,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/api/owner/catalog/suggest"},"msg":"incoming request"}
+# {"level":30,"time":1791996465147,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":200},"responseTime":110.75645299999996,"msg":"request completed"}
+# {"level":30,"time":1791996465149,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/api/owner/catalog/suggest"},"msg":"incoming request"}
+# {"level":30,"time":1791996465159,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":200},"responseTime":9.797555000000102,"msg":"request completed"}
+# {"level":30,"time":1791996465160,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"POST","url":"/api/owner/catalog/suggest"},"msg":"incoming request"}
+# {"level":30,"time":1791996465165,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":409},"err":{"type":"Error","message":"This suggestion request changed. Start a new suggestion.","stack":"Error: This suggestion request changed. Start a new suggestion.\\n    at failure (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/services/catalog-assistant.ts:42:62)\\n    at generateCatalogDraft (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/services/catalog-assistant.ts:51:42)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)","statusCode":409},"msg":"This suggestion request changed. Start a new suggestion."}
+# {"level":30,"time":1791996465169,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":409},"responseTime":8.857876999999462,"msg":"request completed"}
+# {"level":30,"time":1791996465175,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"POST","url":"/api/owner/catalog/suggest"},"msg":"incoming request"}
+# {"level":30,"time":1791996465556,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":200},"responseTime":381.2440550000001,"msg":"request completed"}
+# {"level":30,"time":1791996465557,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","req":{"method":"POST","url":"/api/owner/catalog/suggest"},"msg":"incoming request"}
+# {"level":30,"time":1791996465559,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":400},"responseTime":1.9365939999997863,"msg":"request completed"}
+# {"level":30,"time":1791996465559,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996465579,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","res":{"statusCode":200},"responseTime":20.152648000000227,"msg":"request completed"}
+# {"level":30,"time":1791996465581,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996465585,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","res":{"statusCode":409},"err":{"type":"Error","message":"This product changed or its code already exists. Reload before saving.","stack":"Error: This product changed or its code already exists. Reload before saving.\\n    at <anonymous> (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner-catalog.ts:80:41)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async write (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:59:20)","statusCode":409},"msg":"This product changed or its code already exists. Reload before saving."}
+# {"level":30,"time":1791996465591,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","res":{"statusCode":409},"responseTime":9.983734999999797,"msg":"request completed"}
+# {"level":30,"time":1791996465592,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-a","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996465602,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-a","res":{"statusCode":200},"responseTime":9.671095000000605,"msg":"request completed"}
+# {"level":30,"time":1791996465602,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-b","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996465604,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-b","res":{"statusCode":400},"responseTime":1.26847700000053,"msg":"request completed"}
+# {"level":30,"time":1791996465604,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-c","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996465605,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-c","res":{"statusCode":400},"responseTime":0.7233980000000884,"msg":"request completed"}
+# {"level":30,"time":1791996465605,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-d","req":{"method":"GET","url":"/api/owner/catalog"},"msg":"incoming request"}
+# {"level":30,"time":1791996465611,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-d","res":{"statusCode":200},"responseTime":5.264266000000134,"msg":"request completed"}
+# Subtest: suggestions are authenticated, normalized, idempotent and read-only; generated codes and types are saved only by the owner
+ok 55 - suggestions are authenticated, normalized, idempotent and read-only; generated codes and types are saved only by the owner
+  ---
+  duration_ms: 2938.641348
+  type: 'test'
+  ...
+# Subtest: paid suggestions share the durable budget, settle reported usage once, retain uncertain holds, and reject fabricated fields
+ok 56 - paid suggestions share the durable budget, settle reported usage once, retain uncertain holds, and reject fabricated fields
+  ---
+  duration_ms: 1925.054117
+  type: 'test'
+  ...
+# Subtest: concurrent suggestion requests cannot double-call the model or over-reserve the allowance
+ok 57 - concurrent suggestion requests cannot double-call the model or over-reserve the allowance
+  ---
+  duration_ms: 1971.837187
+  type: 'test'
+  ...
+# Subtest: Google token modality metadata cannot block the shop budget or lose the known cost
+ok 58 - Google token modality metadata cannot block the shop budget or lose the known cost
+  ---
+  duration_ms: 3.680651
+  type: 'test'
+  ...
+# Subtest: generated aliases and keywords cannot turn cutting pliers into combination pliers or wheels
+ok 59 - generated aliases and keywords cannot turn cutting pliers into combination pliers or wheels
+  ---
+  duration_ms: 1.671715
+  type: 'test'
+  ...
+# {"level":30,"time":1791996471360,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/owner/catalog/suggest"},"msg":"incoming request"}
+# {"level":30,"time":1791996471383,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":200},"responseTime":22.77281100000073,"msg":"request completed"}
+# {"level":30,"time":1791996471384,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/owner/catalog/suggest"},"msg":"incoming request"}
+# {"level":30,"time":1791996471826,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":200},"responseTime":442.1238080000003,"msg":"request completed"}
+# {"level":30,"time":1791996471826,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/api/owner/catalog/suggest"},"msg":"incoming request"}
+# {"level":30,"time":1791996472046,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":200},"responseTime":219.25231300000087,"msg":"request completed"}
+# {"level":30,"time":1791996472046,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/api/owner/catalog/suggest"},"msg":"incoming request"}
+# {"level":30,"time":1791996472259,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":409},"err":{"type":"Error","message":"This suggestion request changed. Start a new suggestion.","stack":"Error: This suggestion request changed. Start a new suggestion.\\n    at failure (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/services/catalog-assistant.ts:42:62)\\n    at generateCatalogDraft (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/services/catalog-assistant.ts:51:42)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)","statusCode":409},"msg":"This suggestion request changed. Start a new suggestion."}
+# {"level":30,"time":1791996472259,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":409},"responseTime":213.2136789999986,"msg":"request completed"}
+# {"level":30,"time":1791996472260,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"POST","url":"/api/owner/catalog/suggest"},"msg":"incoming request"}
+# {"level":30,"time":1791996472262,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":409},"err":{"type":"Error","message":"The saved product changed. Select it again before auto-filling.","stack":"Error: The saved product changed. Select it again before auto-filling.\\n    at loadSuggestionPhoto (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/services/catalog-photos.ts:16:47)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async Object.<anonymous> (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner-catalog.ts:50:44)","statusCode":409},"msg":"The saved product changed. Select it again before auto-filling."}
+# {"level":30,"time":1791996472263,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":409},"responseTime":3.2532910000008997,"msg":"request completed"}
+# {"level":30,"time":1791996472263,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"POST","url":"/api/owner/catalog/suggest"},"msg":"incoming request"}
+# {"level":30,"time":1791996472264,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":404},"err":{"type":"Error","message":"Product not found in this shop.","stack":"Error: Product not found in this shop.\\n    at loadSuggestionPhoto (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/services/catalog-photos.ts:15:30)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async Object.<anonymous> (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner-catalog.ts:50:44)","statusCode":404},"msg":"Product not found in this shop."}
+# {"level":30,"time":1791996472265,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":404},"responseTime":1.7842349999991711,"msg":"request completed"}
+# {"level":30,"time":1791996472266,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","req":{"method":"POST","url":"/api/owner/catalog/suggest"},"msg":"incoming request"}
+# {"level":30,"time":1791996472267,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":400},"responseTime":0.8818780000001425,"msg":"request completed"}
+# Subtest: auto-fill reads lower form fields and a versioned saved photo without changing the product
+ok 60 - auto-fill reads lower form fields and a versioned saved photo without changing the product
+  ---
+  duration_ms: 2747.429042
+  type: 'test'
+  ...
+# {"level":30,"time":1791996474205,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996474222,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":200},"responseTime":15.663300000000163,"msg":"request completed"}
+# {"level":30,"time":1791996474225,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/owner/catalog/products/SHOP-92C7E1470CEA4226/photo"},"msg":"incoming request"}
+# {"level":30,"time":1791996474475,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":200},"responseTime":250.7952719999994,"msg":"request completed"}
+# {"level":30,"time":1791996474476,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/api/owner/catalog/suggest"},"msg":"incoming request"}
+# {"level":30,"time":1791996474494,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":200},"responseTime":17.706835000000865,"msg":"request completed"}
+# {"level":30,"time":1791996474496,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/api/owner/catalog/suggest"},"msg":"incoming request"}
+# {"level":30,"time":1791996474730,"pid":864300,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":200},"responseTime":233.3587469999984,"msg":"request completed"}
+# Subtest: auto-fill uses a saved custom photo on hidden products and a replacement overrides its old photo
+ok 61 - auto-fill uses a saved custom photo on hidden products and a replacement overrides its old photo
+  ---
+  duration_ms: 2476.457723
+  type: 'test'
+  ...
+# Subtest: store mind map separates actual departments, families and SKU facts; broad blade compares all four verified options across three families
+ok 62 - store mind map separates actual departments, families and SKU facts; broad blade compares all four verified options across three families
+  ---
+  duration_ms: 2518.436265
+  type: 'test'
+  ...
+# Subtest: type, brand and numeric specifications are hard constraints; unsupported filters never become arbitrary products
+ok 63 - type, brand and numeric specifications are hard constraints; unsupported filters never become arbitrary products
+  ---
+  duration_ms: 1615.529126
+  type: 'test'
+  ...
+# Subtest: hierarchical product refinement uses zero extra AI calls and preserves the original requested line
+ok 64 - hierarchical product refinement uses zero extra AI calls and preserves the original requested line
+  ---
+  duration_ms: 2716.113103
+  type: 'test'
+  ...
+# Subtest: read-only exploration refines current categories without adding, and stale refinement IDs are rejected
+ok 65 - read-only exploration refines current categories without adding, and stale refinement IDs are rejected
+  ---
+  duration_ms: 2197.035024
+  type: 'test'
+  ...
+# Subtest: missing named products keep requests and offer shop help without unrelated filler images
+ok 66 - missing named products keep requests and offer shop help without unrelated filler images
+  ---
+  duration_ms: 1783.602222
+  type: 'test'
+  ...
+# Subtest: catalog identity changed after a browse photo requires a fresh image check before acceptance
+ok 67 - catalog identity changed after a browse photo requires a fresh image check before acceptance
+  ---
+  duration_ms: 2287.003272
+  type: 'test'
+  ...
+# Subtest: a quote yes during product checks cannot accept or submit the proposed products
+ok 68 - a quote yes during product checks cannot accept or submit the proposed products
+  ---
+  duration_ms: 2130.584616
+  type: 'test'
+  ...
+# {"fixture":"10000-product grocery store","retrieved":120,"returned":10,"discoveryMs":418,"filterIndexVerified":true}
+# Subtest: a second store with ten thousand products uses bounded retrieval, complete brand facets and indexed filters
+ok 69 - a second store with ten thousand products uses bounded retrieval, complete brand facets and indexed filters
+  ---
+  duration_ms: 6061.387902
+  type: 'test'
+  ...
+# Subtest: exact SKU suggestions never bypass a conflicting brand, family or specification filter
+ok 70 - exact SKU suggestions never bypass a conflicting brand, family or specification filter
+  ---
+  duration_ms: 1939.958238
+  type: 'test'
+  ...
+# Subtest: multi-query AI discovery combines keywords into one scoped broad search and current narrowing question
+ok 71 - multi-query AI discovery combines keywords into one scoped broad search and current narrowing question
+  ---
+  duration_ms: 2332.270435
+  type: 'test'
+  ...
+# Subtest: narrowing choices reflect shown photo families; solvent, tape and epoxy remain separate product natures
+ok 72 - narrowing choices reflect shown photo families; solvent, tape and epoxy remain separate product natures
+  ---
+  duration_ms: 1710.464131
+  type: 'test'
+  ...
+# Subtest: Tamil vowel marks survive normalization and Tamil catalog aliases retrieve the actual SKUs
+ok 73 - Tamil vowel marks survive normalization and Tamil catalog aliases retrieve the actual SKUs
+  ---
+  duration_ms: 2294.996421
+  type: 'test'
+  ...
+# Subtest: an absent brush is never a bush or unrelated pipe fitting; publishing a brush makes it discoverable immediately
+ok 74 - an absent brush is never a bush or unrelated pipe fitting; publishing a brush makes it discoverable immediately
+  ---
+  duration_ms: 2113.080571
+  type: 'test'
+  ...
+# Subtest: a clear two-item request takes two confirmation taps; new list preserves the old submitted snapshot
+ok 75 - a clear two-item request takes two confirmation taps; new list preserves the old submitted snapshot
+  ---
+  duration_ms: 2645.769696
+  type: 'test'
+  ...
+# Subtest: targeted quantity edits retain every other item, and keeping the list invalidates old consent
+ok 76 - targeted quantity edits retain every other item, and keeping the list invalidates old consent
+  ---
+  duration_ms: 2621.398008
+  type: 'test'
+  ...
+# {"level":30,"time":1791996470008,"pid":864302,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/owner/conversations/7ab2846f-c077-480b-bc28-4f4a8bf311e8/reply"},"msg":"incoming request"}
+# {"level":30,"time":1791996470035,"pid":864302,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":200},"responseTime":26.06799200000023,"msg":"request completed"}
+# {"level":30,"time":1791996470036,"pid":864302,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/owner/conversations/7ab2846f-c077-480b-bc28-4f4a8bf311e8/reply"},"msg":"incoming request"}
+# {"level":30,"time":1791996470044,"pid":864302,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":200},"responseTime":7.497010000000955,"msg":"request completed"}
+# {"level":30,"time":1791996470076,"pid":864302,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/api/owner/conversations/7ab2846f-c077-480b-bc28-4f4a8bf311e8/reply"},"msg":"incoming request"}
+# {"level":30,"time":1791996470079,"pid":864302,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":409},"err":{"type":"Error","message":"The recipient is not approved or the WhatsApp reply window has closed.","stack":"Error: The recipient is not approved or the WhatsApp reply window has closed.\\n    at <anonymous> (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:169:188)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async write (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:59:20)","statusCode":409},"msg":"The recipient is not approved or the WhatsApp reply window has closed."}
+# {"level":30,"time":1791996470082,"pid":864302,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":409},"responseTime":6.129724000000351,"msg":"request completed"}
+# Subtest: handoff pauses AI, cancels assistant work, and authenticated owner replies are idempotent and window-bound
+ok 77 - handoff pauses AI, cancels assistant work, and authenticated owner replies are idempotent and window-bound
+  ---
+  duration_ms: 2161.154397
+  type: 'test'
+  ...
+# Subtest: a second planning stage sees fresh results, cannot add items or change amounts, and is cached independently
+ok 78 - a second planning stage sees fresh results, cannot add items or change amounts, and is cached independently
+  ---
+  duration_ms: 2079.128259
+  type: 'test'
+  ...
+# Subtest: recommendation spacing releases the lease and resumes from cached identification without a third call
+ok 79 - recommendation spacing releases the lease and resumes from cached identification without a third call
+  ---
+  duration_ms: 2053.566116
+  type: 'test'
+  ...
+# Subtest: the native recommendation schema is compact and filters invented product identifiers
+ok 80 - the native recommendation schema is compact and filters invented product identifiers
+  ---
+  duration_ms: 2.605053
+  type: 'test'
+  ...
+# Subtest: media recommendation enablement requires the channel, media and AI gates
+ok 81 - media recommendation enablement requires the channel, media and AI gates
+  ---
+  duration_ms: 1.043438
+  type: 'test'
+  ...
+# Subtest: opt-in voice recommendations use fresh facts, ask above photos, preserve quantity and stop inference on a product tap
+ok 82 - opt-in voice recommendations use fresh facts, ask above photos, preserve quantity and stop inference on a product tap
+  ---
+  duration_ms: 2404.369819
+  type: 'test'
+  ...
+# Subtest: a failed voice attachment offers bound browse and handoff buttons without claiming recognition or spending
+ok 83 - a failed voice attachment offers bound browse and handoff buttons without claiming recognition or spending
+  ---
+  duration_ms: 2237.865348
+  type: 'test'
+  ...
+# Subtest: provider rejection codes are diagnosable without saving secrets or retrying the request
+ok 84 - provider rejection codes are diagnosable without saving secrets or retrying the request
+  ---
+  duration_ms: 2437.930382
+  type: 'test'
+  ...
+# Subtest: media downloads stay on verified HTTPS hosts and normalized audio/photo bytes remain private
+ok 85 - media downloads stay on verified HTTPS hosts and normalized audio/photo bytes remain private
+  ---
+  duration_ms: 361.587536
+  type: 'test'
+  ...
+# Subtest: WhatsApp photos are durably ingested before download and a replay does not refetch or infer twice
+ok 86 - WhatsApp photos are durably ingested before download and a replay does not refetch or infer twice
+  ---
+  duration_ms: 2486.999576
+  type: 'test'
+  ...
+# Subtest: media retries transient downloads once without retrying permission errors or unsafe files
+ok 87 - media retries transient downloads once without retrying permission errors or unsafe files
+  ---
+  duration_ms: 422.240659
+  type: 'test'
+  ...
+# Subtest: voice recognition has a transcript-only contract and planning receives text
+ok 88 - voice recognition has a transcript-only contract and planning receives text
+  ---
+  duration_ms: 2.246554
+  type: 'test'
+  ...
+# Subtest: submitted orders are hidden from new intent while current discovery memory is retained
+ok 89 - submitted orders are hidden from new intent while current discovery memory is retained
+  ---
+  duration_ms: 1.364057
+  type: 'test'
+  ...
+# Subtest: only mislabeled read-only assistance is normalized; mixed write and price proposals stay invalid
+ok 90 - only mislabeled read-only assistance is normalized; mixed write and price proposals stay invalid
+  ---
+  duration_ms: 4.407958
+  type: 'test'
+  ...
+# Subtest: submitted photo and recommendation requests retain their own dedicated contracts
+ok 91 - submitted photo and recommendation requests retain their own dedicated contracts
+  ---
+  duration_ms: 2.456594
+  type: 'test'
+  ...
+# Subtest: media decoding failures retain safe actionable codes without leaking source details
+ok 92 - media decoding failures retain safe actionable codes without leaking source details
+  ---
+  duration_ms: 0.410469
+  type: 'test'
+  ...
+# Subtest: a text reply quoted to an old review cannot confirm the newer review
+ok 93 - a text reply quoted to an old review cannot confirm the newer review
+  ---
+  duration_ms: 2592.117494
+  type: 'test'
+  ...
+# Subtest: request status reflects the shop decision without treating it as payment or fulfillment
+ok 94 - request status reflects the shop decision without treating it as payment or fulfillment
+  ---
+  duration_ms: 2323.610897
+  type: 'test'
+  ...
+# Subtest: disabled media never downloads attachments even when the provider supports them
+ok 95 - disabled media never downloads attachments even when the provider supports them
+  ---
+  duration_ms: 2143.494713
+  type: 'test'
+  ...
+# Subtest: new WhatsApp chats default to Tamil and explicit Tanglish persists without another AI call
+ok 96 - new WhatsApp chats default to Tamil and explicit Tanglish persists without another AI call
+  ---
+  duration_ms: 2218.33347
+  type: 'test'
+  ...
+# Subtest: product carousels expose a bound menu for batch filters, editing and shop help without AI
+ok 97 - product carousels expose a bound menu for batch filters, editing and shop help without AI
+  ---
+  duration_ms: 2320.707575
+  type: 'test'
+  ...
+# Subtest: new product discovery after submission remains read-only until a displayed choice starts a new list
+ok 98 - new product discovery after submission remains read-only until a displayed choice starts a new list
+  ---
+  duration_ms: 2807.877316
+  type: 'test'
+  ...
+# Subtest: a submitted multi-item follow-up retains all quantities until its bound start-list button is tapped
+ok 99 - a submitted multi-item follow-up retains all quantities until its bound start-list button is tapped
+  ---
+  duration_ms: 2280.33096
+  type: 'test'
+  ...
+# Subtest: a multi-item voice follow-up shows native recommendations and a product tap starts every requested line without losing quantities
+ok 100 - a multi-item voice follow-up shows native recommendations and a product tap starts every requested line without losing quantities
+  ---
+  duration_ms: 3247.75409
+  type: 'test'
+  ...
+# Subtest: WhatsApp sequential proposals preview only the first category and automatically advance after its quantity
+ok 101 - WhatsApp sequential proposals preview only the first category and automatically advance after its quantity
+  ---
+  duration_ms: 3095.155504
+  type: 'test'
+  ...
+# Subtest: typing indicators claim only one eligible message and never repeat after failure or during owner pause
+ok 102 - typing indicators claim only one eligible message and never repeat after failure or during owner pause
+  ---
+  duration_ms: 1631.513645
+  type: 'test'
+  ...
+# Subtest: paid multimodal voice bills recognition and planning separately and durable estimated budget settlement
+ok 103 - paid multimodal voice bills recognition and planning separately and durable estimated budget settlement
+  ---
+  duration_ms: 7271.933314
+  type: 'test'
+  ...
+# Subtest: ambiguous spoken tube asks product type, keeps other items, and completes a single hose order
+ok 104 - ambiguous spoken tube asks product type, keeps other items, and completes a single hose order
+  ---
+  duration_ms: 3701.656767
+  type: 'test'
+  ...
+# Subtest: recorded hose correction removes old PVC diameter and retains both other stable lines
+ok 105 - recorded hose correction removes old PVC diameter and retains both other stable lines
+  ---
+  duration_ms: 3294.11595
+  type: 'test'
+  ...
+# Subtest: inferred watering use produces an actual hose proposal rather than literal tube search
+ok 106 - inferred watering use produces an actual hose proposal rather than literal tube search
+  ---
+  duration_ms: 2254.562746
+  type: 'test'
+  ...
+# Subtest: a specific two one-inch PVC request retains count and dimension without a hose alternative
+ok 107 - a specific two one-inch PVC request retains count and dimension without a hose alternative
+  ---
+  duration_ms: 1966.853099
+  type: 'test'
+  ...
+# Subtest: replacement still respects a newly specified diameter instead of showing a mismatched stocked hose
+ok 108 - replacement still respects a newly specified diameter instead of showing a mismatched stocked hose
+  ---
+  duration_ms: 2582.729828
+  type: 'test'
+  ...
+# Subtest: unfounded meaning evidence and invented family IDs cannot partially add a shopping list
+ok 109 - unfounded meaning evidence and invented family IDs cannot partially add a shopping list
+  ---
+  duration_ms: 2235.162315
+  type: 'test'
+  ...
+# Subtest: 1 recognition 503s: bounded retry and honest bill-stage recovery
+ok 110 - 1 recognition 503s: bounded retry and honest bill-stage recovery
+  ---
+  duration_ms: 2532.986047
+  type: 'test'
+  ...
+# Subtest: 2 recognition 503s: bounded retry and honest bill-stage recovery
+ok 111 - 2 recognition 503s: bounded retry and honest bill-stage recovery
+  ---
+  duration_ms: 2735.086504
+  type: 'test'
+  ...
+# Subtest: nontransient speech errors have no automatic retry and a visible kept-list error
+ok 112 - nontransient speech errors have no automatic retry and a visible kept-list error
+  ---
+  duration_ms: 1973.242522
+  type: 'test'
+  ...
+# Subtest: voice approval submits the current delivered bill without requiring a button
+ok 113 - voice approval submits the current delivered bill without requiring a button
+  ---
+  duration_ms: 2822.425489
+  type: 'test'
+  ...
+# Subtest: per-product change opens that item directly, and new-draft copy does not claim submission
+ok 114 - per-product change opens that item directly, and new-draft copy does not claim submission
+  ---
+  duration_ms: 1948.659066
+  type: 'test'
+  ...
+# Subtest: compound hose dimensions stay specifications and never become a count conversion
+ok 115 - compound hose dimensions stay specifications and never become a count conversion
+  ---
+  duration_ms: 1.151867
+  type: 'test'
+  ...
+# Subtest: category labels remain complete in the image and native button titles do not truncate
+ok 116 - category labels remain complete in the image and native button titles do not truncate
+  ---
+  duration_ms: 2079.494218
+  type: 'test'
+  ...
+# Subtest: a replacement remove/add plan cannot silently replace a different named item
+ok 117 - a replacement remove/add plan cannot silently replace a different named item
+  ---
+  duration_ms: 2347.317306
+  type: 'test'
+  ...
+# Subtest: a replacement remove/add plan preserves the named line ID/count
+ok 118 - a replacement remove/add plan preserves the named line ID/count
+  ---
+  duration_ms: 2242.837706
+  type: 'test'
+  ...
+# Subtest: a count word mislabeled as a selling unit does not force an unnecessary unit question
+ok 119 - a count word mislabeled as a selling unit does not force an unnecessary unit question
+  ---
+  duration_ms: 1734.34414
+  type: 'test'
+  ...
+# Subtest: the saved legacy hose error recovers through a fresh complete review without losing count or other lines
+ok 120 - the saved legacy hose error recovers through a fresh complete review without losing count or other lines
+  ---
+  duration_ms: 2359.387805
+  type: 'test'
+  ...
+# Subtest: text: a new two-pipe request replaces the discovery amount for one blade
+ok 121 - text: a new two-pipe request replaces the discovery amount for one blade
+  ---
+  duration_ms: 1538.551855
+  type: 'test'
+  ...
+# Subtest: text: new explicit units do not inherit the earlier blade unit
+ok 122 - text: new explicit units do not inherit the earlier blade unit
+  ---
+  duration_ms: 2562.60831
+  type: 'test'
+  ...
+# Subtest: text: refining the same blade keeps the original amount and unit
+ok 123 - text: refining the same blade keeps the original amount and unit
+  ---
+  duration_ms: 2162.836033
+  type: 'test'
+  ...
+# Subtest: text: an explicit same-goal amount overrides memory while retaining its unit
+ok 124 - text: an explicit same-goal amount overrides memory while retaining its unit
+  ---
+  duration_ms: 2385.172439
+  type: 'test'
+  ...
+# Subtest: text: an unrelated one-inch pipe request cannot inherit blade quantity or treat size as amount
+ok 125 - text: an unrelated one-inch pipe request cannot inherit blade quantity or treat size as amount
+  ---
+  duration_ms: 2466.285689
+  type: 'test'
+  ...
+# Subtest: voice: a new two-pipe request replaces the discovery amount for one blade
+ok 126 - voice: a new two-pipe request replaces the discovery amount for one blade
+  ---
+  duration_ms: 2350.190079
+  type: 'test'
+  ...
+# Subtest: voice: new explicit units do not inherit the earlier blade unit
+ok 127 - voice: new explicit units do not inherit the earlier blade unit
+  ---
+  duration_ms: 2107.220757
+  type: 'test'
+  ...
+# Subtest: voice: refining the same blade keeps the original amount and unit
+ok 128 - voice: refining the same blade keeps the original amount and unit
+  ---
+  duration_ms: 2462.369938
+  type: 'test'
+  ...
+# Subtest: voice: an explicit same-goal amount overrides memory while retaining its unit
+ok 129 - voice: an explicit same-goal amount overrides memory while retaining its unit
+  ---
+  duration_ms: 2148.070291
+  type: 'test'
+  ...
+# Subtest: voice: an unrelated one-inch pipe request cannot inherit blade quantity or treat size as amount
+ok 130 - voice: an unrelated one-inch pipe request cannot inherit blade quantity or treat size as amount
+  ---
+  duration_ms: 2399.214172
+  type: 'test'
+  ...
+# Subtest: bound discovery yes preserves the requested quantity and unit without granting photo consent
+ok 131 - bound discovery yes preserves the requested quantity and unit without granting photo consent
+  ---
+  duration_ms: 2408.841057
+  type: 'test'
+  ...
+# Subtest: explicit Tamil clear survives incidental speech and list inflections, without matching examples or compound edits
+ok 132 - explicit Tamil clear survives incidental speech and list inflections, without matching examples or compound edits
+  ---
+  duration_ms: 5.874585
+  type: 'test'
+  ...
+# Subtest: legacy wrong-family product choices cannot be accepted after retrieval changes
+ok 133 - legacy wrong-family product choices cannot be accepted after retrieval changes
+  ---
+  duration_ms: 1804.396499
+  type: 'test'
+  ...
+# Subtest: four-item corrections retain the active line, avoid unrelated images and reject old photo actions
+ok 134 - four-item corrections retain the active line, avoid unrelated images and reject old photo actions
+  ---
+  duration_ms: 2844.204473
+  type: 'test'
+  ...
+# Subtest: sequential multi-item photo checks keep the no-exact warning in every reply language and WhatsApp body
+ok 135 - sequential multi-item photo checks keep the no-exact warning in every reply language and WhatsApp body
+  ---
+  duration_ms: 2208.861983
+  type: 'test'
+  ...
+# Subtest: an absent product can wait for shop checking while later products are verified without submitting an incomplete list
+ok 136 - an absent product can wait for shop checking while later products are verified without submitting an incomplete list
+  ---
+  duration_ms: 2388.52164
+  type: 'test'
+  ...
+# Subtest: refusing displayed photos by voice cannot erase unrelated lines
+ok 137 - refusing displayed photos by voice cannot erase unrelated lines
+  ---
+  duration_ms: 1924.250479
+  type: 'test'
+  ...
+# Subtest: empty discovery acknowledges the named request and quantity instead of repeating its purpose or claiming shop stock
+ok 138 - empty discovery acknowledges the named request and quantity instead of repeating its purpose or claiming shop stock
+  ---
+  duration_ms: 2507.556132
+  type: 'test'
+  ...
+# Subtest: Tamil list additions are acknowledged before the pending missing item, and voice clearing gets explicit feedback
+ok 139 - Tamil list additions are acknowledged before the pending missing item, and voice clearing gets explicit feedback
+  ---
+  duration_ms: 2289.996734
+  type: 'test'
+  ...
+# Subtest: an unspecified cutter remains unselected and asks what to cut, without unknown-quantity symbols
+ok 140 - an unspecified cutter remains unselected and asks what to cut, without unknown-quantity symbols
+  ---
+  duration_ms: 2232.368863
+  type: 'test'
+  ...
+# Subtest: a catalogued item with insufficient stock is not described as missing from the catalog
+ok 141 - a catalogued item with insufficient stock is not described as missing from the catalog
+  ---
+  duration_ms: 2126.568826
+  type: 'test'
+  ...
+# {"level":30,"time":1791996469218,"pid":864863,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"GET","url":"/health/ready"},"msg":"incoming request"}
+# {"level":30,"time":1791996469234,"pid":864863,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":200},"responseTime":14.238153000000239,"msg":"request completed"}
+# {"level":30,"time":1791996469247,"pid":864863,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"GET","url":"/api/simulator"},"msg":"incoming request"}
+# {"level":30,"time":1791996469235,"pid":864863,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/simulator/events"},"msg":"incoming request"}
+# {"level":30,"time":1791996469241,"pid":864863,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":400},"responseTime":6.201213999999709,"msg":"request completed"}
+# {"level":30,"time":1791996469247,"pid":864863,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","msg":"Route GET:/api/simulator not found"}
+# {"level":30,"time":1791996469247,"pid":864863,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":404},"responseTime":0.5931090000003678,"msg":"request completed"}
+# Subtest: local foundation: locking, seed, durable drafts, replay, stale edits and mock boundaries
+ok 142 - local foundation: locking, seed, durable drafts, replay, stale edits and mock boundaries
+  ---
+  duration_ms: 7280.554492
+  type: 'test'
+  ...
+# Subtest: recognition compatibility entry point sends one Flash Lite request without old conversation or ASR-only configuration
+ok 143 - recognition compatibility entry point sends one Flash Lite request without old conversation or ASR-only configuration
+  ---
+  duration_ms: 7.339561
+  type: 'test'
+  ...
+# Subtest: empty, invalid and truncated transcripts retain strict recognition boundaries
+ok 144 - empty, invalid and truncated transcripts retain strict recognition boundaries
+  ---
+  duration_ms: 6.115824
+  type: 'test'
+  ...
+# Subtest: speech accounting shares Flash Lite rates and retains unknown usage holds
+ok 145 - speech accounting shares Flash Lite rates and retains unknown usage holds
+  ---
+  duration_ms: 0.401229
+  type: 'test'
+  ...
+# Subtest: official SDK sends the Flash Lite JSON recognition contract in one HTTP request
+ok 146 - official SDK sends the Flash Lite JSON recognition contract in one HTTP request
+  ---
+  duration_ms: 42.44997
+  type: 'test'
+  ...
+# Subtest: uploaded raster bytes are bounded and decoded into a small single JPEG; spoofed and malformed formats are rejected
+ok 147 - uploaded raster bytes are bounded and decoded into a small single JPEG; spoofed and malformed formats are rejected
+  ---
+  duration_ms: 286.020461
+  type: 'test'
+  ...
+# Subtest: one image inference searches catalog read-only; current photo selection is required; duplicate upload does not repeat inference
+ok 148 - one image inference searches catalog read-only; current photo selection is required; duplicate upload does not repeat inference
+  ---
+  duration_ms: 2598.071848
+  type: 'test'
+  ...
+# Subtest: unrelated photo and malformed model search cannot mutate or approve an order
+ok 149 - unrelated photo and malformed model search cannot mutate or approve an order
+  ---
+  duration_ms: 3332.612041
+  type: 'test'
+  ...
+# Subtest: photo recognition cannot force an absent nail into the screw-box catalog family
+ok 150 - photo recognition cannot force an absent nail into the screw-box catalog family
+  ---
+  duration_ms: 2123.784684
+  type: 'test'
+  ...
+# Subtest: photo labels use supported size filters; unmodeled material stays a keyword rather than hiding a valid listing
+ok 151 - photo labels use supported size filters; unmodeled material stays a keyword rather than hiding a valid listing
+  ---
+  duration_ms: 2238.868126
+  type: 'test'
+  ...
+# Subtest: the runtime rejects mutation attempts from another image-capable provider and rejects stale queued photos before inference
+ok 152 - the runtime rejects mutation attempts from another image-capable provider and rejects stale queued photos before inference
+  ---
+  duration_ms: 3504.474506
+  type: 'test'
+  ...
+# Subtest: image requests respect the shared free quota and paid text billing never authorizes image inference
+ok 153 - image requests respect the shared free quota and paid text billing never authorizes image inference
+  ---
+  duration_ms: 2571.567807
+  type: 'test'
+  ...
+# {"level":30,"time":1791996493029,"pid":865338,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/native-test/image"},"msg":"incoming request"}
+# {"level":30,"time":1791996493037,"pid":865338,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":401},"responseTime":7.258401000002777,"msg":"request completed"}
+# {"level":30,"time":1791996493038,"pid":865338,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/native-test/session"},"msg":"incoming request"}
+# {"level":30,"time":1791996493046,"pid":865338,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":200},"responseTime":8.14274899999873,"msg":"request completed"}
+# {"level":30,"time":1791996493047,"pid":865338,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/api/native-test/events"},"msg":"incoming request"}
+# {"level":30,"time":1791996493050,"pid":865338,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":400},"responseTime":3.214911999999458,"msg":"request completed"}
+# {"level":30,"time":1791996493054,"pid":865338,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/api/native-test/image"},"msg":"incoming request"}
+# {"level":30,"time":1791996493054,"pid":865338,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":403},"responseTime":0.49558900000192807,"msg":"request completed"}
+# {"level":30,"time":1791996493055,"pid":865338,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"POST","url":"/api/native-test/image"},"msg":"incoming request"}
+# {"level":30,"time":1791996493057,"pid":865338,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":400},"responseTime":2.261023999999452,"msg":"request completed"}
+# {"level":30,"time":1791996493060,"pid":865338,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"POST","url":"/api/native-test/image"},"msg":"incoming request"}
+# {"level":30,"time":1791996493389,"pid":865338,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":200},"responseTime":329.44189899999765,"msg":"request completed"}
+# {"level":30,"time":1791996493391,"pid":865338,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","req":{"method":"GET","url":"/api/native-test/image/43fa41cc-2b54-4989-a7c2-4439ba9013f4"},"msg":"incoming request"}
+# {"level":30,"time":1791996493402,"pid":865338,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":200},"responseTime":11.256431000001612,"msg":"request completed"}
+# {"level":30,"time":1791996493403,"pid":865338,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","req":{"method":"POST","url":"/api/native-test/session"},"msg":"incoming request"}
+# {"level":30,"time":1791996493406,"pid":865338,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","res":{"statusCode":200},"responseTime":3.2389120000007097,"msg":"request completed"}
+# {"level":30,"time":1791996493407,"pid":865338,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","req":{"method":"GET","url":"/api/native-test/image/43fa41cc-2b54-4989-a7c2-4439ba9013f4"},"msg":"incoming request"}
+# {"level":30,"time":1791996493409,"pid":865338,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","res":{"statusCode":404},"responseTime":2.2259650000014517,"msg":"request completed"}
+# Subtest: local photo upload and retrieval enforce signed conversation scope, origin and verified media ingress
+ok 154 - local photo upload and retrieval enforce signed conversation scope, origin and verified media ingress
+  ---
+  duration_ms: 2199.007309
+  type: 'test'
+  ...
+# Subtest: PNG and WebP uploads decode successfully and over-dimension rasters are rejected before conversion
+ok 155 - PNG and WebP uploads decode successfully and over-dimension rasters are rejected before conversion
+  ---
+  duration_ms: 544.339033
+  type: 'test'
+  ...
+# Subtest: photo label inch notation matches catalog inches without weakening numeric or unit constraints
+ok 156 - photo label inch notation matches catalog inches without weakening numeric or unit constraints
+  ---
+  duration_ms: 1874.488937
+  type: 'test'
+  ...
+# Subtest: a named tool with an empty catalog family does not receive unrelated department filler
+ok 157 - a named tool with an empty catalog family does not receive unrelated department filler
+  ---
+  duration_ms: 1937.270255
+  type: 'test'
+  ...
+# Subtest: actual failed pipe cutter name and 42mm size return H19, never the reducer
+ok 158 - actual failed pipe cutter name and 42mm size return H19, never the reducer
+  ---
+  duration_ms: 2295.073351
+  type: 'test'
+  ...
+# Subtest: a vague cutting job can compare six actual alternatives; hard job filters reject irrelevant preferred SKUs
+ok 159 - a vague cutting job can compare six actual alternatives; hard job filters reject irrelevant preferred SKUs
+  ---
+  duration_ms: 2310.203292
+  type: 'test'
+  ...
+# Subtest: typed semantic plans preserve job question, multilingual input, read-only choices, history language and zero-call rechecks
+ok 160 - typed semantic plans preserve job question, multilingual input, read-only choices, history language and zero-call rechecks
+  ---
+  duration_ms: 2962.998716
+  type: 'test'
+  ...
+# Subtest: strict official adapter carries semantic keyword plans while rejecting mixed assistance and order actions
+ok 161 - strict official adapter carries semantic keyword plans while rejecting mixed assistance and order actions
+  ---
+  duration_ms: 13.409425
+  type: 'test'
+  ...
+# Subtest: several requested lines never create a carousel over ten photos and keep deferred groups
+ok 162 - several requested lines never create a carousel over ten photos and keep deferred groups
+  ---
+  duration_ms: 1.911685
+  type: 'test'
+  ...
+# Subtest: discovery remembers an explicit purchase amount through refinement and selection; units are not converted
+ok 163 - discovery remembers an explicit purchase amount through refinement and selection; units are not converted
+  ---
+  duration_ms: 2398.337055
+  type: 'test'
+  ...
+# Subtest: an AI job clarification survives the explicit multi-option photo confirmation
+ok 164 - an AI job clarification survives the explicit multi-option photo confirmation
+  ---
+  duration_ms: 2429.859343
+  type: 'test'
+  ...
+# Subtest: practical AI questions may finish in parentheses but factual claims remain blocked
+ok 165 - practical AI questions may finish in parentheses but factual claims remain blocked
+  ---
+  duration_ms: 1.254697
+  type: 'test'
+  ...
+# Subtest: rechecking a persisted wrong product proposal reruns retrieval instead of repeating a cached image
+ok 166 - rechecking a persisted wrong product proposal reruns retrieval instead of repeating a cached image
+  ---
+  duration_ms: 2041.831225
+  type: 'test'
+  ...
+# Subtest: a model cannot default one or write the cart from a job answer during read-only exploration
+ok 167 - a model cannot default one or write the cart from a job answer during read-only exploration
+  ---
+  duration_ms: 2332.190195
+  type: 'test'
+  ...
+# Subtest: set solvent five, add four extra elbows and remove two unresolved products atomically during pending review
+ok 168 - set solvent five, add four extra elbows and remove two unresolved products atomically during pending review
+  ---
+  duration_ms: 2411.991158
+  type: 'test'
+  ...
+# Subtest: Tamil evidence repair is text-only and preserves every line, negated compressor never added
+ok 169 - Tamil evidence repair is text-only and preserves every line, negated compressor never added
+  ---
+  duration_ms: 2745.492308
+  type: 'test'
+  ...
+# Subtest: repeated invalid polarity repairs do not partially change the draft
+ok 170 - repeated invalid polarity repairs do not partially change the draft
+  ---
+  duration_ms: 2242.095957
+  type: 'test'
+  ...
+# Subtest: paint family phrases retain word order while brand and litre-vs-kg remain protected
+ok 171 - paint family phrases retain word order while brand and litre-vs-kg remain protected
+  ---
+  duration_ms: 2021.458528
+  type: 'test'
+  ...
+# Subtest: inventory updates invalidate remembered suggestions immediately and remain store scoped
+ok 172 - inventory updates invalidate remembered suggestions immediately and remain store scoped
+  ---
+  duration_ms: 2238.008499
+  type: 'test'
+  ...
+# Subtest: short greetings stay Tamil, sustained Tanglish switches, explicit choice is retained
+ok 173 - short greetings stay Tamil, sustained Tanglish switches, explicit choice is retained
+  ---
+  duration_ms: 2592.842442
+  type: 'test'
+  ...
+# Subtest: short submission intents skip historical model edits and route to current prerequisites
+ok 174 - short submission intents skip historical model edits and route to current prerequisites
+  ---
+  duration_ms: 1841.353193
+  type: 'test'
+  ...
+# Subtest: outbound and reconciliation continue while one planning worker is waiting
+ok 175 - outbound and reconciliation continue while one planning worker is waiting
+  ---
+  duration_ms: 1101.350815
+  type: 'test'
+  ...
+# Subtest: requested volume is converted in the verified selling unit, not automatically divided by a pictured pack
+ok 176 - requested volume is converted in the verified selling unit, not automatically divided by a pictured pack
+  ---
+  duration_ms: 1.334626
+  type: 'test'
+  ...
+# Subtest: an unfamiliar inferred watering query is repaired using actual per-line family products, without losing tape and gloves
+ok 177 - an unfamiliar inferred watering query is repaired using actual per-line family products, without losing tape and gloves
+  ---
+  duration_ms: 2440.575805
+  type: 'test'
+  ...
+# Subtest: catalog filter treats 10 litre and 10L as the same verified size and excludes 10kg
+ok 178 - catalog filter treats 10 litre and 10L as the same verified size and excludes 10kg
+  ---
+  duration_ms: 1971.493626
+  type: 'test'
+  ...
+# Subtest: a count of one packed paint is never silently one litre, even when the merchant verified per-litre selling
+ok 179 - a count of one packed paint is never silently one litre, even when the merchant verified per-litre selling
+  ---
+  duration_ms: 2510.838514
+  type: 'test'
+  ...
+# Subtest: clear named removals work with short customer names when an earlier placeholder contains missing
+ok 180 - clear named removals work with short customer names when an earlier placeholder contains missing
+  ---
+  duration_ms: 7160.269622
+  type: 'test'
+  ...
+# Subtest: Tamil and Tanglish shortcuts are whole-message actions; quantities retain units without pack conversion
+ok 181 - Tamil and Tanglish shortcuts are whole-message actions; quantities retain units without pack conversion
+  ---
+  duration_ms: 12.371208
+  type: 'test'
+  ...
+# Subtest: customer controls use Tamil script or spoken Tanglish while retaining English as an explicit option
+ok 182 - customer controls use Tamil script or spoken Tanglish while retaining English as an explicit option
+  ---
+  duration_ms: 0.569688
+  type: 'test'
+  ...
+# Subtest: Tamil is persisted through an English greeting, localized catalog discovery and Tamil quantity response without inference
+ok 183 - Tamil is persisted through an English greeting, localized catalog discovery and Tamil quantity response without inference
+  ---
+  duration_ms: 2991.419692
+  type: 'test'
+  ...
+# Subtest: language changes preserve current product and review consent bindings; replay cannot duplicate replies or submit
+ok 184 - language changes preserve current product and review consent bindings; replay cannot duplicate replies or submit
+  ---
+  duration_ms: 2221.523551
+  type: 'test'
+  ...
+# Subtest: Tamil short consent remains bound to the current review; a stale answer cannot submit or change quantities
+ok 185 - Tamil short consent remains bound to the current review; a stale answer cannot submit or change quantities
+  ---
+  duration_ms: 2036.774638
+  type: 'test'
+  ...
+# Subtest: Tamil failed inference and submitted-request guards are localized and retain business state
+ok 186 - Tamil failed inference and submitted-request guards are localized and retain business state
+  ---
+  duration_ms: 2345.048452
+  type: 'test'
+  ...
+# Subtest: provider receives language rules; optional nulls are omitted without relaxing required quantities or unknown fields
+ok 187 - provider receives language rules; optional nulls are omitted without relaxing required quantities or unknown fields
+  ---
+  duration_ms: 2670.237782
+  type: 'test'
+  ...
+# {"level":30,"time":1791996500476,"pid":866339,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/native-test/session"},"msg":"incoming request"}
+# {"level":30,"time":1791996500515,"pid":866339,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":200},"responseTime":37.981002000000444,"msg":"request completed"}
+# {"level":30,"time":1791996500516,"pid":866339,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"GET","url":"/api/native-test"},"msg":"incoming request"}
+# {"level":30,"time":1791996500544,"pid":866339,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":200},"responseTime":28.177996999998868,"msg":"request completed"}
+# {"level":30,"time":1791996500545,"pid":866339,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/api/native-test/events"},"msg":"incoming request"}
+# {"level":30,"time":1791996500548,"pid":866339,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":401},"responseTime":2.993162000000666,"msg":"request completed"}
+# {"level":30,"time":1791996500548,"pid":866339,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/api/native-test/events"},"msg":"incoming request"}
+# {"level":30,"time":1791996500577,"pid":866339,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":200},"responseTime":28.129268000000593,"msg":"request completed"}
+# {"level":30,"time":1791996500577,"pid":866339,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"GET","url":"/api/native-test"},"msg":"incoming request"}
+# {"level":30,"time":1791996500588,"pid":866339,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":200},"responseTime":10.465572999999495,"msg":"request completed"}
+# {"level":30,"time":1791996500589,"pid":866339,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"GET","url":"/api/native-test"},"msg":"incoming request"}
+# {"level":30,"time":1791996500600,"pid":866339,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":200},"responseTime":10.914781999999832,"msg":"request completed"}
+# Subtest: new native sessions start Tamil, explicit language actions are authenticated and scoped, foreign actor cannot change preference
+ok 188 - new native sessions start Tamil, explicit language actions are authenticated and scoped, foreign actor cannot change preference
+  ---
+  duration_ms: 2275.615361
+  type: 'test'
+  ...
+# Subtest: spoken language changes use the actual transcript without touching a draft or creating consent
+ok 189 - spoken language changes use the actual transcript without touching a draft or creating consent
+  ---
+  duration_ms: 2746.306355
+  type: 'test'
+  ...
+# Subtest: Tamil family narrowing labels and rechecks resolve the displayed facet without extra inference
+ok 190 - Tamil family narrowing labels and rechecks resolve the displayed facet without extra inference
+  ---
+  duration_ms: 2177.918154
+  type: 'test'
+  ...
+# Subtest: empty optional search values and invented read-only taxonomy IDs retain the named request without widening known constraints
+ok 191 - empty optional search values and invented read-only taxonomy IDs retain the named request without widening known constraints
+  ---
+  duration_ms: 14.588063
+  type: 'test'
+  ...
+# Subtest: all paid audio durations keep the Flash Lite model
+ok 192 - all paid audio durations keep the Flash Lite model
+  ---
+  duration_ms: 0.3323
+  type: 'test'
+  ...
+# Subtest: consistent current-line corrections normalize a mixed next label only for explicit corrections
+ok 193 - consistent current-line corrections normalize a mixed next label only for explicit corrections
+  ---
+  duration_ms: 9.703904
+  type: 'test'
+  ...
+# Subtest: observed misplaced read-only fields translate without allowing conflicting aliases or shopping writes
+ok 194 - observed misplaced read-only fields translate without allowing conflicting aliases or shopping writes
+  ---
+  duration_ms: 3.87921
+  type: 'test'
+  ...
+# Subtest: speech reservations hold missing, incomplete and mismatched usage; over-cap usage blocks the budget
+ok 195 - speech reservations hold missing, incomplete and mismatched usage; over-cap usage blocks the budget
+  ---
+  duration_ms: 8238.532647
+  type: 'test'
+  ...
+# Subtest: redundant unchanged-line rechecks stay read-only; mixed changes remain invalid
+ok 196 - redundant unchanged-line rechecks stay read-only; mixed changes remain invalid
+  ---
+  duration_ms: 7.121302
+  type: 'test'
+  ...
+# Subtest: native configuration fails closed; dated USD rates include thinking and never imply paise conversion
+ok 197 - native configuration fails closed; dated USD rates include thinking and never imply paise conversion
+  ---
+  duration_ms: 1.661876
+  type: 'test'
+  ...
+# Subtest: official SDK wire contract: one request, JSON mode and strict backend contract, standard tier, bounded minimal thinking and no hidden retries
+ok 198 - official SDK wire contract: one request, JSON mode and strict backend contract, standard tier, bounded minimal thinking and no hidden retries
+  ---
+  duration_ms: 44.554085
+  type: 'test'
+  ...
+# Subtest: native runtime reserves before SDK invocation, settles measured usage, and known confirmation needs no calls
+ok 199 - native runtime reserves before SDK invocation, settles measured usage, and known confirmation needs no calls
+  ---
+  duration_ms: 3785.9398
+  type: 'test'
+  ...
+# Subtest: truncated, invalid JSON and invalid operation responses still retain billed usage without draft changes
+ok 200 - truncated, invalid JSON and invalid operation responses still retain billed usage without draft changes
+  ---
+  duration_ms: 6126.304554
+  type: 'test'
+  ...
+# Subtest: missing usage and network errors retain budget holds across runtime restart; secrets never reach replies
+ok 201 - missing usage and network errors retain budget holds across runtime restart; secrets never reach replies
+  ---
+  duration_ms: 8960.710071
+  type: 'test'
+  ...
+# Subtest: cross-conversation reservations serialize at store budget; depleted budgets stop before provider invocation
+ok 202 - cross-conversation reservations serialize at store budget; depleted budgets stop before provider invocation
+  ---
+  duration_ms: 1658.989124
+  type: 'test'
+  ...
+# Subtest: usage above configured bounds blocks the budget and preserves draft; unknown held attempts are not refunded
+ok 203 - usage above configured bounds blocks the budget and preserves draft; unknown held attempts are not refunded
+  ---
+  duration_ms: 863.07035
+  type: 'test'
+  ...
+# Subtest: crashed paid attempt remains unknown and held when recovery lacks another reservation
+ok 204 - crashed paid attempt remains unknown and held when recovery lacks another reservation
+  ---
+  duration_ms: 1491.790496
+  type: 'test'
+  ...
+# Subtest: free-tier configuration requires explicit opt-in, stable project scope and zero paid budget
+ok 205 - free-tier configuration requires explicit opt-in, stable project scope and zero paid budget
+  ---
+  duration_ms: 1.324796
+  type: 'test'
+  ...
+# Subtest: free attempts reserve durable project quota before calling, create no paid budget, and throttle across conversations
+ok 206 - free attempts reserve durable project quota before calling, create no paid budget, and throttle across conversations
+  ---
+  duration_ms: 1771.788613
+  type: 'test'
+  ...
+# Subtest: free 429 cooldown survives runtime restart and never retries or exposes provider errors
+ok 207 - free 429 cooldown survives runtime restart and never retries or exposes provider errors
+  ---
+  duration_ms: 1357.111314
+  type: 'test'
+  ...
+# Subtest: free quota admits ten small requests across conversations, rejects the eleventh and retains unknown-token reservations
+ok 208 - free quota admits ten small requests across conversations, rejects the eleventh and retains unknown-token reservations
+  ---
+  duration_ms: 2094.871338
+  type: 'test'
+  ...
+# Subtest: free daily cap counts failed and unknown requests at Pacific day boundaries
+ok 209 - free daily cap counts failed and unknown requests at Pacific day boundaries
+  ---
+  duration_ms: 2130.894305
+  type: 'test'
+  ...
+# Subtest: native add wire alias translates only a complete strict operation object
+ok 210 - native add wire alias translates only a complete strict operation object
+  ---
+  duration_ms: 864.555037
+  type: 'test'
+  ...
+# {"level":30,"time":1791996528092,"pid":866450,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/native-test/session"},"msg":"incoming request"}
+# {"level":30,"time":1791996528096,"pid":866450,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":403},"responseTime":3.4645820000005187,"msg":"request completed"}
+# {"level":30,"time":1791996528097,"pid":866450,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/native-test/session"},"msg":"incoming request"}
+# {"level":30,"time":1791996528097,"pid":866450,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":403},"responseTime":0.35570900000311667,"msg":"request completed"}
+# {"level":30,"time":1791996528097,"pid":866450,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"GET","url":"/api/native-test"},"msg":"incoming request"}
+# {"level":30,"time":1791996528098,"pid":866450,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":403},"responseTime":0.2257790000003297,"msg":"request completed"}
+# {"level":30,"time":1791996528098,"pid":866450,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/api/native-test/session"},"msg":"incoming request"}
+# {"level":30,"time":1791996528106,"pid":866450,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":200},"responseTime":8.396388000001025,"msg":"request completed"}
+# {"level":30,"time":1791996528107,"pid":866450,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"POST","url":"/api/native-test/events"},"msg":"incoming request"}
+# {"level":30,"time":1791996528175,"pid":866450,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":200},"responseTime":67.95478500000172,"msg":"request completed"}
+# {"level":30,"time":1791996528176,"pid":866450,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"POST","url":"/api/native-test/events"},"msg":"incoming request"}
+# {"level":30,"time":1791996528184,"pid":866450,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":200},"responseTime":8.189189000004262,"msg":"request completed"}
+# {"level":30,"time":1791996528184,"pid":866450,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","req":{"method":"GET","url":"/api/native-test"},"msg":"incoming request"}
+# {"level":30,"time":1791996528195,"pid":866450,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":200},"responseTime":10.496222999994643,"msg":"request completed"}
+# {"level":30,"time":1791996528196,"pid":866450,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","req":{"method":"GET","url":"/api/native-test"},"msg":"incoming request"}
+# {"level":30,"time":1791996528196,"pid":866450,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","res":{"statusCode":401},"responseTime":0.22413899999810383,"msg":"request completed"}
+# {"level":30,"time":1791996528197,"pid":866450,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","req":{"method":"GET","url":"/api/simulator"},"msg":"incoming request"}
+# {"level":30,"time":1791996528205,"pid":866450,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","res":{"statusCode":200},"responseTime":7.442520999997214,"msg":"request completed"}
+# Subtest: local native HTTP channel requires local origin/header and signed fresh session; retries do not repeat inference
+ok 211 - local native HTTP channel requires local origin/header and signed fresh session; retries do not repeat inference
+  ---
+  duration_ms: 1311.863341
+  type: 'test'
+  ...
+# Subtest: persona greetings preserve the draft, use no AI request, and replies remain one persisted message
+ok 212 - persona greetings preserve the draft, use no AI request, and replies remain one persisted message
+  ---
+  duration_ms: 877.594343
+  type: 'test'
+  ...
+# Subtest: vague screw box plus paint retains both, asks size then quantity, and sends one photo envelope per turn
+ok 213 - vague screw box plus paint retains both, asks size then quantity, and sends one photo envelope per turn
+  ---
+  duration_ms: 1114.287541
+  type: 'test'
+  ...
+# Subtest: typo matches are choices, numeric specs stay exact, and browse caps at four without adding or auto-paging
+ok 214 - typo matches are choices, numeric specs stay exact, and browse caps at four without adding or auto-paging
+  ---
+  duration_ms: 923.068165
+  type: 'test'
+  ...
+# Subtest: WhatsApp planning respects approved card count, marketing cost, service window and one-message ceiling
+ok 215 - WhatsApp planning respects approved card count, marketing cost, service window and one-message ceiling
+  ---
+  duration_ms: 4.256099
+  type: 'test'
+  ...
+# Subtest: native edit aliases preserve strict fields and map validated current line IDs to backend references
+ok 216 - native edit aliases preserve strict fields and map validated current line IDs to backend references
+  ---
+  duration_ms: 3.064402
+  type: 'test'
+  ...
+# Subtest: contextual yes confirms one product choice, asks quantity, and never sends an order before review
+ok 217 - contextual yes confirms one product choice, asks quantity, and never sends an order before review
+  ---
+  duration_ms: 964.571548
+  type: 'test'
+  ...
+# Subtest: ambiguous numbers, greetings and declines retain the pending line without repeated photos or inference
+ok 218 - ambiguous numbers, greetings and declines retain the pending line without repeated photos or inference
+  ---
+  duration_ms: 1058.451726
+  type: 'test'
+  ...
+# Subtest: measurement and packaging mismatches require an explicit catalog unit and never infer conversions
+ok 219 - measurement and packaging mismatches require an explicit catalog unit and never infer conversions
+  ---
+  duration_ms: 1045.909728
+  type: 'test'
+  ...
+# Subtest: quantity quotes are read-only, computed from catalog prices, and reject unit conversions
+ok 220 - quantity quotes are read-only, computed from catalog prices, and reject unit conversions
+  ---
+  duration_ms: 686.776136
+  type: 'test'
+  ...
+# Subtest: owner questions give truthful answers in one reply without mutating or sending the review
+ok 221 - owner questions give truthful answers in one reply without mutating or sending the review
+  ---
+  duration_ms: 778.999917
+  type: 'test'
+  ...
+# Subtest: mock diagnostic parser preserves box packaging and supported unit synonyms
+ok 222 - mock diagnostic parser preserves box packaging and supported unit synonyms
+  ---
+  duration_ms: 468.866069
+  type: 'test'
+  ...
+# Subtest: WhatsApp planning requires marketing opt-in and selects the cheapest approved matching carousel
+ok 223 - WhatsApp planning requires marketing opt-in and selects the cheapest approved matching carousel
+  ---
+  duration_ms: 1.865675
+  type: 'test'
+  ...
+# Subtest: queued unit answers and remove-it stay bound to the original question instead of changing the next line
+ok 224 - queued unit answers and remove-it stay bound to the original question instead of changing the next line
+  ---
+  duration_ms: 650.2848
+  type: 'test'
+  ...
+# Subtest: mixed shopping and delivery questions retain only actual item requests and one truthful reply
+ok 225 - mixed shopping and delivery questions retain only actual item requests and one truthful reply
+  ---
+  duration_ms: 583.561453
+  type: 'test'
+  ...
+# Subtest: exact SKU refresh preserves loose-piece versus box identity even when SKU words match another alias
+ok 226 - exact SKU refresh preserves loose-piece versus box identity even when SKU words match another alias
+  ---
+  duration_ms: 459.955172
+  type: 'test'
+  ...
+# Subtest: explicit customer price intent is read-only even when a provider would misclassify it as an addition
+ok 227 - explicit customer price intent is read-only even when a provider would misclassify it as an addition
+  ---
+  duration_ms: 417.170332
+  type: 'test'
+  ...
+# Subtest: price variant buttons keep quote intent and quantity until the customer explicitly adds to the list
+ok 228 - price variant buttons keep quote intent and quantity until the customer explicitly adds to the list
+  ---
+  duration_ms: 435.701184
+  type: 'test'
+  ...
+# {"level":30,"time":1791996490293,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/owner/catalog/nodes"},"msg":"incoming request"}
+# {"level":30,"time":1791996490313,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":200},"responseTime":18.978401000000304,"msg":"request completed"}
+# {"level":30,"time":1791996490313,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996490319,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":400},"responseTime":5.066757000000052,"msg":"request completed"}
+# {"level":30,"time":1791996490319,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996490323,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":400},"err":{"type":"Error","message":"Choose a valid product type.","stack":"Error: Choose a valid product type.\\n    at <anonymous> (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner-catalog.ts:75:151)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async write (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:59:20)","statusCode":400},"msg":"Choose a valid product type."}
+# {"level":30,"time":1791996490327,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":400},"responseTime":7.5850900000000365,"msg":"request completed"}
+# {"level":30,"time":1791996490327,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996490338,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":200},"responseTime":10.327492999999777,"msg":"request completed"}
+# {"level":30,"time":1791996490362,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996490371,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":200},"responseTime":8.515527999999904,"msg":"request completed"}
+# {"level":30,"time":1791996490402,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996490411,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":409},"err":{"type":"Error","message":"This product changed or its code already exists. Reload before saving.","stack":"Error: This product changed or its code already exists. Reload before saving.\\n    at <anonymous> (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner-catalog.ts:80:41)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async write (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:59:20)","statusCode":409},"msg":"This product changed or its code already exists. Reload before saving."}
+# {"level":30,"time":1791996490412,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":409},"responseTime":9.515775000000303,"msg":"request completed"}
+# {"level":30,"time":1791996490412,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","req":{"method":"GET","url":"/api/owner/catalog"},"msg":"incoming request"}
+# {"level":30,"time":1791996490413,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":403},"responseTime":0.3722389999998086,"msg":"request completed"}
+# {"level":30,"time":1791996490413,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996490413,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","res":{"statusCode":403},"responseTime":0.20323899999993955,"msg":"request completed"}
+# {"level":30,"time":1791996490544,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996490552,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","res":{"statusCode":200},"responseTime":8.476438000000144,"msg":"request completed"}
+# {"level":30,"time":1791996490563,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-a","req":{"method":"GET","url":"/api/owner/catalog"},"msg":"incoming request"}
+# {"level":30,"time":1791996490569,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-a","res":{"statusCode":200},"responseTime":5.6146349999999074,"msg":"request completed"}
+# {"level":30,"time":1791996490574,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-b","req":{"method":"GET","url":"/api/owner/catalog"},"msg":"incoming request"}
+# {"level":30,"time":1791996490578,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-b","res":{"statusCode":200},"responseTime":3.981358999999884,"msg":"request completed"}
+# Subtest: owner inventory is scoped, verified before publication, searchable in Tamil, and versioned across customer reviews
+ok 229 - owner inventory is scoped, verified before publication, searchable in Tamil, and versioned across customer reviews
+  ---
+  duration_ms: 2118.828696
+  type: 'test'
+  ...
+# {"level":30,"time":1791996492516,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/owner/catalog/nodes"},"msg":"incoming request"}
+# {"level":30,"time":1791996492523,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":200},"responseTime":6.840291999999863,"msg":"request completed"}
+# {"level":30,"time":1791996492523,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996492530,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":200},"responseTime":6.993321999999353,"msg":"request completed"}
+# {"level":30,"time":1791996492532,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/api/owner/catalog/products/SHOP-PLIER/photo"},"msg":"incoming request"}
+# {"level":30,"time":1791996492737,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":200},"responseTime":204.89340099999936,"msg":"request completed"}
+# {"level":30,"time":1791996492738,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"GET","url":"/catalog-images/custom/dfda639c-742f-42f6-a391-62dd87215aa2.jpg"},"msg":"incoming request"}
+# {"level":30,"time":1791996492742,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":404},"responseTime":4.356329000000187,"msg":"request completed"}
+# {"level":30,"time":1791996492742,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"GET","url":"/api/owner/products/SHOP-PLIER/image"},"msg":"incoming request"}
+# {"level":30,"time":1791996492746,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":200},"responseTime":3.2832109999999375,"msg":"request completed"}
+# {"level":30,"time":1791996492747,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"POST","url":"/api/owner/catalog/products/SHOP-PLIER/photo"},"msg":"incoming request"}
+# {"level":30,"time":1791996492755,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":409},"responseTime":8.371169000000009,"msg":"request completed"}
+# {"level":30,"time":1791996492755,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996492764,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":200},"responseTime":8.703357000000324,"msg":"request completed"}
+# {"level":30,"time":1791996492765,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","req":{"method":"GET","url":"/catalog-images/custom/dfda639c-742f-42f6-a391-62dd87215aa2.jpg"},"msg":"incoming request"}
+# {"level":30,"time":1791996492768,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","res":{"statusCode":200},"responseTime":2.779413000000204,"msg":"request completed"}
+# {"level":30,"time":1791996492768,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","req":{"method":"GET","url":"/catalog-images/custom/dfda639c-742f-42f6-a391-62dd87215aa2.jpg"},"msg":"incoming request"}
+# {"level":30,"time":1791996492768,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","res":{"statusCode":404},"responseTime":0.1672790000002351,"msg":"request completed"}
+# {"level":30,"time":1791996492770,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-a","req":{"method":"POST","url":"/api/owner/catalog/products/SHOP-PLIER/photo"},"msg":"incoming request"}
+# {"level":30,"time":1791996492999,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-a","res":{"statusCode":200},"responseTime":229.6813659999998,"msg":"request completed"}
+# {"level":30,"time":1791996493000,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-b","req":{"method":"GET","url":"/catalog-images/custom/dfda639c-742f-42f6-a391-62dd87215aa2.jpg"},"msg":"incoming request"}
+# {"level":30,"time":1791996493002,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-b","res":{"statusCode":404},"responseTime":2.573764000000665,"msg":"request completed"}
+# {"level":30,"time":1791996493003,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-c","req":{"method":"GET","url":"/catalog-images/custom/99f3a041-5752-490b-b82d-5a53f45c8e1c.jpg"},"msg":"incoming request"}
+# {"level":30,"time":1791996493004,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-c","res":{"statusCode":404},"responseTime":0.9692380000005869,"msg":"request completed"}
+# {"level":30,"time":1791996493004,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-d","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996493012,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-d","res":{"statusCode":200},"responseTime":7.871309999999539,"msg":"request completed"}
+# {"level":30,"time":1791996493012,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-e","req":{"method":"GET","url":"/catalog-images/custom/99f3a041-5752-490b-b82d-5a53f45c8e1c.jpg"},"msg":"incoming request"}
+# {"level":30,"time":1791996493014,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-e","res":{"statusCode":200},"responseTime":2.0215350000007675,"msg":"request completed"}
+# {"level":30,"time":1791996493014,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-f","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996493020,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-f","res":{"statusCode":200},"responseTime":5.619695999999749,"msg":"request completed"}
+# {"level":30,"time":1791996493020,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-g","req":{"method":"GET","url":"/catalog-images/custom/99f3a041-5752-490b-b82d-5a53f45c8e1c.jpg"},"msg":"incoming request"}
+# {"level":30,"time":1791996493022,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-g","res":{"statusCode":404},"responseTime":1.3036970000002839,"msg":"request completed"}
+# {"level":30,"time":1791996493022,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-h","req":{"method":"GET","url":"/catalog-images/custom/6c81c34d-566a-4418-97e8-c2df477b1db5.jpg"},"msg":"incoming request"}
+# {"level":30,"time":1791996493023,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-h","res":{"statusCode":404},"responseTime":1.0638969999999972,"msg":"request completed"}
+# Subtest: owner photos are normalized, immutable, publicly store scoped only while visible, and never use customer uploads
+ok 230 - owner photos are normalized, immutable, publicly store scoped only while visible, and never use customer uploads
+  ---
+  duration_ms: 2456.102975
+  type: 'test'
+  ...
+# Subtest: demo initialization cannot overwrite owner-managed catalog facts
+ok 231 - demo initialization cannot overwrite owner-managed catalog facts
+  ---
+  duration_ms: 3545.119432
+  type: 'test'
+  ...
+# {"level":30,"time":1791996498724,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"GET","url":"/catalog-images/messages/b27a8e9aa777f4d9bb6cea4a2db797bf1792947b59d83d719a1b74621d4d8048.png"},"msg":"incoming request"}
+# {"level":30,"time":1791996498726,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":200},"responseTime":1.0588369999986753,"msg":"request completed"}
+# {"level":30,"time":1791996498726,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"GET","url":"/api/owner/message-images/b27a8e9aa777f4d9bb6cea4a2db797bf1792947b59d83d719a1b74621d4d8048.png"},"msg":"incoming request"}
+# {"level":30,"time":1791996498726,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":403},"responseTime":0.2690890000012587,"msg":"request completed"}
+# {"level":30,"time":1791996498726,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"GET","url":"/api/owner/message-images/b27a8e9aa777f4d9bb6cea4a2db797bf1792947b59d83d719a1b74621d4d8048.png"},"msg":"incoming request"}
+# {"level":30,"time":1791996498727,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":200},"responseTime":0.6247279999988677,"msg":"request completed"}
+# {"level":30,"time":1791996498727,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"GET","url":"/catalog-images/messages/b27a8e9aa777f4d9bb6cea4a2db797bf1792947b59d83d719a1b74621d4d8048.png"},"msg":"incoming request"}
+# {"level":30,"time":1791996498727,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":404},"responseTime":0.11920900000041001,"msg":"request completed"}
+# {"level":30,"time":1791996498728,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"GET","url":"/catalog-images/messages/b27a8e9aa777f4d9bb6cea4a2db797bf1792947b59d83d719a1b74621d4d8048.png"},"msg":"incoming request"}
+# {"level":30,"time":1791996498728,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":404},"responseTime":0.11409000000094238,"msg":"request completed"}
+# {"level":30,"time":1791996498728,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"POST","url":"/catalog-images/messages/b27a8e9aa777f4d9bb6cea4a2db797bf1792947b59d83d719a1b74621d4d8048.png"},"msg":"incoming request"}
+# {"level":30,"time":1791996498728,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":404},"responseTime":0.15150899999935064,"msg":"request completed"}
+# {"level":30,"time":1791996498728,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","req":{"method":"GET","url":"/catalog-images/messages/not-a-hash.png"},"msg":"incoming request"}
+# {"level":30,"time":1791996498729,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":404},"responseTime":0.08214900000166381,"msg":"request completed"}
+# {"level":30,"time":1791996498729,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","req":{"method":"GET","url":"/api/owner/message-images/0000000000000000000000000000000000000000000000000000000000000000.png"},"msg":"incoming request"}
+# {"level":30,"time":1791996498729,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","res":{"statusCode":404},"responseTime":0.16422999999849708,"msg":"request completed"}
+# Subtest: visual message PNGs are public on the WhatsApp host and authenticated in owner history
+ok 232 - visual message PNGs are public on the WhatsApp host and authenticated in owner history
+  ---
+  duration_ms: 2161.495676
+  type: 'test'
+  ...
+# {"level":30,"time":1791996500528,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/owner/catalog/nodes"},"msg":"incoming request"}
+# {"level":30,"time":1791996500542,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":200},"responseTime":13.39638500000001,"msg":"request completed"}
+# {"level":30,"time":1791996500542,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"GET","url":"/api/owner/catalog"},"msg":"incoming request"}
+# {"level":30,"time":1791996500547,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":200},"responseTime":4.520758000000569,"msg":"request completed"}
+# {"level":30,"time":1791996500547,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996500554,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":200},"responseTime":6.465973000000304,"msg":"request completed"}
+# {"level":30,"time":1791996500555,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/api/owner/catalog/diagnose"},"msg":"incoming request"}
+# {"level":30,"time":1791996500575,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":200},"responseTime":20.18797799999993,"msg":"request completed"}
+# {"level":30,"time":1791996500576,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996500576,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":400},"responseTime":0.7216779999998835,"msg":"request completed"}
+# {"level":30,"time":1791996500577,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996500583,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":200},"responseTime":6.194143999999142,"msg":"request completed"}
+# {"level":30,"time":1791996500583,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","req":{"method":"POST","url":"/api/owner/catalog/diagnose"},"msg":"incoming request"}
+# {"level":30,"time":1791996500599,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":200},"responseTime":15.33285000000069,"msg":"request completed"}
+# {"level":30,"time":1791996500599,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","req":{"method":"POST","url":"/api/owner/catalog/products"},"msg":"incoming request"}
+# {"level":30,"time":1791996500600,"pid":866476,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","res":{"statusCode":400},"responseTime":0.47935899999902176,"msg":"request completed"}
+# Subtest: saved publication revision is immediately visible to the agent diagnostic; zero price needs an explicit status
+ok 233 - saved publication revision is immediately visible to the agent diagnostic; zero price needs an explicit status
+  ---
+  duration_ms: 1879.735373
+  type: 'test'
+  ...
+# {"level":30,"time":1791996491588,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/owner/requests/34d104df-0fef-4054-a526-03e80bfc46d4/fulfillment"},"msg":"incoming request"}
+# {"level":30,"time":1791996491596,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":409},"err":{"type":"Error","message":"Accept the request before updating pickup status.","stack":"Error: Accept the request before updating pickup status.\\n    at <anonymous> (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:221:64)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async write (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:59:20)","statusCode":409},"msg":"Accept the request before updating pickup status."}
+# {"level":30,"time":1791996491603,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":409},"responseTime":14.245542999999998,"msg":"request completed"}
+# {"level":30,"time":1791996491622,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/owner/requests/34d104df-0fef-4054-a526-03e80bfc46d4/decision"},"msg":"incoming request"}
+# {"level":30,"time":1791996491625,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":409},"err":{"type":"Error","message":"Request is already decided or unavailable. Refresh the list.","stack":"Error: Request is already decided or unavailable. Refresh the list.\\n    at <anonymous> (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:212:48)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async write (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:59:20)","statusCode":409},"msg":"Request is already decided or unavailable. Refresh the list."}
+# {"level":30,"time":1791996491627,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/owner/requests/34d104df-0fef-4054-a526-03e80bfc46d4/decision"},"msg":"incoming request"}
+# {"level":30,"time":1791996491626,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":409},"responseTime":4.661869000000024,"msg":"request completed"}
+# {"level":30,"time":1791996491636,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":200},"responseTime":8.643198000000211,"msg":"request completed"}
+# {"level":30,"time":1791996491772,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/api/owner/requests/34d104df-0fef-4054-a526-03e80bfc46d4/decision"},"msg":"incoming request"}
+# {"level":30,"time":1791996491778,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":409},"err":{"type":"Error","message":"Request is already decided or unavailable. Refresh the list.","stack":"Error: Request is already decided or unavailable. Refresh the list.\\n    at <anonymous> (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:212:48)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async write (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:59:20)","statusCode":409},"msg":"Request is already decided or unavailable. Refresh the list."}
+# {"level":30,"time":1791996491778,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":409},"responseTime":6.189443999999639,"msg":"request completed"}
+# {"level":30,"time":1791996491873,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/api/owner/requests/34d104df-0fef-4054-a526-03e80bfc46d4/fulfillment"},"msg":"incoming request"}
+# {"level":30,"time":1791996491875,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":409},"err":{"type":"Error","message":"Request status changed or that transition is not allowed. Refresh before updating.","stack":"Error: Request status changed or that transition is not allowed. Refresh before updating.\\n    at <anonymous> (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:223:264)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async write (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:59:20)","statusCode":409},"msg":"Request status changed or that transition is not allowed. Refresh before updating."}
+# {"level":30,"time":1791996491876,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":409},"responseTime":3.010992000000442,"msg":"request completed"}
+# {"level":30,"time":1791996491876,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"POST","url":"/api/owner/requests/34d104df-0fef-4054-a526-03e80bfc46d4/fulfillment"},"msg":"incoming request"}
+# {"level":30,"time":1791996491878,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":409},"err":{"type":"Error","message":"Request status changed or that transition is not allowed. Refresh before updating.","stack":"Error: Request status changed or that transition is not allowed. Refresh before updating.\\n    at <anonymous> (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:223:264)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async write (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:59:20)","statusCode":409},"msg":"Request status changed or that transition is not allowed. Refresh before updating."}
+# {"level":30,"time":1791996491879,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/owner/requests/34d104df-0fef-4054-a526-03e80bfc46d4/fulfillment"},"msg":"incoming request"}
+# {"level":30,"time":1791996491878,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":409},"responseTime":2.1826439999995273,"msg":"request completed"}
+# {"level":30,"time":1791996491880,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":409},"err":{"type":"Error","message":"Accept the request before updating pickup status.","stack":"Error: Accept the request before updating pickup status.\\n    at <anonymous> (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:221:64)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async write (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:59:20)","statusCode":409},"msg":"Accept the request before updating pickup status."}
+# {"level":30,"time":1791996491881,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"POST","url":"/api/owner/requests/34d104df-0fef-4054-a526-03e80bfc46d4/fulfillment"},"msg":"incoming request"}
+# {"level":30,"time":1791996491880,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":409},"responseTime":1.9264249999996537,"msg":"request completed"}
+# {"level":30,"time":1791996491889,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":200},"responseTime":8.361759000000347,"msg":"request completed"}
+# {"level":30,"time":1791996491891,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","req":{"method":"POST","url":"/api/owner/requests/34d104df-0fef-4054-a526-03e80bfc46d4/fulfillment"},"msg":"incoming request"}
+# {"level":30,"time":1791996491899,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":200},"responseTime":8.006549000000632,"msg":"request completed"}
+# {"level":30,"time":1791996491995,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","req":{"method":"GET","url":"/api/owner/snapshot"},"msg":"incoming request"}
+# {"level":30,"time":1791996492015,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","res":{"statusCode":200},"responseTime":19.962688999999955,"msg":"request completed"}
+# {"level":30,"time":1791996492099,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","req":{"method":"POST","url":"/api/owner/conversations/5f5a008a-36cb-4516-ae6d-c81293675dd8/reply"},"msg":"incoming request"}
+# {"level":30,"time":1791996492113,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","res":{"statusCode":200},"responseTime":13.808423999999832,"msg":"request completed"}
+# {"level":30,"time":1791996492114,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-a","req":{"method":"POST","url":"/api/owner/conversations/5f5a008a-36cb-4516-ae6d-c81293675dd8/reply"},"msg":"incoming request"}
+# {"level":30,"time":1791996492118,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-a","res":{"statusCode":200},"responseTime":4.663538000000699,"msg":"request completed"}
+# {"level":30,"time":1791996492140,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-b","req":{"method":"POST","url":"/api/owner/requests/34d104df-0fef-4054-a526-03e80bfc46d4/fulfillment"},"msg":"incoming request"}
+# {"level":30,"time":1791996492147,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-b","res":{"statusCode":200},"responseTime":6.691601999999875,"msg":"request completed"}
+# {"level":30,"time":1791996492153,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-c","req":{"method":"POST","url":"/api/owner/requests/34d104df-0fef-4054-a526-03e80bfc46d4/fulfillment"},"msg":"incoming request"}
+# {"level":30,"time":1791996492157,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-c","res":{"statusCode":409},"err":{"type":"Error","message":"Request status changed or that transition is not allowed. Refresh before updating.","stack":"Error: Request status changed or that transition is not allowed. Refresh before updating.\\n    at <anonymous> (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:223:264)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async write (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:59:20)","statusCode":409},"msg":"Request status changed or that transition is not allowed. Refresh before updating."}
+# {"level":30,"time":1791996492157,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-c","res":{"statusCode":409},"responseTime":4.413087999999334,"msg":"request completed"}
+# Subtest: customer photo choice and bound submission continue through owner approval, pickup, and handoff using only a fake sender
+ok 234 - customer photo choice and bound submission continue through owner approval, pickup, and handoff using only a fake sender
+  ---
+  duration_ms: 3401.322453
+  type: 'test'
+  ...
+# {"level":30,"time":1791996494636,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/owner/requests/e04e4096-7d5e-41a5-a2bc-697b72b69f98/decision"},"msg":"incoming request"}
+# {"level":30,"time":1791996494647,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":200},"responseTime":10.9226120000003,"msg":"request completed"}
+# {"level":30,"time":1791996494648,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/owner/conversations/5da0da9a-6881-4f6b-bbba-81d970a58598/control"},"msg":"incoming request"}
+# {"level":30,"time":1791996494656,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":200},"responseTime":8.08632899999975,"msg":"request completed"}
+# {"level":30,"time":1791996494658,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/api/owner/requests/e04e4096-7d5e-41a5-a2bc-697b72b69f98/fulfillment"},"msg":"incoming request"}
+# {"level":30,"time":1791996494668,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":200},"responseTime":10.324082999999519,"msg":"request completed"}
+# {"level":30,"time":1791996494669,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/api/owner/conversations/5da0da9a-6881-4f6b-bbba-81d970a58598/control"},"msg":"incoming request"}
+# {"level":30,"time":1791996494680,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":200},"responseTime":10.451543000000129,"msg":"request completed"}
+# {"level":30,"time":1791996494681,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"POST","url":"/api/owner/requests/e04e4096-7d5e-41a5-a2bc-697b72b69f98/fulfillment"},"msg":"incoming request"}
+# {"level":30,"time":1791996494695,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":200},"responseTime":13.897234000000026,"msg":"request completed"}
+# {"level":30,"time":1791996494697,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"POST","url":"/api/owner/requests/e04e4096-7d5e-41a5-a2bc-697b72b69f98/fulfillment"},"msg":"incoming request"}
+# {"level":30,"time":1791996494706,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":200},"responseTime":8.378669000000627,"msg":"request completed"}
+# {"level":30,"time":1791996494708,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","req":{"method":"POST","url":"/api/owner/requests/e04e4096-7d5e-41a5-a2bc-697b72b69f98/fulfillment"},"msg":"incoming request"}
+# {"level":30,"time":1791996494717,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":200},"responseTime":9.145465999999942,"msg":"request completed"}
+# {"level":30,"time":1791996494728,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","req":{"method":"POST","url":"/api/owner/requests/e04e4096-7d5e-41a5-a2bc-697b72b69f98/fulfillment"},"msg":"incoming request"}
+# {"level":30,"time":1791996494741,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","res":{"statusCode":200},"responseTime":13.030076999999437,"msg":"request completed"}
+# {"level":30,"time":1791996494775,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","req":{"method":"POST","url":"/api/owner/requests/e04e4096-7d5e-41a5-a2bc-697b72b69f98/fulfillment"},"msg":"incoming request"}
+# {"level":30,"time":1791996494781,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","res":{"statusCode":200},"responseTime":5.999305000000277,"msg":"request completed"}
+# Subtest: owner controls and newer statuses invalidate queued notifications; explicit retries never resend uncertain outcomes
+ok 235 - owner controls and newer statuses invalidate queued notifications; explicit retries never resend uncertain outcomes
+  ---
+  duration_ms: 2652.680747
+  type: 'test'
+  ...
+# {"level":30,"time":1791996496643,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/owner/conversations/e1a6fdb0-d121-4831-bd5a-1bce69389d58/control"},"msg":"incoming request"}
+# {"level":30,"time":1791996496646,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":409},"err":{"type":"Error","message":"There is no current shop-assistance request to acknowledge.","stack":"Error: There is no current shop-assistance request to acknowledge.\\n    at <anonymous> (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:120:110)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async write (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:59:20)","statusCode":409},"msg":"There is no current shop-assistance request to acknowledge."}
+# {"level":30,"time":1791996496646,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":409},"responseTime":2.5691939999996976,"msg":"request completed"}
+# {"level":30,"time":1791996496646,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/owner/conversations/3577b6f9-638f-4302-a783-c683e43a90a2/control"},"msg":"incoming request"}
+# {"level":30,"time":1791996496668,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":200},"responseTime":22.16898300000139,"msg":"request completed"}
+# {"level":30,"time":1791996496669,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/api/owner/conversations/3577b6f9-638f-4302-a783-c683e43a90a2/control"},"msg":"incoming request"}
+# {"level":30,"time":1791996496672,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":409},"err":{"type":"Error","message":"There is no current shop-assistance request to acknowledge.","stack":"Error: There is no current shop-assistance request to acknowledge.\\n    at <anonymous> (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:120:110)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async write (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:59:20)","statusCode":409},"msg":"There is no current shop-assistance request to acknowledge."}
+# {"level":30,"time":1791996496673,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":409},"responseTime":3.378391999998712,"msg":"request completed"}
+# {"level":30,"time":1791996496688,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/api/owner/conversations/3577b6f9-638f-4302-a783-c683e43a90a2/control"},"msg":"incoming request"}
+# {"level":30,"time":1791996496717,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":200},"responseTime":29.539413000000422,"msg":"request completed"}
+# {"level":30,"time":1791996496748,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"POST","url":"/api/owner/conversations/3577b6f9-638f-4302-a783-c683e43a90a2/control"},"msg":"incoming request"}
+# {"level":30,"time":1791996496755,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":200},"responseTime":6.698401999999987,"msg":"request completed"}
+# {"level":30,"time":1791996496802,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"POST","url":"/api/owner/conversations/3577b6f9-638f-4302-a783-c683e43a90a2/control"},"msg":"incoming request"}
+# {"level":30,"time":1791996496814,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":200},"responseTime":11.37336999999934,"msg":"request completed"}
+# {"level":30,"time":1791996496982,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","req":{"method":"POST","url":"/api/owner/conversations/3577b6f9-638f-4302-a783-c683e43a90a2/control"},"msg":"incoming request"}
+# {"level":30,"time":1791996497004,"pid":866506,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":200},"responseTime":21.80672400000003,"msg":"request completed"}
+# Subtest: staff acknowledges a handoff with a scoped visual receipt, rejects stale clicks, and notifies assistant resume
+ok 236 - staff acknowledges a handoff with a scoped visual receipt, rejects stale clicks, and notifies assistant resume
+  ---
+  duration_ms: 2321.473643
+  type: 'test'
+  ...
+# Subtest: inventory can find English, Tamil and customer spellings without confusing unknown stock with zero
+ok 237 - inventory can find English, Tamil and customer spellings without confusing unknown stock with zero
+  ---
+  duration_ms: 7.030061
+  type: 'test'
+  ...
+# Subtest: request queue keeps accepted pickups active until collection or cancellation and labels their actual stage
+ok 238 - request queue keeps accepted pickups active until collection or cancellation and labels their actual stage
+  ---
+  duration_ms: 0.307269
+  type: 'test'
+  ...
+# Subtest: reply composer closes at the 24-hour boundary and never enables sending for invalid or future dates
+ok 239 - reply composer closes at the 24-hour boundary and never enables sending for invalid or future dates
+  ---
+  duration_ms: 1.536095
+  type: 'test'
+  ...
+# {"level":30,"time":1791996497752,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"GET","url":"/api/owner/conversations/00000000-0000-4000-8000-000000000002"},"msg":"incoming request"}
+# {"level":30,"time":1791996497772,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":200},"responseTime":18.505131999999776,"msg":"request completed"}
+# {"level":30,"time":1791996497773,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"GET","url":"/api/owner/conversations/00000000-0000-4000-8000-000000000002/media/voice/0d8bd514-c123-43a7-9994-c37cf574baa3"},"msg":"incoming request"}
+# {"level":30,"time":1791996497825,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":200},"responseTime":51.74497599999995,"msg":"request completed"}
+# {"level":30,"time":1791996497826,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"GET","url":"/api/owner/conversations/ece21f76-1556-46cb-9ed4-e40596076cca"},"msg":"incoming request"}
+# {"level":30,"time":1791996497841,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":200},"responseTime":14.948871000000054,"msg":"request completed"}
+# {"level":30,"time":1791996497842,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"GET","url":"/api/owner/conversations/ece21f76-1556-46cb-9ed4-e40596076cca/media/voice/0d8bd514-c123-43a7-9994-c37cf574baa3"},"msg":"incoming request"}
+# {"level":30,"time":1791996497846,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":404},"responseTime":4.415458999999828,"msg":"request completed"}
+# Subtest: owner history binds audio to its conversation and labels missing recordings without broken playback URLs
+ok 240 - owner history binds audio to its conversation and labels missing recordings without broken playback URLs
+  ---
+  duration_ms: 2218.00526
+  type: 'test'
+  ...
+# Subtest: Access validates signatures, exact merchant owner, issuer, audience, expiry and algorithm
+ok 241 - Access validates signatures, exact merchant owner, issuer, audience, expiry and algorithm
+  ---
+  duration_ms: 14.398643
+  type: 'test'
+  ...
+# {"level":30,"time":1791996499563,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"GET","url":"/api/owner/snapshot"},"msg":"incoming request"}
+# {"level":30,"time":1791996499564,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":403},"responseTime":0.6564379999999801,"msg":"request completed"}
+# {"level":30,"time":1791996499565,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"GET","url":"/api/owner/snapshot"},"msg":"incoming request"}
+# {"level":30,"time":1791996499566,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":403},"responseTime":0.6892179999995278,"msg":"request completed"}
+# {"level":30,"time":1791996499566,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"GET","url":"/api/simulator"},"msg":"incoming request"}
+# {"level":30,"time":1791996499566,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":404},"responseTime":0.15949900000032358,"msg":"request completed"}
+# {"level":30,"time":1791996499566,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"GET","url":"/api/owner/snapshot"},"msg":"incoming request"}
+# {"level":30,"time":1791996499567,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":404},"responseTime":0.19872899999973015,"msg":"request completed"}
+# {"level":30,"time":1791996499567,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"GET","url":"/api/owner/snapshot"},"msg":"incoming request"}
+# {"level":30,"time":1791996499583,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":200},"responseTime":15.377940999999737,"msg":"request completed"}
+# {"level":30,"time":1791996499584,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"GET","url":"/api/owner/conversations/37fd39ac-b93b-4780-9c9b-645a810b5c05"},"msg":"incoming request"}
+# {"level":30,"time":1791996499589,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":404},"responseTime":5.2318569999997635,"msg":"request completed"}
+# {"level":30,"time":1791996499590,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","req":{"method":"POST","url":"/api/owner/conversations/37fd39ac-b93b-4780-9c9b-645a810b5c05/control"},"msg":"incoming request"}
+# {"level":30,"time":1791996499599,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":409},"err":{"type":"Error","message":"Conversation changed or is unavailable. Refresh and try again.","stack":"Error: Conversation changed or is unavailable. Refresh and try again.\\n    at <anonymous> (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:122:48)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async write (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:59:20)","statusCode":409},"msg":"Conversation changed or is unavailable. Refresh and try again."}
+# {"level":30,"time":1791996499602,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":409},"responseTime":11.472359999999753,"msg":"request completed"}
+# {"level":30,"time":1791996499602,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","req":{"method":"POST","url":"/api/owner/pause"},"msg":"incoming request"}
+# {"level":30,"time":1791996499602,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","res":{"statusCode":403},"responseTime":0.512909000000036,"msg":"request completed"}
+# {"level":30,"time":1791996499617,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","req":{"method":"POST","url":"/api/owner/conversations/00000000-0000-4000-8000-000000000002/control"},"msg":"incoming request"}
+# {"level":30,"time":1791996499626,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","res":{"statusCode":200},"responseTime":9.340806000000157,"msg":"request completed"}
+# {"level":30,"time":1791996499634,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-a","req":{"method":"POST","url":"/api/owner/conversations/00000000-0000-4000-8000-000000000002/control"},"msg":"incoming request"}
+# {"level":30,"time":1791996499637,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-a","res":{"statusCode":409},"err":{"type":"Error","message":"Conversation changed or is unavailable. Refresh and try again.","stack":"Error: Conversation changed or is unavailable. Refresh and try again.\\n    at <anonymous> (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:122:48)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async write (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:59:20)","statusCode":409},"msg":"Conversation changed or is unavailable. Refresh and try again."}
+# {"level":30,"time":1791996499638,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-a","res":{"statusCode":409},"responseTime":4.089410000000498,"msg":"request completed"}
+# {"level":30,"time":1791996499638,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-b","req":{"method":"POST","url":"/api/owner/conversations/00000000-0000-4000-8000-000000000002/control"},"msg":"incoming request"}
+# {"level":30,"time":1791996499646,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-b","res":{"statusCode":200},"responseTime":7.238061000000016,"msg":"request completed"}
+# {"level":30,"time":1791996499646,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-c","req":{"method":"POST","url":"/api/owner/pause"},"msg":"incoming request"}
+# {"level":30,"time":1791996499651,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-c","res":{"statusCode":200},"responseTime":5.140397000000121,"msg":"request completed"}
+# {"level":30,"time":1791996499655,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-d","req":{"method":"POST","url":"/api/owner/pause"},"msg":"incoming request"}
+# {"level":30,"time":1791996499660,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-d","res":{"statusCode":200},"responseTime":4.892847999999503,"msg":"request completed"}
+# {"level":30,"time":1791996499745,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-e","req":{"method":"POST","url":"/api/owner/conversations/00000000-0000-4000-8000-000000000002/control"},"msg":"incoming request"}
+# {"level":30,"time":1791996499751,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-e","res":{"statusCode":200},"responseTime":6.377642999999807,"msg":"request completed"}
+# {"level":30,"time":1791996499752,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-f","req":{"method":"POST","url":"/api/owner/conversations/00000000-0000-4000-8000-000000000002/control"},"msg":"incoming request"}
+# {"level":30,"time":1791996499757,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-f","res":{"statusCode":200},"responseTime":5.110676999999669,"msg":"request completed"}
+# {"level":30,"time":1791996499794,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-g","req":{"method":"POST","url":"/api/owner/requests/90bc1dd9-820d-4863-9348-939d5e702fd8/decision"},"msg":"incoming request"}
+# {"level":30,"time":1791996499804,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-g","res":{"statusCode":200},"responseTime":10.246423999999934,"msg":"request completed"}
+# {"level":30,"time":1791996499805,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-h","req":{"method":"POST","url":"/api/owner/requests/90bc1dd9-820d-4863-9348-939d5e702fd8/decision"},"msg":"incoming request"}
+# {"level":30,"time":1791996499807,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-h","res":{"statusCode":409},"err":{"type":"Error","message":"Request is already decided or unavailable. Refresh the list.","stack":"Error: Request is already decided or unavailable. Refresh the list.\\n    at <anonymous> (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:212:48)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\\n    at async write (/tmp/shopbot-review-20261014/reviewed-source/02-Build/shopbot-ai/apps/server/src/http/owner.ts:59:20)","statusCode":409},"msg":"Request is already decided or unavailable. Refresh the list."}
+# {"level":30,"time":1791996499807,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-h","res":{"statusCode":409},"responseTime":2.728863000000274,"msg":"request completed"}
+# {"level":30,"time":1791996499817,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"GET","url":"/api/owner/snapshot"},"msg":"incoming request"}
+# {"level":30,"time":1791996499824,"pid":867240,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":200},"responseTime":7.359260999999606,"msg":"request completed"}
+# Subtest: owner isolation, CSRF, takeover, stale controls, pause and request decisions are durable and audited
+ok 242 - owner isolation, CSRF, takeover, stale controls, pause and request decisions are durable and audited
+  ---
+  duration_ms: 1952.497466
+  type: 'test'
+  ...
+# Subtest: exact products show photos before acceptance; bottle quantities before and after selection never call AI
+ok 243 - exact products show photos before acceptance; bottle quantities before and after selection never call AI
+  ---
+  duration_ms: 2239.884144
+  type: 'test'
+  ...
+# Subtest: sequential lists finish each product and its amount before moving to the next, then show an itemized review
+ok 244 - sequential lists finish each product and its amount before moving to the next, then show an itemized review
+  ---
+  duration_ms: 1984.349504
+  type: 'test'
+  ...
+# Subtest: sequential lists retain bulk confirmation for initially exact complete requests
+ok 245 - sequential lists retain bulk confirmation for initially exact complete requests
+  ---
+  duration_ms: 2451.484357
+  type: 'test'
+  ...
+# Subtest: an absent first item cannot be skipped by later available product choices
+ok 246 - an absent first item cannot be skipped by later available product choices
+  ---
+  duration_ms: 1841.426523
+  type: 'test'
+  ...
+# Subtest: product acceptance with a missing quantity asks bottles, then 5 bottles works offline
+ok 247 - product acceptance with a missing quantity asks bottles, then 5 bottles works offline
+  ---
+  duration_ms: 2301.102895
+  type: 'test'
+  ...
+# Subtest: mixed requests retain each line and group exact matches and alternatives into one bounded reply
+ok 248 - mixed requests retain each line and group exact matches and alternatives into one bounded reply
+  ---
+  duration_ms: 2250.208377
+  type: 'test'
+  ...
+# Subtest: more than ten product options and three requested items are checked on customer-driven pages
+ok 249 - more than ten product options and three requested items are checked on customer-driven pages
+  ---
+  duration_ms: 7692.781986
+  type: 'test'
+  ...
+# Subtest: unshown, foreign, duplicate and queued product confirmations cannot approve another choice
+ok 250 - unshown, foreign, duplicate and queued product confirmations cannot approve another choice
+  ---
+  duration_ms: 800.070033
+  type: 'test'
+  ...
+# Subtest: corrections replace the original line, and catalog identity changes revoke photo acceptance
+ok 251 - corrections replace the original line, and catalog identity changes revoke photo acceptance
+  ---
+  duration_ms: 1586.590922
+  type: 'test'
+  ...
+# Subtest: a displayed browse choice counts as photo acceptance; an invented callback must show a product check
+ok 252 - a displayed browse choice counts as photo acceptance; an invented callback must show a product check
+  ---
+  duration_ms: 1580.750546
+  type: 'test'
+  ...
+# Subtest: quantity ambiguity and packaging mismatch never confirm or convert products
+ok 253 - quantity ambiguity and packaging mismatch never confirm or convert products
+  ---
+  duration_ms: 1382.675328
+  type: 'test'
+  ...
+# Subtest: twenty requested lines use pages of at most three and never fan out automatically
+ok 254 - twenty requested lines use pages of at most three and never fan out automatically
+  ---
+  duration_ms: 1302.876794
+  type: 'test'
+  ...
+# Subtest: changed products reject atomic bulk acceptance; missing photos have an explicit fallback
+ok 255 - changed products reject atomic bulk acceptance; missing photos have an explicit fallback
+  ---
+  duration_ms: 981.204045
+  type: 'test'
+  ...
+# Subtest: recommendation selection [] survives rendering and recheck without filler
+ok 256 - recommendation selection [] survives rendering and recheck without filler
+  ---
+  duration_ms: 2093.95553
+  type: 'test'
+  ...
+# Subtest: recommendation selection ["H19"] survives rendering and recheck without filler
+ok 257 - recommendation selection ["H19"] survives rendering and recheck without filler
+  ---
+  duration_ms: 2346.238699
+  type: 'test'
+  ...
+# Subtest: planner receives real zero family counts and recommendation rejects every unsupported SKU
+ok 258 - planner receives real zero family counts and recommendation rejects every unsupported SKU
+  ---
+  duration_ms: 8.764787
+  type: 'test'
+  ...
+# Subtest: generic refinements retain earlier qualifiers; explicit replacements change only that line
+ok 259 - generic refinements retain earlier qualifiers; explicit replacements change only that line
+  ---
+  duration_ms: 2817.071223
+  type: 'test'
+  ...
+# Subtest: customer named product type survives broad and adversarial search plans
+ok 260 - customer named product type survives broad and adversarial search plans
+  ---
+  duration_ms: 2938.247969
+  type: 'test'
+  ...
+# Subtest: replacement scopes rejection to its product: I don't want the PVC pipe, I want a garden pipe (I want a garden pipe)
+ok 261 - replacement scopes rejection to its product: I don't want the PVC pipe, I want a garden pipe (I want a garden pipe)
+  ---
+  duration_ms: 10.207804
+  type: 'test'
+  ...
+# Subtest: replacement scopes rejection to its product: PVC பைப் வேண்டாம், பம்ப் பைப் வேணும் (பம்ப் பைப் வேணும்)
+ok 262 - replacement scopes rejection to its product: PVC பைப் வேண்டாம், பம்ப் பைப் வேணும் (பம்ப் பைப் வேணும்)
+  ---
+  duration_ms: 5.345846
+  type: 'test'
+  ...
+# Subtest: replacement scopes rejection to its product: I don't want the PVC pipe, I want a garden pipe (I don't want the PVC pipe, I want a garden pipe)
+ok 263 - replacement scopes rejection to its product: I don't want the PVC pipe, I want a garden pipe (I don't want the PVC pipe, I want a garden pipe)
+  ---
+  duration_ms: 2.660083
+  type: 'test'
+  ...
+# Subtest: a declined product remains rejected
+ok 264 - a declined product remains rejected
+  ---
+  duration_ms: 1.385246
+  type: 'test'
+  ...
+# Subtest: unit alias ltr cannot become a count
+ok 265 - unit alias ltr cannot become a count
+  ---
+  duration_ms: 3.093992
+  type: 'test'
+  ...
+# Subtest: unit alias lt cannot become a count
+ok 266 - unit alias lt cannot become a count
+  ---
+  duration_ms: 0.626699
+  type: 'test'
+  ...
+# Subtest: unit alias kgs cannot become a count
+ok 267 - unit alias kgs cannot become a count
+  ---
+  duration_ms: 0.563318
+  type: 'test'
+  ...
+# Subtest: unit alias mtr cannot become a count
+ok 268 - unit alias mtr cannot become a count
+  ---
+  duration_ms: 0.366589
+  type: 'test'
+  ...
+# Subtest: unit alias அங்குலம் cannot become a count
+ok 269 - unit alias அங்குலம் cannot become a count
+  ---
+  duration_ms: 0.775248
+  type: 'test'
+  ...
+# Subtest: unit alias லிட்டரு cannot become a count
+ok 270 - unit alias லிட்டரு cannot become a count
+  ---
+  duration_ms: 0.595609
+  type: 'test'
+  ...
+# Subtest: an explicit pack count survives an abbreviated physical unit
+ok 271 - an explicit pack count survives an abbreviated physical unit
+  ---
+  duration_ms: 1.684215
+  type: 'test'
+  ...
+# Subtest: numeric questions use current product dimensions and line numbers only
+ok 272 - numeric questions use current product dimensions and line numbers only
+  ---
+  duration_ms: 4.214939
+  type: 'test'
+  ...
+# Subtest: clear-list command: பட்டியலை காலி செய்யுங்க
+ok 273 - clear-list command: பட்டியலை காலி செய்யுங்க
+  ---
+  duration_ms: 1.895225
+  type: 'test'
+  ...
+# Subtest: clear-list command: பட்டியலை காலி பண்ணுங்க
+ok 274 - clear-list command: பட்டியலை காலி பண்ணுங்க
+  ---
+  duration_ms: 0.417339
+  type: 'test'
+  ...
+# Subtest: clear-list command: லிஸ்ட்டை கிளியர் பண்ணுங்க
+ok 275 - clear-list command: லிஸ்ட்டை கிளியர் பண்ணுங்க
+  ---
+  duration_ms: 0.635988
+  type: 'test'
+  ...
+# Subtest: clear-list command: list ellam clear pannidu
+ok 276 - clear-list command: list ellam clear pannidu
+  ---
+  duration_ms: 0.473759
+  type: 'test'
+  ...
+# Subtest: clear-list command: ok clear my list please
+ok 277 - clear-list command: ok clear my list please
+  ---
+  duration_ms: 0.730898
+  type: 'test'
+  ...
+# Subtest: clear-list command: no more items, பட்டியலை காலி செய்
+ok 278 - clear-list command: no more items, பட்டியலை காலி செய்
+  ---
+  duration_ms: 0.373329
+  type: 'test'
+  ...
+# Subtest: clear-list protection: don't clear my list
+ok 279 - clear-list protection: don't clear my list
+  ---
+  duration_ms: 0.18654
+  type: 'test'
+  ...
+# Subtest: clear-list protection: பட்டியலை காலி செய்யுங்க வேண்டாம்
+ok 280 - clear-list protection: பட்டியலை காலி செய்யுங்க வேண்டாம்
+  ---
+  duration_ms: 0.242819
+  type: 'test'
+  ...
+# Subtest: clear-list protection: list clear pannu venam
+ok 281 - clear-list protection: list clear pannu venam
+  ---
+  duration_ms: 0.16458
+  type: 'test'
+  ...
+# Subtest: clear-list protection: clear my list and add a hose
+ok 282 - clear-list protection: clear my list and add a hose
+  ---
+  duration_ms: 0.141129
+  type: 'test'
+  ...
+# Subtest: clear-list protection: Should I clear my list?
+ok 283 - clear-list protection: Should I clear my list?
+  ---
+  duration_ms: 0.10831
+  type: 'test'
+  ...
+# Subtest: repair receives failure, previous proposal and observations with text modality
+ok 284 - repair receives failure, previous proposal and observations with text modality
+  ---
+  duration_ms: 0.786877
+  type: 'test'
+  ...
+# Subtest: clear_list is a no-op proposal and cannot contain shopping operations
+ok 285 - clear_list is a no-op proposal and cannot contain shopping operations
+  ---
+  duration_ms: 10.841292
+  type: 'test'
+  ...
+# Subtest: shared edit vocabulary covers normal Tamil and Tanglish wording
+ok 286 - shared edit vocabulary covers normal Tamil and Tanglish wording
+  ---
+  duration_ms: 1.007258
+  type: 'test'
+  ...
+# Subtest: query-only pump type and brand cannot inherit a PVC catalog identity
+ok 287 - query-only pump type and brand cannot inherit a PVC catalog identity
+  ---
+  duration_ms: 40.413255
+  type: 'test'
+  ...
+# Subtest: a model target alone cannot replace an unrelated PVC item; an explicit correction can
+ok 288 - a model target alone cannot replace an unrelated PVC item; an explicit correction can
+  ---
+  duration_ms: 16.438038
+  type: 'test'
+  ...
+# Subtest: a bare pipe count asks whether it changes the current typed item
+ok 289 - a bare pipe count asks whether it changes the current typed item
+  ---
+  duration_ms: 13.175196
+  type: 'test'
+  ...
+# Subtest: explicit same-item references set total count and preserve a compatible SKU
+ok 290 - explicit same-item references set total count and preserve a compatible SKU
+  ---
+  duration_ms: 4.490178
+  type: 'test'
+  ...
+# Subtest: PVC heard for the cutter cannot turn an earlier bare pipe into a PVC pipe
+ok 291 - PVC heard for the cutter cannot turn an earlier bare pipe into a PVC pipe
+  ---
+  duration_ms: 12.279319
+  type: 'test'
+  ...
+# Subtest: a brand borrowed from the old cart is removed when the customer did not say it
+ok 292 - a brand borrowed from the old cart is removed when the customer did not say it
+  ---
+  duration_ms: 1.659275
+  type: 'test'
+  ...
+# Subtest: a model pointer cannot select one of several pipes even with an already-said cue
+ok 293 - a model pointer cannot select one of several pipes even with an already-said cue
+  ---
+  duration_ms: 1.679776
+  type: 'test'
+  ...
+# Subtest: an extra request for a different brand cannot increment a focused old SKU
+ok 294 - an extra request for a different brand cannot increment a focused old SKU
+  ---
+  duration_ms: 1.290176
+  type: 'test'
+  ...
+# Subtest: fractions, mixed fractions and local amounts do not become denominators or counts
+ok 295 - fractions, mixed fractions and local amounts do not become denominators or counts
+  ---
+  duration_ms: 15.7246
+  type: 'test'
+  ...
+# Subtest: dimensions preserve their role and convert compatible physical units
+ok 296 - dimensions preserve their role and convert compatible physical units
+  ---
+  duration_ms: 1.672366
+  type: 'test'
+  ...
+# Subtest: the common contract separates pack size, count, budget and unknown amounts
+ok 297 - the common contract separates pack size, count, budget and unknown amounts
+  ---
+  duration_ms: 24.866285
+  type: 'test'
+  ...
+# Subtest: availability-only questions remain read-only while mixed shopping and hours retain both intents
+ok 298 - availability-only questions remain read-only while mixed shopping and hours retain both intents
+  ---
+  duration_ms: 7.050671
+  type: 'test'
+  ...
+# Subtest: images cannot edit or submit orders, and list mode preserves unreadable and crossed-out evidence
+ok 299 - images cannot edit or submit orders, and list mode preserves unreadable and crossed-out evidence
+  ---
+  duration_ms: 4.830798
+  type: 'test'
+  ...
+# Subtest: only current targets with source evidence can be edited
+ok 300 - only current targets with source evidence can be edited
+  ---
+  duration_ms: 7.046592
+  type: 'test'
+  ...
+# Subtest: Flash Lite flags are explicit and long audio uses the common structured request once
+ok 301 - Flash Lite flags are explicit and long audio uses the common structured request once
+  ---
+  duration_ms: 14.616632
+  type: 'test'
+  ...
+# Subtest: existing image storage upgrades idempotently for full-size list uploads
+ok 302 - existing image storage upgrades idempotently for full-size list uploads
+  ---
+  duration_ms: 15564.185112
+  type: 'test'
+  ...
+# Subtest: one audio understanding stage preserves long-note count and does not submit a draft
+ok 303 - one audio understanding stage preserves long-note count and does not submit a draft
+  ---
+  duration_ms: 1911.861812
+  type: 'test'
+  ...
+# Subtest: OCR retains every unresolved line, duplicate events are idempotent, and help retains the whole list
+ok 304 - OCR retains every unresolved line, duplicate events are idempotent, and help retains the whole list
+  ---
+  duration_ms: 1585.561544
+  type: 'test'
+  ...
+# Subtest: malformed OCR evidence cannot partially add valid-looking items
+ok 305 - malformed OCR evidence cannot partially add valid-looking items
+  ---
+  duration_ms: 1338.283883
+  type: 'test'
+  ...
+# Subtest: a price/stock lookup keeps a live draft unchanged and mixed hours do not lose additions
+ok 306 - a price/stock lookup keeps a live draft unchanged and mixed hours do not lose additions
+  ---
+  duration_ms: 1422.154316
+  type: 'test'
+  ...
+# Subtest: budget proposals calculate only verified selling quantities and preserve unknown-price requests
+ok 307 - budget proposals calculate only verified selling quantities and preserve unknown-price requests
+  ---
+  duration_ms: 952.102831
+  type: 'test'
+  ...
+# Subtest: uncertain OCR count remains unknown even when a digit is legible
+ok 308 - uncertain OCR count remains unknown even when a digit is legible
+  ---
+  duration_ms: 1254.16603
+  type: 'test'
+  ...
+# Subtest: a customer can repair an unreadable line without changing the other list items
+ok 309 - a customer can repair an unreadable line without changing the other list items
+  ---
+  duration_ms: 1364.287446
+  type: 'test'
+  ...
+# Subtest: a product photo cannot place an order even when its caption asks to send it
+ok 310 - a product photo cannot place an order even when its caption asks to send it
+  ---
+  duration_ms: 1215.111711
+  type: 'test'
+  ...
+# Subtest: budget-derived quantities refresh when price changes and unknown prices stay pending
+ok 311 - budget-derived quantities refresh when price changes and unknown prices stay pending
+  ---
+  duration_ms: 1327.618141
+  type: 'test'
+  ...
+# Subtest: a refusal of offered photos cannot be turned into a line removal by the model
+ok 312 - a refusal of offered photos cannot be turned into a line removal by the model
+  ---
+  duration_ms: 1.433266
+  type: 'test'
+  ...
+# Subtest: the observed repeated speech binds two pipes and one-inch diameter to one item
+ok 313 - the observed repeated speech binds two pipes and one-inch diameter to one item
+  ---
+  duration_ms: 5.890235
+  type: 'test'
+  ...
+# Subtest: the recorded voice updates the prior three-line cart into four unique products
+ok 314 - the recorded voice updates the prior three-line cart into four unique products
+  ---
+  duration_ms: 876.759265
+  type: 'test'
+  ...
+# Subtest: a fresh recorded list asks pipe type before product and quantity choices
+ok 315 - a fresh recorded list asks pipe type before product and quantity choices
+  ---
+  duration_ms: 1302.508075
+  type: 'test'
+  ...
+# Subtest: restating a total does not increment a cart, while explicit extra does
+ok 316 - restating a total does not increment a cart, while explicit extra does
+  ---
+  duration_ms: 981.509655
+  type: 'test'
+  ...
+# Subtest: different sizes stay separate and a false same-item link is rejected
+ok 317 - different sizes stay separate and a false same-item link is rejected
+  ---
+  duration_ms: 1.776146
+  type: 'test'
+  ...
+# Subtest: an explicit reference joins a later description without requiring already-said words
+ok 318 - an explicit reference joins a later description without requiring already-said words
+  ---
+  duration_ms: 0.680458
+  type: 'test'
+  ...
+# Subtest: ambiguous existing variants ask for a target instead of appending or editing either
+ok 319 - ambiguous existing variants ask for a target instead of appending or editing either
+  ---
+  duration_ms: 0.978617
+  type: 'test'
+  ...
+# Subtest: extra counts require explicit evidence and images cannot target an existing cart
+ok 320 - extra counts require explicit evidence and images cannot target an existing cart
+  ---
+  duration_ms: 0.995038
+  type: 'test'
+  ...
+# Subtest: three linked descriptions retain one item and an explicit correction uses its final count
+ok 321 - three linked descriptions retain one item and an explicit correction uses its final count
+  ---
+  duration_ms: 0.965318
+  type: 'test'
+  ...
+# Subtest: one current edit cannot be applied twice through both an item and a proposed edit
+ok 322 - one current edit cannot be applied twice through both an item and a proposed edit
+  ---
+  duration_ms: 1.932385
+  type: 'test'
+  ...
+# Subtest: native Tamil names update existing products and a repeated total is applied once
+ok 323 - native Tamil names update existing products and a repeated total is applied once
+  ---
+  duration_ms: 879.454608
+  type: 'test'
+  ...
+# Subtest: regional aliases preserve unknown items and reject conflicting duplicate totals
+ok 324 - regional aliases preserve unknown items and reject conflicting duplicate totals
+  ---
+  duration_ms: 3.634001
+  type: 'test'
+  ...
+# Subtest: a native consolidated self-reference preserves the current count and diameter
+ok 325 - a native consolidated self-reference preserves the current count and diameter
+  ---
+  duration_ms: 791.406146
+  type: 'test'
+  ...
+# Subtest: 1 products: complete ordered review and separate quantity approval
+ok 326 - 1 products: complete ordered review and separate quantity approval
+  ---
+  duration_ms: 2191.708718
+  type: 'test'
+  ...
+# Subtest: 9 products: complete ordered review and separate quantity approval
+ok 327 - 9 products: complete ordered review and separate quantity approval
+  ---
+  duration_ms: 2636.345809
+  type: 'test'
+  ...
+# Subtest: 10 products: complete ordered review and separate quantity approval
+ok 328 - 10 products: complete ordered review and separate quantity approval
+  ---
+  duration_ms: 7829.567354
+  type: 'test'
+  ...
+# Subtest: 18 products: complete ordered review and separate quantity approval
+ok 329 - 18 products: complete ordered review and separate quantity approval
+  ---
+  duration_ms: 2119.884294
+  type: 'test'
+  ...
+# Subtest: 20 products: complete ordered review and separate quantity approval
+ok 330 - 20 products: complete ordered review and separate quantity approval
+  ---
+  duration_ms: 1935.040861
+  type: 'test'
+  ...
+# Subtest: 50 products: complete ordered review and separate quantity approval
+ok 331 - 50 products: complete ordered review and separate quantity approval
+  ---
+  duration_ms: 2750.377425
+  type: 'test'
+  ...
+# Subtest: pack size and count guard preserves paint/pipe dimensions and original evidence
+ok 332 - pack size and count guard preserves paint/pipe dimensions and original evidence
+  ---
+  duration_ms: 3.57441
+  type: 'test'
+  ...
+# Subtest: a later paint pack never becomes a wall-sticker specification
+ok 333 - a later paint pack never becomes a wall-sticker specification
+  ---
+  duration_ms: 0.956437
+  type: 'test'
+  ...
+# Subtest: a single unselected candidate has a usable selection button before full-list approval
+ok 334 - a single unselected candidate has a usable selection button before full-list approval
+  ---
+  duration_ms: 1062.762595
+  type: 'test'
+  ...
+# Subtest: a product-choice question shows only that item, then reviews the complete retained list
+ok 335 - a product-choice question shows only that item, then reviews the complete retained list
+  ---
+  duration_ms: 1532.76266
+  type: 'test'
+  ...
+# Subtest: requested 10L packs cannot select 10kg paint or paint without verified volume
+ok 336 - requested 10L packs cannot select 10kg paint or paint without verified volume
+  ---
+  duration_ms: 1154.896766
+  type: 'test'
+  ...
+# Subtest: one remaining candidate progresses through product approval and bill instead of trapping the draft
+ok 337 - one remaining candidate progresses through product approval and bill instead of trapping the draft
+  ---
+  duration_ms: 1118.79384
+  type: 'test'
+  ...
+# Subtest: text: observed one 10-litre box remains one can, while a size alone asks its count
+ok 338 - text: observed one 10-litre box remains one can, while a size alone asks its count
+  ---
+  duration_ms: 1147.963095
+  type: 'test'
+  ...
+# Subtest: voice: observed one 10-litre box remains one can, while a size alone asks its count
+ok 339 - voice: observed one 10-litre box remains one can, while a size alone asks its count
+  ---
+  duration_ms: 1263.787815
+  type: 'test'
+  ...
+# Subtest: unknown count is requested after product approval; quantity answer advances without losing the approved identity
+ok 340 - unknown count is requested after product approval; quantity answer advances without losing the approved identity
+  ---
+  duration_ms: 1098.472822
+  type: 'test'
+  ...
+# Subtest: targeted correction retains IDs, invalidates approvals, and redisplays every product; clear all actually resets
+ok 341 - targeted correction retains IDs, invalidates approvals, and redisplays every product; clear all actually resets
+  ---
+  duration_ms: 1126.6007
+  type: 'test'
+  ...
+# Subtest: missing catalog requests survive and block global approval; returning greeting offers continue/new
+ok 342 - missing catalog requests survive and block global approval; returning greeting offers continue/new
+  ---
+  duration_ms: 839.513492
+  type: 'test'
+  ...
+# Subtest: truncated interpretation and configured 50-line overflow never apply a partial list
+ok 343 - truncated interpretation and configured 50-line overflow never apply a partial list
+  ---
+  duration_ms: 739.20587
+  type: 'test'
+  ...
+# Subtest: PNG templates shape mixed Tamil/Latin, cache identical renders and reject more than five rows
+ok 344 - PNG templates shape mixed Tamil/Latin, cache identical renders and reject more than five rows
+  ---
+  duration_ms: 63.295726
+  type: 'test'
+  ...
+# Subtest: cost planning uses configured service/category rates for the actual ordered group count
+ok 345 - cost planning uses configured service/category rates for the actual ordered group count
+  ---
+  duration_ms: 0.502399
+  type: 'test'
+  ...
+# Subtest: partial group send blocks later parts and text approval until a complete review is resent
+ok 346 - partial group send blocks later parts and text approval until a complete review is resent
+  ---
+  duration_ms: 1097.669404
+  type: 'test'
+  ...
+# Subtest: text preserves 10L paint
+ok 347 - text preserves 10L paint
+  ---
+  duration_ms: 605.245696
+  type: 'test'
+  ...
+# Subtest: text preserves two 10L cans
+ok 348 - text preserves two 10L cans
+  ---
+  duration_ms: 787.904595
+  type: 'test'
+  ...
+# Subtest: text preserves 1-inch pipe
+ok 349 - text preserves 1-inch pipe
+  ---
+  duration_ms: 716.900087
+  type: 'test'
+  ...
+# Subtest: text preserves two 1-inch pipes
+ok 350 - text preserves two 1-inch pipes
+  ---
+  duration_ms: 462.974894
+  type: 'test'
+  ...
+# Subtest: voice preserves 10L paint
+ok 351 - voice preserves 10L paint
+  ---
+  duration_ms: 604.239349
+  type: 'test'
+  ...
+# Subtest: voice preserves two 10L cans
+ok 352 - voice preserves two 10L cans
+  ---
+  duration_ms: 549.135641
+  type: 'test'
+  ...
+# Subtest: voice preserves 1-inch pipe
+ok 353 - voice preserves 1-inch pipe
+  ---
+  duration_ms: 785.208532
+  type: 'test'
+  ...
+# Subtest: voice preserves two 1-inch pipes
+ok 354 - voice preserves two 1-inch pipes
+  ---
+  duration_ms: 516.638345
+  type: 'test'
+  ...
+# Subtest: expired reviews and changed prices require a fresh review; late confirmations never submit
+ok 355 - expired reviews and changed prices require a fresh review; late confirmations never submit
+  ---
+  duration_ms: 598.412874
+  type: 'test'
+  ...
+# Subtest: legacy ambiguous litre quantity is kept for fresh clarification, not treated as ten cans
+ok 356 - legacy ambiguous litre quantity is kept for fresh clarification, not treated as ten cans
+  ---
+  duration_ms: 569.695708
+  type: 'test'
+  ...
+# Subtest: 50-item edit picker covers every stable ID and keeps approval off the product buttons
+ok 357 - 50-item edit picker covers every stable ID and keeps approval off the product buttons
+  ---
+  duration_ms: 598.722024
+  type: 'test'
+  ...
+# Subtest: an empty search or processing failure preserves its message instead of restarting the welcome
+ok 358 - an empty search or processing failure preserves its message instead of restarting the welcome
+  ---
+  duration_ms: 0.574608
+  type: 'test'
+  ...
+# Subtest: shop handoff during products delivers its acknowledgement and pauses the assistant
+ok 359 - shop handoff during products delivers its acknowledgement and pauses the assistant
+  ---
+  duration_ms: 510.630471
+  type: 'test'
+  ...
+# Subtest: shop handoff during bill delivers its acknowledgement and pauses the assistant
+ok 360 - shop handoff during bill delivers its acknowledgement and pauses the assistant
+  ---
+  duration_ms: 588.698189
+  type: 'test'
+  ...
+# Subtest: captured dabba keeps two verified whole paint cans
+ok 361 - captured dabba keeps two verified whole paint cans
+  ---
+  duration_ms: 2294.324153
+  type: 'test'
+  ...
+# Subtest: dabba cannot assume an unverified merchant selling basis
+ok 362 - dabba cannot assume an unverified merchant selling basis
+  ---
+  duration_ms: 2626.654565
+  type: 'test'
+  ...
+# Subtest: captured missing Tanglish count cannot become one can through echoed pack contents
+ok 363 - captured missing Tanglish count cannot become one can through echoed pack contents
+  ---
+  duration_ms: 6329.493919
+  type: 'test'
+  ...
+# Subtest: explicit total amount remains a total even when equal to one pack
+ok 364 - explicit total amount remains a total even when equal to one pack
+  ---
+  duration_ms: 1.900455
+  type: 'test'
+  ...
+# Subtest: a compound recorded hose size grounds its one explicit length without losing diameter
+ok 365 - a compound recorded hose size grounds its one explicit length without losing diameter
+  ---
+  duration_ms: 0.530729
+  type: 'test'
+  ...
+# Subtest: captured Tamil replacement resolves the recorded hose length and preserves another item
+ok 366 - captured Tamil replacement resolves the recorded hose length and preserves another item
+  ---
+  duration_ms: 2137.666077
+  type: 'test'
+  ...
+# Subtest: current spoken numbers ground questions while unsupported numbers and foreign script do not
+ok 367 - current spoken numbers ground questions while unsupported numbers and foreign script do not
+  ---
+  duration_ms: 7.213761
+  type: 'test'
+  ...
+# Subtest: captured ambiguous count produces a useful target choice and retains its spoken total
+ok 368 - captured ambiguous count produces a useful target choice and retains its spoken total
+  ---
+  duration_ms: 1456.506848
+  type: 'test'
+  ...
+# Subtest: captured innam holds ambiguous increment but saves the independent two tapes
+ok 369 - captured innam holds ambiguous increment but saves the independent two tapes
+  ---
+  duration_ms: 1532.675891
+  type: 'test'
+  ...
+# Subtest: captured continuous correction keeps the current hose without invented rubber or another line
+ok 370 - captured continuous correction keeps the current hose without invented rubber or another line
+  ---
+  duration_ms: 1614.12991
+  type: 'test'
+  ...
+# Subtest: negated clear stays protected: பட்டியலை கிளியர் பண்ண வேண்டாம். அப்படியே வைங்க.
+ok 371 - negated clear stays protected: பட்டியலை கிளியர் பண்ண வேண்டாம். அப்படியே வைங்க.
+  ---
+  duration_ms: 1.260686
+  type: 'test'
+  ...
+# Subtest: negated clear stays protected: பட்டியலைக் கிளியர் பண்ண வேண்டாம்
+ok 372 - negated clear stays protected: பட்டியலைக் கிளியர் பண்ண வேண்டாம்
+  ---
+  duration_ms: 0.10846
+  type: 'test'
+  ...
+# Subtest: negated clear stays protected: பட்டியலை காலி செய்யுங்க வேண்டாம்
+ok 373 - negated clear stays protected: பட்டியலை காலி செய்யுங்க வேண்டாம்
+  ---
+  duration_ms: 0.07781
+  type: 'test'
+  ...
+# Subtest: negated clear stays protected: ப்பட்டியலை கிளியர் பண்ண வேண்டாம். அப்படியே வைங்க.
+ok 374 - negated clear stays protected: ப்பட்டியலை கிளியர் பண்ண வேண்டாம். அப்படியே வைங்க.
+  ---
+  duration_ms: 0.101109
+  type: 'test'
+  ...
+# Subtest: a wrong planner pack value is replaced by the literal measured size and never bought as ten cans
+ok 375 - a wrong planner pack value is replaced by the literal measured size and never bought as ten cans
+  ---
+  duration_ms: 0.394119
+  type: 'test'
+  ...
+# Subtest: pipe type choices preserve sizes and count, bind the question, and reject an old choice
+ok 376 - pipe type choices preserve sizes and count, bind the question, and reject an old choice
+  ---
+  duration_ms: 1494.31304
+  type: 'test'
+  ...
+# Subtest: a five-item list starts with acknowledgement and one useful pipe choice, retaining both sizes
+ok 377 - a five-item list starts with acknowledgement and one useful pipe choice, retaining both sizes
+  ---
+  duration_ms: 1305.918426
+  type: 'test'
+  ...
+# Subtest: a recorded price-only utterance with no model item still answers the price over an old pipe question
+ok 378 - a recorded price-only utterance with no model item still answers the price over an old pipe question
+  ---
+  duration_ms: 1180.53639
+  type: 'test'
+  ...
+# Subtest: spoken colloquial counts survive a pack size without inventing a count when none was said
+ok 379 - spoken colloquial counts survive a pack size without inventing a count when none was said
+  ---
+  duration_ms: 0.677468
+  type: 'test'
+  ...
+# Subtest: a zero optional target means no target, while a real stale target is still rejected
+ok 380 - a zero optional target means no target, while a real stale target is still rejected
+  ---
+  duration_ms: 1.680366
+  type: 'test'
+  ...
+# Subtest: a planner cannot lend white paint colour to a customer who requested no colour
+ok 381 - a planner cannot lend white paint colour to a customer who requested no colour
+  ---
+  duration_ms: 0.711028
+  type: 'test'
+  ...
+# Subtest: a captured replace-shaped continuous length edit keeps the recognized hose identity
+ok 382 - a captured replace-shaped continuous length edit keeps the recognized hose identity
+  ---
+  duration_ms: 1203.99772
+  type: 'test'
+  ...
+# Subtest: punctuation-free speech cannot borrow the next paint pack into the independently counted cutter
+ok 383 - punctuation-free speech cannot borrow the next paint pack into the independently counted cutter
+  ---
+  duration_ms: 1159.880834
+  type: 'test'
+  ...
+# Subtest: empty model intent on an exact negated clear recovers only a no-op
+ok 384 - empty model intent on an exact negated clear recovers only a no-op
+  ---
+  duration_ms: 3.229051
+  type: 'test'
+  ...
+# Subtest: a current verified paint photo accepts a short two-dabba reply without a product-name repeat
+ok 385 - a current verified paint photo accepts a short two-dabba reply without a product-name repeat
+  ---
+  duration_ms: 1389.271511
+  type: 'test'
+  ...
+# Subtest: an explicit English article counts a can while a pack size alone does not
+ok 386 - an explicit English article counts a can while a pack size alone does not
+  ---
+  duration_ms: 1.409306
+  type: 'test'
+  ...
+# Subtest: a planner count of fifty from a spoken fifty metres becomes five verified hose pieces
+ok 387 - a planner count of fifty from a spoken fifty metres becomes five verified hose pieces
+  ---
+  duration_ms: 979.729259
+  type: 'test'
+  ...
+# Subtest: the actual pipe diameter filter retrieves size-stored pipes and excludes other diameters
+ok 388 - the actual pipe diameter filter retrieves size-stored pipes and excludes other diameters
+  ---
+  duration_ms: 1868.136524
+  type: 'test'
+  ...
+# Subtest: known stock and price remain visible when a metre conversion needs shop verification
+ok 389 - known stock and price remain visible when a metre conversion needs shop verification
+  ---
+  duration_ms: 2693.835391
+  type: 'test'
+  ...
+# Subtest: ta uses one instruction language and one unit label
+ok 390 - ta uses one instruction language and one unit label
+  ---
+  duration_ms: 5087.753126
+  type: 'test'
+  ...
+# Subtest: en uses one instruction language and one unit label
+ok 391 - en uses one instruction language and one unit label
+  ---
+  duration_ms: 2649.357546
+  type: 'test'
+  ...
+# Subtest: price lookup during product review answers from stock and price without changing the list
+ok 392 - price lookup during product review answers from stock and price without changing the list
+  ---
+  duration_ms: 1315.496522
+  type: 'test'
+  ...
+# Subtest: spoken finish command: send my list to the store
+ok 393 - spoken finish command: send my list to the store
+  ---
+  duration_ms: 1997.542379
+  type: 'test'
+  ...
+# Subtest: spoken finish command: send it to the shop
+ok 394 - spoken finish command: send it to the shop
+  ---
+  duration_ms: 2174.202453
+  type: 'test'
+  ...
+# Subtest: spoken finish command: ஓகே ஆர்டரை பிளேஸ் பண்ணிடலாம்
+ok 395 - spoken finish command: ஓகே ஆர்டரை பிளேஸ் பண்ணிடலாம்
+  ---
+  duration_ms: 1723.260368
+  type: 'test'
+  ...
+# Subtest: spoken product approval followed by spoken submission needs no button
+ok 396 - spoken product approval followed by spoken submission needs no button
+  ---
+  duration_ms: 1506.280299
+  type: 'test'
+  ...
+# Subtest: text finish directly submits the current fully identified review
+ok 397 - text finish directly submits the current fully identified review
+  ---
+  duration_ms: 1079.270032
+  type: 'test'
+  ...
+# Subtest: unknown price can send the list for store checking while positive stock stays visible
+ok 398 - unknown price can send the list for store checking while positive stock stays visible
+  ---
+  duration_ms: 1028.978252
+  type: 'test'
+  ...
+# Subtest: a read-only estimate preserves the current review and excludes unpriced lines
+ok 399 - a read-only estimate preserves the current review and excludes unpriced lines
+  ---
+  duration_ms: 1151.579825
+  type: 'test'
+  ...
+# Subtest: voice edits and removal affect only their named line
+ok 400 - voice edits and removal affect only their named line
+  ---
+  duration_ms: 1567.467281
+  type: 'test'
+  ...
+# Subtest: a stale recording cannot submit a newer draft
+ok 401 - a stale recording cannot submit a newer draft
+  ---
+  duration_ms: 1111.394689
+  type: 'test'
+  ...
+# Subtest: store assistance is an idempotent tool; customer inventory writes are absent
+ok 402 - store assistance is an idempotent tool; customer inventory writes are absent
+  ---
+  duration_ms: 744.600946
+  type: 'test'
+  ...
+# Subtest: submission is a whole command; refusals, questions and edits cannot become consent
+ok 403 - submission is a whole command; refusals, questions and edits cannot become consent
+  ---
+  duration_ms: 0.306159
+  type: 'test'
+  ...
+# Subtest: estimates read the current owner price, rather than the old product snapshot
+ok 404 - estimates read the current owner price, rather than the old product snapshot
+  ---
+  duration_ms: 872.892325
+  type: 'test'
+  ...
+# Subtest: the finish button submits the current list and a quote does not block an explicit spoken send
+ok 405 - the finish button submits the current list and a quote does not block an explicit spoken send
+  ---
+  duration_ms: 1028.847842
+  type: 'test'
+  ...
+# Subtest: a read-only quote followed by explicit speech sends the unchanged list
+ok 406 - a read-only quote followed by explicit speech sends the unchanged list
+  ---
+  duration_ms: 1142.331059
+  type: 'test'
+  ...
+# Subtest: uploaded bytes determine voice duration; invalid, long and silent recordings are rejected before inference
+ok 407 - uploaded bytes determine voice duration; invalid, long and silent recordings are rejected before inference
+  ---
+  duration_ms: 316.505743
+  type: 'test'
+  ...
+# Subtest: recognition and planning are separate free SDK requests; real photos need acceptance; duplicate upload cannot repeat inference
+ok 408 - recognition and planning are separate free SDK requests; real photos need acceptance; duplicate upload cannot repeat inference
+  ---
+  duration_ms: 3081.438069
+  type: 'test'
+  ...
+# Subtest: current voice approval uses recognized text without generated edits; missing transcript keeps the draft
+ok 409 - current voice approval uses recognized text without generated edits; missing transcript keeps the draft
+  ---
+  duration_ms: 8030.311585
+  type: 'test'
+  ...
+# Subtest: voice respects the shared free request spacing without repeating a stage
+ok 410 - voice respects the shared free request spacing without repeating a stage
+  ---
+  duration_ms: 1941.685704
+  type: 'test'
+  ...
+# {"level":30,"time":1791996518269,"pid":867767,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/native-test/voice"},"msg":"incoming request"}
+# {"level":30,"time":1791996518277,"pid":867767,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":401},"responseTime":6.643833000000086,"msg":"request completed"}
+# {"level":30,"time":1791996518278,"pid":867767,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"POST","url":"/api/native-test/session"},"msg":"incoming request"}
+# {"level":30,"time":1791996518293,"pid":867767,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":200},"responseTime":15.259690999999293,"msg":"request completed"}
+# {"level":30,"time":1791996518294,"pid":867767,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/api/native-test/events"},"msg":"incoming request"}
+# {"level":30,"time":1791996518297,"pid":867767,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":400},"responseTime":3.356030999999348,"msg":"request completed"}
+# {"level":30,"time":1791996518298,"pid":867767,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/api/native-test/voice"},"msg":"incoming request"}
+# {"level":30,"time":1791996518298,"pid":867767,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":403},"responseTime":0.2343799999998737,"msg":"request completed"}
+# {"level":30,"time":1791996518299,"pid":867767,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"POST","url":"/api/native-test/voice"},"msg":"incoming request"}
+# {"level":30,"time":1791996518421,"pid":867767,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":200},"responseTime":121.92091499999879,"msg":"request completed"}
+# {"level":30,"time":1791996518422,"pid":867767,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"GET","url":"/api/native-test/voice/4df7b35d-238d-4478-99d9-adc30806424d"},"msg":"incoming request"}
+# {"level":30,"time":1791996518426,"pid":867767,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":200},"responseTime":4.199968999999328,"msg":"request completed"}
+# {"level":30,"time":1791996518427,"pid":867767,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","req":{"method":"POST","url":"/api/native-test/session"},"msg":"incoming request"}
+# {"level":30,"time":1791996518429,"pid":867767,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":200},"responseTime":2.231764000000112,"msg":"request completed"}
+# {"level":30,"time":1791996518429,"pid":867767,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","req":{"method":"POST","url":"/api/native-test/session"},"msg":"incoming request"}
+# {"level":30,"time":1791996518431,"pid":867767,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","res":{"statusCode":200},"responseTime":2.0762849999991886,"msg":"request completed"}
+# {"level":30,"time":1791996518432,"pid":867767,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","req":{"method":"GET","url":"/api/native-test/voice/4df7b35d-238d-4478-99d9-adc30806424d"},"msg":"incoming request"}
+# {"level":30,"time":1791996518435,"pid":867767,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","res":{"statusCode":404},"responseTime":2.8754320000007283,"msg":"request completed"}
+# Subtest: paid text adapter refuses audio before any request; local route requires signed session and uploaded media
+ok 411 - paid text adapter refuses audio before any request; local route requires signed session and uploaded media
+  ---
+  duration_ms: 1617.025523
+  type: 'test'
+  ...
+# Subtest: compact provider search plans translate atomically into the canonical deterministic filter contract
+ok 412 - compact provider search plans translate atomically into the canonical deterministic filter contract
+  ---
+  duration_ms: 1771.663513
+  type: 'test'
+  ...
+# Subtest: duplicate or out-of-range provider plan bindings cannot partially mutate a draft
+ok 413 - duplicate or out-of-range provider plan bindings cannot partially mutate a draft
+  ---
+  duration_ms: 1793.074018
+  type: 'test'
+  ...
+# Subtest: a queued voice quantity cannot answer the next product question or make another AI call
+ok 414 - a queued voice quantity cannot answer the next product question or make another AI call
+  ---
+  duration_ms: 1305.740157
+  type: 'test'
+  ...
+# Subtest: recognized Tamil clear-list command overrides a model pause and remains idempotent
+ok 415 - recognized Tamil clear-list command overrides a model pause and remains idempotent
+  ---
+  duration_ms: 1205.808235
+  type: 'test'
+  ...
+# Subtest: recognized spoken quantity answers the bound item when the model omits operations
+ok 416 - recognized spoken quantity answers the bound item when the model omits operations
+  ---
+  duration_ms: 1208.539598
+  type: 'test'
+  ...
+# Subtest: spoken clear command tolerates the recorded inflection and acknowledgement but rejects negation and compound edits
+ok 417 - spoken clear command tolerates the recorded inflection and acknowledgement but rejects negation and compound edits
+  ---
+  duration_ms: 1022.580099
+  type: 'test'
+  ...
+# Subtest: a negated spoken clear keeps the draft even when the model proposes removal
+ok 418 - a negated spoken clear keeps the draft even when the model proposes removal
+  ---
+  duration_ms: 1192.2555
+  type: 'test'
+  ...
+# Subtest: an explicit clear transcript remains usable when the model plan is malformed
+ok 419 - an explicit clear transcript remains usable when the model plan is malformed
+  ---
+  duration_ms: 1031.877574
+  type: 'test'
+  ...
+# Subtest: an acknowledgement before a second spoken edit keeps the complete validated plan
+ok 420 - an acknowledgement before a second spoken edit keeps the complete validated plan
+  ---
+  duration_ms: 1054.651366
+  type: 'test'
+  ...
+# Subtest: malformed compound spoken edits cannot recover into a partial clear
+ok 421 - malformed compound spoken edits cannot recover into a partial clear
+  ---
+  duration_ms: 1013.270092
+  type: 'test'
+  ...
+# Subtest: a pending item refusal cannot remove unrelated draft lines
+ok 422 - a pending item refusal cannot remove unrelated draft lines
+  ---
+  duration_ms: 1008.268125
+  type: 'test'
+  ...
+# Subtest: inaudible recognition returns a clear retry without shopping planning
+ok 423 - inaudible recognition returns a clear retry without shopping planning
+  ---
+  duration_ms: 853.235896
+  type: 'test'
+  ...
+# Subtest: spoken edit list opens bound item choices without a planning request
+ok 424 - spoken edit list opens bound item choices without a planning request
+  ---
+  duration_ms: 1111.01884
+  type: 'test'
+  ...
+# Subtest: spoken language preference uses recognition only
+ok 425 - spoken language preference uses recognition only
+  ---
+  duration_ms: 734.611952
+  type: 'test'
+  ...
+# Subtest: paid voice recognition, planning and recommendation each settle a separate budgeted attempt
+ok 426 - paid voice recognition, planning and recommendation each settle a separate budgeted attempt
+  ---
+  duration_ms: 941.205858
+  type: 'test'
+  ...
+# Subtest: recognition uses only a reply-language locale hint and never sends draft or history
+ok 427 - recognition uses only a reply-language locale hint and never sends draft or history
+  ---
+  duration_ms: 2.404734
+  type: 'test'
+  ...
+# Subtest: one transient paid recognition retry allows all four accounted stages without releasing unknown charges
+ok 428 - one transient paid recognition retry allows all four accounted stages without releasing unknown charges
+  ---
+  duration_ms: 975.30753
+  type: 'test'
+  ...
+# Subtest: paid retry cannot bypass the configured budget or release a failed request reservation
+ok 429 - paid retry cannot bypass the configured budget or release a failed request reservation
+  ---
+  duration_ms: 793.49681
+  type: 'test'
+  ...
+# Subtest: long customer requests cannot hide the photo identity or relevance warning
+ok 430 - long customer requests cannot hide the photo identity or relevance warning
+  ---
+  duration_ms: 23.19043
+  type: 'test'
+  ...
+# Subtest: two through ten choices use one native carousel with bounded consistent quick replies
+ok 431 - two through ten choices use one native carousel with bounded consistent quick replies
+  ---
+  duration_ms: 4.327689
+  type: 'test'
+  ...
+# Subtest: ambiguous proposal cards never duplicate Start this list buttons and preserve consistent carousel rows
+ok 432 - ambiguous proposal cards never duplicate Start this list buttons and preserve consistent carousel rows
+  ---
+  duration_ms: 3.078592
+  type: 'test'
+  ...
+# Subtest: single choices retain photo and tap, absent photos use lists, and four menu items never overflow reply buttons
+ok 433 - single choices retain photo and tap, absent photos use lists, and four menu items never overflow reply buttons
+  ---
+  duration_ms: 1.819105
+  type: 'test'
+  ...
+# Subtest: Tamil clipping preserves graphemes and price, and confirmation requires the complete review
+ok 434 - Tamil clipping preserves graphemes and price, and confirmation requires the complete review
+  ---
+  duration_ms: 16.536457
+  type: 'test'
+  ...
+# Subtest: service-window visual choices take priority over marketing templates and closed windows remain blocked
+ok 435 - service-window visual choices take priority over marketing templates and closed windows remain blocked
+  ---
+  duration_ms: 0.649659
+  type: 'test'
+  ...
+# Subtest: category → photo → quantity → review → confirm runs without inference, and duplicate confirmation cannot submit twice
+ok 436 - category → photo → quantity → review → confirm runs without inference, and duplicate confirmation cannot submit twice
+  ---
+  duration_ms: 3156.022977
+  type: 'test'
+  ...
+# Subtest: cross-customer, unsent, expired and forged taps cannot change a draft or invoke AI
+ok 437 - cross-customer, unsent, expired and forged taps cannot change a draft or invoke AI
+  ---
+  duration_ms: 5160.900497
+  type: 'test'
+  ...
+# Subtest: a multi-item request keeps quantities and accepts identified products together before separate final consent
+ok 438 - a multi-item request keeps quantities and accepts identified products together before separate final consent
+  ---
+  duration_ms: 3634.162402
+  type: 'test'
+  ...
+# {"level":30,"time":1791996517818,"pid":867926,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"GET","url":"/catalog-images/H01.jpg"},"msg":"incoming request"}
+# {"level":30,"time":1791996517831,"pid":867926,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":200},"responseTime":11.592679999999746,"msg":"request completed"}
+# {"level":30,"time":1791996517843,"pid":867926,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"GET","url":"/catalog-images/H01.jpg"},"msg":"incoming request"}
+# {"level":30,"time":1791996517845,"pid":867926,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":404},"responseTime":1.9945050000005722,"msg":"request completed"}
+# {"level":30,"time":1791996517846,"pid":867926,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"GET","url":"/catalog-images/H99.jpg"},"msg":"incoming request"}
+# {"level":30,"time":1791996517847,"pid":867926,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":404},"responseTime":1.2885669999996026,"msg":"request completed"}
+# {"level":30,"time":1791996517848,"pid":867926,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"GET","url":"/catalog-images/H02.jpg"},"msg":"incoming request"}
+# {"level":30,"time":1791996517848,"pid":867926,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":404},"responseTime":0.39625900000100955,"msg":"request completed"}
+# {"level":30,"time":1791996517849,"pid":867926,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"GET","url":"/customer-uploads/private.jpg"},"msg":"incoming request"}
+# {"level":30,"time":1791996517849,"pid":867926,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":404},"responseTime":0.3420989999995072,"msg":"request completed"}
+# Subtest: only active catalog photos belonging to the sender store are public
+ok 439 - only active catalog photos belonging to the sender store are public
+  ---
+  duration_ms: 1357.617763
+  type: 'test'
+  ...
+# Subtest: an oversized review preserves the draft but invalidates undisplayed consent
+ok 440 - an oversized review preserves the draft but invalidates undisplayed consent
+  ---
+  duration_ms: 2287.136742
+  type: 'test'
+  ...
+# {"level":30,"time":1791996509225,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"POST","url":"/api/owner/conversations/cc9027e6-2341-47e8-8b82-f26eccc8d11f/control"},"msg":"incoming request"}
+# {"level":30,"time":1791996509283,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":200},"responseTime":57.74070100000017,"msg":"request completed"}
+# Subtest: owner waiting is acknowledged once and assistant resume sends fresh bound quantity choices
+ok 441 - owner waiting is acknowledged once and assistant resume sends fresh bound quantity choices
+  ---
+  duration_ms: 2613.390028
+  type: 'test'
+  ...
+# Subtest: WhatsApp signature covers exact bytes and channel flags require complete configuration
+ok 442 - WhatsApp signature covers exact bytes and channel flags require complete configuration
+  ---
+  duration_ms: 2.324824
+  type: 'test'
+  ...
+# Subtest: WhatsApp free AI uses the scoped hardware catalog, delivered history and text product-code choices without repeating inference
+ok 443 - WhatsApp free AI uses the scoped hardware catalog, delivered history and text product-code choices without repeating inference
+  ---
+  duration_ms: 7169.801027
+  type: 'test'
+  ...
+# {"level":30,"time":1791996517848,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"GET","url":"/owner"},"msg":"incoming request"}
+# {"level":30,"time":1791996517850,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":404},"responseTime":1.499617000001308,"msg":"request completed"}
+# {"level":30,"time":1791996517851,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"GET","url":"/api/simulator"},"msg":"incoming request"}
+# {"level":30,"time":1791996517852,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":404},"responseTime":0.7086279999984981,"msg":"request completed"}
+# {"level":30,"time":1791996517853,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1791996517853,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":404},"responseTime":0.5013479999997799,"msg":"request completed"}
+# {"level":30,"time":1791996517854,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1791996517857,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":403},"responseTime":2.6819130000003497,"msg":"request completed"}
+# {"level":30,"time":1791996517859,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","req":{"method":"GET","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1791996517860,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-5","res":{"statusCode":403},"responseTime":0.9887679999992542,"msg":"request completed"}
+# {"level":30,"time":1791996517862,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","req":{"method":"GET","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1791996517870,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-6","res":{"statusCode":200},"responseTime":7.187370999999985,"msg":"request completed"}
+# {"level":30,"time":1791996517871,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1791996517893,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-7","res":{"statusCode":200},"responseTime":21.869683999999324,"msg":"request completed"}
+# {"level":30,"time":1791996517895,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1791996517906,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-8","res":{"statusCode":200},"responseTime":10.9866320000001,"msg":"request completed"}
+# {"level":30,"time":1791996517909,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1791996517910,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-a","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1791996517935,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-9","res":{"statusCode":200},"responseTime":25.30582499999946,"msg":"request completed"}
+# {"level":30,"time":1791996517949,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-a","res":{"statusCode":200},"responseTime":39.03873899999962,"msg":"request completed"}
+# {"level":30,"time":1791996518005,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-b","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1791996518024,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-b","res":{"statusCode":200},"responseTime":19.213260000000446,"msg":"request completed"}
+# {"level":30,"time":1791996518083,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-c","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1791996518093,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-c","res":{"statusCode":200},"responseTime":9.720864999999321,"msg":"request completed"}
+# {"level":30,"time":1791996518093,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-d","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1791996518101,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-d","res":{"statusCode":200},"responseTime":7.381930999999895,"msg":"request completed"}
+# {"level":30,"time":1791996518102,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-e","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1791996518122,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-e","res":{"statusCode":200},"responseTime":20.435717000000295,"msg":"request completed"}
+# {"level":30,"time":1791996518123,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-f","req":{"method":"GET","url":"/api/owner/snapshot"},"msg":"incoming request"}
+# {"level":30,"time":1791996518134,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-f","res":{"statusCode":200},"responseTime":10.522182999999131,"msg":"request completed"}
+# {"level":30,"time":1791996518145,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","req":{"method":"GET","url":"/privacy"},"msg":"incoming request"}
+# {"level":30,"time":1791996518147,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-g","req":{"method":"POST","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1791996518146,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-1","res":{"statusCode":404},"responseTime":0.24655899999925168,"msg":"request completed"}
+# {"level":30,"time":1791996518146,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","req":{"method":"GET","url":"/api/owner/privacy-draft"},"msg":"incoming request"}
+# {"level":30,"time":1791996518146,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-2","res":{"statusCode":403},"responseTime":0.20428899999933492,"msg":"request completed"}
+# {"level":30,"time":1791996518146,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","req":{"method":"GET","url":"/webhooks/whatsapp"},"msg":"incoming request"}
+# {"level":30,"time":1791996518146,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-3","res":{"statusCode":404},"responseTime":0.1032390000000305,"msg":"request completed"}
+# {"level":30,"time":1791996518147,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","req":{"method":"GET","url":"/webhook"},"msg":"incoming request"}
+# {"level":30,"time":1791996518147,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-4","res":{"statusCode":403},"responseTime":0.20443900000100257,"msg":"request completed"}
+# {"level":30,"time":1791996518156,"pid":868049,"hostname":"gk-pc-System-Product-Name","reqId":"req-g","res":{"statusCode":200},"responseTime":8.741746999998213,"msg":"request completed"}
+# Subtest: signed ingress isolates hosts/assets/recipients, commits before ACK, deduplicates batches and honors owner controls
+ok 444 - signed ingress isolates hosts/assets/recipients, commits before ACK, deduplicates batches and honors owner controls
+  ---
+  duration_ms: 1640.920491
+  type: 'test'
+  ...
+# Subtest: closed service window, uncertain sends, early statuses and authentication failure do not cause repeated sends
+ok 445 - closed service window, uncertain sends, early statuses and authentication failure do not cause repeated sends
+  ---
+  duration_ms: 1526.543897
+  type: 'test'
+  ...
+1..445
+# tests 445
+# suites 0
+# pass 445
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 83041.639285

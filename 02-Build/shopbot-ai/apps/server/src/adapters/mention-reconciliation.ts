@@ -2,18 +2,17 @@ import type {ConversationState,DraftLine} from '../../../../packages/contracts/i
 import type {TurnUnderstanding} from '../../../../packages/contracts/understanding.js';
 import {normalize,tokens} from '../../../../packages/contracts/catalog-text.js';
 import {say,lineName} from '../../../../packages/contracts/language.js';
-import {matchesProductMeasures,spokenMeasures,convertAmount,catalogPack} from '../services/quantity-evidence.js';
+import {matchesProductMeasures,spokenMeasures,convertAmount,catalogPack,catalogMeasures,explicitPurchaseCount} from '../services/quantity-evidence.js';
 type Item=TurnUnderstanding['requestedItems'][number];
-export const additionalMention=/(?:மேலும்|இன்னும்|கூடுதலா|எக்ஸ்ட்ரா|\b(?:extra|additional|more|innum|kooduthal(?:a)?|melum)\b)/i;
-const repeatMention=/(?:ஆல்ரெடி|ஏற்கனவே|சொல்லிட்டேன்|அதே|\b(?:already|same|as i said|told you|sonnen|sollitten|adhe)\b)/i;
-const correctionMention=/(?:இல்லை|இல்ல|\b(?:actually|sorry|correction|instead|no)\b)/i;
-function identity(query:string){return tokens(normalize(query).replace(/\b\d+(?:\.\d+)?\s*(?:inch|inches|mm|cm|ml|litre|litres|kg|metre|metres|m)\b/g,' ')).join(' ');}
+import {additionalMention,repeatMention,correctionMention,currentItemMention} from '../../../../packages/contracts/intent-language.js';
+export {additionalMention} from '../../../../packages/contracts/intent-language.js';
+function identity(query:string){return tokens(normalize(query).replace(/\bhose\s+pipe\b/g,'hose').replace(/\b\d+(?:\.\d+)?\s*(?:inch|inches|mm|cm|ml|litre|litres|kg|metre|metres|m)\b/g,' ')).join(' ');}
 // These nouns name several physically different shop products. A one-word
 // mention does not identify a previously selected type by itself.
 const ambiguousHeads=new Set(['pipe','tube','hose']);
 function ambiguousIdentity(query:string){const words=identity(query).split(' ');return words.length===1&&ambiguousHeads.has(words[0]);}
 function refersToCurrentItem(item:Item,state:ConversationState,line:DraftLine){
- return repeatMention.test(item.sourceText)||correctionMention.test(item.sourceText)||state.editingLineId===line.id||state.pending?.kind==='question'&&state.pending.lineId===line.id||state.pending?.kind==='products'&&state.pending.groups.length===1&&state.pending.groups[0].lineId===line.id;
+ return repeatMention.test(item.sourceText)||correctionMention.test(item.sourceText)||currentItemMention.test(item.sourceText)||state.editingLineId===line.id||state.pending?.kind==='question'&&state.pending.lineId===line.id||state.pending?.kind==='products'&&state.pending.groups.length===1&&state.pending.groups[0].lineId===line.id;
 }
 export function sameMention(a:string,b:string){
  const left=identity(a),right=identity(b);if(!left||!right)return false;
@@ -24,6 +23,7 @@ export function sameMention(a:string,b:string){
 // Include the spoken count and referential wording omitted by a terse sourceText.
 // The result is always one literal substring, never reconstructed evidence.
 export function mentionClause(source:string,phrase:string){
+ if(explicitPurchaseCount(phrase)!==undefined)return phrase;
  const pieces=source.split(/[,;\n]|[.!?](?:\s|$)|\b(?:and|plus|next|then|aduthu|appuram)\b|அடுத்து|அப்புறம்|அதுக்கப்புறம்|அண்ட்|நெக்ஸ்ட்/iu);
  const hits=pieces.filter(p=>p.includes(phrase)),clause=hits[0]?.trim();return clause&&clause.length<=500?clause:phrase;
 }
@@ -35,11 +35,44 @@ function compatibleItems(a:Item,b:Item){
  if(a.targetLineId&&b.targetLineId&&a.targetLineId!==b.targetLineId)return false;
  return true;
 }
+// Attribute prefix/postfix counts across punctuation-free speech jointly.
+// A literal gap cannot supply two items' counts. If two assignments remain
+// possible, ask for a correction instead of borrowing a neighbouring count.
+function boundedClauses(items:Item[],source:string){
+ const spans=items.map(i=>({start:source.indexOf(i.sourceText),end:source.indexOf(i.sourceText)+i.sourceText.length}));
+ if(spans.some((s,n)=>s.start<0||source.lastIndexOf(items[n].sourceText)!==s.start||n>0&&s.start<spans[n-1].end))return null;
+ let changed=false;
+ const candidates=items.map((item,n)=>{
+  const span=spans[n],clause=mentionClause(source,item.sourceText);
+  if(explicitPurchaseCount(item.sourceText)!==undefined||item.purchaseCount===null||!items.some((other,j)=>j!==n&&clause.includes(other.sourceText)))return [span];
+  const prefix={start:spans[n-1]?.end??0,end:span.end},suffix={start:span.start,end:spans[n+1]?.start??source.length};
+  const count=(s:{start:number;end:number})=>explicitPurchaseCount(source.slice(s.start,s.end));
+  if(count(prefix)===undefined&&count(suffix)===undefined)return [span];
+  changed=true;
+  return [prefix,suffix].filter(s=>s.end-s.start<=500&&count(s)===item.purchaseCount)
+   .filter(s=>!(s===suffix&&n+1<items.length&&items[n+1].purchaseCount===null&&explicitPurchaseCount(source.slice(span.end,spans[n+1].end))===item.purchaseCount));
+ });
+ if(!changed)return null;
+ const ways:number[][]=candidates.map(row=>row.map(()=>0));
+ for(let n=items.length-1;n>=0;n--)for(let j=0;j<candidates[n].length;j++)ways[n][j]=n===items.length-1?1:Math.min(2,candidates[n+1].reduce((sum,next,k)=>sum+(candidates[n][j].end<=next.start?ways[n+1][k]:0),0));
+ if(ways[0].reduce((a,b)=>a+b,0)!==1)throw new Error('Neighbouring item counts need clarification');
+ const result:string[]=[];let end=0;
+ for(let n=0;n<items.length;n++){const index=candidates[n].findIndex((s,j)=>s.start>=end&&ways[n][j]>0),span=candidates[n][index];result.push(source.slice(span.start,span.end).trim());end=span.end;}
+ return result;
+}
 export function consolidateMentions(items:Item[],source:string,image:boolean):Item[]{
  if(image){if(items.some(i=>i.targetLineId!==undefined||i.sameItemOrdinal!==undefined||i.requestMode==='additional'))throw new Error('Images cannot edit existing lines or consolidate list rows');return items;}
- const result:Item[]=[],references=new Map<number,Item>();
- for(const raw of items){
-  const item={...raw,sourceText:mentionClause(source,raw.sourceText)};
+ const result:Item[]=[],references=new Map<number,Item>(),bounded=boundedClauses(items,source);
+ for(const [position,raw] of items.entries()){
+  let phrase=bounded?.[position]??mentionClause(source,raw.sourceText);
+  const start=source.indexOf(raw.sourceText),others=items.filter(other=>other!==raw&&other.sourceText!==raw.sourceText).map(other=>({start:source.indexOf(other.sourceText),end:source.indexOf(other.sourceText)+other.sourceText.length})).filter(other=>other.start>=0);
+  // ASR often omits punctuation. Expanding one terse source span must not
+  // borrow a different item's count or pack contents from the same clause.
+  if(!bounded&&start>=0&&others.some(other=>phrase.includes(source.slice(other.start,other.end)))){
+   const next=Math.min(source.length,...others.filter(other=>other.start>=start+raw.sourceText.length).map(other=>other.start));
+   phrase=source.slice(start,next).trim();
+  }
+  const item={...raw,sourceText:phrase};
   // A self-reference says nothing about another row. Some providers include
   // it on an already consolidated item; discard it without changing evidence.
   if(item.sameItemOrdinal===item.ordinal)delete item.sameItemOrdinal;
@@ -59,7 +92,7 @@ export function consolidateMentions(items:Item[],source:string,image:boolean):It
 }
 export function compatibleLine(item:Item,line:DraftLine){
  const product=line.candidates?.find(p=>p.sku===line.sku);
- if(!item.query||![line.query??line.name,product?.name,...(product?.aliases??[]),...Object.values(product?.localNames??{})].some(name=>name&&sameMention(item.query!,name)))return false;
+ if(!item.query||![line.query??line.name,product?.name,product?.familyId?.replaceAll('-',' '),...(product?.aliases??[]),...Object.values(product?.localNames??{})].some(name=>name&&sameMention(item.query!,name)))return false;
  // A shared head noun is insufficient when the new request contains a brand,
  // material or use qualifier. Those words can be in query even when the model
  // leaves the structured fields empty. Keep the old SKU only if its catalog
@@ -74,9 +107,76 @@ export function compatibleLine(item:Item,line:DraftLine){
  if(pack&&item.packSize&&convertAmount(item.packSize,pack.unit)!==pack.value)return false;
  return true;
 }
+// Resolve an edit's spoken name against every old line. A model-chosen ID
+// cannot make the shared alias "pipe" identify one of two pipe entries.
+// Compare product identity, not the unit/pack words repeated on every card.
+const editNoise=new Set(['inch','inches','இன்ச்','இன்சு','mm','cm','metre','meter','litre','kg','piece','box','pack','pcs','pc','set','item','line','entry','product','and','of','the','my','this','that','one','first','second','third','last','எண்ணம்','பீஸ்','பேக்','பெட்டி','லிட்டர்','கிலோ','மீட்டர்','அது','அந்த','இந்த','பொருள்','எல்லாம்','missing','unknown','unavailable']);
+function editText(source:string){
+ const substitutions:[RegExp,string][]=[[/பிவிசி|பீவிசி|பி\s*வி\s*சி/gu,'PVC'],[/பைப்(?:பு|பை|ப்கள்|களை)?/gu,'pipe'],[/ஸ்க்ரூ\s*டிரைவர்|ஸ்குரு\s*டிரைவர்/gu,'screw driver'],[/ஸ்க்ரூ|ஸ்குரு|திருகு/gu,'screw'],[/போல்ட்(?:டு|டை|டா|களை|கள்)?/gu,'bolt'],[/நட்டு(?:களை|கள்)?/gu,'nut'],[/பிளேயர்|ப்ளையர்|பிளையர்/gu,'plier'],[/கட்டிங்/gu,'cutting'],[/ஸ்விட்ச்|சுவிட்ச்/gu,'switch'],[/சாக்கெட்|சாக்கட்/gu,'socket'],[/பெயிண்ட்|பெயின்ட்/gu,'paint'],[/வயர்/gu,'wire'],[/ஹோஸ்|ஓஸ்/gu,'hose'],[/கார்டன்/gu,'garden']];
+ let text=normalize(source).replace(/\bscrewdriver\b/giu,'screw driver');for(const [pattern,replacement] of substitutions)text=text.replace(pattern,replacement);return text;
+}
+export function editIdentityWords(source:string){return tokens(editText(source)).filter(word=>word.length>2&&!/^\d/.test(word)&&!editNoise.has(word));}
+export function editMeasuresMatch(source:string,line:DraftLine):boolean {
+ // Recognition sometimes writes the inch abbreviation as "4 in". Normalize
+ // it only for edit-size comparison, never for purchase-count extraction.
+ const measures=spokenMeasures(source.replace(/\b(\d+(?:\.\d+)?)\s*in\b/giu,'$1 inch')).filter(measure=>['inch','mm','cm','m','foot','litre','ml','kg','g'].includes(measure.unit));
+ const product=line.candidates?.find(product=>product.sku===line.sku),known=[...line.productMeasures??[],...(line.packSize?[line.packSize]:[]),...spokenMeasures([line.query,line.name].join(' ')),...(product?catalogMeasures(product):[])];
+ return measures.every(measure=>{const comparable=known.filter(value=>convertAmount(value,measure.unit)!==null);return !comparable.length||comparable.some(value=>convertAmount(value,measure.unit)===measure.value);});
+}
+// A normalized model target may translate a name, but cannot override a
+// different product type explicitly named in the current source.
+export function editIdentityMatches(source:string,line:DraftLine):boolean {
+ const words=new Set(editIdentityWords(source)),product=line.candidates?.find(p=>p.sku===line.sku);
+ const primary=editIdentityWords([line.query,line.name,product?.name].filter(Boolean).join(' '));
+ const known=new Set(editIdentityWords([line.query,line.name,product?.name,...product?.aliases??[],...Object.values(product?.localNames??{})].filter(Boolean).join(' ')));
+ if(words.has('pipe')&&!words.has('hose')&&primary.includes('hose')&&!primary.includes('pipe'))return false;
+ if(words.has('screw')&&!words.has('driver')&&primary.includes('driver'))return false;
+ const productHeads=new Set(['cutter','brush','blade','wheel','hose','pipe','box','switch','socket']);
+ if([...words].some(word=>productHeads.has(word)&&!known.has(word))&&primary.some(word=>productHeads.has(word)))return false;
+ // A shared head noun cannot turn a named variant into a different product.
+ // For example, "wire cutter" must not select the only "pipe cutter" row.
+ // Inspect adjacent words so conversational verbs and quantities are not
+ // mistaken for product qualifiers.
+ const spoken=editText(source);
+ const productQualifiers=new Set(['wire','pipe','paint','garden','water','pvc','steel','plastic','metal','wood','angle','cutting','grinding','screw','gas','electrical']);
+ for(const match of spoken.matchAll(/\b([a-z][a-z0-9]*)\s+(cutter|brush|blade|wheel|hose|pipe|box|switch|socket)\b/giu)){
+  const modifier=match[1].toLowerCase(),head=match[2].toLowerCase();
+  if(known.has(head)&&productQualifiers.has(modifier)&&!known.has(modifier))return false;
+ }
+ return true;
+}
+export function namedEditLines(source:string,state:ConversationState,options:{ignoreMeasures?:boolean}={}):DraftLine[]{
+ const ordinal=/\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|[1-9]|10)(?:st|nd|rd|th)?\s+(?:item|line|product|entry|row)\b/i.exec(source);
+ const last=/\blast\s+(?:item|line|product|entry|row)\b|கடைசி(?:யா|யில|யில்)?|லாஸ்ட்(?:டா|டாக)?/iu.test(source);
+ const index=ordinal?(({first:1,second:2,third:3,fourth:4,fifth:5,sixth:6,seventh:7,eighth:8,ninth:9,tenth:10} as Record<string,number>)[ordinal[1].toLowerCase()]??Number(ordinal[1]))-1:last?state.draft.length-1:undefined;
+ const text=editText(source),words=new Set(editIdentityWords(source));
+ const scored=state.draft.map(line=>{
+  const product=line.candidates?.find(p=>p.sku===line.sku);
+  const names=[line.query,line.name,line.sku,product?.name,...product?.aliases??[],...Object.values(product?.localNames??{})].filter((n):n is string=>!!n);
+  if(!editIdentityMatches(source,line))return {line,score:0};
+  const known=new Set(names.flatMap(editIdentityWords)),shared=[...words].filter(word=>known.has(word));
+  // An alias consisting only of a size/pack must not identify a product.
+  const exact=names.filter(name=>editIdentityWords(name).length&&text.includes(editText(name))).map(name=>editIdentityWords(name).length*100+editText(name).length);
+  return {line,score:Math.max(shared.length*10,...exact)};
+ });
+ const best=Math.max(0,...scored.map(row=>row.score));
+ const named=(best?scored.filter(row=>row.score===best).map(row=>row.line):[]).filter(line=>options.ignoreMeasures||editMeasuresMatch(source,line));
+ if(index!==undefined){
+  const positional=state.draft[index];if(!positional)return [];
+  if(named.length)return named.some(line=>line.id===positional.id)?[positional]:[];
+  // A pure ordinal can select a row. A product named alongside a conflicting
+  // ordinal must be clarified, rather than letting position override identity.
+  const remainder=source.replace(ordinal?.[0]??/(?:\blast\s+(?:item|line|product|entry|row)\b|கடைசி(?:யா|யில|யில்)?|லாஸ்ட்(?:டா|டாக)?)/giu,'');
+  if(!editIdentityWords(remainder).filter(word=>!['remove','delete','drop','please','change','set','to','make','neekku','நீக்கு','நீக்குங்க','எடுத்துருங்க'].includes(word)).length)return [positional];
+ }
+ return named;
+}
 export function existingMention(item:Item,state:ConversationState):{line?:DraftLine;clarify?:string}{
  if(item.targetLineId){
   const line=state.draft.find(l=>l.id===item.targetLineId);if(!line)throw new Error('Repeated item target is not current');
+  const focused=state.editingLineId===line.id||state.pending?.kind==='question'&&state.pending.lineId===line.id;
+  const compatible=state.draft.filter(l=>compatibleLine(item,l));
+  if(!focused&&compatible.length>1)return {clarify:say(state,'Which existing item should receive this change?','ஏற்கனவே உள்ள எந்தப் பொருளுக்கு இந்த மாற்றம் வேண்டும்?','Irukkura entha porulukku intha maaththam venum?')};
   if(!refersToCurrentItem(item,state,line)){
    if(!compatibleLine(item,line))return {};
    if(item.query&&ambiguousIdentity(item.query))return {clarify:say(state,`Do you mean your existing ${lineName(line,state)}, or a different ${item.query}?`,`ஏற்கனவே உள்ள ${lineName(line,state)}-ஐ சொல்கிறீர்களா, வேறு ${item.query} வேண்டுமா?`,`Irukkura ${lineName(line,state)}-a solreengala, vera ${item.query} venuma?`)};
@@ -90,7 +190,10 @@ export function existingMention(item:Item,state:ConversationState):{line?:DraftL
   // A correction may change the type entirely. It can replace one clearly
   // referenced pipe line, but a new BSA/pump pipe without correction remains
   // a separate request even when another pipe is already on the list.
-  const related=state.draft.filter(line=>sameMention(item.query!,line.query??line.name)&&refersToCurrentItem(item,state,line));
+  const related=state.draft.filter(line=>{
+   const product=line.candidates?.find(p=>p.sku===line.sku);
+   return [line.query,line.name,product?.name,...product?.aliases??[]].some(name=>name&&sameMention(item.query!,name))&&refersToCurrentItem(item,state,line);
+  });
   if(related.length===1)return {line:related[0]};
   if(related.length>1)return {clarify:say(state,'Which existing item should I change?','ஏற்கனவே உள்ள எந்தப் பொருளை மாற்றணும்?','Irukkura entha porulai maathanum?')};
  }

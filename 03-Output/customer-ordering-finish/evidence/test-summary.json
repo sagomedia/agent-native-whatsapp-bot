@@ -1,0 +1,39 @@
+{
+  "tests": 523,
+  "passed": 523,
+  "failed": 0,
+  "command": "npm run test:integration",
+  "mode": "offline fixtures on disposable PostgreSQL 17",
+  "build": "passed",
+  "typecheck": "passed",
+  "nativePackagerSyntax": "passed",
+  "ownerBrowser": {
+    "desktop": true,
+    "mobileOverflow": false,
+    "pageErrors": 0,
+    "receiptPost": 200,
+    "quotePost": 200
+  },
+  "limitations": [
+    "No real customer message was sent for testing",
+    "Real phone Tamil audio and \u20b910 receipt need merchant acceptance"
+  ],
+  "qr": {
+    "independentDecode": true,
+    "amount": "10.00",
+    "currency": "INR",
+    "recipientMatches": true,
+    "referenceLength": 35
+  },
+  "live": {
+    "readiness": "ready",
+    "service": "active/running",
+    "restarts": 0,
+    "manifest": "content_verified",
+    "welcomeAudioHttp": 200,
+    "welcomeAudioBytes": 32125,
+    "externalOwnerLoginHttp": 302,
+    "ownerWithoutJwtHttp": 403,
+    "publicSimulatorHttp": 404
+  }
+}
