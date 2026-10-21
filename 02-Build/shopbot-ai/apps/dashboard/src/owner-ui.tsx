@@ -13,6 +13,7 @@ export function useOwnerUrl() {
 }
 function ownerUrl(values: Record<string,string|null>) {
   const url = new URL(window.location.href);
+  if(values.view&&values.view!==url.searchParams.get('view'))url.hash='';
   for (const [key,value] of Object.entries(values)) {
     if(value===null || value==='')url.searchParams.delete(key);else url.searchParams.set(key,value);
   }

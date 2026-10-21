@@ -87,6 +87,16 @@ Object.assign(tamil,{
  'Review this customer’s orders':'இந்த வாடிக்கையாளரின் ஆர்டர்களைப் பார்','Last customer message':'வாடிக்கையாளரின் கடைசி செய்தி','No WhatsApp reply window recorded':'WhatsApp பதில் அளிக்கும் நேரம் பதிவாகவில்லை','WhatsApp sending is disabled.':'WhatsApp செய்தி அனுப்புதல் நிறுத்தப்பட்டுள்ளது.','Reply window closed':'பதில் அளிக்கும் நேரம் முடிந்தது',
  'No message previews in this stage':'இந்த நிலையில் செய்தி மாதிரிகள் இல்லை','Choose another stage or check again.':'வேறு நிலையைத் தேர்வு செய்யுங்கள் அல்லது மீண்டும் சரிபாருங்கள்.','Show all stages':'எல்லா நிலைகளையும் காட்டு'
 });
+Object.assign(tamil,{
+ 'Shop tools':'கடை கருவிகள்','Order stage':'ஆர்டர் நிலை','Settings sections':'அமைப்புப் பகுதிகள்','Connection':'இணைப்பு','Assistant':'உதவியாளர்','Usage & costs':'பயன்பாடு / செலவு','Recent activity':'சமீபத்திய செயல்கள்','Product sections':'பொருள் பகுதிகள்','Shop facts':'கடை விவரங்கள்','Product details':'பொருள் விவரங்கள்','Publication checks':'வெளியிடும் சோதனைகள்',
+ 'Orders and customer help, in one place.':'ஆர்டர்களும் வாடிக்கையாளர் உதவியும் ஒரே இடத்தில்.',
+ 'Check requests, send quotes and prepare pickups.':'கோரிக்கைகளைச் சரிபார்த்து விலைப்பட்டியல் அனுப்பி பொருட்களைத் தயார் செய்யுங்கள்.',
+ 'Read the request, help the customer and keep the order moving.':'கோரிக்கையைப் படித்து வாடிக்கையாளருக்கு உதவுங்கள்.',
+ 'Shop prices, available stock and the details customers need.':'கடை விலை, கிடைக்கும் இருப்பு, வாடிக்கையாளருக்குத் தேவையான விவரங்கள்.',
+ 'Your connection, assistant controls and recorded costs.':'இணைப்பு, உதவியாளர் கட்டுப்பாடுகள், பதிவு செய்த செலவுகள்.',
+ 'Check the messages your customers see.':'வாடிக்கையாளர்கள் பார்க்கும் செய்திகளைச் சரிபாருங்கள்.'
+});
+Object.assign(tamil,{'Loading orders…':'ஆர்டர்கள் ஏற்றப்படுகின்றன…','Loading order…':'ஆர்டர் ஏற்றப்படுகிறது…','Loading conversations…':'உரையாடல்கள் ஏற்றப்படுகின்றன…','Loading conversation…':'உரையாடல் ஏற்றப்படுகிறது…'});
 const storageKey='shopbot.owner.language';
 const LocaleContext=createContext({locale:'en' as OwnerLocale,t:(text:string)=>text,setLocale:(_locale:OwnerLocale)=>{}});
 export function OwnerLocaleProvider({children}:{children:ReactNode}){

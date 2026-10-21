@@ -106,7 +106,7 @@ export function OrderQuoteEditor({request:r,originalLines,amendments,offered,not
       const duplicate=!!original?.sku&&source.filter(l=>l.sku===original.sku).length>1;
       const inventory=line.sku?r.inventory?.find(item=>item.sku===line.sku):undefined;
       const basis=problems[index]!.filter(problem=>problem.field==='saleMode').map(problem=>problem.message);
-      return <div className={'order-line'+(review?' order-line-review':'')+(issues[index]!.length&&!readOnly?' order-line-needs-check':'')} key={line.id}>
+      return <div data-readonly={readOnly} className={'order-line'+(review?' order-line-review':'')+(issues[index]!.length&&!readOnly?' order-line-needs-check':'')} key={line.id}>
        <div className="order-table-row" role="row" id={'quote-row-'+line.id} tabIndex={-1}>
         <div className="order-product-cell" role="cell">
          {photo?<button type="button" className="order-photo-button" aria-label={'Enlarge photo of '+line.name} onClick={()=>setPreview({src:photo,name:line.name})}><ProductPhoto src={photo} name={line.name}/><span>{t("View photo")}</span></button>:<div className="order-photo-missing"><span aria-hidden="true">▧</span><small>{t("No photo")}<br/>Check in store</small></div>}

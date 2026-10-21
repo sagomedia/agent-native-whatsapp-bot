@@ -6,8 +6,9 @@ export type RequestState = {acceptance: string; fulfillment: string;advance_requ
 export const ownerViews = ['overview', 'requests', 'conversations', 'catalog', 'connections', 'message-review'] as const;
 export type OwnerView = typeof ownerViews[number];
 export const viewLabels: Record<OwnerView, string> = {
-  overview: 'Today', conversations: 'Conversations', requests: 'Orders', catalog: 'Products', connections: 'Settings & usage', 'message-review':'Message review'
+  overview: 'Today', conversations: 'Messages', requests: 'Orders', catalog: 'Products', connections: 'Settings & usage', 'message-review':'Message review'
 };
+export const viewDescriptions:Record<OwnerView,string>={overview:'Orders and customer help, in one place.',requests:'Check requests, send quotes and prepare pickups.',conversations:'Read the request, help the customer and keep the order moving.',catalog:'Shop prices, available stock and the details customers need.',connections:'Your connection, assistant controls and recorded costs.','message-review':'Check the messages your customers see.'};
 export function ownerView(value: string | null): OwnerView {
   return ownerViews.includes(value as OwnerView) ? value as OwnerView : 'overview';
 }

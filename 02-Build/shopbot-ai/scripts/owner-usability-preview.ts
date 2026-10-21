@@ -37,7 +37,7 @@ const server=createServer(async(req,res)=>{
  const chunks:Buffer[]=[];let size=0;for await(const b of req){size+=b.length;if(size>3000000){res.writeHead(413).end();return;}chunks.push(b);}
  const response=await app.inject({method:req.method as 'GET',url:req.url??'/',headers:{...req.headers,host:owner.hostname,'cf-access-jwt-assertion':'synthetic-offline-only',...(req.headers.origin?{origin:'https://'+owner.hostname}:{})},...(chunks.length?{payload:Buffer.concat(chunks)}:{})});
  const headers={...response.headers};delete headers['content-length'];res.writeHead(response.statusCode,headers);
- if(headers['content-type']?.toString().includes('text/html'))res.end(response.body.replace('<body>','<body><div role="status" style="position:fixed;bottom:4px;left:8px;z-index:40;padding:3px 7px;font-size:11px;background:#fff2c6;color:#402e08;pointer-events:none">Local preview · synthetic data</div>'));else res.end(response.rawPayload);
+ if(headers['content-type']?.toString().includes('text/html'))res.end(response.body.replace('<body>','<body><div class="owner-preview-note" role="status">Local preview · synthetic data</div>'));else res.end(response.rawPayload);
 });
 server.listen(port,'127.0.0.1',()=>console.log(`Dashboard usability preview: ${origin}/owner`));
 let stopping=false;async function stop(){if(stopping)return;stopping=true;server.close();await app.close();await pool.end();await admin.query(`DROP SCHEMA ${schema} CASCADE`);await admin.end();}
