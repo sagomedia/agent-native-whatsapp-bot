@@ -1,0 +1,31 @@
+{
+  "synthetic": true,
+  "passed": [
+    "Daily navigation and direct work shortcuts",
+    "Manual reply, unsent-draft guard, takeover and return preserve global pause",
+    "Two-click price path, unchanged stock, lost-response retry uses identical batch",
+    "Stock tasks preview holds and available units, with stable retry identity",
+    "Mixed inline updates write only edited price/count and retain reservations",
+    "Full product editor and AI details preserve merchant price and selling unit",
+    "Uncertain stock retry freezes the entire payload even after product metadata refresh",
+    "Settings, pause, billing analytics and unknown-charge warnings retained",
+    "Message previews render without sending or interactive commerce actions",
+    "All six views and inline grid fit 360/390/1024/1536 widths with internal scrolling",
+    "Tamil daily controls and saved owner-language preference",
+    "Expired sign-in retains the live draft and restores access in the original tab"
+  ],
+  "newPricePathClicks": 2,
+  "clickMeasurements": {
+    "before": [
+      "Update price",
+      "Confirm checked price",
+      "Review price",
+      "Save price"
+    ],
+    "after": [
+      "Update price",
+      "Save price"
+    ]
+  },
+  "pageErrors": []
+}

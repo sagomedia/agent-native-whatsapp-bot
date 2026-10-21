@@ -1,3 +1,4 @@
+import {useOwnerLocale} from './owner-locale.js';
 import {useEffect, useRef, useState, useSyncExternalStore, type ReactNode, type AnchorHTMLAttributes} from 'react';
 
 const navigationEvent = 'shopbot:owner-navigation';
@@ -52,11 +53,12 @@ export function ProductPhoto({src, name, large = false}: {src?: string; name: st
 export function ConfirmDialog({title, children, confirmLabel = 'Discard changes', tone='danger', onConfirm, onCancel}: {
   title: string; children: ReactNode; confirmLabel?: string;tone?:'danger'|'primary'; onConfirm: () => void; onCancel: () => void
 }) {
+ const {t}=useOwnerLocale();
   const dialog = useRef<HTMLDialogElement>(null);
   const cancel = useRef<HTMLButtonElement>(null);
   useEffect(() => {dialog.current?.showModal(); cancel.current?.focus(); return () => dialog.current?.close();}, []);
   return <dialog className="owner-dialog" ref={dialog} aria-labelledby="owner-dialog-title" onCancel={event => {event.preventDefault(); onCancel();}}>
     <h2 id="owner-dialog-title">{title}</h2><div className="owner-dialog-body">{children}</div>
-    <div className="owner-actions"><button ref={cancel} type="button" onClick={onCancel}>Keep working</button><button className={tone==='primary'?'owner-primary':'owner-danger'} type="button" onClick={onConfirm}>{confirmLabel}</button></div>
+    <div className="owner-actions"><button ref={cancel} type="button" onClick={onCancel}>{t("Keep working")}</button><button className={tone==='primary'?'owner-primary':'owner-danger'} type="button" onClick={onConfirm}>{confirmLabel}</button></div>
   </dialog>;
 }

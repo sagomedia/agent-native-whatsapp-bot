@@ -1,0 +1,37 @@
+import {createServer} from 'node:http';
+import {randomUUID} from 'node:crypto';
+import pg from 'pg';
+import {setupDatabase} from '../apps/server/src/db/migrate.js';
+import {setupImageDemo,demoCatalogStore} from '../apps/server/src/services/demo-catalog.js';
+import {createApp} from '../apps/server/src/http/app.js';
+
+// Isolated local rehearsal only. The real owner app retains Access JWT checks.
+// Injected identity exists solely inside this disposable loopback harness.
+const databaseUrl=process.env.DATABASE_URL,port=Number(process.env.PORT??3043);
+if(!databaseUrl||!['127.0.0.1','localhost','[::1]'].includes(new URL(databaseUrl).hostname))throw new Error('Use a disposable local DATABASE_URL.');
+const schema='owner_usability_'+randomUUID().replaceAll('-',''),admin=new pg.Pool({connectionString:databaseUrl});await admin.query(`CREATE SCHEMA ${schema}`);
+const pool=new pg.Pool({connectionString:databaseUrl,options:`-c search_path=${schema}`});
+await setupDatabase(pool,'mock');await setupImageDemo(pool);
+// Synthetic conversations and orders cover daily task stages without channel credentials.
+for(let index=0;index<6;index++){
+ const conversation=randomUUID(),order=randomUUID();
+ await pool.query("INSERT INTO conversations(id,store_id,actor,reply_language,handoff_requested) VALUES($1,$2,$3,'ta',$4)",[conversation,demoCatalogStore,'preview-shopper-'+(index+1),index===0]);
+ await pool.query("INSERT INTO messages(id,conversation_id,direction,text,status) VALUES($1,$2,'inbound',$3,'processed')",[randomUUID(),conversation,index===0?'Can the shop help me check this list?':'Please prepare two PVC pipes and one measuring tape.']);
+ const complete=index>=3;
+ const lines=[{id:randomUUID(),query:'1 inch PVC pipe',name:'1 inch PVC Heavy Pipe Local',sku:'H01',productVersion:1,quantity:2,unit:'piece',pricePaise:2500,resolution:'matched'},...(!complete?[{id:randomUUID(),query:'socket',name:'Socket — check size in store',quantity:2,unit:'piece',resolution:'unavailable'}]:[]),{id:randomUUID(),query:'Measuring tape',name:'Measuring Tape 5m',sku:'H20',productVersion:1,quantity:1,unit:'piece',pricePaise:2500,resolution:'matched'}];
+ await pool.query("INSERT INTO order_requests(id,store_id,conversation_id,actor,review_id,lines,total_paise,estimate_complete,acceptance,fulfillment) VALUES($1,$2,$3,$4,$5,$6,7500,$7,$8,$9)",[order,demoCatalogStore,conversation,'preview-shopper-'+(index+1),randomUUID(),JSON.stringify(lines),complete,index>=4?'accepted':'awaiting_approval',index===4?'ready_for_pickup':index===5?'collected':'awaiting_approval']);
+}
+const owner={hostname:'offline-owner.example.test',issuer:'https://offline.cloudflareaccess.com',audience:'offline-only',email:'offline-owner@example.test',storeId:demoCatalogStore};
+const app=await createApp({mode:'mock',databaseUrl,host:'127.0.0.1',port,mediaDir:'/tmp/shopbot-owner-usability-preview',owner},pool,undefined,undefined,async()=>({email:owner.email,subject:'offline-only'}));
+const origin=`http://127.0.0.1:${port}`;
+const server=createServer(async(req,res)=>{
+ if(req.headers.host!==`127.0.0.1:${port}`||!['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress??'')){res.writeHead(403).end();return;}
+ if(!['GET','HEAD'].includes(req.method??'')&&req.headers.origin!==origin){res.writeHead(403).end();return;}
+ const chunks:Buffer[]=[];let size=0;for await(const b of req){size+=b.length;if(size>3000000){res.writeHead(413).end();return;}chunks.push(b);}
+ const response=await app.inject({method:req.method as 'GET',url:req.url??'/',headers:{...req.headers,host:owner.hostname,'cf-access-jwt-assertion':'synthetic-offline-only',...(req.headers.origin?{origin:'https://'+owner.hostname}:{})},...(chunks.length?{payload:Buffer.concat(chunks)}:{})});
+ const headers={...response.headers};delete headers['content-length'];res.writeHead(response.statusCode,headers);
+ if(headers['content-type']?.toString().includes('text/html'))res.end(response.body.replace('<body>','<body><div role="status" style="position:fixed;bottom:4px;left:8px;z-index:40;padding:3px 7px;font-size:11px;background:#fff2c6;color:#402e08;pointer-events:none">Local preview · synthetic data</div>'));else res.end(response.rawPayload);
+});
+server.listen(port,'127.0.0.1',()=>console.log(`Dashboard usability preview: ${origin}/owner`));
+let stopping=false;async function stop(){if(stopping)return;stopping=true;server.close();await app.close();await pool.end();await admin.query(`DROP SCHEMA ${schema} CASCADE`);await admin.end();}
+process.on('SIGINT',()=>{void stop();});process.on('SIGTERM',()=>{void stop();});

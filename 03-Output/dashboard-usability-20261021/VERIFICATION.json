@@ -1,0 +1,83 @@
+{
+  "date": "2026-10-21",
+  "baselineCommit": "f3a982747e95e37bbe58e678ea43209b696f5b54",
+  "scopeCommit": "4e92ec2",
+  "branch": "codex/dashboard-usability-20261021",
+  "trackingIssue": "https://github.com/sagomedia/agent-native-whatsapp-bot/issues/52",
+  "baselineFailureIssue": "https://github.com/sagomedia/agent-native-whatsapp-bot/issues/53",
+  "deployed": false,
+  "liveCustomerSends": 0,
+  "liveProviderCalls": 0,
+  "build": "passed",
+  "catalogCleanup": {
+    "passed": 4,
+    "failed": 0
+  },
+  "fullRegression": {
+    "total": 840,
+    "passed": 838,
+    "failed": 2,
+    "skipped": 0
+  },
+  "untouchedBaselineComparison": {
+    "total": 42,
+    "passed": 40,
+    "failed": 2,
+    "sameFailures": true
+  },
+  "focusedRegression": {
+    "passed": 19,
+    "failed": 0
+  },
+  "dashboardBrowser": {
+    "synthetic": true,
+    "passed": [
+      "Daily navigation and direct work shortcuts",
+      "Manual reply, unsent-draft guard, takeover and return preserve global pause",
+      "Two-click price path, unchanged stock, lost-response retry uses identical batch",
+      "Stock tasks preview holds and available units, with stable retry identity",
+      "Mixed inline updates write only edited price/count and retain reservations",
+      "Full product editor and AI details preserve merchant price and selling unit",
+      "Uncertain stock retry freezes the entire payload even after product metadata refresh",
+      "Settings, pause, billing analytics and unknown-charge warnings retained",
+      "Message previews render without sending or interactive commerce actions",
+      "All six views and inline grid fit 360/390/1024/1536 widths with internal scrolling",
+      "Tamil daily controls and saved owner-language preference",
+      "Expired sign-in retains the live draft and restores access in the original tab"
+    ],
+    "newPricePathClicks": 2,
+    "clickMeasurements": {
+      "before": [
+        "Update price",
+        "Confirm checked price",
+        "Review price",
+        "Save price"
+      ],
+      "after": [
+        "Update price",
+        "Save price"
+      ]
+    },
+    "pageErrors": []
+  },
+  "actualLocalApiBrowser": {
+    "realLocalDatabase": true,
+    "synthetic": true,
+    "views": 6,
+    "viewports": [
+      1440,
+      390
+    ],
+    "priceSavedPaise": 3150,
+    "physicalCountSaved": 18,
+    "pageErrors": []
+  },
+  "remaining": [
+    "Two baseline customer conversation regressions",
+    "Hosted checks",
+    "Physical phone keyboard / screen reader / enlarged text",
+    "Intended staff task and Tamil copy acceptance",
+    "Older hardware and weak-network performance measurements",
+    "Controlled release acceptance"
+  ]
+}
