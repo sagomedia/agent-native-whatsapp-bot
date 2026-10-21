@@ -1,0 +1,242 @@
+{
+  "date": "2026-10-21",
+  "repository": "sagomedia/agent-native-whatsapp-bot",
+  "before_main": "fccf1e39e130d565ff838fdfc28076304b551fbf",
+  "latest_sha": "9b7bafe0ce68b6c719103bfb61961dc91c5fca36",
+  "consolidation_merge": "e97777cd7fd16dad728f46103f0fb09d6422b565",
+  "branches": [
+    {
+      "branch": "codex/bulk-image-deadline-20261017",
+      "sha": "5f3c224422b0d183f4eddd087e50045cb2d3aaf9",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/catalog-3000-implementation-20261017",
+      "sha": "4a3054d7dff09b745b425cbd759c77076bdabad1",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/catalog-bulk-20261017",
+      "sha": "14ce1f3ef880d7b88b6d1ab30f1f82cffffd17d3",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/catalog-discovery-pages-20261017",
+      "sha": "b35300bf21db3a0fd77bf42b978d891393bf556c",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/catalog-native-tools-20261017",
+      "sha": "db3b2ceb59f91161b5f3cdd4193dd16ecdfca4e4",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/catalog-owner-pages-20261017",
+      "sha": "ea9a2ee863cfd63fc46bf2735f7d0179a058229d",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/catalog-reference-photos-20261017",
+      "sha": "99c2bf0b053ed260f191f41a6aaf26c4e1a99046",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/catalog-retrieval-scale-20261017",
+      "sha": "a6cafe44166d94a4080374b64c55ab4290231e83",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/catalog-review-later-20261017",
+      "sha": "8f4b135324d76cf63fe949a29c3dfa3226d6720f",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/compact-corrections-20261018",
+      "sha": "1f3826682f003c9f058f406d8b4c309cafdf9d6f",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/compact-whatsapp-20261016",
+      "sha": "44f3d6898c8b0303612487a245dd4a38ecdca0d6",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/convenience-stock-20261016",
+      "sha": "00b45563d342dba3b801977ffdf4120bcf44e1f8",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/conversation-review-fixes-20261014",
+      "sha": "2403f76e0c770b9217fc191d2dc88ff8581560d3",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/crud-language-20261019",
+      "sha": "9b61d8ac6cea8a080c56a4a1da0f00e1563bdb10",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/customer-ux-20261019",
+      "sha": "8d55b42516db98f68154f8ff8bc005cbf686e0c6",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/dashboard-usability-20261021",
+      "sha": "9b7bafe0ce68b6c719103bfb61961dc91c5fca36",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/decision-layer-research-20261018",
+      "sha": "e506b2d832dd538ab4709bf875d2b173d172761e",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/finish-customer-ordering-20261015",
+      "sha": "2c90ece1e036fdcd390827587fa592c342c4a660",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/next-demo-plan-20261018",
+      "sha": "780ce26e26d6503ad4a9422aa516a4a1f2f9e509",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/order-review-workbench-20261020",
+      "sha": "f3a982747e95e37bbe58e678ea43209b696f5b54",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/owner-readiness-bulk-facts-20261018",
+      "sha": "ea6db8d2d1375e026eff1ac75e7a3023e6fe5501",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/product-editor-image-speed-20261018",
+      "sha": "42fe130a4842489883eb1caf19442d26f5b47a2b",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/restore-visual-shopping-20261020",
+      "sha": "d2edf59bbd1cc9e7c275c991721d7d3faea1050c",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/reviewed-catalog-assembly-20261017",
+      "sha": "42098d1571dfba8bf3e6a5d9e7f45262ede4a140",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/voice-cart-targets-20261019",
+      "sha": "1d27a0cd056c09292ce69474f5b59d37032d4a88",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/voice-compound-removal-20261019",
+      "sha": "c30dca25a9e53eba4ec982b68c8592b38d0b66b7",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/voice-order-recovery-final",
+      "sha": "2955219c07d28ec47f612e9f6b920757becbb414",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "codex/whatsapp-delivery-recovery-20261019",
+      "sha": "d8c8deaa437bf9ae18750ed528da822c4b4804a8",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "feature/catalog-mindmap",
+      "sha": "1c47977025f0bb94a1f6f223043011a85bc0b6e7",
+      "contained_in_latest": true
+    },
+    {
+      "branch": "main",
+      "sha": "fccf1e39e130d565ff838fdfc28076304b551fbf",
+      "contained_in_latest": true
+    }
+  ],
+  "tags": [
+    {
+      "tag": "checkpoint/catalog-mindmap-voice",
+      "sha": "d8e93fe3262778664b814ca9ff432abcf7cb7a5d"
+    },
+    {
+      "tag": "checkpoint/image-search",
+      "sha": "1c47977025f0bb94a1f6f223043011a85bc0b6e7"
+    },
+    {
+      "tag": "checkpoint/language-storage-audit",
+      "sha": "b165d4c07f817240e2fc8bf154928871e424d7f3"
+    },
+    {
+      "tag": "checkpoint/visual-confirmation",
+      "sha": "7dd651bc2daf349d284ce744714716d7448bd160"
+    }
+  ],
+  "retained_active_branch": "codex/dashboard-usability-20261021",
+  "removed_historical_branches": [
+    "codex/crud-language-20261019",
+    "codex/customer-ux-20261019",
+    "codex/decision-layer-research-20261018",
+    "codex/next-demo-plan-20261018",
+    "codex/order-review-workbench-20261020",
+    "codex/owner-readiness-bulk-facts-20261018",
+    "codex/product-editor-image-speed-20261018",
+    "codex/restore-visual-shopping-20261020",
+    "codex/voice-cart-targets-20261019",
+    "codex/voice-compound-removal-20261019",
+    "codex/whatsapp-delivery-recovery-20261019",
+    "feature/catalog-mindmap",
+    "codex/bulk-image-deadline-20261017",
+    "codex/catalog-3000-implementation-20261017",
+    "codex/catalog-bulk-20261017",
+    "codex/catalog-discovery-pages-20261017",
+    "codex/catalog-native-tools-20261017",
+    "codex/catalog-owner-pages-20261017",
+    "codex/catalog-reference-photos-20261017",
+    "codex/catalog-retrieval-scale-20261017",
+    "codex/catalog-review-later-20261017",
+    "codex/compact-corrections-20261018",
+    "codex/compact-whatsapp-20261016",
+    "codex/convenience-stock-20261016",
+    "codex/conversation-review-fixes-20261014",
+    "codex/finish-customer-ordering-20261015",
+    "codex/reviewed-catalog-assembly-20261017",
+    "codex/voice-order-recovery-final"
+  ],
+  "remaining_branches": [
+    "codex/dashboard-usability-20261021",
+    "main"
+  ],
+  "original_open_pull_requests": [
+    4,
+    5,
+    7,
+    9,
+    11,
+    13,
+    19,
+    20,
+    21,
+    22,
+    24,
+    25,
+    26,
+    28,
+    30,
+    33,
+    35,
+    37,
+    39,
+    41,
+    43,
+    45,
+    47,
+    49,
+    51,
+    54
+  ],
+  "application_changes_during_cleanup": false,
+  "deployment_performed": false
+}

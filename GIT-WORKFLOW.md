@@ -1,29 +1,55 @@
 # GitHub workflow, checkpoints and rollback
 
-The private GitHub repository is [sagomedia/agent-native-whatsapp-bot](https://github.com/sagomedia/agent-native-whatsapp-bot). `origin` uses its HTTPS URL. `main` contains the current application plus repository setup; `feature/catalog-mindmap` retains the pre-setup application state. New changes should use a separate branch and pull request, with the automated checks passing before merge. See `CONTRIBUTING.md`.
+The private repository is [sagomedia/agent-native-whatsapp-bot](https://github.com/sagomedia/agent-native-whatsapp-bot). `main` is the current published source baseline. The 21 October consolidation preserved the ordering, catalog, WhatsApp recovery and owner-dashboard history in `main` and retired 28 obsolete branches. [The cleanup record](03-Output/branch-cleanup-20261021/README.md) maps every original branch to its preserved commit.
 
-Use a normal local-disk Git checkout for active development. The recovered checkout on this computer is `/home/gk-pc/whatsapp-bot-finish`; its working branch tracks the matching branch on `origin`. The historical SMB workspace can be disconnected. SMB does not support the chmod operations required to initialize Git metadata, so that older workspace's `.git` points to `/home/gk-pc/.local/share/shopbot-ai/project-git` on this computer. That pointer is specific to this machine. A GitHub clone on a normal local filesystem has its own portable `.git` directory.
+`codex/dashboard-usability-20261021` remains for newer, unfinished inventory work in the existing local checkout. Its earlier published dashboard changes are already in `main`; the newer local work has not been merged or published by the cleanup. Deployment and owner/device/payment acceptance remain separate from source consolidation.
+
+## Daily development
+
+Use a normal local-disk checkout. Save any wanted edits before switching branches, then start each new change from current `main`:
+
+```bash
+git switch main
+git pull --ff-only origin main
+git switch -c codex/describe-the-change
+```
+
+Push the change and open a pull request against `main`. Run the checks in [CONTRIBUTING.md](CONTRIBUTING.md), verify the hosted result, and merge when they pass. Retire the completed branch and start the next change from updated `main`. GitHub's automatic deletion of merged branches is enabled. Preserve unfinished local work before deleting branch names or pruning local history.
+
+For a consolidation of stacked branches, use a merge commit to preserve their original ancestry. Verify that every branch tip being retired is an ancestor of `main`; a matching filename or similar commit message is insufficient. A branch that has moved since the audit needs another check.
+
+The historical SMB workspace can be disconnected. Its `.git` points to `/home/gk-pc/.local/share/shopbot-ai/project-git` on this computer because SMB did not support the required Git metadata operations. This pointer is specific to that machine. A normal local clone has its own portable `.git` directory. Do not reset or replace the existing checkout to resolve a missing shared-drive mount.
+
+## Checkpoints and historical local images
+
+The four existing tags remain unchanged:
 
 - `checkpoint/visual-confirmation`: verified visual-confirmation baseline (`7dd651b`).
-- `checkpoint/catalog-mindmap-voice`: the original verified catalog/recorded-voice phase.
-- `checkpoint/language-storage-audit`: Tamil normalization/audio metadata fixes, catalog preparation kit and language audit. This checkpoint records live language failures; it is not a multilingual-readiness milestone.
+- `checkpoint/catalog-mindmap-voice`: original verified catalog/recorded-voice phase.
+- `checkpoint/language-storage-audit`: Tamil normalization/audio metadata fixes, catalog preparation kit and language audit. This records live language failures, not multilingual readiness.
+- `checkpoint/image-search`: customer photo upload and guarded read-only recognition flow. This preserves the old `feature/catalog-mindmap` branch tip.
 
-Before changing versions, keep the working tree clean (`git status --short`) and save wanted changes in a commit. Use `git switch main` for current development or `git switch --detach checkpoint/visual-confirmation` to inspect the older baseline. Return with `git switch main`. Switching source alone does not restart Docker. Rebuild the selected app from `02-Build/shopbot-ai` with `docker compose up -d --build app`. Existing database/media volumes are preserved; these additive migrations do not provide a database rollback or restore historical order data.
+Keep the working tree clean before inspecting an earlier checkpoint:
 
-The deployed local image also preserves `shopbot-ai-visual-baseline` for immediate app rollback. Tag that image as `shopbot-ai-local-app`, then run `docker compose up -d --no-build app`. The updated candidate is `shopbot-ai-mindmap-candidate`. Refresh and choose New chat after an app restart because signed local test cookies are process-specific.
+```bash
+git status --short
+git switch --detach checkpoint/visual-confirmation
+# Inspect the historical source, then return to the published baseline.
+git switch main
+```
 
-Image-upload checkpoint: `checkpoint/image-search` records the customer photo upload and guarded read-only recognition flow. The deployed candidate is `shopbot-ai-image-candidate`; `shopbot-ai-language-baseline` preserves the prior app image.
+Earlier local Docker experiments used the image names `shopbot-ai-visual-baseline`, `shopbot-ai-mindmap-candidate`, `shopbot-ai-language-baseline` and `shopbot-ai-image-candidate`. These are historical names; inspect the actual local images and deployed release before using them. Switching source does not rebuild Docker or update the VPS. Database and media volumes need their own backups; additive migrations do not supply a database rollback.
 
 ## Portable history
 
-A metadata pointer copied to another computer will not carry its history. `03-Output/shopbot-ai-history.bundle` exports all current commits, branches and tags. The bundle is ignored by Git and contains no ignored `.env`, audio, node_modules or runtime database. From the project root, refresh it after a new commit with:
+A Git metadata pointer copied to another computer does not carry its history. A bundle exports committed source, branches and tags. The ignored `03-Output/shopbot-ai-history.bundle` can be refreshed from the project root:
 
 ```bash
 git bundle create 03-Output/shopbot-ai-history.bundle --all
 git bundle verify 03-Output/shopbot-ai-history.bundle
 ```
 
-To recover independently, clone the bundle into a normal local-disk directory:
+To recover independently, clone the bundle onto a local disk:
 
 ```bash
 git clone --branch main /path/to/shopbot-ai-history.bundle /path/to/local-shopbot
@@ -32,4 +58,4 @@ git switch --detach checkpoint/visual-confirmation
 git switch main
 ```
 
-Environment settings and persistent database volumes are separate local runtime state. The GitHub repository and history bundle preserve tracked source, documents and demo evidence; neither contains ignored credentials or a runtime-data backup.
+Retired branch commits remain reachable through `main`. Use the commit mapping in the cleanup record to recreate an old branch if needed. The cleanup also saved and verified a full pre-cleanup bundle locally. Neither GitHub nor a history bundle includes ignored credentials, uncommitted edits, customer uploads or a runtime-data backup. Preserve those separately.

@@ -14,6 +14,8 @@ git switch -c codex/describe-the-change
 
 Make focused commits describing the behavior changed. Review `git diff` and `git diff --cached` before committing. Push the branch and open a pull request against `main`; describe the outcome, validation and known limitations. Merge after the checks pass. `checkpoint/*` tags preserve earlier verified versions; do not move or delete them as part of routine development.
 
+Keep one branch per unfinished change. After merging, start the next change from updated `main`; do not accumulate new stages on branches whose pull requests have already merged. Delete a completed branch only after its commits are preserved in `main` and any unpublished local work has been saved. Close superseded stacked pull requests with a link to the consolidation that preserves their work. GitHub's automatic deletion of merged branches is enabled; remote branch deletion does not remove a local checkout or its uncommitted edits.
+
 ## Tracking and publication
 
 Track bugs, requested features and remaining acceptance work in GitHub Issues, and link the relevant issue from the pull request. Keep owner/device acceptance issues open until the actual checks are recorded; merging code does not complete a real-device or payment test.
