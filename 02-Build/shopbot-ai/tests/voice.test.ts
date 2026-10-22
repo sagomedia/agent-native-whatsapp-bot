@@ -1,6 +1,6 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {randomUUID} from 'node:crypto';import pg from 'pg';import {FinishReason,GenerateContentResponse,ThinkingLevel} from '@google/genai';
 import {spokenClearCommand} from '../apps/server/src/services/shopping-language.js';
-import {geminiSpeechRate} from '../apps/server/src/services/inference-budget.js';
+import {geminiTextRate} from '../apps/server/src/services/inference-budget.js';
 import {setupDatabase} from '../apps/server/src/db/migrate.js';import {setupImageDemo,demoCatalogStore} from '../apps/server/src/services/demo-catalog.js';import {normalizeVoice,pcmWav,verifyVoiceDecoder,loadVoice} from '../apps/server/src/services/voice-media.js';import {SimulatorService} from '../apps/server/src/services/simulator.js';import {ConversationRuntime} from '../apps/server/src/runtime/conversation.js';import {GoogleInterpreter} from '../apps/server/src/adapters/google-interpreter.js';import {initializeBudget} from '../apps/server/src/services/inference-budget.js';import {createApp} from '../apps/server/src/http/app.js';
 const settings={allowPaidInference:false,apiKey:'offline-placeholder',model:'gemini-3.5-flash-lite',budgetMicrousd:0,freeQuota:{scope:'voice-test',model:'gemini-3.5-flash-lite'}};
 function wav(seconds:number){const pcm=Buffer.alloc(Math.round(seconds*16000)*2);for(let i=0;i<pcm.length/2;i++)pcm.writeInt16LE(Math.round(Math.sin(i*0.17)*1200),i*2);return pcmWav(pcm);}
@@ -170,7 +170,7 @@ test('spoken language preference uses recognition only',async()=>fixture(async(p
 test('paid voice recognition, planning and recommendation each settle a separate budgeted attempt',async()=>fixture(async(pool,inbox)=>{
  let calls=0;const provider=new GoogleInterpreter({...settings,freeQuota:undefined,allowPaidInference:true,allowMultimodal:true,budgetMicrousd:1000000},{generateContent:async params=>{
   calls++;const schema=(params.config?.responseJsonSchema as any)?.properties;
-  if((params.config?.responseJsonSchema as any)?.properties?.transcript&&!(params.config?.responseJsonSchema as any)?.properties?.operations)return Object.assign(response({}),{modelVersion:geminiSpeechRate.model,candidates:[{finishReason:FinishReason.STOP,content:{parts:[{text:JSON.stringify({transcript:'Show me a pipe cutter'})}]}}]});
+  if((params.config?.responseJsonSchema as any)?.properties?.transcript&&!(params.config?.responseJsonSchema as any)?.properties?.operations)return Object.assign(response({}),{modelVersion:geminiTextRate.model,candidates:[{finishReason:FinishReason.STOP,content:{parts:[{text:JSON.stringify({transcript:'Show me a pipe cutter'})}]}}]});
   if(schema?.skus)return response({skus:['H19'],question:null});
   assert.match(params.contents as string,/Show me a pipe cutter/);return response({operations:[],next:'assist',assistance:{queries:['pipe cutter'],rootQuery:'pipe cutter'},assistanceSearch:{keywords:['pipe cutter']}});
  }});
@@ -179,7 +179,7 @@ test('paid voice recognition, planning and recommendation each settle a separate
  const u=upload(12);await inbox.ingest({id:u.id,type:'voice',mediaId:u.id},await normalizeVoice(u));await runtime.processNext(inbox.context);
  const attempts=(await pool.query('SELECT stage,state,billing_state,provider,rate_snapshot FROM provider_attempts WHERE message_id=$1 ORDER BY attempt',[u.id])).rows;
  assert.equal(calls,3);assert.deepEqual(attempts.map(a=>a.stage),['recognize','identify','recommend']);assert.ok(attempts.every(a=>a.state==='succeeded'&&a.billing_state==='estimated'));
- assert.equal(attempts[0].provider,'google:'+geminiSpeechRate.model);assert.equal(attempts[0].rate_snapshot.model,geminiSpeechRate.model);assert.equal(attempts[1].rate_snapshot.model,settings.model);
+ assert.equal(attempts[0].provider,'google:'+geminiTextRate.model);assert.equal(attempts[0].rate_snapshot.model,geminiTextRate.model);assert.equal(attempts[1].rate_snapshot.model,settings.model);
  const budget=(await pool.query('SELECT held_microusd,committed_microusd FROM inference_budgets WHERE store_id=$1',[inbox.context.storeId])).rows[0];assert.equal(Number(budget.held_microusd),0);assert.equal(Number(budget.committed_microusd),2235);
  assert.equal((await inbox.snapshot()).conversation.draft.length,0);
 }));
@@ -205,7 +205,7 @@ test('one transient paid recognition retry allows all four accounted stages with
  let calls=0,speechCalls=0;
  const provider=new GoogleInterpreter({...settings,freeQuota:undefined,allowPaidInference:true,allowMultimodal:true,budgetMicrousd:1000000},{generateContent:async params=>{
   calls++;
-  if((params.config?.responseJsonSchema as any)?.properties?.transcript&&!(params.config?.responseJsonSchema as any)?.properties?.operations){speechCalls++;if(speechCalls===1)throw Object.assign(new Error('temporary speech error'),{status:503});return Object.assign(response({}),{modelVersion:geminiSpeechRate.model,candidates:[{finishReason:FinishReason.STOP,content:{parts:[{text:JSON.stringify({transcript:'Show me a pipe cutter'})}]}}]});}
+  if((params.config?.responseJsonSchema as any)?.properties?.transcript&&!(params.config?.responseJsonSchema as any)?.properties?.operations){speechCalls++;if(speechCalls===1)throw Object.assign(new Error('temporary speech error'),{status:503});return Object.assign(response({}),{modelVersion:geminiTextRate.model,candidates:[{finishReason:FinishReason.STOP,content:{parts:[{text:JSON.stringify({transcript:'Show me a pipe cutter'})}]}}]});}
   if((params.config?.responseJsonSchema as any)?.properties?.skus)return response({skus:['H19'],question:null});
   return response({operations:[],next:'assist',assistance:{queries:['pipe cutter'],rootQuery:'pipe cutter'},assistanceSearch:{keywords:['pipe cutter']}});
  }});
