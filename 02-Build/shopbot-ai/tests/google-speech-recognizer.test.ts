@@ -37,7 +37,7 @@ test('dedicated transcription is explicit, paid, multimodal and separate from th
  const env={ALLOW_PAID_INFERENCE:'true',ALLOW_MULTIMODAL_INFERENCE:'true',GEMINI_API_KEY:'offline',AI_BUDGET_USD:'1',GEMINI_TRANSCRIPTION_MODEL:geminiSpeechRate.model};
  const configured=readNativeSettings(env);assert.equal(configured.model,geminiTextRate.model);assert.equal(configured.transcriptionModel,geminiSpeechRate.model);
  const provider=new GoogleInterpreter(configured);assert.equal(provider.recognitionProviderFor(input).billing?.model,geminiSpeechRate.model);assert.equal(provider.billing.model,geminiTextRate.model);
- assert.equal(new GoogleInterpreter({...configured,transcriptionModel:undefined}).recognitionProviderFor(input).billing?.model,geminiTextRate.model);
+ const combined=new GoogleInterpreter({...configured,transcriptionModel:undefined});assert.equal(combined.recognitionProviderFor(input).billing?.model,geminiTextRate.model);assert.notEqual(provider.name,combined.name);
  for(const overrides of [{ALLOW_MULTIMODAL_INFERENCE:'false'},{ALLOW_PAID_INFERENCE:'false'},{ALLOW_FREE_INFERENCE:'true'},{GEMINI_TRANSCRIPTION_MODEL:'unreviewed'}])assert.throws(()=>readNativeSettings({...env,...overrides}),/Dedicated transcription/);
 });
 test('pinned SDK uses one real Interactions HTTP request with no GenerateContent configuration',async()=>{
