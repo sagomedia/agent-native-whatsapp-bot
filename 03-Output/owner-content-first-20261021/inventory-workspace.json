@@ -1,0 +1,385 @@
+{
+  "synthetic": true,
+  "productionAssets": true,
+  "realLocalApi": true,
+  "inventoryRowsVisibleAt1440": 9,
+  "layouts": [
+    {
+      "width": 1920,
+      "height": 1080,
+      "locale": "en",
+      "section": "general"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "locale": "en",
+      "section": "selling"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "locale": "en",
+      "section": "stock"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "locale": "en",
+      "section": "photos"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "locale": "en",
+      "section": "search"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "locale": "ta",
+      "section": "general"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "locale": "ta",
+      "section": "selling"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "locale": "ta",
+      "section": "stock"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "locale": "ta",
+      "section": "photos"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "locale": "ta",
+      "section": "search"
+    },
+    {
+      "width": 1440,
+      "height": 1000,
+      "locale": "en",
+      "section": "general"
+    },
+    {
+      "width": 1440,
+      "height": 1000,
+      "locale": "en",
+      "section": "selling"
+    },
+    {
+      "width": 1440,
+      "height": 1000,
+      "locale": "en",
+      "section": "stock"
+    },
+    {
+      "width": 1440,
+      "height": 1000,
+      "locale": "en",
+      "section": "photos"
+    },
+    {
+      "width": 1440,
+      "height": 1000,
+      "locale": "en",
+      "section": "search"
+    },
+    {
+      "width": 1440,
+      "height": 1000,
+      "locale": "ta",
+      "section": "general"
+    },
+    {
+      "width": 1440,
+      "height": 1000,
+      "locale": "ta",
+      "section": "selling"
+    },
+    {
+      "width": 1440,
+      "height": 1000,
+      "locale": "ta",
+      "section": "stock"
+    },
+    {
+      "width": 1440,
+      "height": 1000,
+      "locale": "ta",
+      "section": "photos"
+    },
+    {
+      "width": 1440,
+      "height": 1000,
+      "locale": "ta",
+      "section": "search"
+    },
+    {
+      "width": 1024,
+      "height": 600,
+      "locale": "en",
+      "section": "general"
+    },
+    {
+      "width": 1024,
+      "height": 600,
+      "locale": "en",
+      "section": "selling"
+    },
+    {
+      "width": 1024,
+      "height": 600,
+      "locale": "en",
+      "section": "stock"
+    },
+    {
+      "width": 1024,
+      "height": 600,
+      "locale": "en",
+      "section": "photos"
+    },
+    {
+      "width": 1024,
+      "height": 600,
+      "locale": "en",
+      "section": "search"
+    },
+    {
+      "width": 1024,
+      "height": 600,
+      "locale": "ta",
+      "section": "general"
+    },
+    {
+      "width": 1024,
+      "height": 600,
+      "locale": "ta",
+      "section": "selling"
+    },
+    {
+      "width": 1024,
+      "height": 600,
+      "locale": "ta",
+      "section": "stock"
+    },
+    {
+      "width": 1024,
+      "height": 600,
+      "locale": "ta",
+      "section": "photos"
+    },
+    {
+      "width": 1024,
+      "height": 600,
+      "locale": "ta",
+      "section": "search"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "locale": "en",
+      "section": "general"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "locale": "en",
+      "section": "selling"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "locale": "en",
+      "section": "stock"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "locale": "en",
+      "section": "photos"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "locale": "en",
+      "section": "search"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "locale": "ta",
+      "section": "general"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "locale": "ta",
+      "section": "selling"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "locale": "ta",
+      "section": "stock"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "locale": "ta",
+      "section": "photos"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "locale": "ta",
+      "section": "search"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "locale": "en",
+      "section": "general"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "locale": "en",
+      "section": "selling"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "locale": "en",
+      "section": "stock"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "locale": "en",
+      "section": "photos"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "locale": "en",
+      "section": "search"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "locale": "ta",
+      "section": "general"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "locale": "ta",
+      "section": "selling"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "locale": "ta",
+      "section": "stock"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "locale": "ta",
+      "section": "photos"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "locale": "ta",
+      "section": "search"
+    },
+    {
+      "width": 320,
+      "height": 640,
+      "locale": "en",
+      "section": "general"
+    },
+    {
+      "width": 320,
+      "height": 640,
+      "locale": "en",
+      "section": "selling"
+    },
+    {
+      "width": 320,
+      "height": 640,
+      "locale": "en",
+      "section": "stock"
+    },
+    {
+      "width": 320,
+      "height": 640,
+      "locale": "en",
+      "section": "photos"
+    },
+    {
+      "width": 320,
+      "height": 640,
+      "locale": "en",
+      "section": "search"
+    },
+    {
+      "width": 320,
+      "height": 640,
+      "locale": "ta",
+      "section": "general"
+    },
+    {
+      "width": 320,
+      "height": 640,
+      "locale": "ta",
+      "section": "selling"
+    },
+    {
+      "width": 320,
+      "height": 640,
+      "locale": "ta",
+      "section": "stock"
+    },
+    {
+      "width": 320,
+      "height": 640,
+      "locale": "ta",
+      "section": "photos"
+    },
+    {
+      "width": 320,
+      "height": 640,
+      "locale": "ta",
+      "section": "search"
+    }
+  ],
+  "zeroEditorCheckboxes": true,
+  "keyboardTabs": true,
+  "cachedNavigationStyleIsolation": true,
+  "editsSurviveSectionChanges": true,
+  "invalidReviewWrites": 0,
+  "phonePublicationDialogs": [
+    "en",
+    "ta"
+  ],
+  "publicationModalConfirmations": 2,
+  "publishWrites": 2,
+  "unknownPriceAndStockPreserved": true,
+  "automaticPriceStatus": true,
+  "priceToConfirmClearsObsoleteValue": true,
+  "approvedNoPhotoChoiceRetained": true,
+  "secondPriceSavedPaise": 1550,
+  "pageErrors": []
+}

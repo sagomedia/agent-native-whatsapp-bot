@@ -1,0 +1,1132 @@
+{
+  "date": "2026-10-21",
+  "acceptedScope": "4f0e8e8",
+  "functionalBaseline": "d1853a0974658f0f3117cf213a9640ece16ad743",
+  "productionAssets": true,
+  "syntheticShopOnly": true,
+  "liveSending": false,
+  "inference": false,
+  "vpsDeployment": false,
+  "sourceSha256": {
+    "OrderQuoteEditor.tsx": "df1035d1b888a4a220f4a2c21f86624923a1fbfa5d12ec2a26049d60a81deb99",
+    "OwnerCatalog.tsx": "79aa15430e1631bf59e6fd225630a26925e92e8de522a84cc03b3a52d3427960",
+    "OwnerDashboard.tsx": "8c688044d24d3991c4af2ea2cf6c88810cbca67821637499a2efc6a5b475d970",
+    "OwnerOrders.tsx": "889c2d109e1c5b9d199f4c642d4573f7b1edda8b81e7f7aab7d921faf16bb063",
+    "OwnerTools.tsx": "037ae027777c69ab0c8ab2bbae485e38d79032f2232e765c1c28411362091ce1",
+    "owner-content.css": "a7e0310f0c23c71a90db2f461c679e9363b9c8021d6de99fd8db3982bcdccbb7",
+    "owner-locale.tsx": "3be2fcd9a0583fa37a0dcce1abbb52ef53b784ce8e75322d8d88993e347dafca"
+  },
+  "buildTypecheck": "passed",
+  "catalogCleanup": {
+    "passed": 4,
+    "failed": 0
+  },
+  "browserSuites": {
+    "contentSpace": {
+      "evidence": "owner-content-space.json",
+      "result": {
+        "synthetic": true,
+        "readOnly": true,
+        "results": [
+          {
+            "screen": "orders",
+            "locale": "en",
+            "width": 320,
+            "viewportHeight": 640,
+            "top": 174,
+            "height": 490.078125,
+            "available": 406,
+            "visible": 406,
+            "innerScroll": "visible",
+            "completeRows": 3
+          },
+          {
+            "screen": "order-detail",
+            "locale": "en",
+            "width": 320,
+            "viewportHeight": 640,
+            "top": 181.6875,
+            "height": 317.875,
+            "available": 458.3125,
+            "visible": 317.875,
+            "innerScroll": "auto"
+          },
+          {
+            "screen": "messages",
+            "locale": "en",
+            "width": 320,
+            "viewportHeight": 640,
+            "top": 192.984375,
+            "height": 372.625,
+            "available": 447.015625,
+            "visible": 372.625,
+            "innerScroll": "auto"
+          },
+          {
+            "screen": "product",
+            "locale": "en",
+            "width": 320,
+            "viewportHeight": 640,
+            "top": 326.15625,
+            "height": 1152.71875,
+            "available": 313.84375,
+            "visible": 313.84375,
+            "innerScroll": "visible",
+            "usable": 239.25
+          },
+          {
+            "screen": "orders",
+            "locale": "ta",
+            "width": 320,
+            "viewportHeight": 640,
+            "top": 174,
+            "height": 490.078125,
+            "available": 406,
+            "visible": 406,
+            "innerScroll": "visible",
+            "completeRows": 3
+          },
+          {
+            "screen": "order-detail",
+            "locale": "ta",
+            "width": 320,
+            "viewportHeight": 640,
+            "top": 181.6875,
+            "height": 307.5,
+            "available": 458.3125,
+            "visible": 307.5,
+            "innerScroll": "auto"
+          },
+          {
+            "screen": "messages",
+            "locale": "ta",
+            "width": 320,
+            "viewportHeight": 640,
+            "top": 192.984375,
+            "height": 371.421875,
+            "available": 447.015625,
+            "visible": 371.421875,
+            "innerScroll": "auto"
+          },
+          {
+            "screen": "product",
+            "locale": "ta",
+            "width": 320,
+            "viewportHeight": 640,
+            "top": 341,
+            "height": 1152.71875,
+            "available": 299,
+            "visible": 299,
+            "innerScroll": "visible",
+            "usable": 224.40625
+          },
+          {
+            "screen": "orders",
+            "locale": "en",
+            "width": 390,
+            "viewportHeight": 844,
+            "top": 174,
+            "height": 490.078125,
+            "available": 610,
+            "visible": 490.078125,
+            "innerScroll": "visible",
+            "completeRows": 4
+          },
+          {
+            "screen": "order-detail",
+            "locale": "en",
+            "width": 390,
+            "viewportHeight": 844,
+            "top": 181.6875,
+            "height": 521.875,
+            "available": 662.3125,
+            "visible": 521.875,
+            "innerScroll": "auto"
+          },
+          {
+            "screen": "messages",
+            "locale": "en",
+            "width": 390,
+            "viewportHeight": 844,
+            "top": 192.984375,
+            "height": 583.015625,
+            "available": 651.015625,
+            "visible": 583.015625,
+            "innerScroll": "auto"
+          },
+          {
+            "screen": "product",
+            "locale": "en",
+            "width": 390,
+            "viewportHeight": 844,
+            "top": 326.15625,
+            "height": 1095.390625,
+            "available": 517.84375,
+            "visible": 517.84375,
+            "innerScroll": "visible",
+            "usable": 448.84375
+          },
+          {
+            "screen": "orders",
+            "locale": "ta",
+            "width": 390,
+            "viewportHeight": 844,
+            "top": 174,
+            "height": 490.078125,
+            "available": 610,
+            "visible": 490.078125,
+            "innerScroll": "visible",
+            "completeRows": 4
+          },
+          {
+            "screen": "order-detail",
+            "locale": "ta",
+            "width": 390,
+            "viewportHeight": 844,
+            "top": 181.6875,
+            "height": 521.875,
+            "available": 662.3125,
+            "visible": 521.875,
+            "innerScroll": "auto"
+          },
+          {
+            "screen": "messages",
+            "locale": "ta",
+            "width": 390,
+            "viewportHeight": 844,
+            "top": 192.984375,
+            "height": 576.625,
+            "available": 651.015625,
+            "visible": 576.625,
+            "innerScroll": "auto"
+          },
+          {
+            "screen": "product",
+            "locale": "ta",
+            "width": 390,
+            "viewportHeight": 844,
+            "top": 341,
+            "height": 1095.390625,
+            "available": 503,
+            "visible": 503,
+            "innerScroll": "visible",
+            "usable": 434
+          },
+          {
+            "screen": "long-tamil-orders",
+            "locale": "ta",
+            "width": 320,
+            "viewportHeight": 640,
+            "top": 174,
+            "height": 506.875,
+            "available": 406,
+            "visible": 406,
+            "innerScroll": "visible",
+            "completeRows": 3
+          },
+          {
+            "screen": "long-tamil-orders",
+            "locale": "ta",
+            "width": 390,
+            "viewportHeight": 844,
+            "top": 174,
+            "height": 506.875,
+            "available": 610,
+            "visible": 506.875,
+            "innerScroll": "visible",
+            "completeRows": 4
+          }
+        ],
+        "paginationPreserved": true,
+        "phoneActions44px": true,
+        "toolsFocusTrap": true,
+        "searchReload": true,
+        "returnScroll": true,
+        "toolsEscapeFocus": true,
+        "helpEscapeFocus": true,
+        "breakpoints": [
+          800,
+          801
+        ],
+        "shortViewport": [
+          320,
+          400
+        ],
+        "pageErrors": []
+      }
+    },
+    "pageDesign": {
+      "evidence": "owner-design.json",
+      "result": {
+        "synthetic": true,
+        "realReads": true,
+        "realWrites": 0,
+        "csvPreviewIntercepts": 1,
+        "layouts": [
+          {
+            "view": "overview",
+            "width": 1920,
+            "height": 1080
+          },
+          {
+            "view": "requests",
+            "width": 1920,
+            "height": 1080
+          },
+          {
+            "view": "conversations",
+            "width": 1920,
+            "height": 1080
+          },
+          {
+            "view": "catalog",
+            "width": 1920,
+            "height": 1080
+          },
+          {
+            "view": "connections",
+            "width": 1920,
+            "height": 1080
+          },
+          {
+            "view": "message-review",
+            "width": 1920,
+            "height": 1080
+          },
+          {
+            "view": "overview",
+            "width": 1440,
+            "height": 1000
+          },
+          {
+            "view": "requests",
+            "width": 1440,
+            "height": 1000
+          },
+          {
+            "view": "conversations",
+            "width": 1440,
+            "height": 1000
+          },
+          {
+            "view": "catalog",
+            "width": 1440,
+            "height": 1000
+          },
+          {
+            "view": "connections",
+            "width": 1440,
+            "height": 1000
+          },
+          {
+            "view": "message-review",
+            "width": 1440,
+            "height": 1000
+          },
+          {
+            "view": "overview",
+            "width": 1024,
+            "height": 600
+          },
+          {
+            "view": "requests",
+            "width": 1024,
+            "height": 600
+          },
+          {
+            "view": "conversations",
+            "width": 1024,
+            "height": 600
+          },
+          {
+            "view": "catalog",
+            "width": 1024,
+            "height": 600
+          },
+          {
+            "view": "connections",
+            "width": 1024,
+            "height": 600
+          },
+          {
+            "view": "message-review",
+            "width": 1024,
+            "height": 600
+          },
+          {
+            "view": "overview",
+            "width": 768,
+            "height": 1024
+          },
+          {
+            "view": "requests",
+            "width": 768,
+            "height": 1024
+          },
+          {
+            "view": "conversations",
+            "width": 768,
+            "height": 1024
+          },
+          {
+            "view": "catalog",
+            "width": 768,
+            "height": 1024
+          },
+          {
+            "view": "connections",
+            "width": 768,
+            "height": 1024
+          },
+          {
+            "view": "message-review",
+            "width": 768,
+            "height": 1024
+          },
+          {
+            "view": "overview",
+            "width": 390,
+            "height": 844
+          },
+          {
+            "view": "requests",
+            "width": 390,
+            "height": 844
+          },
+          {
+            "view": "conversations",
+            "width": 390,
+            "height": 844
+          },
+          {
+            "view": "catalog",
+            "width": 390,
+            "height": 844
+          },
+          {
+            "view": "connections",
+            "width": 390,
+            "height": 844
+          },
+          {
+            "view": "message-review",
+            "width": 390,
+            "height": 844
+          },
+          {
+            "view": "overview",
+            "width": 320,
+            "height": 640
+          },
+          {
+            "view": "requests",
+            "width": 320,
+            "height": 640
+          },
+          {
+            "view": "conversations",
+            "width": 320,
+            "height": 640
+          },
+          {
+            "view": "catalog",
+            "width": 320,
+            "height": 640
+          },
+          {
+            "view": "connections",
+            "width": 320,
+            "height": 640
+          },
+          {
+            "view": "message-review",
+            "width": 320,
+            "height": 640
+          }
+        ],
+        "phoneOrders": [
+          {
+            "language": "en",
+            "state": "ready_for_pickup",
+            "complete": true,
+            "contentHeight": 295.578125
+          },
+          {
+            "language": "en",
+            "state": "awaiting_approval",
+            "complete": true,
+            "contentHeight": 295.578125
+          },
+          {
+            "language": "en",
+            "state": "awaiting_approval",
+            "complete": false,
+            "contentHeight": 317.875
+          },
+          {
+            "language": "en",
+            "state": "awaiting_approval",
+            "complete": false,
+            "contentHeight": 317.875
+          },
+          {
+            "language": "en",
+            "state": "awaiting_approval",
+            "complete": false,
+            "contentHeight": 317.875
+          },
+          {
+            "language": "en",
+            "state": "collected",
+            "complete": true,
+            "contentHeight": 371.28125
+          },
+          {
+            "language": "ta",
+            "state": "ready_for_pickup",
+            "complete": true,
+            "contentHeight": 270.90625
+          },
+          {
+            "language": "ta",
+            "state": "awaiting_approval",
+            "complete": true,
+            "contentHeight": 270.90625
+          },
+          {
+            "language": "ta",
+            "state": "awaiting_approval",
+            "complete": false,
+            "contentHeight": 307.5
+          },
+          {
+            "language": "ta",
+            "state": "awaiting_approval",
+            "complete": false,
+            "contentHeight": 307.5
+          },
+          {
+            "language": "ta",
+            "state": "awaiting_approval",
+            "complete": false,
+            "contentHeight": 307.5
+          },
+          {
+            "language": "ta",
+            "state": "collected",
+            "complete": true,
+            "contentHeight": 371.28125
+          }
+        ],
+        "primaryContrast": 6.6918167588587,
+        "errors": []
+      }
+    },
+    "innerWorkflows": {
+      "evidence": "owner-inner-workflows.json",
+      "result": {
+        "synthetic": true,
+        "commerceWritesMocked": true,
+        "realCsvPreviewStagedOnly": true,
+        "checks": [
+          "Order → stock repair and order → conversation both return directly to the exact order; unavailable reply is named honestly; original customer photos have a direct link",
+          "Record advance focuses the transaction field; the minimum reference length is visible before verification",
+          "Every secondary product section survives refresh; changing sections preserves edits",
+          "Price and stock submit by Enter and retain the inventory even after previously opening that product",
+          "Uncertain stock retry keeps its exact payload and prevents returning before recovery",
+          "Matching retry repeats the exact 200-character query rather than editing it",
+          "Selected-draft failure retries the same record directly",
+          "Failed draft filters hide stale rows; closing review cancels late selection navigation",
+          "CSV upload fits the first short-phone screen; a response-lost partial batch resumes after refresh without reuploading or automatic writes",
+          "Unavailable CSV restore offers retry and never shows an apply action for stale data",
+          "Real CSV staging survives reload and one-click navigation back to Products, with browser Back restoring the proposal and no fact changes or apply calls"
+        ],
+        "layouts": [
+          {
+            "width": 1440,
+            "height": 1000,
+            "locale": "en",
+            "screen": "stock return"
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "locale": "en",
+            "screen": "CSV start"
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "locale": "ta",
+            "screen": "stock return"
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "locale": "ta",
+            "screen": "CSV start"
+          },
+          {
+            "width": 768,
+            "height": 1024,
+            "locale": "en",
+            "screen": "stock return"
+          },
+          {
+            "width": 768,
+            "height": 1024,
+            "locale": "en",
+            "screen": "CSV start"
+          },
+          {
+            "width": 768,
+            "height": 1024,
+            "locale": "ta",
+            "screen": "stock return"
+          },
+          {
+            "width": 768,
+            "height": 1024,
+            "locale": "ta",
+            "screen": "CSV start"
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "locale": "en",
+            "screen": "stock return"
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "locale": "en",
+            "screen": "CSV start"
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "locale": "ta",
+            "screen": "stock return"
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "locale": "ta",
+            "screen": "CSV start"
+          },
+          {
+            "width": 320,
+            "height": 640,
+            "locale": "en",
+            "screen": "stock return"
+          },
+          {
+            "width": 320,
+            "height": 640,
+            "locale": "en",
+            "screen": "CSV start"
+          },
+          {
+            "width": 320,
+            "height": 640,
+            "locale": "ta",
+            "screen": "stock return"
+          },
+          {
+            "width": 320,
+            "height": 640,
+            "locale": "ta",
+            "screen": "CSV start"
+          }
+        ],
+        "pageErrors": []
+      }
+    },
+    "inventory": {
+      "evidence": "inventory-workspace.json",
+      "result": {
+        "synthetic": true,
+        "productionAssets": true,
+        "realLocalApi": true,
+        "inventoryRowsVisibleAt1440": 9,
+        "layouts": [
+          {
+            "width": 1920,
+            "height": 1080,
+            "locale": "en",
+            "section": "general"
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "locale": "en",
+            "section": "selling"
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "locale": "en",
+            "section": "stock"
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "locale": "en",
+            "section": "photos"
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "locale": "en",
+            "section": "search"
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "locale": "ta",
+            "section": "general"
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "locale": "ta",
+            "section": "selling"
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "locale": "ta",
+            "section": "stock"
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "locale": "ta",
+            "section": "photos"
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "locale": "ta",
+            "section": "search"
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "locale": "en",
+            "section": "general"
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "locale": "en",
+            "section": "selling"
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "locale": "en",
+            "section": "stock"
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "locale": "en",
+            "section": "photos"
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "locale": "en",
+            "section": "search"
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "locale": "ta",
+            "section": "general"
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "locale": "ta",
+            "section": "selling"
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "locale": "ta",
+            "section": "stock"
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "locale": "ta",
+            "section": "photos"
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "locale": "ta",
+            "section": "search"
+          },
+          {
+            "width": 1024,
+            "height": 600,
+            "locale": "en",
+            "section": "general"
+          },
+          {
+            "width": 1024,
+            "height": 600,
+            "locale": "en",
+            "section": "selling"
+          },
+          {
+            "width": 1024,
+            "height": 600,
+            "locale": "en",
+            "section": "stock"
+          },
+          {
+            "width": 1024,
+            "height": 600,
+            "locale": "en",
+            "section": "photos"
+          },
+          {
+            "width": 1024,
+            "height": 600,
+            "locale": "en",
+            "section": "search"
+          },
+          {
+            "width": 1024,
+            "height": 600,
+            "locale": "ta",
+            "section": "general"
+          },
+          {
+            "width": 1024,
+            "height": 600,
+            "locale": "ta",
+            "section": "selling"
+          },
+          {
+            "width": 1024,
+            "height": 600,
+            "locale": "ta",
+            "section": "stock"
+          },
+          {
+            "width": 1024,
+            "height": 600,
+            "locale": "ta",
+            "section": "photos"
+          },
+          {
+            "width": 1024,
+            "height": 600,
+            "locale": "ta",
+            "section": "search"
+          },
+          {
+            "width": 768,
+            "height": 1024,
+            "locale": "en",
+            "section": "general"
+          },
+          {
+            "width": 768,
+            "height": 1024,
+            "locale": "en",
+            "section": "selling"
+          },
+          {
+            "width": 768,
+            "height": 1024,
+            "locale": "en",
+            "section": "stock"
+          },
+          {
+            "width": 768,
+            "height": 1024,
+            "locale": "en",
+            "section": "photos"
+          },
+          {
+            "width": 768,
+            "height": 1024,
+            "locale": "en",
+            "section": "search"
+          },
+          {
+            "width": 768,
+            "height": 1024,
+            "locale": "ta",
+            "section": "general"
+          },
+          {
+            "width": 768,
+            "height": 1024,
+            "locale": "ta",
+            "section": "selling"
+          },
+          {
+            "width": 768,
+            "height": 1024,
+            "locale": "ta",
+            "section": "stock"
+          },
+          {
+            "width": 768,
+            "height": 1024,
+            "locale": "ta",
+            "section": "photos"
+          },
+          {
+            "width": 768,
+            "height": 1024,
+            "locale": "ta",
+            "section": "search"
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "locale": "en",
+            "section": "general"
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "locale": "en",
+            "section": "selling"
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "locale": "en",
+            "section": "stock"
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "locale": "en",
+            "section": "photos"
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "locale": "en",
+            "section": "search"
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "locale": "ta",
+            "section": "general"
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "locale": "ta",
+            "section": "selling"
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "locale": "ta",
+            "section": "stock"
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "locale": "ta",
+            "section": "photos"
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "locale": "ta",
+            "section": "search"
+          },
+          {
+            "width": 320,
+            "height": 640,
+            "locale": "en",
+            "section": "general"
+          },
+          {
+            "width": 320,
+            "height": 640,
+            "locale": "en",
+            "section": "selling"
+          },
+          {
+            "width": 320,
+            "height": 640,
+            "locale": "en",
+            "section": "stock"
+          },
+          {
+            "width": 320,
+            "height": 640,
+            "locale": "en",
+            "section": "photos"
+          },
+          {
+            "width": 320,
+            "height": 640,
+            "locale": "en",
+            "section": "search"
+          },
+          {
+            "width": 320,
+            "height": 640,
+            "locale": "ta",
+            "section": "general"
+          },
+          {
+            "width": 320,
+            "height": 640,
+            "locale": "ta",
+            "section": "selling"
+          },
+          {
+            "width": 320,
+            "height": 640,
+            "locale": "ta",
+            "section": "stock"
+          },
+          {
+            "width": 320,
+            "height": 640,
+            "locale": "ta",
+            "section": "photos"
+          },
+          {
+            "width": 320,
+            "height": 640,
+            "locale": "ta",
+            "section": "search"
+          }
+        ],
+        "zeroEditorCheckboxes": true,
+        "keyboardTabs": true,
+        "cachedNavigationStyleIsolation": true,
+        "editsSurviveSectionChanges": true,
+        "invalidReviewWrites": 0,
+        "phonePublicationDialogs": [
+          "en",
+          "ta"
+        ],
+        "publicationModalConfirmations": 2,
+        "publishWrites": 2,
+        "unknownPriceAndStockPreserved": true,
+        "automaticPriceStatus": true,
+        "priceToConfirmClearsObsoleteValue": true,
+        "approvedNoPhotoChoiceRetained": true,
+        "secondPriceSavedPaise": 1550,
+        "pageErrors": []
+      }
+    },
+    "completeness": {
+      "evidence": "dashboard-completeness.json",
+      "result": {
+        "synthetic": true,
+        "writes": [],
+        "passed": [
+          "Today exposes send failures and disabled channel truth; task shortcuts clear unrelated filters and selections",
+          "Failed shop checks have a visible retry outside the closed diagnostics section",
+          "All applied product filters remain visible when controls are closed; clear and draft retry recover in place",
+          "Failed product reads never leave the previous product editable; stock history errors never masquerade as no movements; both retry in place",
+          "Order acceptance, pickup, payment and stock are visible; stock repair opens the actual product even after a CSV task",
+          "Message filters have truthful empty states; read failures retry; all 405 retained messages are reachable in bounded pages with a direct order link",
+          "Evidence and preview errors offer retry; empty preview filters can reset; conflicting-only charges retain the incomplete-total warning",
+          "Six pages fit desktop, tablet and 320/390-pixel phones; every seeded order state retains usable content and actions in English and Tamil"
+        ],
+        "viewports": [
+          1440,
+          768,
+          390,
+          320
+        ],
+        "pageErrors": []
+      }
+    },
+    "dailyTasks": {
+      "evidence": "dashboard-usability-tasks.json",
+      "result": {
+        "synthetic": true,
+        "passed": [
+          "Daily navigation and direct work shortcuts",
+          "Lost manual-send response and a closed reply window retain the draft and replay the same operation",
+          "Manual reply, unsent-draft guard, takeover and return preserve global pause",
+          "Bounded catalog pages and unknown-stock opening count avoid an invalid restock or false zero",
+          "Optional four-job help works by keyboard at desktop, tablet and 320-pixel phone widths",
+          "Two-click price path, unchanged stock, lost-response retry uses identical batch",
+          "Stock tasks preview holds and available units, with stable retry identity",
+          "Mixed inline updates write only edited price/count and retain reservations",
+          "Clearing a field keeps other edits; off-page edits remain visible; partial save reloads only remaining products",
+          "Full product editor and AI details preserve merchant price and selling unit",
+          "Uncertain stock retry freezes the entire payload even after product metadata refresh",
+          "Photo and Tamil alias draft reload, safe clone, publication confirmation, hide/search and draft rejection",
+          "Advance verification, explicit cancellation confirmation and a separate actual refund reference",
+          "Settings, pause, billing analytics and unknown-charge warnings retained",
+          "Message previews render without sending or interactive commerce actions",
+          "All six views and inline grid fit 320/360/390/768/1024/1536/1920 widths with internal scrolling",
+          "Tamil daily controls and saved owner-language preference",
+          "Expired sign-in retains the live draft and restores access in the original tab"
+        ],
+        "newPricePathClicks": 2,
+        "clickMeasurements": {},
+        "pageErrors": []
+      }
+    },
+    "localApi": {
+      "evidence": "owner-local-api.json",
+      "result": {
+        "synthetic": true,
+        "realLocalApi": true,
+        "views": 6,
+        "viewports": [
+          1440,
+          390
+        ],
+        "quoteDraftSaveReload": true,
+        "offeredQuoteRequiresApproval": true,
+        "missingChannelNotClaimedSent": true,
+        "priceSavedPaise": 3150,
+        "physicalCountSaved": 18,
+        "approvalToCollection": true,
+        "readyOrderCollection": true,
+        "reservationsViaRealServices": true,
+        "pauseResume": true,
+        "takeoverWithSendingDisabled": true,
+        "quickHelp": true,
+        "pageErrors": []
+      }
+    }
+  },
+  "interceptedReadFixtures": [
+    "long Tamil product names",
+    "two order pages"
+  ],
+  "remainingAcceptance": [
+    "Staff/novice exercise",
+    "Native Tamil copy review",
+    "Physical keyboard/safe areas/zoom/screen reader",
+    "Older devices and weak network",
+    "Live channel/payment and controlled release"
+  ],
+  "integration": {
+    "passed": 848,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 256381.109666,
+    "encoding": "UTF8",
+    "postgresql": "18"
+  },
+  "quoteBrowserAcceptance": "passed: full draft/conflict/send-response recovery, approval, fulfillment, offline and eight viewport sizes",
+  "previewReseeded": true
+}

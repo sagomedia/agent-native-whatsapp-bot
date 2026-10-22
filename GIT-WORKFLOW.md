@@ -2,7 +2,7 @@
 
 The private repository is [sagomedia/agent-native-whatsapp-bot](https://github.com/sagomedia/agent-native-whatsapp-bot). `main` is the current published source baseline. The 21 October consolidation preserved the ordering, catalog, WhatsApp recovery and owner-dashboard history in `main` and retired 28 obsolete branches. [The cleanup record](03-Output/branch-cleanup-20261021/README.md) maps every original branch to its preserved commit.
 
-`codex/dashboard-usability-20261021` remains for newer, unfinished inventory work in the existing local checkout. Its earlier published dashboard changes are already in `main`; the newer local work has not been merged or published by the cleanup. Deployment and owner/device/payment acceptance remain separate from source consolidation.
+The inventory follow-up now uses `codex/inventory-workspace-20261021`, created from the consolidated `main`. The accepted scope and implementation from `codex/dashboard-usability-20261021` were carried onto this separate branch after PR #54 merged the earlier dashboard. [Issue #52](https://github.com/sagomedia/agent-native-whatsapp-bot/issues/52) links the current draft and hosted checks. Both original commits remain preserved; this revision does not delete either branch. Deployment and owner/device/payment acceptance remain separate from source consolidation.
 
 ## Daily development
 

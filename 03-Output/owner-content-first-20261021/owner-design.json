@@ -1,0 +1,264 @@
+{
+  "synthetic": true,
+  "realReads": true,
+  "realWrites": 0,
+  "csvPreviewIntercepts": 1,
+  "layouts": [
+    {
+      "view": "overview",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "view": "requests",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "view": "conversations",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "view": "catalog",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "view": "connections",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "view": "message-review",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "view": "overview",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "view": "requests",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "view": "conversations",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "view": "catalog",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "view": "connections",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "view": "message-review",
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "view": "overview",
+      "width": 1024,
+      "height": 600
+    },
+    {
+      "view": "requests",
+      "width": 1024,
+      "height": 600
+    },
+    {
+      "view": "conversations",
+      "width": 1024,
+      "height": 600
+    },
+    {
+      "view": "catalog",
+      "width": 1024,
+      "height": 600
+    },
+    {
+      "view": "connections",
+      "width": 1024,
+      "height": 600
+    },
+    {
+      "view": "message-review",
+      "width": 1024,
+      "height": 600
+    },
+    {
+      "view": "overview",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "view": "requests",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "view": "conversations",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "view": "catalog",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "view": "connections",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "view": "message-review",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "view": "overview",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "view": "requests",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "view": "conversations",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "view": "catalog",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "view": "connections",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "view": "message-review",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "view": "overview",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "view": "requests",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "view": "conversations",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "view": "catalog",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "view": "connections",
+      "width": 320,
+      "height": 640
+    },
+    {
+      "view": "message-review",
+      "width": 320,
+      "height": 640
+    }
+  ],
+  "phoneOrders": [
+    {
+      "language": "en",
+      "state": "ready_for_pickup",
+      "complete": true,
+      "contentHeight": 295.578125
+    },
+    {
+      "language": "en",
+      "state": "awaiting_approval",
+      "complete": true,
+      "contentHeight": 295.578125
+    },
+    {
+      "language": "en",
+      "state": "awaiting_approval",
+      "complete": false,
+      "contentHeight": 317.875
+    },
+    {
+      "language": "en",
+      "state": "awaiting_approval",
+      "complete": false,
+      "contentHeight": 317.875
+    },
+    {
+      "language": "en",
+      "state": "awaiting_approval",
+      "complete": false,
+      "contentHeight": 317.875
+    },
+    {
+      "language": "en",
+      "state": "collected",
+      "complete": true,
+      "contentHeight": 371.28125
+    },
+    {
+      "language": "ta",
+      "state": "ready_for_pickup",
+      "complete": true,
+      "contentHeight": 270.90625
+    },
+    {
+      "language": "ta",
+      "state": "awaiting_approval",
+      "complete": true,
+      "contentHeight": 270.90625
+    },
+    {
+      "language": "ta",
+      "state": "awaiting_approval",
+      "complete": false,
+      "contentHeight": 307.5
+    },
+    {
+      "language": "ta",
+      "state": "awaiting_approval",
+      "complete": false,
+      "contentHeight": 307.5
+    },
+    {
+      "language": "ta",
+      "state": "awaiting_approval",
+      "complete": false,
+      "contentHeight": 307.5
+    },
+    {
+      "language": "ta",
+      "state": "collected",
+      "complete": true,
+      "contentHeight": 371.28125
+    }
+  ],
+  "primaryContrast": 6.6918167588587,
+  "errors": []
+}
