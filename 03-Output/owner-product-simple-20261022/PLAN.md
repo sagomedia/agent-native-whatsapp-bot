@@ -23,3 +23,7 @@ Remove duplicate totals from the product header. Show concise stock information 
 ## Verification
 
 Build and catalog preparation checks; focused product validation tests; synthetic local browser checks for routine price entry, blank/zero/free price, advanced identity preservation, quantity validation focus, unknown/held stock, photo evidence, drafts and publication, saved section routes, unsaved navigation, mobile/desktop English and Tamil. Record screenshots and exact outcomes. No paid inference or live customer sends.
+
+## Deployment continuation — 22 October
+
+The owner explicitly requires requested changes to be deployed to the existing test VPS, not only previewed locally. During preflight another authorized customer-identity release (source fed8fd7, candidate preview-42c19230aa44) was already backing up for activation. The editor must preserve that release's customer profiles, phone-number display, schema 42 and audio support. Integrate its immutable source before packaging the combined deployment; rerun build, relevant editor/customer checks and integration checks, verify hosted checks, then use a fresh guarded backup/upgrade. Do not activate the superseded editor-only preview-c02cadb93c24, as it would omit customer-identity code.
