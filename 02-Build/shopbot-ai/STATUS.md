@@ -188,3 +188,7 @@ Deployed `preview-5c7bf76887e7` with the customer quick-action/editing flow, own
 ## WhatsApp customer identity
 
 Verified incoming WhatsApp webhooks now retain the sender-matched profile name alongside the existing recipient number (schema 42). Authenticated owner inbox, chat header, orders, checkout/help and overview show the profile name with international phone; old chats use their saved phone until another incoming message supplies a name. Name and phone searches operate across server-side pages. Orders include identity independently of the recent inbox. Empty/malformed profiles retain known names; delayed and duplicate messages cannot replace newer profile names. Hashed customer actors and public customer APIs retain their existing behavior.
+
+## Obsolete review queue recovery
+
+The sender now isolates never-attempted historical system notices when an explicitly superseded uncertain review blocks them and a later customer turn already has a current assistant reply. Notices remain blocked for owner review; older unsent assistant fallbacks are cancelled. Unknown delivery evidence is preserved. Recovery takes the conversation lock, scopes store/channel and operator revision, records an audit event, and retains active-review, current multipart, attempted-notice and owner-control guards.
