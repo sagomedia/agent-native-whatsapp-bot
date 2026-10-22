@@ -102,6 +102,26 @@ Object.assign(tamil,{
 Object.assign(tamil,{'Loading orders…':'ஆர்டர்கள் ஏற்றப்படுகின்றன…','Loading order…':'ஆர்டர் ஏற்றப்படுகிறது…','Loading conversations…':'உரையாடல்கள் ஏற்றப்படுகின்றன…','Loading conversation…':'உரையாடல் ஏற்றப்படுகிறது…'});
 Object.assign(tamil,{"General": "பொது விவரங்கள்", "Selling details": "விற்பனை விவரங்கள்", "Customer search": "வாடிக்கையாளர் தேடல்", "Photos": "படங்கள்", "Product section": "பொருள் பகுதி", "Current product facts": "தற்போதைய பொருள் விவரங்கள்", "Photo": "படம்", "Edit product photo": "பொருள் படத்தை மாற்று", "Price & selling unit": "விலை / விற்பனை அளவு", "Product identity": "பொருளின் அடையாளம்", "Edit selling details": "விற்பனை விவரங்களை மாற்று", "Adjust stock": "இருப்பை மாற்று", "Photos & source evidence": "படங்களும் மூல ஆதாரமும்", "Photo to publish": "வெளியிடும் படம்", "Use the selected or existing photo": "தேர்ந்தெடுத்த அல்லது இருக்கும் படத்தைப் பயன்படுத்து", "Publish without a product photo": "படமின்றி வெளியிடு", "Confirm & publish": "உறுதி செய்து வெளியிடு", "Selected or existing photo": "தேர்ந்தெடுத்த அல்லது இருக்கும் படம்", "No product photo": "பொருள் படம் இல்லை", "Changed details": "மாற்றிய விவரங்கள்", "Check this detail": "இந்த விவரத்தைச் சரிபார்", "Go to field": "விவரத்துக்குச் செல்", "Suggested details need review": "பரிந்துரை விவரங்களைச் சரிபாருங்கள்", "Published product": "வெளியிடப்பட்ட பொருள்", "Product code is created when saved": "சேமிக்கும்போது பொருள் குறியீடு உருவாகும்", "Review & publish changes": "மாற்றங்களைப் பார்த்து வெளியிடு", "Review & publish product": "பொருளைப் பார்த்து வெளியிடு", "Confirming approves these product details for customer use. Unknown price or stock stays unknown.": "உறுதி செய்வதால் இந்தப் பொருள் விவரங்கள் வாடிக்கையாளருக்குக் கிடைக்கும். தெரியாத விலை அல்லது இருப்பு தெரியாததாகவே இருக்கும்.", "Save this product before recording stock movements. Opening stock can be entered in General. A draft keeps the published stock unchanged.": "இருப்பு மாற்றத்தைப் பதிவு செய்ய முதலில் பொருளைச் சேமியுங்கள். ஆரம்ப இருப்பைப் பொது விவரங்களில் நிரப்பலாம். வரைவு சேமிப்பதால் வெளியிட்ட இருப்பு மாறாது.", "Edit": "மாற்று", "Price": "விலை"});
 Object.assign(tamil,{'Review & publish':'பார்த்து வெளியிடு'});
+Object.assign(tamil,{
+ 'Shop price':'கடை விலை','Inventory tools':'இருப்பு கருவிகள்','Product details':'பொருள் விவரங்கள்','Price & stock':'விலை மற்றும் இருப்பு',
+ 'Leave the price blank if you need to confirm it with the customer.':'வாடிக்கையாளரிடம் விலையை உறுதி செய்ய வேண்டுமெனில் காலியாக விடுங்கள்.',
+ 'This item is marked as free.':'இந்தப் பொருள் இலவசமாகக் குறிக்கப்பட்டுள்ளது.',
+ 'This is your shop price for one selling unit.':'இது ஒரு விற்பனை அலகிற்கான உங்கள் கடை விலை.',
+ 'Mark this item as free':'இந்தப் பொருளை இலவசமாகக் குறி','Clear price':'விலையை நீக்கு',
+ 'Check how this item is sold before publishing.':'வெளியிடுவதற்கு முன் இந்தப் பொருள் எப்படி விற்கப்படுகிறது என்பதைச் சரிபாருங்கள்.',
+ 'Update stock':'இருப்பை மாற்று','Opening stock (optional)':'ஆரம்ப இருப்பு (விருப்பம்)',
+ 'Leave blank if unknown':'தெரியாவிட்டால் காலியாக விடுங்கள்',
+ 'Count in the selling unit. Leave blank if you have not checked.':'விற்பனை அலகில் எண்ணுங்கள். சரிபார்க்கவில்லை எனில் காலியாக விடுங்கள்.',
+ 'Brand, size & category':'பிராண்ட், அளவு மற்றும் வகை','Optional product details':'கூடுதல் பொருள் விவரங்கள்',
+ 'Smallest quantity customers can buy':'வாடிக்கையாளர் வாங்கக்கூடிய குறைந்தபட்ச அளவு',
+ 'Usually 1 for pieces; use 0.5 when customers can buy half a selling unit.':'துண்டுகளுக்கு வழக்கமாக 1. அரை அலகு வாங்க முடியுமெனில் 0.5 பயன்படுத்துங்கள்.',
+ 'Suggestions need your review. Price and stock are kept.':'பரிந்துரைகளைச் சரிபாருங்கள். விலை மற்றும் இருப்பு மாற்றப்படாது.',
+ 'Reference photo · exact product not verified':'மாதிரிப் படம் · சரியான பொருள் உறுதி செய்யப்படவில்லை',
+ 'Save your product changes before updating stock.':'இருப்பை மாற்றும் முன் பொருள் மாற்றங்களைச் சேமியுங்கள்.',
+ 'Save this product before recording stock movements. Opening stock can be entered in Product details. A draft keeps the published stock unchanged.':'இருப்பு மாற்றத்தைப் பதிவு செய்ய முதலில் பொருளைச் சேமியுங்கள். ஆரம்ப இருப்பைப் பொருள் விவரங்களில் நிரப்பலாம். வரைவு சேமிப்பதால் வெளியிட்ட இருப்பு மாறாது.',
+ 'Draft changes are not visible to customers.':'வரைவு மாற்றங்கள் வாடிக்கையாளர்களுக்குத் தெரியாது.',
+ 'Save a draft to finish later, or review to publish.':'பிறகு முடிக்க வரைவாகச் சேமியுங்கள் அல்லது சரிபார்த்து வெளியிடுங்கள்.'
+});
 const storageKey='shopbot.owner.language';
 const LocaleContext=createContext({locale:'en' as OwnerLocale,t:(text:string)=>text,setLocale:(_locale:OwnerLocale)=>{}});
 export function OwnerLocaleProvider({children}:{children:ReactNode}){

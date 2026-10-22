@@ -15,7 +15,7 @@ test('publication review rejects invalid commercial numbers and distinguishes fr
  assert.ok(productPublicationIssues({...product,priceStatus:'priced',price:'0'}).some(issue=>issue.field==='price'));
  assert.deepEqual(productPublicationIssues({...product,priceStatus:'free',price:'0'}),[]);
  assert.ok(productPublicationIssues({...product,priceStatus:'free',price:'5'}).some(issue=>issue.field==='price'));
- for(const quantityStep of ['0','101','NaN','0.0001'])assert.ok(productPublicationIssues({...product,quantityStep}).some(issue=>issue.field==='quantityStep'));
+ for(const quantityStep of ['0','101','NaN','0.0001'])assert.ok(productPublicationIssues({...product,quantityStep}).some(issue=>issue.field==='quantityStep'&&issue.section==='selling'));
  for(const stock of ['-1','NaN','1.0001'])assert.ok(productPublicationIssues({...product,stock}).some(issue=>issue.field==='stock'));
 });
 test('publication review sends ambiguous pack selling decisions to Selling details',()=>{

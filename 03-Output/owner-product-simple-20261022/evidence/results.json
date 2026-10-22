@@ -1,0 +1,63 @@
+{
+  "layouts": [
+    {
+      "locale": "en",
+      "width": 1440,
+      "everydayControls": 3,
+      "overflow": false
+    },
+    {
+      "locale": "en",
+      "width": 800,
+      "everydayControls": 3,
+      "overflow": false
+    },
+    {
+      "locale": "en",
+      "width": 390,
+      "everydayControls": 3,
+      "overflow": false
+    },
+    {
+      "locale": "en",
+      "width": 320,
+      "everydayControls": 3,
+      "overflow": false
+    },
+    {
+      "locale": "ta",
+      "width": 1440,
+      "everydayControls": 3,
+      "overflow": false
+    },
+    {
+      "locale": "ta",
+      "width": 800,
+      "everydayControls": 3,
+      "overflow": false
+    },
+    {
+      "locale": "ta",
+      "width": 390,
+      "everydayControls": 3,
+      "overflow": false
+    },
+    {
+      "locale": "ta",
+      "width": 320,
+      "everydayControls": 3,
+      "overflow": false
+    }
+  ],
+  "realLocalServices": true,
+  "draftPreservesLivePrice": true,
+  "publishedPricePaise": 12345,
+  "advancedBrandPreserved": true,
+  "holdsPreserved": true,
+  "quantityErrorOpensAndFocusesSelling": true,
+  "zeroRequiresExplicitFree": true,
+  "blankPriceRemainsUnknown": true,
+  "newUnknownStockPreserved": true,
+  "unsavedNavigationGuard": true,
+  "pageErrors": []
+}
