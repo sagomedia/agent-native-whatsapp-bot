@@ -67,6 +67,28 @@ for(const scenario of ['active_review','same_customer_turn','same_reply_group','
  assert.equal(await channel.sendNext(),false);assert.equal(sends,0);
 }));
 
+for(const scenario of ['superseded','active_review','other_cancellation','attempted_notice','owner_control'] as const)test(`${scenario}: historical notices behind uncertainty cannot replay or strand current replies`,()=>fixture(async pool=>{
+ const sent:any[]=[];const channel=new WhatsAppChannel(pool,cfg,async(_url,init)=>{sent.push(JSON.parse(String(init!.body)));return new Response(JSON.stringify({messages:[{id:'wamid.queue-recovery.'+sent.length}]}),{status:200});});await channel.setup();
+ await channel.receive(incoming('old.notice.turn'));await channel.processNext();
+ const old=(await pool.query("SELECT m.* FROM messages m JOIN whatsapp_outbox o ON o.message_id=m.id ORDER BY m.sequence LIMIT 1")).rows[0];
+ await pool.query("UPDATE whatsapp_outbox SET state='unknown',attempts=1,last_error='network_outcome_unknown' WHERE message_id=$1",[old.id]);await pool.query("UPDATE messages SET status='unknown' WHERE id=$1",[old.id]);
+ const page=randomUUID();await pool.query("INSERT INTO messages(id,conversation_id,direction,text,status,response_to,reply_group_id,part_index,part_count) VALUES($1,$2,'outbound','superseded action','cancelled',$3,$4,1,2)",[page,old.conversation_id,old.response_to,old.reply_group_id]);
+ await pool.query("INSERT INTO whatsapp_outbox(message_id,conversation_id,state,operator_revision,last_error) VALUES($1,$2,'cancelled',0,$3)",[page,old.conversation_id,scenario==='active_review'?'owner_control_changed':scenario==='other_cancellation'?'other_reason':'review_superseded']);
+ const notice=randomUUID();await pool.query("INSERT INTO messages(id,conversation_id,direction,text,status) VALUES($1,$2,'outbound','historical payment notice','queued')",[notice,old.conversation_id]);await pool.query("INSERT INTO whatsapp_outbox(message_id,conversation_id,state,operator_revision,sender_kind,attempts) VALUES($1,$2,'queued',0,'system',$3)",[notice,old.conversation_id,scenario==='attempted_notice'?1:0]);
+ await channel.receive(incoming('intermediate.turn'));await channel.processNext();
+ const fallback=(await pool.query("SELECT m.id FROM messages m JOIN whatsapp_outbox o ON o.message_id=m.id WHERE o.state='queued' AND o.sender_kind='assistant' ORDER BY m.sequence DESC LIMIT 1")).rows[0];
+ await pool.query('DELETE FROM whatsapp_actions WHERE message_id=$1',[fallback.id]); // A text-only fallback has no review actions to invalidate.
+ await channel.receive(incoming('latest.turn'));await channel.processNext();
+ if(scenario==='owner_control')await pool.query("UPDATE conversations SET operator_mode='owner' WHERE id=$1",[old.conversation_id]);
+ assert.equal(await channel.sendNext(),scenario==='superseded');
+ const states=(await pool.query('SELECT message_id,state,attempts,last_error FROM whatsapp_outbox WHERE message_id=ANY($1::uuid[])',[[old.id,notice,fallback.id]])).rows;
+ assert.equal(states.find(r=>r.message_id===old.id).state,'unknown');assert.equal(states.find(r=>r.message_id===old.id).attempts,1);
+ if(scenario==='superseded'){
+  assert.equal(sent.length,1);assert.ok(!JSON.stringify(sent).includes('historical payment notice'));assert.equal(states.find(r=>r.message_id===notice).state,'blocked');assert.equal(states.find(r=>r.message_id===notice).last_error,'delivery_recovery_review_required');assert.equal(states.find(r=>r.message_id===fallback.id).state,'cancelled');
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM owner_audit WHERE action='delivery_queue_recovery'")).rows[0].n,1);assert.equal(await channel.sendNext(),false);assert.equal(sent.length,1);
+ }else{assert.equal(sent.length,0);assert.equal(states.find(r=>r.message_id===notice).state,'queued');}
+}));
+
 test('pre-connection retries are delayed and capped; resets and deadlines remain unknown without retries',()=>fixture(async pool=>{
  let sends=0,error:unknown=new TypeError('fetch failed',{cause:{code:'EAI_AGAIN',syscall:'getaddrinfo'}});
  const channel=new WhatsAppChannel(pool,cfg,async()=>{sends++;throw error;});await channel.setup();await channel.receive(incoming('retry.turn'));await channel.processNext();

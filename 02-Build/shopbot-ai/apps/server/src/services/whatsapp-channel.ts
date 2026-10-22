@@ -1,3 +1,4 @@
+import {recoverReviewQueue} from './review-queue-recovery.js';
 import {refreshOrderListChoice} from './order-list-choice.js';
 import {normalizeVoice} from './voice-media.js';
 import {reviewDeliveryReady} from './review-delivery.js';
@@ -287,6 +288,7 @@ export class WhatsAppChannel {
       // Recovered in-flight sends are ambiguous: never automatically resend them.
       await client.query("UPDATE messages SET status='unknown' WHERE id IN (SELECT o.message_id FROM whatsapp_outbox o JOIN whatsapp_conversations w ON w.conversation_id=o.conversation_id WHERE w.phone_id=$1 AND o.state='sending' AND o.started_at<now()-interval '1 minute')",[c.phoneId]);
       await client.query("UPDATE whatsapp_outbox o SET state='unknown',last_error='interrupted_send' FROM whatsapp_conversations w WHERE w.conversation_id=o.conversation_id AND w.phone_id=$1 AND o.state='sending' AND o.started_at<now()-interval '1 minute'",[c.phoneId]);
+      await recoverReviewQueue(client,c.storeId,c.phoneId);
       // Current invoice pages must arrive in order. An uncertain obsolete review
       // can release a later customer turn only after its action page was explicitly
       // superseded; the uncertain page itself is neither retried nor marked sent.
