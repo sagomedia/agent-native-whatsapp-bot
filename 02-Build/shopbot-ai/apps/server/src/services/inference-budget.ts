@@ -1,4 +1,4 @@
-import {GEMINI_MODEL_ID} from '../../../../packages/contracts/model-policy.js';
+import {GEMINI_MODEL_ID,GEMINI_TRANSCRIPTION_MODEL_ID} from '../../../../packages/contracts/model-policy.js';
 import {randomUUID} from 'node:crypto';
 import type {Pool,PoolClient} from 'pg';
 import type {Interpreter,ProviderResult} from '../adapters/interpreter.js';
@@ -7,8 +7,9 @@ import {ToolError,withConversation,type ActorContext} from './context.js';
 export type RateCard={model:string;currency:'USD';verifiedOn:string;validUntil:string;source:string;inputMicrousdPerMillion:number;outputMicrousdPerMillion:number;inputTokenLimit:number;maxOutputTokens:number};
 // Standard text/image/audio inputs share this verified price. No audio output.
 export const geminiTextRate:Readonly<RateCard>=Object.freeze({model:GEMINI_MODEL_ID,currency:'USD',verifiedOn:'2026-10-14',validUntil:'2026-11-01',source:'https://ai.google.dev/gemini-api/docs/pricing',inputMicrousdPerMillion:300000,outputMicrousdPerMillion:2500000,inputTokenLimit:1048576,maxOutputTokens:4096});
-// Compatibility export: speech now uses the same Flash Lite rate and model.
-export const geminiSpeechRate = geminiTextRate;
+// Audio-only Transcribe input and text output; bounded to our 30-second notes.
+// 4096 input tokens conservatively cover 750 audio tokens plus API overhead.
+export const geminiSpeechRate:Readonly<RateCard>=Object.freeze({model:GEMINI_TRANSCRIPTION_MODEL_ID,currency:'USD',verifiedOn:'2026-10-21',validUntil:'2026-11-01',source:'https://ai.google.dev/gemini-api/docs/pricing',inputMicrousdPerMillion:2000000,outputMicrousdPerMillion:12000000,inputTokenLimit:4096,maxOutputTokens:4096});
 export const freeQuotaLimits=Object.freeze({requestsPerMinute:10,inputTokensPerMinute:200000,requestsPerDay:100,minIntervalSeconds:6,reservedInputTokens:64000});
 const integer=(n:unknown):n is number=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0;
 export const rateFreshnessPolicy=Object.freeze({maxVerificationDays:31,warningDays:7,graceDays:0});
@@ -16,7 +17,7 @@ export function rateHealth(rate:RateCard|undefined,now=Date.now()) {
   const date=(value:string)=>/^\d{4}-\d{2}-\d{2}$/.test(value)&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value?Date.parse(value+'T00:00:00Z'):NaN;
   let verified=NaN,expires=NaN;
   try{if(rate){verified=date(rate.verifiedOn);expires=date(rate.validUntil);}}catch{/* Invalid dates remain invalid. */}
-  const valid=!!rate&&rate.currency==='USD'&&rate.model===GEMINI_MODEL_ID&&integer(rate.inputMicrousdPerMillion)&&integer(rate.outputMicrousdPerMillion)&&integer(rate.inputTokenLimit)&&integer(rate.maxOutputTokens)&&rate.inputTokenLimit>0&&rate.inputTokenLimit<=1048576&&rate.maxOutputTokens>0&&rate.maxOutputTokens<=16384&&Number.isFinite(verified)&&Number.isFinite(expires)&&verified<=now&&expires>verified&&expires-verified<=rateFreshnessPolicy.maxVerificationDays*86400000&&rate.source==='https://ai.google.dev/gemini-api/docs/pricing';
+  const valid=!!rate&&rate.currency==='USD'&&[GEMINI_MODEL_ID,GEMINI_TRANSCRIPTION_MODEL_ID].some(model=>model===rate.model)&&integer(rate.inputMicrousdPerMillion)&&integer(rate.outputMicrousdPerMillion)&&integer(rate.inputTokenLimit)&&integer(rate.maxOutputTokens)&&rate.inputTokenLimit>0&&rate.inputTokenLimit<=(rate.model===GEMINI_TRANSCRIPTION_MODEL_ID?4096:1048576)&&rate.maxOutputTokens>0&&rate.maxOutputTokens<=(rate.model===GEMINI_TRANSCRIPTION_MODEL_ID?4096:16384)&&Number.isFinite(verified)&&Number.isFinite(expires)&&verified<=now&&expires>verified&&expires-verified<=rateFreshnessPolicy.maxVerificationDays*86400000&&rate.source==='https://ai.google.dev/gemini-api/docs/pricing';
   const daysRemaining=valid?Math.max(0,Math.ceil((expires-now)/86400000)):null;
   const status=!valid?'invalid':expires<=now?'expired':(daysRemaining??0)<=rateFreshnessPolicy.warningDays?'expiring':'fresh';
   return {status:status as 'invalid'|'expired'|'expiring'|'fresh',verifiedOn:rate?.verifiedOn??null,validUntil:rate?.validUntil??null,daysRemaining};

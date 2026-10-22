@@ -80,10 +80,10 @@ test('speech reservations hold missing, incomplete and mismatched usage; over-ca
  for(const scenario of ['missing','incomplete','mismatched','over-cap'] as const) await fixture(async(pool,inbox)=>{
   await initializeBudget(pool,simulatorContext,1000000);
   const id=randomUUID();await inbox.ingest({id,type:'text',text:'ledger fixture'});
-  const provider=new GoogleSpeechRecognizer({apiKey:'offline-only',budgetMicrousd:1000000},{generateContent:async()=>{throw new Error('no provider call');}});
+  const provider=new GoogleSpeechRecognizer({apiKey:'offline-only',budgetMicrousd:1000000},{create:async()=>{throw new Error('no provider call');}});
   const reserved=await withConversation(pool,simulatorContext,client=>reserveAttempt(client,simulatorContext,id,0,provider,'recognize'));
-  assert.ok(reserved.id);assert.equal(worstCaseReservation(geminiSpeechRate),324813);
-  assert.equal(Number((await pool.query('SELECT held_microusd FROM inference_budgets')).rows[0].held_microusd),324813);
+  assert.ok(reserved.id);assert.equal(worstCaseReservation(geminiSpeechRate),57344);
+  assert.equal(Number((await pool.query('SELECT held_microusd FROM inference_budgets')).rows[0].held_microusd),57344);
   const usage:Record<string,number>=scenario==='over-cap'?{promptTokenCount:1048577,candidatesTokenCount:30,totalTokenCount:1048607}:scenario==='incomplete'?{promptTokenCount:357,totalTokenCount:357}:{promptTokenCount:357,candidatesTokenCount:30,totalTokenCount:387};
   const result:ProviderResult|undefined=scenario==='missing'?undefined:{output:{operations:[],next:'continue',transcript:'heard'},truncated:false,responseModel:scenario==='mismatched'?'wrong-model':geminiSpeechRate.model,usage};
   const accepted=await settleAttempt(pool,simulatorContext,reserved.id!,result);
@@ -91,7 +91,7 @@ test('speech reservations hold missing, incomplete and mismatched usage; over-ca
   const attempt=(await pool.query('SELECT provider,stage,billing_state,rate_snapshot FROM provider_attempts')).rows[0];
   assert.equal(attempt.provider,provider.name);assert.equal(attempt.stage,'recognize');assert.equal(attempt.billing_state,'unknown');assert.equal(attempt.rate_snapshot.model,geminiSpeechRate.model);
   const budget=(await pool.query('SELECT held_microusd,committed_microusd,blocked FROM inference_budgets')).rows[0];
-  assert.equal(Number(budget.held_microusd),324813);assert.equal(Number(budget.committed_microusd),0);assert.equal(budget.blocked,scenario==='over-cap');
+  assert.equal(Number(budget.held_microusd),57344);assert.equal(Number(budget.committed_microusd),0);assert.equal(budget.blocked,scenario==='over-cap');
  });
 });
 

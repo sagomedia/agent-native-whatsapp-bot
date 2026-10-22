@@ -132,6 +132,7 @@ manifest = {
     'prompt_version':proof['promptVersion'],
     'understanding_version':proof['understandingVersion'],
     'model_id':proof['model'],
+    'transcription_model_id':proof.get('transcriptionModel'),
     'dependency_additions':dependency_additions,
     'base_lock_sha256':base_lock_sha256,
     'source_tree_sha256': source_hash.hexdigest(),

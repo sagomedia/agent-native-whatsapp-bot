@@ -3,9 +3,9 @@ import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {z} from 'zod';
 import type {Pool} from 'pg';
-import {GEMINI_MODEL_ID,UNDERSTANDING_VERSION,UNDERSTANDING_PROMPT_VERSION} from '../../../../packages/contracts/model-policy.js';
+import {GEMINI_MODEL_ID,GEMINI_TRANSCRIPTION_MODEL_ID,UNDERSTANDING_VERSION,UNDERSTANDING_PROMPT_VERSION} from '../../../../packages/contracts/model-policy.js';
 const sha=z.string().regex(/^[a-f0-9]{64}$/);
-export const releaseManifestSchema=z.object({version:z.literal(1),gitCommit:z.string().regex(/^[a-f0-9]{40}$/),gitTree:z.string().regex(/^[a-f0-9]{40}$/),clean:z.literal(true),createdAt:z.iso.datetime(),model:z.literal(GEMINI_MODEL_ID),understandingVersion:z.literal(UNDERSTANDING_VERSION),promptVersion:z.literal(UNDERSTANDING_PROMPT_VERSION),artifactHash:sha,files:z.array(z.object({path:z.string().regex(/^(?:dist\/(?!release-manifest\.json$)|resources\/|package(?:-lock)?\.json$)[A-Za-z0-9_.\/-]*$/).refine(s=>!s.split('/').includes('..')),sha256:sha}).strict()).min(1)}).strict();
+export const releaseManifestSchema=z.object({version:z.literal(1),gitCommit:z.string().regex(/^[a-f0-9]{40}$/),gitTree:z.string().regex(/^[a-f0-9]{40}$/),clean:z.literal(true),createdAt:z.iso.datetime(),model:z.literal(GEMINI_MODEL_ID),transcriptionModel:z.literal(GEMINI_TRANSCRIPTION_MODEL_ID).optional(),understandingVersion:z.literal(UNDERSTANDING_VERSION),promptVersion:z.literal(UNDERSTANDING_PROMPT_VERSION),artifactHash:sha,files:z.array(z.object({path:z.string().regex(/^(?:dist\/(?!release-manifest\.json$)|resources\/|package(?:-lock)?\.json$)[A-Za-z0-9_.\/-]*$/).refine(s=>!s.split('/').includes('..')),sha256:sha}).strict()).min(1)}).strict();
 export type ReleaseManifest=z.infer<typeof releaseManifestSchema>;
 let processRelease:string|null=null;
 let runtimeMetadata:Awaited<ReturnType<typeof verifyRelease>>={status:'unverified',model:GEMINI_MODEL_ID,promptVersion:UNDERSTANDING_PROMPT_VERSION,understandingVersion:UNDERSTANDING_VERSION};
@@ -35,6 +35,6 @@ export async function verifyRelease(root=process.cwd(),required=process.env.SHOP
  try{
   const manifest=releaseManifestSchema.parse(JSON.parse(await readFile(resolve(root,'dist/release-manifest.json'),'utf8'))),files=await releaseFiles(root);
   if(new Set(manifest.files.map(f=>f.path)).size!==manifest.files.length||JSON.stringify(files)!==JSON.stringify(manifest.files)||artifactHash(files)!==manifest.artifactHash)throw new Error('Artifact content does not match its release manifest.');
-  return {status:'content_verified' as const,gitCommit:manifest.gitCommit,gitTree:manifest.gitTree,artifactHash:manifest.artifactHash,model:manifest.model,promptVersion:manifest.promptVersion,understandingVersion:manifest.understandingVersion,createdAt:manifest.createdAt};
+  return {status:'content_verified' as const,gitCommit:manifest.gitCommit,gitTree:manifest.gitTree,artifactHash:manifest.artifactHash,model:manifest.model,transcriptionModel:manifest.transcriptionModel,promptVersion:manifest.promptVersion,understandingVersion:manifest.understandingVersion,createdAt:manifest.createdAt};
  }catch(error){if(required)throw new Error('A valid release manifest matching the installed artifacts is required before startup.');return {status:'unverified' as const,model:GEMINI_MODEL_ID,promptVersion:UNDERSTANDING_PROMPT_VERSION,understandingVersion:UNDERSTANDING_VERSION};}
 }
