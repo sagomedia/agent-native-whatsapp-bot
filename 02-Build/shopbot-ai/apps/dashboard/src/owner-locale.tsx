@@ -117,6 +117,7 @@ Object.assign(tamil,{
  'Usually 1 for pieces; use 0.5 when customers can buy half a selling unit.':'துண்டுகளுக்கு வழக்கமாக 1. அரை அலகு வாங்க முடியுமெனில் 0.5 பயன்படுத்துங்கள்.',
  'Suggestions need your review. Price and stock are kept.':'பரிந்துரைகளைச் சரிபாருங்கள். விலை மற்றும் இருப்பு மாற்றப்படாது.',
  'Reference photo · exact product not verified':'மாதிரிப் படம் · சரியான பொருள் உறுதி செய்யப்படவில்லை',
+ 'Publish this draft or reload the current product before updating stock.':'இருப்பை மாற்றும் முன் இந்த வரைவை வெளியிடுங்கள் அல்லது தற்போதைய பொருளை மீண்டும் திறக்கவும்.',
  'Save your product changes before updating stock.':'இருப்பை மாற்றும் முன் பொருள் மாற்றங்களைச் சேமியுங்கள்.',
  'Save this product before recording stock movements. Opening stock can be entered in Product details. A draft keeps the published stock unchanged.':'இருப்பு மாற்றத்தைப் பதிவு செய்ய முதலில் பொருளைச் சேமியுங்கள். ஆரம்ப இருப்பைப் பொருள் விவரங்களில் நிரப்பலாம். வரைவு சேமிப்பதால் வெளியிட்ட இருப்பு மாறாது.',
  'Draft changes are not visible to customers.':'வரைவு மாற்றங்கள் வாடிக்கையாளர்களுக்குத் தெரியாது.',
