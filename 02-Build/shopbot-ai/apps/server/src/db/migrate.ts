@@ -469,6 +469,13 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       );
       INSERT INTO schema_migrations(version) VALUES(40);
     `);}
+    const v42=await client.query('SELECT version FROM schema_migrations WHERE version=42');
+    if(!v42.rowCount){await client.query(`
+      ALTER TABLE whatsapp_conversations
+        ADD COLUMN profile_name text CHECK(profile_name IS NULL OR length(profile_name) BETWEEN 1 AND 200),
+        ADD COLUMN profile_updated_at timestamptz;
+      INSERT INTO schema_migrations(version) VALUES(42);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

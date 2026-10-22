@@ -24,7 +24,13 @@ import {downloadWhatsAppMedia,mediaFailureCode} from './whatsapp-media.js';
 const id=z.string().min(1).max(512),digits=z.string().regex(/^\d{7,15}$/),timestamp=z.string().regex(/^\d{1,12}$/);
 const incoming=z.object({id,from:digits,timestamp,type:z.string().max(40),text:z.object({body:z.string().min(1).max(4096)}).optional(),image:z.object({id,caption:z.string().trim().max(1000).optional()}).optional(),audio:z.object({id}).optional(),context:z.object({id}).optional(),button:z.object({payload:id,text:z.string().max(200)}).optional(),interactive:z.object({type:z.string(),button_reply:z.object({id,title:z.string().max(200)}).optional(),list_reply:z.object({id,title:z.string().max(200)}).optional()}).optional()});
 const status=z.object({id,recipient_id:digits,timestamp,status:z.enum(['sent','delivered','read','failed']),biz_opaque_callback_data:z.uuid().optional(),errors:z.array(z.object({code:z.number().int()})).max(10).optional(),pricing:z.unknown().optional()});
-export const webhookSchema=z.object({object:z.literal('whatsapp_business_account'),entry:z.array(z.object({id:z.string(),changes:z.array(z.object({field:z.string(),value:z.object({metadata:z.object({phone_number_id:z.string()}).optional(),messages:z.array(incoming).max(100).optional(),statuses:z.array(status).max(100).optional()})})).max(20)})).max(20)});
+// A malformed optional contact must not discard an otherwise valid message.
+const contact=z.object({wa_id:digits,profile:z.object({name:z.string().max(512).optional().catch(undefined)}).optional().catch(undefined)}).optional().catch(undefined);
+function profileName(value:string|undefined){
+  const cleaned=value?.replace(/[\p{Cc}\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/gu,' ').replace(/\s+/gu,' ').trim();
+  return cleaned?Array.from(cleaned).slice(0,200).join(''):null;
+}
+export const webhookSchema=z.object({object:z.literal('whatsapp_business_account'),entry:z.array(z.object({id:z.string(),changes:z.array(z.object({field:z.string(),value:z.object({metadata:z.object({phone_number_id:z.string()}).optional(),contacts:z.array(contact).max(100).optional(),messages:z.array(incoming).max(100).optional(),statuses:z.array(status).max(100).optional()})})).max(20)})).max(20)});
 type Webhook=z.infer<typeof webhookSchema>;
 export type WhatsAppFetch=typeof fetch;
 
@@ -88,6 +94,7 @@ export class WhatsAppChannel {
             if(!Number.isSafeInteger(seconds)||seconds<1||seconds>Date.now()/1000+300)continue;
             if((await client.query('SELECT 1 FROM whatsapp_inbound WHERE phone_id=$1 AND provider_id=$2',[c.phoneId,m.id])).rowCount)continue;
             let mapped=(await client.query('SELECT conversation_id FROM whatsapp_conversations WHERE phone_id=$1 AND recipient=$2',[c.phoneId,m.from])).rows[0];
+            const name=profileName(v.contacts?.find(contact=>contact?.wa_id===m.from)?.profile?.name);
             const actor='whatsapp:'+createHash('sha256').update(c.phoneId+':'+m.from).digest('hex').slice(0,24);
             if(!mapped){
               mapped={conversation_id:randomUUID()};
@@ -97,6 +104,10 @@ export class WhatsAppChannel {
               await client.query('SELECT id FROM conversations WHERE id=$1 FOR UPDATE',[mapped.conversation_id]);
               await client.query('UPDATE whatsapp_conversations SET last_inbound_at=greatest(last_inbound_at,to_timestamp($1)) WHERE conversation_id=$2',[seconds,mapped.conversation_id]);
             }
+            // Do not erase a known name when a webhook omits contacts, or let an
+            // older delayed message replace a newer profile. Names are display-only.
+            if(name)await client.query(`UPDATE whatsapp_conversations SET profile_name=$1,profile_updated_at=to_timestamp($2)
+              WHERE conversation_id=$3 AND (profile_updated_at IS NULL OR profile_updated_at<=to_timestamp($2))`,[name,seconds,mapped.conversation_id]);
             const ctx:ActorContext={storeId:c.storeId,conversationId:mapped.conversation_id,actor,role:'customer'},messageId=randomUUID();
             if(c.visualOrdering)await client.query('UPDATE conversations SET visual_ordering=true WHERE id=$1',[ctx.conversationId]);
             const state=await loadState(client,ctx),memory=await loadAssistantMemory(client,ctx);

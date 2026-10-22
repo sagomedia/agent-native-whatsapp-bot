@@ -1,0 +1,78 @@
+{
+  "checks": [
+    {
+      "view": "conversations",
+      "width": 1440,
+      "nameAndPhone": true,
+      "overflow": false
+    },
+    {
+      "view": "conversations",
+      "width": 1440,
+      "nameAndPhone": true,
+      "overflow": false
+    },
+    {
+      "view": "requests",
+      "width": 1440,
+      "nameAndPhone": true,
+      "overflow": false
+    },
+    {
+      "view": "overview",
+      "width": 1440,
+      "nameAndPhone": true,
+      "overflow": false
+    },
+    {
+      "view": "conversations",
+      "width": 390,
+      "nameAndPhone": true,
+      "overflow": false
+    },
+    {
+      "view": "conversations",
+      "width": 390,
+      "nameAndPhone": true,
+      "overflow": false
+    },
+    {
+      "view": "requests",
+      "width": 390,
+      "nameAndPhone": true,
+      "overflow": false
+    },
+    {
+      "view": "overview",
+      "width": 390,
+      "nameAndPhone": true,
+      "overflow": false
+    },
+    {
+      "view": "conversations",
+      "width": 320,
+      "nameAndPhone": true,
+      "overflow": false
+    },
+    {
+      "view": "conversations",
+      "width": 320,
+      "nameAndPhone": true,
+      "overflow": false
+    },
+    {
+      "view": "requests",
+      "width": 320,
+      "nameAndPhone": true,
+      "overflow": false
+    },
+    {
+      "view": "overview",
+      "width": 320,
+      "nameAndPhone": true,
+      "overflow": false
+    }
+  ],
+  "longNames": true,
+  "pageErrors": []
+}
