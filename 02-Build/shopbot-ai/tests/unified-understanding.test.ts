@@ -255,3 +255,17 @@ test('transient dedicated recognition retries once in the ledger and then interp
  let asrCalls=0;const provider=new GoogleInterpreter({...settings,transcriptionModel:geminiSpeechRate.model},{generateContent:async()=>response({...base(),requestedItems:[item('two H07','H07',2)]})},{create:async()=>{if(++asrCalls===1)throw Object.assign(new Error('fixture unavailable'),{status:503});return speechResponse('two H07');}});
  const r=new ConversationRuntime(pool,provider,{allowPaidInference:true,visualOrdering:true});const after=(await dedicatedVoice(inbox,r)).snapshot;assert.equal(asrCalls,2);assert.equal(after.conversation.draft[0]?.quantity,2);assert.deepEqual((await pool.query('SELECT stage,state FROM provider_attempts ORDER BY attempt')).rows,[{stage:'recognize',state:'failed'},{stage:'recognize',state:'succeeded'},{stage:'identify',state:'succeeded'}]);
 }));
+
+test('dedicated voice can use a separate fresh-catalog recommendation after text understanding',async()=>fixture(async(pool,inbox)=>{
+ let shoppingCalls=0;
+ const spoken='Show me a pipe cutter';
+ const provider=new GoogleInterpreter({...settings,transcriptionModel:geminiSpeechRate.model},{generateContent:async request=>{
+  shoppingCalls++;assert.ok(!JSON.stringify(request).includes('inlineData'));
+  if((request.config?.responseJsonSchema as any)?.properties?.skus)return response({skus:['H19'],question:null});
+  return response({...base(),intents:['lookup'],requestedItems:[item(spoken,'pipe cutter',null)]});
+ }},{create:async()=>speechResponse(spoken)});
+ const r=new ConversationRuntime(pool,provider,{allowPaidInference:true,visualOrdering:true,mediaRecommendations:true});
+ const after=(await dedicatedVoice(inbox,r)).snapshot;
+ assert.equal(shoppingCalls,2);assert.equal(after.conversation.draft.length,0);assert.equal(after.requests.length,0);
+ assert.deepEqual((await pool.query('SELECT stage,state FROM provider_attempts ORDER BY attempt')).rows,[{stage:'recognize',state:'succeeded'},{stage:'identify',state:'succeeded'},{stage:'recommend',state:'succeeded'}]);
+}));
