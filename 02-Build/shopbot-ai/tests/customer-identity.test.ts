@@ -46,7 +46,7 @@ test('migration keeps historical phones and orders; owner name/phone searches cr
  await pool.query('INSERT INTO whatsapp_conversations(conversation_id,phone_id,recipient,last_inbound_at) VALUES($1,$2,$3,now())',[old,cfg.phoneId,cfg.recipients[0]]);
  await pool.query("INSERT INTO order_requests(id,store_id,conversation_id,actor,review_id,lines,total_paise) VALUES($1,$2,$3,'whatsapp:historical',$4,$5,100)",[order,fixtureStore,old,randomUUID(),JSON.stringify([{id:randomUUID(),name:'Pipe',quantity:1,unit:'piece',resolution:'unavailable'}])]);
  // Rehearse the additive migration over populated version 40, then run it again.
- await pool.query('ALTER TABLE whatsapp_conversations DROP COLUMN profile_name,DROP COLUMN profile_updated_at');await pool.query('DELETE FROM schema_migrations WHERE version=41');await setupDatabase(pool,'mock');await setupDatabase(pool,'mock');
+ await pool.query('ALTER TABLE whatsapp_conversations DROP COLUMN profile_name,DROP COLUMN profile_updated_at');await pool.query('DELETE FROM schema_migrations WHERE version=42');await setupDatabase(pool,'mock');await setupDatabase(pool,'mock');
  const read=async(query:string)=>{const r=await app.inject({url:'/api/owner/snapshot?details=0&'+query,headers});assert.equal(r.statusCode,200,r.body);return r.json();};
  const historical=(await read('order='+order)).requests.find((r:any)=>r.id===order);assert.equal(historical.customer_name,null);assert.equal(customerLabel(historical.actor,old,historical),'+919000000001');
  await pool.query('UPDATE whatsapp_conversations SET profile_name=$1 WHERE conversation_id=$2',['கோகுல் 50%_shop',old]);
