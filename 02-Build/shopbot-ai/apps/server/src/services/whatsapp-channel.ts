@@ -297,11 +297,18 @@ export class WhatsAppChannel {
         WHERE w.phone_id=$1 AND c.store_id=$2 AND o.state='queued' AND o.next_attempt_at<=now() AND NOT EXISTS(
           SELECT 1 FROM messages earlier JOIN whatsapp_outbox pending ON pending.message_id=earlier.id
           WHERE earlier.conversation_id=m.conversation_id AND earlier.sequence<m.sequence AND pending.operator_revision=o.operator_revision AND pending.state IN ('queued','sending','unknown')
-          AND NOT(pending.state='unknown' AND pending.sender_kind='assistant' AND o.sender_kind='assistant'
+          AND NOT(pending.state='unknown' AND pending.sender_kind='assistant'
             AND earlier.reply_group_id IS NOT NULL AND m.reply_group_id IS DISTINCT FROM earlier.reply_group_id
-            AND EXISTS(SELECT 1 FROM messages old_turn JOIN messages new_turn ON new_turn.id=m.response_to
+            AND (o.sender_kind='assistant' AND EXISTS(SELECT 1 FROM messages old_turn JOIN messages new_turn ON new_turn.id=m.response_to
               WHERE old_turn.id=earlier.response_to AND old_turn.conversation_id=m.conversation_id AND new_turn.conversation_id=m.conversation_id
               AND old_turn.direction='inbound' AND new_turn.direction='inbound' AND new_turn.sequence>old_turn.sequence)
+             OR o.sender_kind='system' AND EXISTS(SELECT 1 FROM messages resolved
+              JOIN whatsapp_outbox delivered ON delivered.message_id=resolved.id
+              JOIN messages new_turn ON new_turn.id=resolved.response_to AND new_turn.conversation_id=m.conversation_id AND new_turn.direction='inbound'
+              JOIN messages old_turn ON old_turn.id=earlier.response_to AND old_turn.conversation_id=m.conversation_id AND old_turn.direction='inbound'
+              WHERE resolved.conversation_id=m.conversation_id AND resolved.sequence>earlier.sequence AND resolved.sequence<m.sequence
+               AND new_turn.sequence>old_turn.sequence AND delivered.sender_kind='assistant'
+               AND delivered.operator_revision=o.operator_revision AND delivered.state IN ('delivered','read')))
             AND EXISTS(SELECT 1 FROM messages stale JOIN whatsapp_outbox cancelled ON cancelled.message_id=stale.id
               WHERE stale.conversation_id=m.conversation_id AND stale.reply_group_id=earlier.reply_group_id
               AND cancelled.state='cancelled' AND cancelled.last_error='review_superseded'))
