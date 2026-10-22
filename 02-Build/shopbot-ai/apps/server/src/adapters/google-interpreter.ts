@@ -116,6 +116,8 @@ export class GoogleInterpreter implements Interpreter {
     if(settings.transcriptionModel){
       if(settings.transcriptionModel!==geminiSpeechRate.model||!settings.allowPaidInference||settings.freeQuota||!this.multimodal)throw new Error('Dedicated transcription requires the supported Transcribe model and authorized paid multimodal inference.');
       this.recognitionProvider=new GoogleSpeechRecognizer({apiKey:settings.apiKey,model:settings.transcriptionModel,budgetMicrousd:settings.budgetMicrousd},speechTransport);
+      // Do not reuse a proposal cached under the combined audio pipeline.
+      this.name+=':transcribe-verbatim-v1';
     }
     // Exactly one SDK request per ledger attempt; no SDK retries or automatic tool loop.
     this.transport=transport??new GoogleGenAI({apiKey:settings.apiKey,vertexai:false,httpOptions:{apiVersion:'v1beta',timeout:9500,retryOptions:{attempts:1}}}).models;
