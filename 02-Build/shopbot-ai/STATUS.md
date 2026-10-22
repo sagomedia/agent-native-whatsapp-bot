@@ -162,3 +162,7 @@ Native session media carousels (2–10 cards), single-photo buttons, category/li
 # Customer Experience VPS Release - 5 October 2026
 
 Deployed `preview-5c7bf76887e7` with the customer quick-action/editing flow, owner handoff/manual replies, Tamil/Tanglish interface and new-chat WhatsApp Tamil default. All 138 isolated tests and the production build passed. VPS readiness, migration 18, installed quick-action rendering and unchanged environment were verified. Existing test chat language preferences remain unchanged; attachment and staged-discovery features remain off. See `../../03-Output/customer-experience-vps-deployment.md`.
+
+## WhatsApp customer identity
+
+Verified incoming WhatsApp webhooks now retain the sender-matched profile name alongside the existing recipient number (schema 41). Authenticated owner inbox, chat header, orders, checkout/help and overview show the profile name with international phone; old chats use their saved phone until another incoming message supplies a name. Name and phone searches operate across server-side pages. Orders include identity independently of the recent inbox. Empty/malformed profiles retain known names; delayed and duplicate messages cannot replace newer profile names. Hashed customer actors and public customer APIs retain their existing behavior.
