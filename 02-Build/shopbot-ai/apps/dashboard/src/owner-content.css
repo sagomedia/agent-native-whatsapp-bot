@@ -182,3 +182,31 @@
  .owner-shell-v2.owner-content-first .owner-daily-nav{position:static}
  .owner-shell-v2.owner-content-first .order-quote-footer,.owner-shell-v2.owner-content-first .owner-reply-form{position:sticky;bottom:0;background:white}
 }
+
+/* Product entry follows the shop task: identity, price/unit, shelf stock. */
+.owner-shell-v2.owner-content-first .owner-inventory-tool-disclosure{margin-block:0 10px;font-size:13px}
+.owner-shell-v2.owner-content-first .owner-inventory-tool-disclosure>summary{width:max-content;cursor:pointer;color:var(--ui-accent);padding-block:6px}
+.owner-shell-v2.owner-content-first .owner-inventory-tool-disclosure[open]>.owner-inventory-tools{margin-top:6px}
+.owner-shell-v2.owner-content-first #product-panel-general{max-width:850px;padding-block:20px}
+.owner-shell-v2.owner-content-first .owner-record-identity{margin-bottom:20px}
+.owner-shell-v2.owner-content-first .owner-description>small{display:block;margin-top:6px}
+.owner-shell-v2.owner-content-first .owner-everyday-facts>h3{font-size:15px;margin:0 0 12px}
+.owner-shell-v2.owner-content-first .owner-price-unit-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,.6fr);gap:16px}
+.owner-shell-v2.owner-content-first .owner-price-help{margin:8px 0;font-size:13px;color:var(--ui-muted);line-height:1.6}
+.owner-shell-v2.owner-content-first .owner-price-help .owner-link{padding:0;min-height:32px}
+.owner-shell-v2.owner-content-first .owner-product-stock-summary{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:18px;margin-top:16px;border-top:1px solid var(--ui-border)}
+.owner-shell-v2.owner-content-first .owner-product-stock-summary small{display:block;font-size:12px;color:var(--ui-muted);margin-top:5px;line-height:1.6}
+.owner-shell-v2.owner-content-first .owner-product-stock-summary>div{min-width:0}
+.owner-shell-v2.owner-content-first .owner-product-extra{border-top:1px solid var(--ui-border);padding-top:14px;margin-top:12px}
+.owner-shell-v2.owner-content-first .owner-product-extra>summary{cursor:pointer;font-weight:600;padding-block:6px}
+.owner-shell-v2.owner-content-first .owner-product-extra>summary small{display:block;font-weight:400;font-size:12px;color:var(--ui-muted);margin-top:6px;overflow-wrap:anywhere}
+.owner-shell-v2.owner-content-first .owner-product-extra>section{padding-top:16px}
+.owner-shell-v2.owner-content-first .owner-source-warning{font-size:13px;color:#885400}
+.owner-shell-v2.owner-content-first .owner-source-warning button{display:inline;padding-inline:0}
+.owner-shell-v2.owner-content-first .owner-record-basis button{display:inline}
+@media(max-width:800px){
+ .owner-shell-v2.owner-content-first #product-panel-general{padding-top:14px}
+ .owner-shell-v2.owner-content-first .owner-price-unit-row{grid-template-columns:minmax(0,1fr);gap:12px}
+ .owner-shell-v2.owner-content-first .owner-product-stock-summary{gap:10px;flex-wrap:wrap}
+ .owner-shell-v2.owner-content-first .owner-inventory-tool-disclosure:has(~.owner-catalog-editing){display:none}
+}

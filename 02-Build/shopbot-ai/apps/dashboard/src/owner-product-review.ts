@@ -8,9 +8,9 @@ export function productPublicationIssues(input:Input):ProductReviewIssue[]{
  if(input.name.trim().length<2)add('productName','general','Enter a product name with at least two characters.');
  if(!input.unit)add('unit','general','Choose the selling unit.');
  if(input.priceStatus!=='confirm'&&!/^\d+(?:\.\d{1,2})?$/.test(input.price))add('price','general','Enter the shop price with up to two decimal places.');
- else if(input.priceStatus==='priced'&&Number(input.price)<=0)add('price','general','Enter a price above zero, or choose the free-item price status.');
+ else if(input.priceStatus==='priced'&&Number(input.price)<=0)add('price','general','Enter a price above zero, or mark this item as free.');
  else if(input.priceStatus==='free'&&Number(input.price)!==0)add('price','general','A free item must have a price of zero.');
- if(!/^\d+(?:\.\d{1,3})?$/.test(input.quantityStep)||Number(input.quantityStep)<=0||Number(input.quantityStep)>100)add('quantityStep','general','Enter a quantity increment above zero and no more than 100.');
+ if(!/^\d+(?:\.\d{1,3})?$/.test(input.quantityStep)||Number(input.quantityStep)<=0||Number(input.quantityStep)>100)add('quantityStep','selling','Enter a quantity increment above zero and no more than 100.');
  if(input.stock.trim()&&(!/^\d+(?:\.\d{1,3})?$/.test(input.stock)||!Number.isFinite(Number(input.stock))))add('stock','general','Enter a non-negative physical count, or leave it unknown.');
  if((input.packValue&&!input.packUnit)||(!input.packValue&&input.packUnit))add('packValue','selling','Enter both the pack content amount and unit, or leave both blank.');
  else if(input.packValue&&(!Number.isFinite(Number(input.packValue))||Number(input.packValue)<=0))add('packValue','selling','Enter a pack content amount above zero.');

@@ -1,6 +1,6 @@
 import type {KeyboardEvent} from 'react';
 import {useOwnerLocale} from './owner-locale.js';
-export const productSections={general:'General',selling:'Selling details',stock:'Stock',photos:'Photos',search:'Customer search'} as const;
+export const productSections={general:'Product details',selling:'Selling details',stock:'Stock',photos:'Photos',search:'Customer search'} as const;
 export type ProductSection=keyof typeof productSections;
 export function OwnerProductTabs({value,onChange,disabled=false}:{value:ProductSection;onChange:(section:ProductSection)=>void;disabled?:boolean}){
  const {t}=useOwnerLocale(),sections=Object.keys(productSections) as ProductSection[];

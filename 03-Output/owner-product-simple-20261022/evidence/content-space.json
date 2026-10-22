@@ -1,0 +1,230 @@
+{
+  "synthetic": true,
+  "readOnly": true,
+  "results": [
+    {
+      "screen": "orders",
+      "locale": "en",
+      "width": 320,
+      "viewportHeight": 640,
+      "top": 174,
+      "height": 490.078125,
+      "available": 406,
+      "visible": 406,
+      "innerScroll": "visible",
+      "completeRows": 3
+    },
+    {
+      "screen": "order-detail",
+      "locale": "en",
+      "width": 320,
+      "viewportHeight": 640,
+      "top": 181.6875,
+      "height": 317.875,
+      "available": 458.3125,
+      "visible": 317.875,
+      "innerScroll": "auto"
+    },
+    {
+      "screen": "messages",
+      "locale": "en",
+      "width": 320,
+      "viewportHeight": 640,
+      "top": 192.984375,
+      "height": 372.625,
+      "available": 447.015625,
+      "visible": 372.625,
+      "innerScroll": "auto"
+    },
+    {
+      "screen": "product",
+      "locale": "en",
+      "width": 320,
+      "viewportHeight": 640,
+      "top": 250.9375,
+      "height": 649.1875,
+      "available": 389.0625,
+      "visible": 389.0625,
+      "innerScroll": "visible",
+      "usable": 314.46875
+    },
+    {
+      "screen": "orders",
+      "locale": "ta",
+      "width": 320,
+      "viewportHeight": 640,
+      "top": 174,
+      "height": 490.078125,
+      "available": 406,
+      "visible": 406,
+      "innerScroll": "visible",
+      "completeRows": 3
+    },
+    {
+      "screen": "order-detail",
+      "locale": "ta",
+      "width": 320,
+      "viewportHeight": 640,
+      "top": 181.6875,
+      "height": 307.5,
+      "available": 458.3125,
+      "visible": 307.5,
+      "innerScroll": "auto"
+    },
+    {
+      "screen": "messages",
+      "locale": "ta",
+      "width": 320,
+      "viewportHeight": 640,
+      "top": 192.984375,
+      "height": 371.421875,
+      "available": 447.015625,
+      "visible": 371.421875,
+      "innerScroll": "auto"
+    },
+    {
+      "screen": "product",
+      "locale": "ta",
+      "width": 320,
+      "viewportHeight": 640,
+      "top": 250.9375,
+      "height": 743.171875,
+      "available": 389.0625,
+      "visible": 389.0625,
+      "innerScroll": "visible",
+      "usable": 314.46875
+    },
+    {
+      "screen": "orders",
+      "locale": "en",
+      "width": 390,
+      "viewportHeight": 844,
+      "top": 174,
+      "height": 490.078125,
+      "available": 610,
+      "visible": 490.078125,
+      "innerScroll": "visible",
+      "completeRows": 4
+    },
+    {
+      "screen": "order-detail",
+      "locale": "en",
+      "width": 390,
+      "viewportHeight": 844,
+      "top": 181.6875,
+      "height": 521.875,
+      "available": 662.3125,
+      "visible": 521.875,
+      "innerScroll": "auto"
+    },
+    {
+      "screen": "messages",
+      "locale": "en",
+      "width": 390,
+      "viewportHeight": 844,
+      "top": 192.984375,
+      "height": 583.015625,
+      "available": 651.015625,
+      "visible": 583.015625,
+      "innerScroll": "auto"
+    },
+    {
+      "screen": "product",
+      "locale": "en",
+      "width": 390,
+      "viewportHeight": 844,
+      "top": 250.9375,
+      "height": 629.046875,
+      "available": 593.0625,
+      "visible": 593.0625,
+      "innerScroll": "visible",
+      "usable": 524.0625
+    },
+    {
+      "screen": "orders",
+      "locale": "ta",
+      "width": 390,
+      "viewportHeight": 844,
+      "top": 174,
+      "height": 490.078125,
+      "available": 610,
+      "visible": 490.078125,
+      "innerScroll": "visible",
+      "completeRows": 4
+    },
+    {
+      "screen": "order-detail",
+      "locale": "ta",
+      "width": 390,
+      "viewportHeight": 844,
+      "top": 181.6875,
+      "height": 521.875,
+      "available": 662.3125,
+      "visible": 521.875,
+      "innerScroll": "auto"
+    },
+    {
+      "screen": "messages",
+      "locale": "ta",
+      "width": 390,
+      "viewportHeight": 844,
+      "top": 192.984375,
+      "height": 576.625,
+      "available": 651.015625,
+      "visible": 576.625,
+      "innerScroll": "auto"
+    },
+    {
+      "screen": "product",
+      "locale": "ta",
+      "width": 390,
+      "viewportHeight": 844,
+      "top": 250.9375,
+      "height": 683.046875,
+      "available": 593.0625,
+      "visible": 593.0625,
+      "innerScroll": "visible",
+      "usable": 524.0625
+    },
+    {
+      "screen": "long-tamil-orders",
+      "locale": "ta",
+      "width": 320,
+      "viewportHeight": 640,
+      "top": 174,
+      "height": 506.875,
+      "available": 406,
+      "visible": 406,
+      "innerScroll": "visible",
+      "completeRows": 3
+    },
+    {
+      "screen": "long-tamil-orders",
+      "locale": "ta",
+      "width": 390,
+      "viewportHeight": 844,
+      "top": 174,
+      "height": 506.875,
+      "available": 610,
+      "visible": 506.875,
+      "innerScroll": "visible",
+      "completeRows": 4
+    }
+  ],
+  "paginationPreserved": true,
+  "phoneActions44px": true,
+  "toolsFocusTrap": true,
+  "searchReload": true,
+  "returnScroll": true,
+  "toolsEscapeFocus": true,
+  "helpEscapeFocus": true,
+  "breakpoints": [
+    800,
+    801
+  ],
+  "shortViewport": [
+    320,
+    400
+  ],
+  "pageErrors": []
+}

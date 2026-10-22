@@ -1,3 +1,9 @@
+## 22 October 2026 — simpler product entry
+
+The owner product form starts with three everyday inputs: name, shop price and selling unit. Shelf/held/available stock has a direct update action; brand/size/category are summarized under optional details. Specialist selling rules remain available, with validation focusing the correct section. Entering an amount, leaving price unknown, and explicitly marking a zero-price item free are distinct. Drafts preserve live facts and explain why stock updates require completing/reloading the draft. Build, 859 integration tests, catalog checks, eight editor browser layouts and existing inner workflows pass. [Research and evidence, including the intermittent broad order-scroll harness result](../../03-Output/owner-product-simple-20261022/README.md). PR #64; this simplification is local, not on the VPS. Owner acceptance remains open under #52.
+
+The independently released 90-second audio source 17175d8 is verified on the VPS as preview-0885b5b7c995: schema 41, full backup decode, old audio and merchant facts preserved, compiled duration/admission checks and matching served assets. See issue #61 for exact deployment proof; fresh user phone/transcription acceptance remains open.
+
 ## 22 October 2026 — 90-second inbound voice notes
 
 Raised audio ingress, normalization/storage, model admission, recognizer and local recorder limits together to 90 seconds. Original payloads are bounded to 4 MiB; normalized mono WAVs to 2,880,044 bytes. Schema 41 widens existing constraints without rewriting recordings. Processing deadlines, models, budget and retry policies remain. [Scope, implementation and evidence](../../03-Output/audio-90-seconds-20261022/README.md). Tracking #61; real user voice accuracy remains separate from synthetic acceptance.
@@ -178,3 +184,7 @@ Native session media carousels (2–10 cards), single-photo buttons, category/li
 # Customer Experience VPS Release - 5 October 2026
 
 Deployed `preview-5c7bf76887e7` with the customer quick-action/editing flow, owner handoff/manual replies, Tamil/Tanglish interface and new-chat WhatsApp Tamil default. All 138 isolated tests and the production build passed. VPS readiness, migration 18, installed quick-action rendering and unchanged environment were verified. Existing test chat language preferences remain unchanged; attachment and staged-discovery features remain off. See `../../03-Output/customer-experience-vps-deployment.md`.
+
+## WhatsApp customer identity
+
+Verified incoming WhatsApp webhooks now retain the sender-matched profile name alongside the existing recipient number (schema 42). Authenticated owner inbox, chat header, orders, checkout/help and overview show the profile name with international phone; old chats use their saved phone until another incoming message supplies a name. Name and phone searches operate across server-side pages. Orders include identity independently of the recent inbox. Empty/malformed profiles retain known names; delayed and duplicate messages cannot replace newer profile names. Hashed customer actors and public customer APIs retain their existing behavior.
