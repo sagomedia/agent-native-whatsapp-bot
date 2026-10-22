@@ -1,4 +1,7 @@
 import {test} from 'node:test';
+import type {Interactions} from '@google/genai';
+import type {SpeechRequest} from '../apps/server/src/adapters/google-speech-recognizer.js';
+import {geminiSpeechRate} from '../apps/server/src/services/inference-budget.js';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
@@ -226,3 +229,29 @@ test('the live understanding schema uses compact provider grammar while local va
  for(const count of [-2,0,101,1.0001])assert.throws(()=>understandingToInterpretation({...base(),requestedItems:[item('two pipes','pipe',count)]},{text:'two pipes',state},true));
  assert.throws(()=>understandingToInterpretation({...base(),requestedItems:[{...item('two pipes','pipe',2),targetLineId:'invented-id'}]},{text:'two pipes',state},true));
 });
+
+function speechResponse(transcript:string):Interactions.Interaction{return {id:'offline-asr',model:geminiSpeechRate.model,status:'completed',steps:[{type:'model_output',content:[{type:'text',text:transcript}]}],usage:{total_input_tokens:500,total_output_tokens:30,total_tokens:530,total_thought_tokens:0}};}
+async function dedicatedVoice(inbox:SimulatorService,r:ConversationRuntime){const id=randomUUID(),event={id,type:'voice' as const,mediaId:id},media={audio:Buffer.from('RIFF dedicated transcription fixture'),durationSeconds:20,sourceHash:'dedicated-asr-controlled'};await inbox.ingest(event,media);await r.processNext(inbox.context);return {event,media,snapshot:await inbox.snapshot()};}
+test('dedicated voice recognizes once, gives Flash-Lite only the transcript and settles both models',async()=>fixture(async(pool,inbox)=>{
+ let recognized:SpeechRequest|undefined,asrCalls=0,understandingCalls=0;
+ const spoken='இரண்டு H07';
+ const provider=new GoogleInterpreter({...settings,transcriptionModel:geminiSpeechRate.model},{generateContent:async request=>{understandingCalls++;const wire=JSON.stringify(request);assert.ok(wire.includes(spoken));assert.ok(!wire.includes('inlineData'));assert.equal(request.model,settings.model);return response({...base(),transcript:'untrusted rewritten transcript',requestedItems:[item(spoken,'H07',2)]});}},{create:async request=>{recognized=request;asrCalls++;return speechResponse(spoken);}});
+ const r=new ConversationRuntime(pool,provider,{allowPaidInference:true,visualOrdering:true});
+ const {event,media,snapshot}=await dedicatedVoice(inbox,r);assert.equal(asrCalls,1);assert.equal(understandingCalls,1);assert.equal(snapshot.conversation.draft[0]?.quantity,2);assert.equal(snapshot.requests.length,0);
+ assert.equal(recognized?.input instanceof Array,true);assert.ok(!JSON.stringify(recognized).includes('currentDraft'));
+ const attempts=(await pool.query('SELECT stage,state,response_model,billing_state,response,input_admission FROM provider_attempts ORDER BY attempt')).rows;
+ assert.deepEqual(attempts.map(a=>[a.stage,a.state,a.response_model,a.billing_state]),[['recognize','succeeded',geminiSpeechRate.model,'estimated'],['identify','succeeded',settings.model,'estimated']]);
+ assert.equal(attempts[0].response.transcript,spoken);assert.ok(attempts[0].input_admission.mediaBytes>0);assert.equal(attempts[1].input_admission.mediaBytes,0);
+ assert.equal(Number((await pool.query('SELECT held_microusd FROM inference_budgets')).rows[0].held_microusd),0);
+ assert.equal((await inbox.ingest(event,media)).duplicate,true);assert.equal(await r.processNext(inbox.context),false);assert.equal(asrCalls,1);assert.equal(understandingCalls,1);
+}));
+test('empty or failed dedicated recognition keeps the current cart and never invokes interpretation',async()=>{
+ for(const mode of ['empty','failed','mismatched'] as const)await fixture(async(pool,inbox)=>{
+  let calls=0;const provider=new GoogleInterpreter({...settings,transcriptionModel:geminiSpeechRate.model},{generateContent:async()=>{calls++;return response({...base(),requestedItems:[item('one H07','H07')]});}},{create:async()=>({...speechResponse(''),...(mode==='failed'?{status:'failed'}:mode==='mismatched'?{model:'wrong-model'}:{})})});
+  const r=new ConversationRuntime(pool,provider,{allowPaidInference:true,visualOrdering:true});const before=await text(inbox,r,'one H07');assert.equal(calls,1);const after=(await dedicatedVoice(inbox,r)).snapshot;assert.deepEqual(after.conversation.draft,before.conversation.draft);assert.equal(calls,1);assert.equal(after.requests.length,0);
+ });
+});
+test('transient dedicated recognition retries once in the ledger and then interprets the transcript',async()=>fixture(async(pool,inbox)=>{
+ let asrCalls=0;const provider=new GoogleInterpreter({...settings,transcriptionModel:geminiSpeechRate.model},{generateContent:async()=>response({...base(),requestedItems:[item('two H07','H07',2)]})},{create:async()=>{if(++asrCalls===1)throw Object.assign(new Error('fixture unavailable'),{status:503});return speechResponse('two H07');}});
+ const r=new ConversationRuntime(pool,provider,{allowPaidInference:true,visualOrdering:true});const after=(await dedicatedVoice(inbox,r)).snapshot;assert.equal(asrCalls,2);assert.equal(after.conversation.draft[0]?.quantity,2);assert.deepEqual((await pool.query('SELECT stage,state FROM provider_attempts ORDER BY attempt')).rows,[{stage:'recognize',state:'failed'},{stage:'recognize',state:'succeeded'},{stage:'identify',state:'succeeded'}]);
+}));

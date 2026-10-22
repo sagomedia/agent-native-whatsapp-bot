@@ -1,4 +1,5 @@
 import {amendmentIntent} from '../services/order-amendments.js';
+import {GoogleSpeechRecognizer,type SpeechTransport} from './google-speech-recognizer.js';
 import {spokenTamilInstruction} from './tamil-style.js';
 import {admitRequest} from '../services/inference-admission.js';
 import {observeUnderstanding,perceptionEnvelope} from '../services/perception-observation.js';
@@ -10,7 +11,7 @@ import {languageOf,say} from '../../../../packages/contracts/language.js';
 import {GoogleGenAI,ThinkingLevel,ServiceTier,type GenerateContentParameters,type GenerateContentResponse} from '@google/genai';
 import {z} from 'zod';
 import {interpretationSchema,operationSchema} from '../../../../packages/contracts/index.js';
-import {geminiTextRate,validateRateCard,rateHealth,type RateCard} from '../services/inference-budget.js';
+import {geminiTextRate,geminiSpeechRate,validateRateCard,rateHealth,type RateCard} from '../services/inference-budget.js';
 import type {Interpreter,InterpretationInput,ProviderResult} from './interpreter.js';
 import {planningResponseSchema,imageResponseSchema,recognitionResponseSchema} from './google-planning-schema.js';
 
@@ -53,11 +54,13 @@ Search: searchPlans:[{operationIndex,keywords:[synonyms],familyId:only certain a
 Edits: use stable current UUIDs. Identity changes use resolve_line with lineId/query; keep count/brand only for the same product, never carry old dimensions into a replacement. set_quantity:{reference,quantity:TOTAL,supportingPhrase}. Extra counts use increment_quantity:{reference,delta,supportingPhrase}. Measured totals of the SAME selected product use set_amount:{reference,amount:{value,unit},mode:total|continuous,supportingPhrase}; measured additions use increment_amount:{reference,delta:{value,unit},supportingPhrase}. This 10m hose wanted as 50m total uses set_amount 50m, never productMeasures 50m or a new query. Only explicit single/continuous length uses continuous. Backend converts verified contents; you never calculate packs. ProductMeasures describe ONE item's diameter/length; requestedAmount is the total wanted. An edit also asking the bill keeps operations,next=review,estimateRequested=true.
 Named multi-line edits work while other questions are pending. Negation (வேண்டாம்/venda/do not want) removes only the named existing line; absent means no addition. remove_item:{reference,supportingPhrase}. A refusal of choices never clears the list. Ambiguous targets ask which item without writes. Only set_fulfillment has method:pickup. Bare yes never approves or submits; yes plus an edit is an edit.
 Browsing/job/availability discovery is read-only: operations=[],next=assist,assistance:{rootQuery,queries:[1-3 useful queries],lineId:only the current line for alternatives,quantity:explicit only,requestedUnit:explicit only,question:optional},assistanceSearch:{keywords,...valid map filters}. Continue remembered goals on check again; a workpiece diameter is useCase, not a cutter dimension. Multi-item purchase lists use operations, not assistance. Pure prices use operations=[],next=price,priceQuery,priceQuantity/priceUnit if stated; never mutate a draft from a pure quote. Mixed edits plus bill use review. Social/pause/help use operations=[],next=continue,conversation:greeting|thanks|help|handoff|pause. Shop questions use conversation:shop_question,shopQuestions:[delivery|discount|hours|technical|availability]; keep shopping edits if combined. Use backend catalog observations before asking questions. If an exact known product is found, return its search/price plan; do not ask for stock or price data already present. Missing price is independent of positive stock. One short localized clarifyQuestion/assistance.question may ask missing identity details, never make commerce claims. Text planning uses the given voice transcript, never regenerates it. Omit all unused optional fields.`;
-export type NativeSettings={unifiedUnderstanding?:boolean;allowImageLists?:boolean;maxOutputTokens?:number;allowPaidInference:boolean;apiKey:string;model:string;budgetMicrousd:number;allowMultimodal?:boolean;freeQuota?:{scope:string;model:string}};
+export type NativeSettings={transcriptionModel?:string;unifiedUnderstanding?:boolean;allowImageLists?:boolean;maxOutputTokens?:number;allowPaidInference:boolean;apiKey:string;model:string;budgetMicrousd:number;allowMultimodal?:boolean;freeQuota?:{scope:string;model:string}};
 const submittedInstruction='For an explicit amendment or cancellation to the submitted order, propose operations against its current line IDs; the backend stages an amendment and never edits the original snapshot. For extra/add/change/remove use this route. An explicit new order uses a separate list. The previous request is immutable. Never apply an edit yourself or copy quantities into unrelated new products. A single new product or job returns operations=[],next=assist,assistance and optionally assistanceSearch. A new multi-item shopping list must preserve EACH item with add_item operations,next=review; the backend will hold it for an explicit new-list button, not edit the old order. Use only actual purchase amounts; unspecified quantities stay null. Assistance fields are allowed ONLY with next=assist.';
 const quantityInstruction='Tamil purchase amount: "oru blade venum" / "ஒரு பிளேடு வேணும்" explicitly requests quantity=1; rendu/ரெண்டு=2. Do not omit the spoken amount in a purchase request. Availability-only "oru blade irukka" has no purchase quantity. Size distinction: "oru inch pipe" means a 1-inch pipe, NOT one pipe. "rendu blade and oru inch pipe" means blade quantity=2 and 1-inch pipe quantity=null. Only a separate purchase amount counts as quantity. Write numeric dimensions as digits in canonical search queries (1 inch pipe), while preserving the original spoken words in transcript.';
 const visualQuantityInstruction='Keep packSize, purchase count and requestedAmount separate. One 10L can: count=1, packSize=10 litre, requestedUnit=can; two cans: count=2. 10L paint without a count: quantity=null; never ten cans. ProductMeasures describe one physical item. One 1-inch pipe: diameter=1 inch,count=1; a bare 1-inch pipe has count=null. A selected 10m hose requested as 50m total uses set_amount; backend checks whole packs, cutting, continuous length, unit verification and stock. Keep its SKU/photo. New products remain add_item while other items are unresolved. '+quantityInstruction;
 export function readNativeSettings(env=process.env):NativeSettings {
+  const transcriptionModel=env.GEMINI_TRANSCRIPTION_MODEL;
+  if(transcriptionModel&&(transcriptionModel!==geminiSpeechRate.model||env.ALLOW_PAID_INFERENCE!=='true'||env.ALLOW_FREE_INFERENCE==='true'||env.ALLOW_MULTIMODAL_INFERENCE!=='true'))throw new Error('Dedicated transcription requires the supported Transcribe model and authorized paid multimodal inference.');
   if(env.ALLOW_FREE_INFERENCE==='true') {
     if(env.ALLOW_PAID_INFERENCE==='true'||(env.AI_BUDGET_USD??'0')!=='0') throw new Error('Free-tier evaluation requires paid inference disabled and budget zero.');
     if(!env.GEMINI_API_KEY?.trim()) throw new Error('GEMINI_API_KEY is required for native evaluation.');
@@ -74,7 +77,8 @@ export function readNativeSettings(env=process.env):NativeSettings {
   const [whole,fraction='']=value.split('.');const budgetMicrousd=Number(BigInt(whole)*1000000n+BigInt(fraction.padEnd(6,'0')));
   if(!Number.isSafeInteger(budgetMicrousd)||budgetMicrousd<=0) throw new Error('Invalid inference budget.');
   validateRateCard(geminiTextRate);
-  return {unifiedUnderstanding:env.GEMINI_UNIFIED_UNDERSTANDING_ENABLED==='true',allowImageLists:env.GEMINI_HANDWRITTEN_LISTS_ENABLED==='true',maxOutputTokens:env.WHATSAPP_VISUAL_ORDERING_ENABLED==='true'||env.GEMINI_UNIFIED_UNDERSTANDING_ENABLED==='true'?16384:4096,allowPaidInference:true,apiKey:env.GEMINI_API_KEY,model,budgetMicrousd,allowMultimodal:env.ALLOW_MULTIMODAL_INFERENCE==='true'};
+  if(transcriptionModel)validateRateCard(geminiSpeechRate);
+  return {transcriptionModel,unifiedUnderstanding:env.GEMINI_UNIFIED_UNDERSTANDING_ENABLED==='true',allowImageLists:env.GEMINI_HANDWRITTEN_LISTS_ENABLED==='true',maxOutputTokens:env.WHATSAPP_VISUAL_ORDERING_ENABLED==='true'||env.GEMINI_UNIFIED_UNDERSTANDING_ENABLED==='true'?16384:4096,allowPaidInference:true,apiKey:env.GEMINI_API_KEY,model,budgetMicrousd,allowMultimodal:env.ALLOW_MULTIMODAL_INFERENCE==='true'};
 }
 function prompt(input:InterpretationInput) {
   // Media recognition describes the request before available stock can bias it.
@@ -99,17 +103,20 @@ export class GoogleInterpreter implements Interpreter {
   readonly billing:RateCard;
   readonly freeQuota?:{scope:string;model:string};
   readonly recognitionProvider?:Interpreter;
-  // Duration never selects a second model.
-  recognitionProviderFor(_input:InterpretationInput):Interpreter { return this; }
+  recognitionProviderFor(_input:InterpretationInput):Interpreter { return this.recognitionProvider??this; }
   private transport:GoogleTransport;
   private multimodal:boolean;
-  constructor(settings:NativeSettings,transport?:GoogleTransport) {
+  constructor(settings:NativeSettings,transport?:GoogleTransport,speechTransport?:SpeechTransport) {
     if((!settings.allowPaidInference&&!settings.freeQuota)||!settings.apiKey||settings.model!==geminiTextRate.model) throw new Error('Live interpretation is disabled: native configuration is incomplete.');
     if(rateHealth(geminiTextRate).status==='invalid')validateRateCard(geminiTextRate);this.billing={...geminiTextRate,maxOutputTokens:settings.maxOutputTokens??geminiTextRate.maxOutputTokens};this.freeQuota=settings.freeQuota;this.name=`google:${settings.model}${this.freeQuota?':free':''}`;
     this.unifiedUnderstanding=settings.unifiedUnderstanding===true;
     this.supportsImageLists=this.unifiedUnderstanding&&settings.allowImageLists===true;
     if(this.unifiedUnderstanding)this.name+=':understanding-v2:'+UNDERSTANDING_PROMPT_VERSION;
     this.multimodal=settings.allowMultimodal===true;
+    if(settings.transcriptionModel){
+      if(settings.transcriptionModel!==geminiSpeechRate.model||!settings.allowPaidInference||settings.freeQuota||!this.multimodal)throw new Error('Dedicated transcription requires the supported Transcribe model and authorized paid multimodal inference.');
+      this.recognitionProvider=new GoogleSpeechRecognizer({apiKey:settings.apiKey,model:settings.transcriptionModel,budgetMicrousd:settings.budgetMicrousd},speechTransport);
+    }
     // Exactly one SDK request per ledger attempt; no SDK retries or automatic tool loop.
     this.transport=transport??new GoogleGenAI({apiKey:settings.apiKey,vertexai:false,httpOptions:{apiVersion:'v1beta',timeout:9500,retryOptions:{attempts:1}}}).models;
   }
