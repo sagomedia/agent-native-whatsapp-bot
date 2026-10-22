@@ -795,7 +795,8 @@ export class ConversationRuntime {
     const photo=image?await loadImage(this.pool,ctx,(claim.event as Extract<SimulatorEvent,{type:'image'}>).mediaId):undefined;
     if(photo&&photo.sourceVersion!==claim.state.version)throw new ToolError('That photo belongs to an earlier product question. Please send the current photo again.','stale_version');
     let transcript:string|undefined;
-    if(voice&&!this.provider.unifiedUnderstanding){
+    const separateRecognition=voice&&(!this.provider.unifiedUnderstanding||!!this.provider.recognitionProvider);
+    if(separateRecognition){
       // Recognition sees only the newly received audio. Keep the validated
       // transcript in its own durable ledger stage before any shopping plan.
       let recognized:Interpretation;
@@ -812,9 +813,9 @@ export class ConversationRuntime {
     }
     let text=claim.event.type==='text'?claim.event.text:claim.event.type==='image'?(claim.event.caption||'Find catalog products like the uploaded photo'):transcript??'Understand the current recording';
     const observations=image?[]:await withConversation(this.pool,ctx,async client=>observeCatalog(client,ctx,this.tools,observationQueries(text,claim.state,claim.memory),`${claim.id}:observe`));
-    const input={history:recent,text,audio:this.provider.unifiedUnderstanding?audio:undefined,image:photo,state:claim.state,catalog:claim.catalog,catalogMap:claim.catalogMap,assistantMemory:claim.memory,observations};
+    const input={history:recent,text,audio:this.provider.unifiedUnderstanding&&!separateRecognition?audio:undefined,image:photo,state:claim.state,catalog:claim.catalog,catalogMap:claim.catalogMap,assistantMemory:claim.memory,observations};
     let identified=await this.callProvider(ctx,claim,input,'identify');
-    if(voice){transcript=this.provider.unifiedUnderstanding?identified.transcript:transcript;if(!transcript)throw new ToolError('No clear speech was recognized. Record again or type your request.','voice_unreadable');identified={...identified,transcript};text=transcript;}
+    if(voice){transcript=this.provider.unifiedUnderstanding&&!separateRecognition?identified.transcript:transcript;if(!transcript)throw new ToolError('No clear speech was recognized. Record again or type your request.','voice_unreadable');identified={...identified,transcript};text=transcript;}
     if(image&&identified.understanding?.inputKind==='handwritten_list')text=identified.understanding.observedText??text;
     const evidenceRepair=!image&&identified.understanding?.unresolved.includes('validation_recovery')?claim.evidenceRepair:undefined;
     if(evidenceRepair){
@@ -882,7 +883,7 @@ export class ConversationRuntime {
     }
     if(claim.state.visualOrdering&&claim.state.lastRequestId&&identified.operations.some(op=>op.kind==='add_item'))return identified;
     const newList=mediaRecommendations&&claim.state.lastRequestId&&identified.operations.length>1&&identified.operations.every(op=>op.kind==='add_item')?identified.operations as NonNullable<AssistantMemory['newList']>:undefined;
-    if(this.provider.unifiedUnderstanding&&(await this.pool.query('SELECT count(*)::int AS calls FROM provider_attempts WHERE message_id=$1',[claim.id])).rows[0].calls>=2)return identified;
+    if(this.provider.unifiedUnderstanding&&(await this.pool.query("SELECT count(*)::int AS calls FROM provider_attempts WHERE message_id=$1 AND stage<>'recognize'",[claim.id])).rows[0].calls>=2)return identified;
     if(identified.next!=='assist'&&!newList||!(mediaRecommendations||(this.options.discoveryStages??(!!this.provider.freeQuota&&claim.event.type==='text'))))return identified;
     const recommendationItems=newList&&(this.options.sequentialItems)?newList.slice(0,1):newList;
     const plan=newList?{queries:recommendationItems!.slice(0,3).map(item=>item.query)}:identified.assistance!;

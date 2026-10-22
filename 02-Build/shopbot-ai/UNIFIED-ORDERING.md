@@ -1,6 +1,6 @@
 # Unified Flash Lite ordering
 
-All application inference uses gemini-3.5-flash-lite. The historical speech-recognizer entry point now delegates to the same model; duration never chooses a Transcribe model.
+Shopping understanding uses gemini-3.5-flash-lite. Set `GEMINI_TRANSCRIPTION_MODEL=gemini-3.5-transcribe` for dedicated voice recognition followed by Flash-Lite text understanding. See [VOICE-TRANSCRIPTION.md](VOICE-TRANSCRIPTION.md) for the current VPS pipeline. With this setting absent, the original combined Flash-Lite audio path remains available.
 
 The new extraction contract is opt-in so existing drafts, cached legacy interpretations and current consent bindings can be preserved while the release is evaluated. Enable these in the existing private configuration:
 
