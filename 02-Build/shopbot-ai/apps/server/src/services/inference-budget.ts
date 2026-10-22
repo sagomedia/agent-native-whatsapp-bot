@@ -7,8 +7,8 @@ import {ToolError,withConversation,type ActorContext} from './context.js';
 export type RateCard={model:string;currency:'USD';verifiedOn:string;validUntil:string;source:string;inputMicrousdPerMillion:number;outputMicrousdPerMillion:number;inputTokenLimit:number;maxOutputTokens:number};
 // Standard text/image/audio inputs share this verified price. No audio output.
 export const geminiTextRate:Readonly<RateCard>=Object.freeze({model:GEMINI_MODEL_ID,currency:'USD',verifiedOn:'2026-10-14',validUntil:'2026-11-01',source:'https://ai.google.dev/gemini-api/docs/pricing',inputMicrousdPerMillion:300000,outputMicrousdPerMillion:2500000,inputTokenLimit:1048576,maxOutputTokens:4096});
-// Audio-only Transcribe input and text output; bounded to our 30-second notes.
-// 4096 input tokens conservatively cover 750 audio tokens plus API overhead.
+// Audio-only Transcribe input and text output; bounded to our 90-second notes.
+// 4096 input tokens conservatively cover 2250 audio tokens plus API overhead.
 export const geminiSpeechRate:Readonly<RateCard>=Object.freeze({model:GEMINI_TRANSCRIPTION_MODEL_ID,currency:'USD',verifiedOn:'2026-10-21',validUntil:'2026-11-01',source:'https://ai.google.dev/gemini-api/docs/pricing',inputMicrousdPerMillion:2000000,outputMicrousdPerMillion:12000000,inputTokenLimit:4096,maxOutputTokens:4096});
 export const freeQuotaLimits=Object.freeze({requestsPerMinute:10,inputTokensPerMinute:200000,requestsPerDay:100,minIntervalSeconds:6,reservedInputTokens:64000});
 const integer=(n:unknown):n is number=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0;

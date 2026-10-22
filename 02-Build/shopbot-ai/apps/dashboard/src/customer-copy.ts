@@ -212,9 +212,9 @@ const customerCopy:Record<string,[string,string]>={
     "குரல் பதிவு செய்",
     "Kural record pannu"
   ],
-  "Up to 30 seconds · check the photos after speaking": [
-    "அதிகபட்சம் 30 வினாடி · பேசிய பிறகு பொருள் படங்களைச் சரிபாருங்கள்",
-    "Adhigapatcham 30 vinadi · pesiyapiragu porul photos-ai check pannunga"
+  "Up to 90 seconds · check the photos after speaking": [
+    "அதிகபட்சம் 90 வினாடி · பேசிய பிறகு பொருள் படங்களைச் சரிபாருங்கள்",
+    "Adhigapatcham 90 vinadi · pesiyapiragu porul photos-ai check pannunga"
   ],
   "The local chat is unavailable.": [
     "உள்ளூர் உரையாடல் கிடைக்கவில்லை.",

@@ -1,0 +1,58 @@
+{
+  "date": "2026-10-22",
+  "acceptedScope": "c9cc1a8",
+  "baseline": "c8b51ae12caff70210b4a7419259442ec8c3eb8e",
+  "maxSeconds": 90,
+  "uploadBytes": 4194304,
+  "normalizedWavBytes": 2880044,
+  "migration": 41,
+  "buildTypecheck": "passed",
+  "integration": {
+    "passed": 859,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 173210.478042
+  },
+  "boundaryScenarios": {
+    "passed": 5,
+    "failed": 0,
+    "includes90SecondOpus": true
+  },
+  "catalogCleanup": {
+    "passed": 4,
+    "failed": 0
+  },
+  "browserRecorder": {
+    "simulatedMicrophone": true,
+    "realMediaUploads": false,
+    "results": [
+      {
+        "locale": "en",
+        "recordsPast30": true,
+        "recordsThrough88": true,
+        "autoStopsAt89": true,
+        "previewBeforeSend": true
+      },
+      {
+        "locale": "ta",
+        "recordsPast30": true,
+        "recordsThrough88": true,
+        "autoStopsAt89": true,
+        "previewBeforeSend": true
+      },
+      {
+        "locale": "ta-Latn",
+        "recordsPast30": true,
+        "recordsThrough88": true,
+        "autoStopsAt89": true,
+        "previewBeforeSend": true
+      }
+    ],
+    "pageErrors": []
+  },
+  "processingDeadlinesUnchanged": true,
+  "modelAndBudgetUnchanged": true,
+  "providerCalls": 0,
+  "customerSends": 0,
+  "realPhoneTranscriptionAcceptance": "pending"
+}

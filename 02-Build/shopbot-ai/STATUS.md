@@ -1,3 +1,7 @@
+## 22 October 2026 — 90-second inbound voice notes
+
+Raised audio ingress, normalization/storage, model admission, recognizer and local recorder limits together to 90 seconds. Original payloads are bounded to 4 MiB; normalized mono WAVs to 2,880,044 bytes. Schema 41 widens existing constraints without rewriting recordings. Processing deadlines, models, budget and retry policies remain. [Scope, implementation and evidence](../../03-Output/audio-90-seconds-20261022/README.md). Tracking #61; real user voice accuracy remains separate from synthetic acceptance.
+
 ## 21 October 2026 — content-first owner interface
 
 Implemented accepted plan `4f0e8e8`: compact phone title/Tools, flowing Orders/inbox lists, contextual record actions, fewer perimeter borders, conditional pagination, expanded conversation transcript and compact product framing. Preserved all business controls and recovery states. A loading-aware return restores order-list position and focus; Tools supports keyboard containment and Escape. At 320×640, Orders gains 118→406px of available worklist span and the transcript 71→373px; English/Tamil minimum spans and long-Tamil row checks pass. [Implementation, measurements, evidence and tradeoffs](../../03-Output/owner-content-first-20261021/README.md). Candidate remains in draft PR #57; not deployed to the VPS. Staff/device/native-copy/live-provider acceptance stays open under #52.
