@@ -1,3 +1,4 @@
+import {setOwnerLanguage} from './owner-browser-tools.mjs';
 // Local synthetic rehearsal. Real APIs supply page reads; mutations are blocked.
 // A CSV preview response is intercepted solely to inspect the responsive rows.
 import assert from 'node:assert/strict';
@@ -55,14 +56,14 @@ try{
  // The read-only rehearsal never applies that intercepted preview.
  await page.getByRole('button',{name:'Back to products',exact:true}).click();assert.equal(await page.getByRole('dialog').count(),0);
  for(const language of ['en','ta']){
-  await visit('overview');await page.getByLabel('Dashboard language / மொழி').selectOption(language);
+  await visit('overview');await setOwnerLanguage(page,language);
   for(const request of snapshot.requests){
    await page.goto(base+'/owner?view=requests&order='+request.id);await page.locator('.order-items-scroll').waitFor();await page.getByText('Loading your saved quote…',{exact:true}).waitFor({state:'hidden'});
    const content=await page.locator('.order-items-scroll').boundingBox();assert.ok(content.height>=120,language+' '+request.fulfillment+' content height '+content.height);assert.ok(await contained('.order-footer-actions'),language+' action labels must fit');phoneOrders.push({language,state:request.fulfillment,complete:request.estimate_complete,contentHeight:content.height});
    if(request.fulfillment==='ready_for_pickup')await page.screenshot({path:resolve(out,'ready-order-'+language+'-320.png')});
   }
  }
- await visit('overview');await page.getByLabel('Dashboard language / மொழி').selectOption('en');const colors=await page.locator('.owner-primary').first().evaluate(el=>{const style=getComputedStyle(el);return {text:style.color,background:style.backgroundColor};});assert.ok(contrast(colors.text,colors.background)>=4.5,'Primary button contrast');
+ await visit('overview');await setOwnerLanguage(page,'en');const colors=await page.locator('.owner-primary').first().evaluate(el=>{const style=getComputedStyle(el);return {text:style.color,background:style.backgroundColor};});assert.ok(contrast(colors.text,colors.background)>=4.5,'Primary button contrast');
  assert.deepEqual(errors,[]);assert.deepEqual(blockedWrites,[]);assert.equal(previewReads,1);
  await writeFile(resolve(out,'results.json'),JSON.stringify({synthetic:true,realReads:true,realWrites:0,csvPreviewIntercepts:previewReads,layouts,phoneOrders,primaryContrast:contrast(colors.text,colors.background),errors},null,2));console.log('Owner design checks passed: six pages, six viewport sizes, stage/section navigation, product actions, dialogs, CSV cards, 12 English/Tamil order states and contrast.');
 }catch(error){console.error('Browser errors:',errors);console.error((await page.locator('body').innerText()).slice(0,4000));await page.screenshot({path:resolve(out,'failure.png')});throw error;}finally{await browser.close();}

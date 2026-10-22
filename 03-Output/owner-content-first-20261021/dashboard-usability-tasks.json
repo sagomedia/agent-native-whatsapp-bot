@@ -1,0 +1,26 @@
+{
+  "synthetic": true,
+  "passed": [
+    "Daily navigation and direct work shortcuts",
+    "Lost manual-send response and a closed reply window retain the draft and replay the same operation",
+    "Manual reply, unsent-draft guard, takeover and return preserve global pause",
+    "Bounded catalog pages and unknown-stock opening count avoid an invalid restock or false zero",
+    "Optional four-job help works by keyboard at desktop, tablet and 320-pixel phone widths",
+    "Two-click price path, unchanged stock, lost-response retry uses identical batch",
+    "Stock tasks preview holds and available units, with stable retry identity",
+    "Mixed inline updates write only edited price/count and retain reservations",
+    "Clearing a field keeps other edits; off-page edits remain visible; partial save reloads only remaining products",
+    "Full product editor and AI details preserve merchant price and selling unit",
+    "Uncertain stock retry freezes the entire payload even after product metadata refresh",
+    "Photo and Tamil alias draft reload, safe clone, publication confirmation, hide/search and draft rejection",
+    "Advance verification, explicit cancellation confirmation and a separate actual refund reference",
+    "Settings, pause, billing analytics and unknown-charge warnings retained",
+    "Message previews render without sending or interactive commerce actions",
+    "All six views and inline grid fit 320/360/390/768/1024/1536/1920 widths with internal scrolling",
+    "Tamil daily controls and saved owner-language preference",
+    "Expired sign-in retains the live draft and restores access in the original tab"
+  ],
+  "newPricePathClicks": 2,
+  "clickMeasurements": {},
+  "pageErrors": []
+}

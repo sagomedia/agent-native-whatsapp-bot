@@ -2,6 +2,7 @@ import {createContext,useContext,useEffect,useState,type ReactNode} from 'react'
 
 export type OwnerLocale='en'|'ta';
 const tamil:Record<string,string>={
+ 'WhatsApp on':'வாட்ஸ்அப் இயங்கும்','WhatsApp off':'வாட்ஸ்அப் நிறுத்தம்','Tools':'கருவிகள்','Conversation details':'உரையாடல் விவரங்கள்',
  'Use at least 6 characters from the transaction reference.':'பரிவர்த்தனை எண்ணில் குறைந்தது 6 எழுத்துகள் அல்லது எண்களை உள்ளிடவும்.',
  'Back to order':'ஆர்டருக்குத் திரும்பு','Handle conversation':'உரையாடலைக் கவனி','Open full photo':'முழுப் படத்தைத் திற',
  'Today':'இன்று','Orders':'ஆர்டர்கள்','Messages':'செய்திகள்','Conversations':'உரையாடல்கள்','Products':'பொருட்கள்','Settings & usage':'கடை அமைப்புகள்','Message review':'செய்தி மாதிரிகள்','Shop counter':'கடை வேலைகள்',
@@ -60,7 +61,7 @@ Object.assign(tamil,{
 export function ownerText(locale:OwnerLocale,text:string){
  if(locale==='en')return text;
  if(tamil[text])return tamil[text];
- return text.replace(/\bCustomer · /g,'வாடிக்கையாளர் · ').replace(/^(\d+) items$/,'$1 பொருட்கள்').replace(/^Resolve (\d+) items?$/,'$1 பொருட்களின் விவரங்களை நிரப்பு');
+ return text.replace(/\bCustomer · /g,'வாடிக்கையாளர் · ').replace(/^(\d+) items$/,'$1 பொருட்கள்').replace(/^Resolve (\d+) items?$/,'$1 விவரங்களை நிரப்பு');
 }
 Object.assign(tamil,{
  'Quote saved':'விலைப்பட்டியல் சேமிக்கப்பட்டது','Order saved':'ஆர்டர் சேமிக்கப்பட்டது','WhatsApp notification is off. Turn it on below to send this saved quote.':'WhatsApp அறிவிப்பு நிறுத்தப்பட்டுள்ளது. சேமித்த விலைப்பட்டியலை அனுப்ப கீழே மீண்டும் செயல்படுத்துங்கள்.',

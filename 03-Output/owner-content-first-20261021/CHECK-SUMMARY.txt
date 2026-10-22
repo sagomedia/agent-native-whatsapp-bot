@@ -1,0 +1,31 @@
+Final local checks
+
+Production build/typecheck:
+dist/dashboard/assets/language-CiP3My05.js                 97.66 kB │ gzip:  28.36 kB
+dist/dashboard/assets/index-D2A0J46b.js                   367.16 kB │ gzip: 109.39 kB
+
+✓ built in 2.80s
+
+PostgreSQL:
+  duration_ms: 436.342461
+  type: 'test'
+  ...
+1..848
+# tests 848
+# suites 0
+# pass 848
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 256381.109666
+
+Catalog cleanup:
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.122s
+
+OK
+
+Quote browser:
+Owner UX acceptance passed: suggested prices, large/enlarged photos, direct manual store quotes, no review checkboxes, optional matching, save/conflict recovery, one-action send, customer approval, automatic refresh, offline recovery, approval-to-acceptance-to-ready-to-collection, fixed viewport and independently scrolling items.
