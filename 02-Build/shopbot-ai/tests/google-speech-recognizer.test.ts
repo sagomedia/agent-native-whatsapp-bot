@@ -22,8 +22,8 @@ test('empty, invalid, incomplete and model-mismatched transcripts cannot produce
  assert.deepEqual((await run(response(''))).output,{operations:[],next:'continue'});
  for(const r of [response('x'.repeat(4001)),{...response('one'),model:geminiTextRate.model},{...response('one'),status:'failed'},{...response('one'),steps:[{type:'function_call',id:'bad',name:'submit',arguments:{}}]},{...response('one'),errors:[{code:'INTERNAL',message:'fixture'}]}] as Interactions.Interaction[]){const result=await run(r);assert.equal(result.output,null);assert.ok(result.validationIssues?.length);}
  assert.equal((await run({...response('one'),status:'incomplete'})).truncated,true);
- for(const durationSeconds of [0,-1,31,NaN,Infinity])await assert.rejects(new GoogleSpeechRecognizer(settings).interpret({...input,audio:{...input.audio,durationSeconds}},AbortSignal.timeout(1000)),/30 seconds/);
- for(const data of ['', '!!!',Buffer.alloc(960045).toString('base64')])await assert.rejects(new GoogleSpeechRecognizer(settings).interpret({...input,audio:{...input.audio,data}},AbortSignal.timeout(1000)));
+ for(const durationSeconds of [0,-1,90.01,NaN,Infinity])await assert.rejects(new GoogleSpeechRecognizer(settings).interpret({...input,audio:{...input.audio,durationSeconds}},AbortSignal.timeout(1000)),/90 seconds/);
+ for(const data of ['', '!!!',Buffer.alloc(2880045).toString('base64')])await assert.rejects(new GoogleSpeechRecognizer(settings).interpret({...input,audio:{...input.audio,data}},AbortSignal.timeout(1000)));
  assert.throws(()=>new GoogleSpeechRecognizer({...settings,model:geminiTextRate.model}),/pinned model/);
 });
 test('Transcribe accounting uses its speech rate and holds unknown usage',()=>{

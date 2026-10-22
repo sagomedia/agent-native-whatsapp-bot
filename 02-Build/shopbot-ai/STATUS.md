@@ -1,3 +1,7 @@
+## 22 October 2026 — deployment preserves 90-second voice notes
+
+Preserved audio policy and additive migration 41 from verified source `17175d8` while preparing the minimal owner redesign release. This keeps the already deployed voice-note duration support alongside schemas 42 and 43.
+
 ## 22 October 2026 — minimal owner redesign
 
 Implemented the approved Orders, Chats, Products and Settings redesign with three order stages, optional revised bills, original bill preservation, a product picker and order-only store items, advisory recorded stock, one-action product creation, and owner-checked ₹10 receipt confirmation without a compulsory bank reference. Desktop/mobile flows use the same visual language. See [scope, implementation and verification](../../03-Output/minimal-owner-redesign-20261022/README.md), tracked in issue #69. Local synthetic rehearsal only; no runtime deployment or real-device UPI verification.

@@ -1,3 +1,4 @@
+import {voiceLimits,voiceWavBase64Limit} from '../../../../packages/contracts/voice-policy.js';
 import {amendmentIntent} from '../services/order-amendments.js';
 import {GoogleSpeechRecognizer,type SpeechTransport} from './google-speech-recognizer.js';
 import {spokenTamilInstruction} from './tamil-style.js';
@@ -125,7 +126,7 @@ export class GoogleInterpreter implements Interpreter {
   validateInput(input:InterpretationInput) {
     if(input.audio&&input.stage!=='recognize'&&!(this.unifiedUnderstanding&&input.stage==='identify')||input.stage==='recognize'&&!input.audio)throw new Error('Audio is accepted only in the recognition stage.');
     if(input.image&&(!this.supportsImages||input.audio||input.image.mimeType!=='image/jpeg'||!input.image.data||input.image.data.length>2796204))throw new Error('Image input requires the free-only adapter and a verified photo under 2 MB.');
-    if(input.audio&&(!this.supportsAudio||input.audio.mimeType!=='audio/wav'||input.audio.durationSeconds<=0||input.audio.durationSeconds>30||input.audio.data.length>1280100))throw new Error('Audio requires the free-only adapter and a verified recording of up to 30 seconds.');
+    if(input.audio&&(!this.supportsAudio||input.audio.mimeType!=='audio/wav'||input.audio.durationSeconds<=0||input.audio.durationSeconds>voiceLimits.maxSeconds||input.audio.data.length>voiceWavBase64Limit))throw new Error('Audio requires the free-only adapter and a verified recording of up to 90 seconds.');
     if((input.catalog?.length??0)>200||Buffer.byteLength((input.stage==='recognize'?'Transcribe the new recording.':prompt(input))+(input.image?imageInstruction:planningInstruction),'utf8')>64000) throw new Error('Native context is too large. Narrow the catalog before interpretation.');
   }
   private buildRequest(input:InterpretationInput):GenerateContentParameters {

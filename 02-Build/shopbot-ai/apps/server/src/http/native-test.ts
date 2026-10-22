@@ -1,3 +1,4 @@
+import {voiceUploadBase64Limit} from '../../../../packages/contracts/voice-policy.js';
 import {imageUploadSchema,normalizeImage,loadImage} from '../services/image-media.js';
 import {voiceUploadSchema,normalizeVoice,loadVoice} from '../services/voice-media.js';
 import {randomUUID,randomBytes,createHmac,timingSafeEqual} from 'node:crypto';
@@ -59,7 +60,7 @@ export async function registerNativeTest(app:FastifyInstance,pool:Pool,provider:
       try{const media=await normalizeImage(parsed.data),saved=await inbox.ingest({id:parsed.data.id,type:'image',mediaId:parsed.data.id,caption:parsed.data.caption},undefined,media);await runtime.processNext(inbox.context);return saved;}catch(error){return reply.code((error as {statusCode?:number}).statusCode??400).send({error:error instanceof Error?error.message:'Photo could not be saved.'});}
     });
     routes.get('/api/native-test/image/:id',async(request,reply)=>{const inbox=await channel(request);if(!inbox)return reply.code(401).send({error:'Start a new AI test conversation.'});const id=(request.params as {id:string}).id;if(!/^[0-9a-f-]{36}$/.test(id))return reply.code(400).send({error:'Invalid image.'});try{const media=await loadImage(pool,inbox.context,id);return reply.header('Cache-Control','private, no-store').header('X-Content-Type-Options','nosniff').type('image/jpeg').send(Buffer.from(media.data,'base64'));}catch{return reply.code(404).send({error:'Image not found.'});}});
-    routes.post('/api/native-test/voice',{bodyLimit:1450000},async(request,reply)=>{
+    routes.post('/api/native-test/voice',{bodyLimit:voiceUploadBase64Limit+1024},async(request,reply)=>{
       const inbox=await channel(request);if(!inbox)return reply.code(401).send({error:'Start a new AI test conversation.'});
       if(!provider.supportsAudio)return reply.code(503).send({error:'Voice input is not configured. Please type your request.'});
       const parsed=voiceUploadSchema.safeParse(request.body);if(!parsed.success)return reply.code(400).send({error:'Use a supported voice recording under 1 MB.'});

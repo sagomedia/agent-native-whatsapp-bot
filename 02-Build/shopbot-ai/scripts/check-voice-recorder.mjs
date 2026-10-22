@@ -1,0 +1,14 @@
+// Production assets; simulated microphone and clock, all APIs intercepted.
+import assert from 'node:assert/strict';
+import {resolve} from 'node:path';
+import {mkdir,writeFile} from 'node:fs/promises';
+const {chromium}=await import(process.env.PLAYWRIGHT_MODULE??'playwright');
+const base=process.env.RECORDER_UI_URL??'http://127.0.0.1:5188';assert.ok(['localhost','127.0.0.1'].includes(new URL(base).hostname));
+const out=resolve(process.env.RECORDER_EVIDENCE_DIR??'artifacts/voice-recorder');await mkdir(out,{recursive:true});
+const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome'}),page=await browser.newPage({viewport:{width:390,height:844}}),errors=[],results=[];page.on('pageerror',e=>errors.push(e.message));let locale='en';
+await page.route('**/native-test',route=>route.fulfill({path:resolve('dist/dashboard/index.html'),contentType:'text/html'}));
+await page.route('**/api/**',route=>{assert.equal(route.request().method(),'GET');return route.fulfill({json:{mode:'mock',provider:'offline-preview',catalog:[],conversation:{version:0,draft:[],pending:null,fulfillment:'pickup',lastRequestId:null,replyLanguage:locale},messages:[],requests:[],pending:0,interpretationAttempts:0,lastFailure:null,capabilities:{voice:true,image:false,quota:{minIntervalSeconds:6,requestsPerMinute:10,requestsPerDay:100}},deliveryPreview:{outboundMessages:0,planningPaisePerMessage:0,estimateOnly:true}}});});
+await page.addInitScript(()=>{class Recorder{static isTypeSupported(){return true;}state='inactive';ondataavailable=null;onstop=null;constructor(){}start(){this.state='recording';}stop(){this.state='inactive';this.ondataavailable?.({data:new Blob(['synthetic recorder bytes'],{type:'audio/webm'})});this.onstop?.();}}window.MediaRecorder=Recorder;Object.defineProperty(navigator,'mediaDevices',{value:{getUserMedia:async()=>({getTracks:()=>[{stop(){}}]})}});});
+await page.clock.install();
+try{for(locale of ['en','ta','ta-Latn']){await page.goto(base+'/native-test');const recorder=page.locator('.voice-recorder');await recorder.getByRole('button').first().waitFor();assert.match(await recorder.innerText(),/90/);await recorder.getByRole('button').first().click();await recorder.getByRole('status').waitFor();await page.clock.runFor(88000);assert.match(await recorder.getByRole('status').innerText(),/88.*90/);await page.screenshot({path:resolve(out,'recording-'+locale+'.png')});await page.clock.runFor(1000);await recorder.locator('audio').waitFor();assert.equal(await recorder.getByRole('status').count(),0);assert.equal(await recorder.getByRole('button').count(),2);results.push({locale,recordsPast30:true,recordsThrough88:true,autoStopsAt89:true,previewBeforeSend:true});}
+assert.deepEqual(errors,[]);await writeFile(resolve(out,'results.json'),JSON.stringify({simulatedMicrophone:true,realMediaUploads:false,results,pageErrors:errors},null,2));console.log(JSON.stringify(results));}finally{await browser.close();}
