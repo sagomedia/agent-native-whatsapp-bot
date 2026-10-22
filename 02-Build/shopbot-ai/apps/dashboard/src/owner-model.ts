@@ -39,8 +39,10 @@ export function requestLabel(request: RequestState) {
   if (request.acceptance === 'accepted') return 'Preparing';
   return request.acceptance.replaceAll('_', ' ');
 }
-export function customerLabel(actor: string | undefined, id: string) {
-  // The owner snapshot contains no saved customer display names or phone numbers.
+export type CustomerIdentity={customer_name?:string|null;customer_phone?:string|null};
+export function customerLabel(actor: string | undefined, id: string, identity?:CustomerIdentity) {
+  const phone=identity?.customer_phone?`+${identity.customer_phone}`:undefined;
+  if(phone)return identity?.customer_name?`${identity.customer_name} · ${phone}`:phone;
   return actor === 'local-simulator' ? 'Demo shopper' : `Customer · ${id.slice(0, 8)}`;
 }
 export function replyWindowOpen(lastInbound: string | null | undefined, now = Date.now()) {
