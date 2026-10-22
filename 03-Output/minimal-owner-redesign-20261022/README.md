@@ -27,6 +27,6 @@ Browser checks exercise real local API writes for photographed product creation,
 
 ## Deployment boundary
 
-This is a source implementation and local rehearsal. It has not changed the running shop or deployed a release. Apply migrations normally during a future release after taking the deployment's own database/media backup. A source rollback does not undo database changes or commerce events.
+The redesign was subsequently deployed to the existing VPS as release `preview-ebb2f177e88a`, source `91e8ca3`, with 90-second audio preservation and schema 43. See [DEPLOYMENT.md](DEPLOYMENT.md) for backups, retained records, ordinary demo prices and live verification. A source rollback does not undo database changes or commerce events.
 
 The existing QR request already includes `tr` and `tn`; recipient-app/bank visibility of those fields still requires small real-device payment tests. Automatic settlement verification is not implied by generating a QR or by a customer saying they paid.

@@ -1,3 +1,7 @@
+## 22 October 2026 — minimal redesign active on the VPS
+
+Activated release `preview-ebb2f177e88a` from source `91e8ca3` after 874 passing integration tests, verified packaging, private backup/restore rehearsal and read-only page checks. Schema 43 is active, existing data and environment are retained, and 90-second voice support is preserved. Prepared 295 ordinary prices in the explicitly synthetic demo store with provenance retained. See [deployment proof](../../03-Output/minimal-owner-redesign-20261022/DEPLOYMENT.md). Real-device QR reference visibility remains untested.
+
 ## 22 October 2026 — deployment preserves 90-second voice notes
 
 Preserved audio policy and additive migration 41 from verified source `17175d8` while preparing the minimal owner redesign release. This keeps the already deployed voice-note duration support alongside schemas 42 and 43.
