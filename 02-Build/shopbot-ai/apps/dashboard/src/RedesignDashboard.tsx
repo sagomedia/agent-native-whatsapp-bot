@@ -1,0 +1,31 @@
+import {lazy,Suspense,useEffect,useState} from 'react';
+import {OwnerLocaleProvider,useOwnerLocale} from './owner-locale.js';
+import {OwnerIcon} from './OwnerIcon.js';
+import {navigateOwner,OwnerLink,useOwnerUrl} from './owner-ui.js';
+import {visiblePoll} from './owner-polling.js';
+import {redesignApi} from './redesign-api.js';
+import './redesign.css';
+const Orders=lazy(()=>import('./RedesignOrders.js').then(m=>({default:m.RedesignOrders})));
+const Products=lazy(()=>import('./RedesignProducts.js').then(m=>({default:m.RedesignProducts})));
+const Chats=lazy(()=>import('./RedesignChats.js').then(m=>({default:m.RedesignChats})));
+const Settings=lazy(()=>import('./RedesignSettings.js').then(m=>({default:m.RedesignSettings})));
+const AdvancedCatalog=lazy(()=>import('./OwnerCatalog.js').then(m=>({default:m.OwnerCatalog})));
+export function RedesignDashboard(){return <OwnerLocaleProvider><Workspace/></OwnerLocaleProvider>;}
+const tabs=[{view:'requests',label:'Orders',icon:'orders'},{view:'conversations',label:'Chats',icon:'messages'},{view:'catalog',label:'Products',icon:'products'}] as const;
+function Workspace(){
+ const {locale,setLocale,t}=useOwnerLocale(),params=useOwnerUrl();
+ const raw=params.get('view'),view=raw==='conversations'||raw==='catalog'||raw==='connections'?raw:raw==='message-review'?'connections':'requests';
+ const [snapshot,setSnapshot]=useState<any>(null),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[attempt,setAttempt]=useState(0);
+ const advanced=view==='catalog'&&(params.get('bulk')==='1'||params.get('visibility')==='draft'||params.get('advanced')==='1');
+ async function refresh(signal?:AbortSignal){const next=await redesignApi('snapshot?details='+(view==='connections'?'1':'0'),undefined,signal);if(!signal?.aborted){setSnapshot(next);setError('');}}
+ useEffect(()=>{const stop=visiblePoll(async signal=>{try{await refresh(signal);}catch(e){if(!signal.aborted)setError(e instanceof Error?e.message:'Could not load shop details.');}},{intervalMs:15000});return stop;},[attempt,view]);
+ useEffect(()=>{document.title=(tabs.find(x=>x.view===view)?.label??'Settings')+' · ShopBot';},[view]);
+ async function act(path:string,body:unknown,success:string){if(busy)return;setBusy(true);setError('');setNotice('');try{await redesignApi(path,body);await refresh();setNotice(success);}catch(e){setError(e instanceof Error?e.message:'Could not save. Please try again.');}finally{setBusy(false);}}
+ const newRoute=(next:string)=>({view:next,order:null,conversation:null,orderSearch:null,orderPage:null,inboxSearch:null,inboxPage:null,inboxHelp:null,bulk:null,visibility:null,advanced:null,product:null});
+ const help=Number(snapshot?.conversationCounts?.help??0);
+ return <div className="redesign"><a className="rd-skip" href="#rd-main">{t('Skip to main content')}</a><aside className="rd-sidebar"><div className="rd-brand">ShopBot</div><div className="rd-shop-name">{snapshot?.store.name??'Your shop'}</div><nav aria-label="Main navigation">{tabs.map(tab=><OwnerLink key={tab.view} values={newRoute(tab.view)} aria-current={view===tab.view?'page':undefined}><OwnerIcon name={tab.icon}/><span>{t(tab.label)}</span>{tab.view==='conversations'&&help>0?<span className="rd-count">{help}</span>:null}</OwnerLink>)}</nav><div className="rd-sidebar-bottom"><OwnerLink values={newRoute('connections')} aria-current={view==='connections'?'page':undefined}><OwnerIcon name="settings"/>{t('Settings')}</OwnerLink><label className="rd-language"><span aria-hidden="true">◎</span><select aria-label="Dashboard language" value={locale} onChange={e=>setLocale(e.target.value as 'en'|'ta')}><option value="en">English</option><option value="ta">தமிழ்</option></select></label></div></aside><div className="rd-body"><header className="rd-mobile-header"><strong>ShopBot</strong><OwnerLink values={newRoute('connections')} aria-label="Settings"><OwnerIcon name="settings"/></OwnerLink></header><main id="rd-main" className={'rd-main'+(view==='requests'||view==='conversations'?' rd-main-workspace':'')}>
+ {error?<div className="rd-global-message rd-error" role="alert">{error}<button type="button" onClick={()=>setAttempt(n=>n+1)}>{t('Try again')}</button></div>:null}
+ {notice?<div className="rd-global-message" role="status">{notice}<button type="button" aria-label="Dismiss notification" onClick={()=>setNotice('')}>×</button></div>:null}
+ {!snapshot&&!error?<p role="status" className="rd-loading">{t('Loading shop records…')}</p>:snapshot?<Suspense fallback={<p role="status" className="rd-loading">{t('Loading…')}</p>}>{view==='requests'?<Orders/>:view==='conversations'?<Chats/>:view==='catalog'?advanced?<div className="rd-advanced"><button className="rd-return" onClick={()=>navigateOwner({bulk:null,visibility:null,advanced:null,product:null})}>← Products</button><AdvancedCatalog/></div>:<Products/>:<Settings snapshot={snapshot} busy={busy} onAct={act}/>}</Suspense>:null}
+ </main></div><nav className="rd-mobile-nav" aria-label="Mobile navigation">{tabs.map(tab=><OwnerLink key={tab.view} values={newRoute(tab.view)} aria-current={view===tab.view?'page':undefined}><span><OwnerIcon name={tab.icon}/>{tab.view==='conversations'&&help>0?<b className="rd-count">{help}</b>:null}</span>{t(tab.label)}</OwnerLink>)}</nav></div>;
+}

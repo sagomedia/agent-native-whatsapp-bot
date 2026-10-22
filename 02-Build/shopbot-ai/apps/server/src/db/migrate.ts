@@ -476,6 +476,19 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
         ADD COLUMN profile_updated_at timestamptz;
       INSERT INTO schema_migrations(version) VALUES(42);
     `);}
+    const v43=await client.query('SELECT version FROM schema_migrations WHERE version=43');
+    if(!v43.rowCount){await client.query(`
+      ALTER TABLE order_advances DROP CONSTRAINT IF EXISTS order_advances_check;
+      ALTER TABLE order_advances ADD CONSTRAINT order_advances_verified_owner_check
+        CHECK(state NOT IN ('verified','refund_pending','refunded') OR (verified_by IS NOT NULL AND verified_at IS NOT NULL));
+      CREATE TABLE owner_order_reviews (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),request_id uuid NOT NULL REFERENCES order_requests(id),
+        input_hash text NOT NULL CHECK(input_hash ~ '^[a-f0-9]{64}$'),
+        result jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX owner_order_reviews_request ON owner_order_reviews(store_id,request_id,created_at DESC);
+      INSERT INTO schema_migrations(version) VALUES(43);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

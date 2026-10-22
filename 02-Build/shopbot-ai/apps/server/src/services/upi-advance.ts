@@ -94,6 +94,18 @@ export async function verifyManualAdvance(client:PoolClient,storeId:string,reque
  if(!refundRequired)await client.query("UPDATE order_requests SET payment='pending' WHERE store_id=$1 AND id=$2",[storeId,requestId]);
  return {verified:true,replayed:false,refundRequired};
 }
+/** Owner checked the ₹10 receipt in the bank app; no unverified reference is invented. */
+export async function confirmManualAdvanceReceipt(client:PoolClient,storeId:string,requestId:string,actor:string,expectedState:'requested'|'claimed'|'pay_at_shop') {
+ const row=(await client.query('SELECT a.*,r.acceptance,r.fulfillment FROM order_advances a JOIN order_requests r ON r.id=a.request_id AND r.store_id=a.store_id WHERE a.store_id=$1 AND a.request_id=$2 FOR UPDATE OF a,r',[storeId,requestId])).rows[0];
+ if(!row)throw new ToolError('Advance request not found.');
+ if(row.state==='verified')return {verified:true,replayed:true,amountPaise:Number(row.amount_paise)};
+ if(row.state!==expectedState)throw new ToolError('The customer payment state changed. Refresh this order.','stale_version');
+ if(row.acceptance==='rejected'||['cancelled','collected'].includes(row.fulfillment))throw new ToolError('This order is closed. Review the advance refund separately.');
+ await client.query("UPDATE order_advances SET state='verified',verified_by=$1,verified_at=now(),updated_at=now() WHERE id=$2",[actor,row.id]);
+ if(row.state==='pay_at_shop')await client.query('UPDATE order_requests SET advance_required=true WHERE store_id=$1 AND id=$2',[storeId,requestId]);
+ await client.query("UPDATE order_requests SET payment='pending' WHERE store_id=$1 AND id=$2",[storeId,requestId]);
+ return {verified:true,replayed:false,amountPaise:Number(row.amount_paise)};
+}
 export const paymentClaimText=(text:string)=>/^(?:(?:i\s+)?(?:have\s+)?paid|payment\s+(?:done|paid)|pay\s+panni(?:tten|tteen)|pay\s*பண்ணிட்டேன்|பணம்\s*(?:அனுப்பிட்டேன்|செலுத்திட்டேன்))[.!\s]*$/iu.test(text.trim());
 export const demoPayAtShopText=(text:string)=>/^(?:i(?:'ll| will) pay (?:the )?(?:full (?:amount|bill)|everything) (?:at|in) (?:the )?(?:shop|store)|கடைல(?:யே)?\s*(?:முழு\s*)?(?:பணம்|காசு)\s*தர்றேன்|kadai(?:yi)?la\s+(?:muzhu\s+)?panam\s+tharen)[.!\s]*$/iu.test(text.trim());
 

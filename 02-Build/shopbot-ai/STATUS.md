@@ -1,3 +1,7 @@
+## 22 October 2026 — minimal owner redesign
+
+Implemented the approved Orders, Chats, Products and Settings redesign with three order stages, optional revised bills, original bill preservation, a product picker and order-only store items, advisory recorded stock, one-action product creation, and owner-checked ₹10 receipt confirmation without a compulsory bank reference. Desktop/mobile flows use the same visual language. See [scope, implementation and verification](../../03-Output/minimal-owner-redesign-20261022/README.md), tracked in issue #69. Local synthetic rehearsal only; no runtime deployment or real-device UPI verification.
+
 ## 21 October 2026 — owner interface visual revision
 
 Reworked all six owner views around stable desktop navigation, compact phone controls, readable forms and semantic status colors. Today brings real orders onto the first phone screen; Products groups price/stock/actions; full editor and Settings gain section navigation; CSV previews become phone cards. Order/message filters show loading instead of a false empty result from previous data. Full PostgreSQL suite **843/843**, build/typecheck, catalog **4/4**, existing workflow/quote/completeness browser checks, 36 production page layouts, 12 English/Tamil short-phone order combinations and actual isolated API workflows pass. See [design, before/after screens and verification](../../03-Output/owner-design-20261021/README.md). Draft PR #54; no deployment. Staff, physical-device, native copy and live-provider acceptance remain open under issue #52.

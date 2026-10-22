@@ -1,6 +1,6 @@
 # ShopBot redesign decisions
 
-Captured from the user's clarification on 22 October 2026. These are requirements for future implementation; this turn changes only a preview.
+Captured from the user's clarification on 22 October 2026. These requirements were approved before implementation; this directory records the implementation and its verification.
 
 - Three order stages: New, Ready for pickup, Completed. The customer has already checked the bill and placed the order before it reaches the owner.
 - Owner reviews the order in New. Sending a revised bill is optional and remains within New. Do not add a mandatory approval workflow or mandatory Preparing stage.

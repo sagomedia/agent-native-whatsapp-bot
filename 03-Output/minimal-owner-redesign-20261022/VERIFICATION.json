@@ -1,0 +1,25 @@
+{
+  "integration": {
+    "tests": 869,
+    "passed": 869,
+    "failed": 0,
+    "skipped": 0
+  },
+  "browser": {
+    "checks": 29,
+    "writes": 9,
+    "errors": [],
+    "widths": [
+      1440,
+      390,
+      320
+    ]
+  },
+  "catalogCleanup": {
+    "passed": 4
+  },
+  "build": "passed",
+  "sourceOnly": true,
+  "liveDeployment": false,
+  "paymentDeviceValidation": "pending"
+}

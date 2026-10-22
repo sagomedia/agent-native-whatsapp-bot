@@ -1,0 +1,79 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
+import pg from 'pg';
+import {setupDatabase} from '../apps/server/src/db/migrate.js';
+import {setupImageDemo} from '../apps/server/src/services/demo-catalog.js';
+import {fixtureStore} from '../profiles/hardware.js';
+import {createApp} from '../apps/server/src/http/app.js';
+
+const owner={hostname:'simple-product.example.test',issuer:'https://test.cloudflareaccess.com',audience:'owner-app',email:'owner@example.test',storeId:fixtureStore};
+const headers={host:owner.hostname,'cf-access-jwt-assertion':'synthetic',origin:'https://'+owner.hostname,'x-shopbot-owner':'1','content-type':'application/json'};
+async function fixture(run:(pool:pg.Pool,app:Awaited<ReturnType<typeof createApp>>)=>Promise<void>){
+ const admin=new pg.Pool({connectionString:process.env.DATABASE_URL}),schema='simple_product_'+randomUUID().replaceAll('-','');
+ await admin.query(`CREATE SCHEMA ${schema}`);
+ const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:`-c search_path=${schema}`});let app;
+ try{await setupDatabase(pool,'mock');await setupImageDemo(pool,fixtureStore);
+  app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,host:'127.0.0.1',port:3017,mediaDir:'/tmp/test',owner},pool,undefined,undefined,async()=>({email:owner.email,subject:'owner'}));
+  await run(pool,app);
+ }finally{await app?.close();await pool.end();await admin.query(`DROP SCHEMA ${schema} CASCADE`);await admin.end();}
+}
+const post=(app:any,body:unknown)=>app.inject({method:'POST',url:'/api/owner/products/simple',headers,payload:JSON.stringify(body)});
+
+test('one action publishes a photographed product while unknown stock remains advisory, and retries do not duplicate it',()=>fixture(async(pool,app)=>{
+ const image=await readFile('resources/catalog/ksmc-demo/images/H19.jpg');
+ const request={createId:randomUUID(),name:'Red handled cutting plier',pricePaise:25000,unit:'piece',quantityStep:1,
+  details:{localNames:{ta:'சிவப்பு இடுக்கி'},aliases:['cutting tool'],specifications:{material:'steel',colour:'red'}},
+  photo:{id:randomUUID(),mimeType:'image/jpeg',data:image.toString('base64'),caption:''}};
+ let response=await post(app,request);assert.equal(response.statusCode,200,response.body);
+ const created=response.json();assert.equal(created.active,true);assert.equal(created.stock,null);
+ assert.match(created.imageUrl,/^\/catalog-images\/custom\//);
+ assert.equal((await pool.query('SELECT count(*) FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,created.sku])).rows[0].count,'1');
+ response=await post(app,{...request,details:{...request.details,specifications:{colour:'red',material:'steel'}}});assert.equal(response.statusCode,200,response.body);assert.equal(response.json().replayed,true);
+ assert.equal((await pool.query('SELECT count(*) FROM inventory_movements WHERE store_id=$1 AND sku=$2',[fixtureStore,created.sku])).rows[0].count,'0');
+ const list=(await app.inject({url:'/api/owner/catalog?q=Red%20handled',headers})).json();
+ assert.equal(list.products[0].sku,created.sku);assert.equal(list.products[0].pricePaise,25000);
+ response=await post(app,{sku:created.sku,version:created.version,name:request.name,unit:'piece',pricePaise:27500});
+ assert.equal(response.statusCode,200,response.body);assert.equal(response.json().stock,null);
+ const changed=(await pool.query('SELECT aliases,local_names,image_path FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,created.sku])).rows[0];
+ assert.ok(changed.aliases.includes('cutting tool'));assert.equal(changed.local_names.ta,'சிவப்பு இடுக்கி');
+ assert.equal(changed.image_path,created.imageUrl);
+ response=await post(app,{...request,name:'Different plier'});assert.equal(response.statusCode,409);
+}));
+
+test('stock edits require current inventory version and cannot erase order reservations',()=>fixture(async(pool,app)=>{
+ const image=await readFile('resources/catalog/ksmc-demo/images/H19.jpg');
+ const initial={createId:randomUUID(),name:'Steel cutting plier',pricePaise:30000,unit:'piece',stock:8,
+  photo:{id:randomUUID(),mimeType:'image/jpeg',data:image.toString('base64'),caption:''}};
+ let response=await post(app,initial);assert.equal(response.statusCode,200,response.body);const created=response.json();
+ await pool.query('UPDATE products SET reserved_stock=3,inventory_version=inventory_version+1 WHERE store_id=$1 AND sku=$2',[fixtureStore,created.sku]);
+ const edit={sku:created.sku,version:created.version,inventoryVersion:created.inventoryVersion,name:initial.name,
+  pricePaise:initial.pricePaise,unit:'piece',stock:2};
+ response=await post(app,edit);assert.equal(response.statusCode,409,response.body);
+ response=await post(app,{...edit,inventoryVersion:created.inventoryVersion+1});assert.equal(response.statusCode,409,response.body);
+ const after=(await pool.query('SELECT stock,reserved_stock,version FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,created.sku])).rows[0];
+ assert.equal(Number(after.stock),8);assert.equal(Number(after.reserved_stock),3);assert.equal(after.version,created.version);
+ response=await post(app,{...edit,inventoryVersion:created.inventoryVersion+1,stock:7});assert.equal(response.statusCode,200,response.body);
+ assert.equal(response.json().stock,7);
+ const low=(await app.inject({url:'/api/owner/catalog?q=Steel%20cutting&stock=low',headers})).json();
+ assert.equal(low.products[0].sku,created.sku);assert.equal(low.products[0].stock,4);
+}));
+
+test('shop name changes only after matching the name the owner saw',()=>fixture(async(pool,app)=>{
+ const current=(await pool.query('SELECT name FROM stores WHERE id=$1',[fixtureStore])).rows[0].name as string;
+ const postName=(name:string,expectedName:string)=>app.inject({method:'POST',url:'/api/owner/store/details',headers,payload:JSON.stringify({name,expectedName})});
+ let response=await postName('New shop name',current);assert.equal(response.statusCode,200,response.body);
+ response=await postName('Stale overwrite',current);assert.equal(response.statusCode,409,response.body);
+ assert.equal((await pool.query('SELECT name FROM stores WHERE id=$1',[fixtureStore])).rows[0].name,'New shop name');
+}));
+
+
+test('a basic product edit preserves its measured selling increment',()=>fixture(async(pool,app)=>{
+ await pool.query("UPDATE products SET quantity_step=0.1 WHERE store_id=$1 AND sku='H08'",[fixtureStore]);
+ const prior=(await pool.query("SELECT * FROM products WHERE store_id=$1 AND sku='H08'",[fixtureStore])).rows[0];
+ const response=await post(app,{sku:prior.sku,version:prior.version,name:prior.name,unit:prior.unit,pricePaise:Number(prior.price_paise)+100});
+ assert.equal(response.statusCode,200,response.body);
+ const after=(await pool.query('SELECT quantity_step FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,prior.sku])).rows[0];
+ assert.equal(Number(after.quantity_step),0.1);
+}));

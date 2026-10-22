@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {productColumns,productFromRow} from '../services/catalog.js';
 
 const pageFields={q:z.string().trim().max(200).default(''),limit:z.coerce.number().int().min(1).max(100).default(25),cursor:z.string().max(4000).optional()};
-export const productPageSchema=z.object({...pageFields,visibility:z.enum(['','visible','draft']).default(''),stock:z.enum(['','out','unknown']).default(''),family:z.string().max(80).default(''),brand:z.string().max(120).default(''),exception:z.enum(['','missing_photo','pending_price','pending_review','review_conflicts']).default(''),sort:z.enum(['name','sku','updated']).default('name')}).strict();
+export const productPageSchema=z.object({...pageFields,visibility:z.enum(['','visible','draft']).default(''),stock:z.enum(['','out','unknown','low']).default(''),family:z.string().max(80).default(''),brand:z.string().max(120).default(''),exception:z.enum(['','missing_photo','pending_price','pending_review','review_conflicts']).default(''),sort:z.enum(['name','sku','updated']).default('name')}).strict();
 export const proposalPageSchema=z.object({...pageFields,batch:z.string().max(100).default(''),exception:z.enum(['','conflicts','issues','missing_photo','pending_price','unknown_stock']).default('')}).strict();
 const invalid=(message:string,statusCode=400)=>Object.assign(new Error(message),{statusCode});
 const signature=(input:Record<string,unknown>)=>createHash('sha256').update(JSON.stringify({...input,cursor:undefined})).digest('hex');
@@ -31,6 +31,7 @@ export async function ownerProductPage(c:PoolClient,storeId:string,input:z.infer
  if(input.visibility)where.push(`active=${bind(input.visibility==='visible')}`);
  if(input.stock==='unknown')where.push('stock IS NULL');
  if(input.stock==='out')where.push('stock IS NOT NULL AND stock-reserved_stock<=0');
+ if(input.stock==='low')where.push('stock IS NOT NULL AND stock-reserved_stock>0 AND stock-reserved_stock<=5');
  if(input.family)where.push(`family_id=${bind(input.family)}`);
  if(input.brand)where.push(`brand=${bind(input.brand)}`);
  const pendingReview=`NOT merchant_verification @> '{"identity":true,"photo":true,"sellingUnit":true,"price":true,"stock":true}'::jsonb`;

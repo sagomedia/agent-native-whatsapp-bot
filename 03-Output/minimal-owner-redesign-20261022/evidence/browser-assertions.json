@@ -1,0 +1,259 @@
+{
+  "synthetic": true,
+  "base": "http://127.0.0.1:3048",
+  "checks": [
+    {
+      "name": "orders 1440 fits",
+      "passed": true,
+      "viewport": 1440,
+      "document": 1440
+    },
+    {
+      "name": "products 1440 fits",
+      "passed": true,
+      "viewport": 1440,
+      "document": 1440
+    },
+    {
+      "name": "chats 1440 fits",
+      "passed": true,
+      "viewport": 1440,
+      "document": 1440
+    },
+    {
+      "name": "settings 1440 fits",
+      "passed": true,
+      "viewport": 1440,
+      "document": 1440
+    },
+    {
+      "name": "orders 390 fits",
+      "passed": true,
+      "viewport": 390,
+      "document": 390
+    },
+    {
+      "name": "products 390 fits",
+      "passed": true,
+      "viewport": 390,
+      "document": 390
+    },
+    {
+      "name": "chats 390 fits",
+      "passed": true,
+      "viewport": 390,
+      "document": 390
+    },
+    {
+      "name": "settings 390 fits",
+      "passed": true,
+      "viewport": 390,
+      "document": 390
+    },
+    {
+      "name": "orders 320 fits",
+      "passed": true,
+      "viewport": 320,
+      "document": 320
+    },
+    {
+      "name": "products 320 fits",
+      "passed": true,
+      "viewport": 320,
+      "document": 320
+    },
+    {
+      "name": "chats 320 fits",
+      "passed": true,
+      "viewport": 320,
+      "document": 320
+    },
+    {
+      "name": "settings 320 fits",
+      "passed": true,
+      "viewport": 320,
+      "document": 320
+    },
+    {
+      "name": "selected product photo renders before save",
+      "passed": true
+    },
+    {
+      "name": "photo product saved and shelf count changed through real APIs",
+      "passed": true
+    },
+    {
+      "name": "product and stock survive page reload",
+      "passed": true
+    },
+    {
+      "name": "shop details persist through real API",
+      "passed": true
+    },
+    {
+      "name": "chat detail 390 fits",
+      "passed": true,
+      "viewport": 390,
+      "document": 390
+    },
+    {
+      "name": "chat detail 320 fits",
+      "passed": true,
+      "viewport": 320,
+      "document": 320
+    },
+    {
+      "name": "zero recorded stock product selectable and saved, order remains New",
+      "passed": true
+    },
+    {
+      "name": "unlisted physical store item saved only to order",
+      "passed": true
+    },
+    {
+      "name": "optional revised bill preserves New stage",
+      "passed": true
+    },
+    {
+      "name": "order detail 1440 fits",
+      "passed": true,
+      "viewport": 1440,
+      "document": 1440
+    },
+    {
+      "name": "order detail 390 fits",
+      "passed": true,
+      "viewport": 390,
+      "document": 390
+    },
+    {
+      "name": "order detail 320 fits",
+      "passed": true,
+      "viewport": 320,
+      "document": 320
+    },
+    {
+      "name": "New to Ready persisted through review API",
+      "passed": true
+    },
+    {
+      "name": "Ready to Completed persisted through complete API",
+      "passed": true
+    },
+    {
+      "name": "owner bank confirmation persisted",
+      "passed": true
+    },
+    {
+      "name": "no browser console errors or uncaught exceptions",
+      "passed": true
+    },
+    {
+      "name": "all recorded owner writes succeeded",
+      "passed": true
+    }
+  ],
+  "writes": [
+    {
+      "path": "/api/owner/products/simple",
+      "status": 200,
+      "body": {
+        "sku": "SHOP-59162C53F24B43B9",
+        "version": 1,
+        "inventoryVersion": 2,
+        "active": true,
+        "stock": 12,
+        "imageUrl": "/catalog-images/custom/9f0c0edc-c11e-4fe1-9d14-011b9e7fd88b.jpg",
+        "revision": 186
+      }
+    },
+    {
+      "path": "/api/owner/catalog/products/SHOP-59162C53F24B43B9/stock",
+      "status": 200,
+      "body": {
+        "sku": "SHOP-59162C53F24B43B9",
+        "inventoryVersion": 3,
+        "onHand": 18,
+        "available": 18,
+        "replayed": false
+      }
+    },
+    {
+      "path": "/api/owner/store/details",
+      "status": 200,
+      "body": {
+        "name": "Murugan Hardware & Electricals"
+      }
+    },
+    {
+      "path": "/api/owner/requests/83dd2a90-bffb-42d0-b4b2-4d8ae2c6b1cf/review",
+      "status": 200,
+      "body": {
+        "requestId": "83dd2a90-bffb-42d0-b4b2-4d8ae2c6b1cf",
+        "stage": "new",
+        "effectiveRevision": 2,
+        "totalPaise": 88000,
+        "customerNotification": "not_requested",
+        "replayed": false
+      }
+    },
+    {
+      "path": "/api/owner/requests/83dd2a90-bffb-42d0-b4b2-4d8ae2c6b1cf/review",
+      "status": 200,
+      "body": {
+        "requestId": "83dd2a90-bffb-42d0-b4b2-4d8ae2c6b1cf",
+        "stage": "new",
+        "effectiveRevision": 3,
+        "totalPaise": 80500,
+        "customerNotification": "not_requested",
+        "replayed": false
+      }
+    },
+    {
+      "path": "/api/owner/requests/83dd2a90-bffb-42d0-b4b2-4d8ae2c6b1cf/review",
+      "status": 200,
+      "body": {
+        "requestId": "83dd2a90-bffb-42d0-b4b2-4d8ae2c6b1cf",
+        "stage": "new",
+        "effectiveRevision": 4,
+        "totalPaise": 80500,
+        "customerNotification": "not_sent",
+        "reason": "Sending is unavailable, the owner is handling this conversation, or the reply window is closed.",
+        "replayed": false
+      }
+    },
+    {
+      "path": "/api/owner/requests/83dd2a90-bffb-42d0-b4b2-4d8ae2c6b1cf/review",
+      "status": 200,
+      "body": {
+        "requestId": "83dd2a90-bffb-42d0-b4b2-4d8ae2c6b1cf",
+        "stage": "ready",
+        "effectiveRevision": 5,
+        "totalPaise": 80500,
+        "customerNotification": "not_sent",
+        "reason": "Sending is disabled or this is a preview conversation.",
+        "replayed": false
+      }
+    },
+    {
+      "path": "/api/owner/requests/83dd2a90-bffb-42d0-b4b2-4d8ae2c6b1cf/complete",
+      "status": 200,
+      "body": {
+        "requestId": "83dd2a90-bffb-42d0-b4b2-4d8ae2c6b1cf",
+        "stage": "completed",
+        "effectiveRevision": 5
+      }
+    },
+    {
+      "path": "/api/owner/requests/794fe1e4-1676-449e-9f6b-dc1fa6285f55/advance/confirm",
+      "status": 200,
+      "body": {
+        "verified": true,
+        "replayed": false,
+        "amountPaise": 1000,
+        "customerNotification": "not_requested"
+      }
+    }
+  ],
+  "errors": []
+}

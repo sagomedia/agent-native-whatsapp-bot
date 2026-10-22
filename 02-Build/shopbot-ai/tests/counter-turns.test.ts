@@ -145,7 +145,7 @@ test('an unverified price answer retains the product and known stock without sho
   const phone=textOnPhone(lastReply(snapshot));
   assert.match(phone,/White paint 10 litre/);
   assert.match(phone,/Price: shop to confirm/);
-  assert.match(phone,/Available · shop record/);
+  assert.match(phone,/Recorded stock · shop will confirm/);
   assert.doesNotMatch(phone,/₹0|Which|Choose a quantity/);
   assert.equal(lastReply(snapshot).readOnly,true);
   assert.equal(buttons(lastReply(snapshot)).length,0);

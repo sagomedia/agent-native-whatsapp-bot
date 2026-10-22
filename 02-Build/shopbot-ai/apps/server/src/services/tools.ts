@@ -97,7 +97,7 @@ function resolvedLine(product: Product, quantity: number | null, query: string, 
   if(sellingBasisIssues(product).length)return {...evidence,...(pack?{packSize:pack}:{}),id,query,sku:product.sku,name:product.name,quantity:null,requestedQuantity:quantity??undefined,unit:product.unit,pricePaise:product.pricePaise,productVersion:product.version,resolution:'needs_unit',catalogIssue:'selling_unit_unverified',candidates:[product]};
   if(product.priceStatus==='confirm'||product.pricePaise===0&&product.priceStatus!=='free')return {...evidence,...(pack?{packSize:pack}:{}),id,query,sku:product.sku,name:product.name,quantity,unit:product.unit,pricePaise:product.pricePaise,productVersion:product.version,resolution:'unavailable',catalogIssue:'price_unverified',candidates:[product]};
   return {...evidence,...(pack?{packSize:pack}:{}), id,query,sku:product.sku,quantity,name:product.name,unit:product.unit,pricePaise:product.pricePaise,productVersion:product.version,
-    ...(requestedUnit?{requestedUnit:normalizeUnit(requestedUnit)}:{}),...(product.stock===0?{catalogIssue:'out_of_stock' as const}:{}),resolution:quantity===null?'needs_quantity':product.stock===0?'unavailable':'matched',candidates:[product] };
+    ...(requestedUnit?{requestedUnit:normalizeUnit(requestedUnit)}:{}),resolution:quantity===null?'needs_quantity':'matched',candidates:[product] };
 }
 async function resolveLine(client: PoolClient, ctx: ActorContext, query: string, quantity: number | null, id: string = randomUUID(),requestedUnit?:string,search?:DiscoveryPlan,evidence:LineEvidence={},previous?:DraftLine): Promise<DraftLine> {
   evidence=lineEvidence(evidence);
@@ -367,7 +367,7 @@ export class RetailTools {
         if(!product) { if(line.resolution!=='unavailable'||line.candidates?.length||line.productConfirmation) {line.resolution='unavailable';line.candidates=[];delete line.productConfirmation;refreshed=true;} continue; }
         const current=preserveConfirmation(line,resolvedLine(product,line.requestedQuantity??line.quantity,line.query??line.name,line.id,line.requestedUnit,line));
         if(state.catalogDiscovery&&!productConfirmed(line,product)){const discovery=await discoverProducts(client,ctx,line.query??line.name,line.discovery?.plan);current.candidates=discovery.products;current.discovery=discovery;}
-        if(product.stock!==null&&current.quantity!==null&&product.stock<current.quantity){current.resolution='unavailable';current.catalogIssue=product.stock===0?'out_of_stock':'insufficient_stock';}
+        // Shelf counts are advisory: stale or zero records must not erase a customer's requested item.
         if(line.shopCheckDeferred&&current.resolution!=='matched')current.shopCheckDeferred=true;
         if(digest(current)!==digest(line)) {state.draft[state.draft.findIndex(l=>l.id===line.id)]=current;refreshed=true;}
       }
@@ -429,7 +429,7 @@ export class RetailTools {
         continue;
       }
       const [product]=await searchProducts(client,ctx,line.sku!);
-      if(line.resolution!=='matched'||!product||sellingBasisIssues(product).length||(state.requireProductConfirmation&&!productConfirmed(line,product))||product.version!==line.productVersion||product.pricePaise!==line.pricePaise||(product.stock!==null&&product.stock<line.quantity!)) {
+      if(line.resolution!=='matched'||!product||sellingBasisIssues(product).length||(state.requireProductConfirmation&&!productConfirmed(line,product))||product.version!==line.productVersion||product.pricePaise!==line.pricePaise) {
         state.pending=null; await saveState(client,ctx,state);
         return {state,message:'Price or availability changed after the review. No request submitted. Review the draft again.'};
       }

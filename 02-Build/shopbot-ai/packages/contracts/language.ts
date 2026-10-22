@@ -126,6 +126,6 @@ export function productPriceText(product:Product,context:LanguageContext):string
 }
 export function productStockText(product:Product,context:LanguageContext):string {
  if(product.stock===null)return say(context,'Availability: shop to check','கிடைக்குமானு கடை check பண்ணும்','Kidaikkumaanu kadai check pannum');
- if(product.stock===0)return say(context,'Currently out of stock','இப்போது இருப்பு இல்லை','Ippo stock illai');
- return say(context,'Available · shop record','கடை list-ல stock இருக்கு','Kadai list-la stock irukku');
+ if(product.stock===0)return say(context,'Recorded stock: 0 · shop will check','பதிவில் stock 0 · கடை சரிபார்க்கும்','Record-la stock 0 · kadai check pannum');
+ return say(context,'Recorded stock · shop will confirm','பதிவில் stock இருக்கு · கடை உறுதி செய்யும்','Record-la stock irukku · kadai confirm pannum');
 }
