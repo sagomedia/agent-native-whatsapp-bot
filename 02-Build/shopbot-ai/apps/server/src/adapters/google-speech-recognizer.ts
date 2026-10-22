@@ -1,3 +1,4 @@
+import {voiceLimits,voiceWavBase64Limit} from '../../../../packages/contracts/voice-policy.js';
 import {GoogleGenAI,type Interactions} from '@google/genai';
 import {geminiSpeechRate,validateRateCard,type RateCard} from '../services/inference-budget.js';
 import {admitInferenceRequest} from '../services/inference-admission.js';
@@ -21,7 +22,7 @@ export class GoogleSpeechRecognizer implements Interpreter {
  }
  validateInput(input:InterpretationInput){
   const a=input.audio;
-  if(input.stage!=='recognize'||input.image||!a||a.mimeType!=='audio/wav'||!Number.isFinite(a.durationSeconds)||a.durationSeconds<=0||a.durationSeconds>30||!a.data||a.data.length>1280060||!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(a.data))throw new Error('Recognition requires one verified WAV recording of up to 30 seconds.');
+  if(input.stage!=='recognize'||input.image||!a||a.mimeType!=='audio/wav'||!Number.isFinite(a.durationSeconds)||a.durationSeconds<=0||a.durationSeconds>voiceLimits.maxSeconds||!a.data||a.data.length>voiceWavBase64Limit||(a.data.length%4!==0||!/^[A-Za-z0-9+/]*={0,2}$/.test(a.data)))throw new Error('Recognition requires one verified WAV recording of up to 90 seconds.');
  }
  prepareInput(input:InterpretationInput){
   validateRateCard(this.billing);this.validateInput(input);

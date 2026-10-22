@@ -1,3 +1,4 @@
+import {voiceLimits} from '../../../../packages/contracts/voice-policy.js';
 import {normalizeImage,imageUploadSchema} from './image-media.js';
 import {normalizeVoice,voiceUploadSchema} from './voice-media.js';
 import type {WhatsAppConfig} from './whatsapp-config.js';
@@ -10,7 +11,7 @@ export function mediaFailureCode(error:unknown){
   const message=error instanceof Error?error.message:'';
   if(/decoded in time|took too long/.test(message))return 'media_decode_timeout';
   if(/decoder is unavailable/.test(message))return 'media_decoder_unavailable';
-  if(/30 seconds|between 0.2/.test(message))return 'media_duration_invalid';
+  if(/(?:30|90) seconds|between 0.2/.test(message))return 'media_duration_invalid';
   if(/could not hear/.test(message))return 'media_silent';
   return 'media_decode_failed';
 }
@@ -44,7 +45,7 @@ export async function downloadWhatsAppMedia(config:WhatsAppConfig,request:typeof
   let url:URL;
   try{url=new URL(metadata.url??'');}catch{throw new MediaDownloadError('media_untrusted_host','Untrusted media host');}
   if(url.protocol!=='https:'||url.username||url.password||url.port||!(url.hostname==='lookaside.fbsbx.com'||url.hostname==='lookaside.facebook.com'||url.hostname.endsWith('.fbcdn.net')))throw new MediaDownloadError('media_untrusted_host','Untrusted media host');
-  const maximum=kind==='image'?2097152:1048576;
+  const maximum=kind==='image'?2097152:voiceLimits.uploadBytes;
   if(!Number.isSafeInteger(metadata.file_size)||metadata.file_size!<=0||metadata.file_size!>maximum)throw new MediaDownloadError('media_too_large','Media is too large');
   const data=(await downloadBytes(config,request,url.href,maximum)).toString('base64'),mimeType=metadata.mime_type?.split(';')[0].trim();
   if(kind==='voice'){voiceUploadSchema.parse({id:messageId,data,mimeType});await onVoiceDownloaded?.({audio:Buffer.from(data,'base64'),mimeType:mimeType!});}

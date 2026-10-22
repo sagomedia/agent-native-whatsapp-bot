@@ -469,6 +469,16 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       );
       INSERT INTO schema_migrations(version) VALUES(40);
     `);}
+    const v41=await client.query('SELECT version FROM schema_migrations WHERE version=41');
+    if(!v41.rowCount){await client.query(`
+      ALTER TABLE voice_media DROP CONSTRAINT voice_media_audio_check;
+      ALTER TABLE voice_media ADD CONSTRAINT voice_media_audio_check CHECK(octet_length(audio)<=2880044);
+      ALTER TABLE voice_media DROP CONSTRAINT voice_media_duration_seconds_check;
+      ALTER TABLE voice_media ADD CONSTRAINT voice_media_duration_seconds_check CHECK(duration_seconds>0 AND duration_seconds<=90);
+      ALTER TABLE whatsapp_media DROP CONSTRAINT whatsapp_media_original_audio_check;
+      ALTER TABLE whatsapp_media ADD CONSTRAINT whatsapp_media_original_audio_check CHECK(original_audio IS NULL OR octet_length(original_audio) BETWEEN 1 AND 4194304);
+      INSERT INTO schema_migrations(version) VALUES(41);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }
