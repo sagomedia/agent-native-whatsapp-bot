@@ -1,0 +1,127 @@
+{
+  "vpsRegression": {
+    "tests": 843,
+    "pass": 843,
+    "fail": 0,
+    "skipped": 0
+  },
+  "build": "passed",
+  "pythonCatalogTests": {
+    "passed": 4,
+    "failed": 0
+  },
+  "syntheticVpsIntegration": {
+    "pass": true,
+    "sourceCommit": "e248f4e59101fd51e6387448439d58989bb8449d",
+    "artifactHash": "c4d50ebbac08f76e0925527dc67b4e7b9d210ea96c90accd0ec4bbbfa3b9e934",
+    "schema": "transcription_eval_23abb7ae8dc747cabd0bd7b5d282030e",
+    "elapsedMs": 6697,
+    "asrCalls": 1,
+    "shoppingCalls": 1,
+    "transcript": "I need two rolls of PTFE tape and three paint brushes.",
+    "draft": [
+      {
+        "query": "PTFE tape",
+        "quantity": 2,
+        "resolution": "matched"
+      },
+      {
+        "query": "paint brush",
+        "quantity": 3,
+        "resolution": "unavailable"
+      }
+    ],
+    "estimatedCostMicrousd": 1671,
+    "budgetLimitUnchanged": true,
+    "customerSends": 0,
+    "privateEvidence": "/var/backups/shopbot-migration/transcription-20261021/evaluation.json"
+  },
+  "deployment": {
+    "activated": true,
+    "release": "preview-b7b0e81fdbba",
+    "nativeBackup": "/var/backups/shopbot-migration/owner-20261022T034310Z",
+    "sourceCommit": "c5c873e8707e99bd3e2fe493b4b9c41650b58a28",
+    "artifactHash": "319d75a28b4985ef4223544b41c9b3bb41c8f93bde90b6102123807d2915624b",
+    "transcriptionModel": "gemini-3.5-transcribe",
+    "shoppingModel": "gemini-3.5-flash-lite"
+  },
+  "realTamilTanglishDeviceAccuracy": "pending",
+  "vpsFinalFocused": {
+    "passed": 42,
+    "failed": 0
+  },
+  "configuredProvider": {
+    "configuredProviderVerified": true,
+    "provider": "google:gemini-3.5-flash-lite:understanding-v2:2026-10-20.1:transcribe-verbatim-v1",
+    "transcriptionProvider": "google:gemini-3.5-transcribe:verbatim-v1",
+    "model": "gemini-3.5-flash-lite",
+    "transcriptionModel": "gemini-3.5-transcribe",
+    "unifiedUnderstanding": true,
+    "gitCommit": "c5c873e8707e99bd3e2fe493b4b9c41650b58a28",
+    "artifactHash": "319d75a28b4985ef4223544b41c9b3bb41c8f93bde90b6102123807d2915624b",
+    "apiCalls": 0
+  },
+  "github": {
+    "headRefOid": "15b4e2b364eab64efbbc7e09fb85309547b667ac",
+    "mergeCommit": {
+      "oid": "eb1affa0a6188485de0e0e6ef7a7ed784132644b"
+    },
+    "state": "MERGED",
+    "statusCheckRollup": [
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-22T03:50:56Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/sagomedia/agent-native-whatsapp-bot/actions/runs/39718259230/job/119625939062",
+        "name": "Build and test",
+        "startedAt": "2026-10-22T03:43:26Z",
+        "status": "COMPLETED",
+        "workflowName": "Project checks"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-22T03:51:08Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/sagomedia/agent-native-whatsapp-bot/actions/runs/39718256305/job/119625903909",
+        "name": "Build and test",
+        "startedAt": "2026-10-22T03:43:19Z",
+        "status": "COMPLETED",
+        "workflowName": "Project checks"
+      }
+    ]
+  },
+  "vpsHostedCI": {
+    "conclusion": "success",
+    "headSha": "c5c873e8707e99bd3e2fe493b4b9c41650b58a28",
+    "status": "completed",
+    "url": "https://github.com/sagomedia/agent-native-whatsapp-bot/actions/runs/39718258142"
+  },
+  "note": "VPS source is the previously deployed baseline plus the feature; main PR is separately merged.",
+  "postDeployment": {
+    "ready": true,
+    "runningProcessModelsVerified": true,
+    "release": "preview-b7b0e81fdbba",
+    "sourceCommit": "c5c873e8707e99bd3e2fe493b4b9c41650b58a28",
+    "artifactHash": "319d75a28b4985ef4223544b41c9b3bb41c8f93bde90b6102123807d2915624b",
+    "schemaVersion": 40,
+    "transcriptionModel": "gemini-3.5-transcribe",
+    "shoppingModel": "gemini-3.5-flash-lite",
+    "dashboardBytesUnchanged": true,
+    "productFactsPreserved": true,
+    "originalPhotosPreserved": true,
+    "storeSettingsPreserved": true,
+    "untouchedCartsPreserved": 5,
+    "budgetLimitUnchanged": true,
+    "priorBudgetHoldsPreserved": true,
+    "configurationOnlyAddsTranscriptionModel": true,
+    "customerTestSends": 0,
+    "databaseBackupDecoded": true,
+    "nativeBackup": "/var/backups/shopbot-migration/owner-20261022T034310Z",
+    "privateEvidence": "/var/backups/shopbot-migration/transcription-20261021/before-20261022T034253Z"
+  },
+  "temporaryAccessCleanup": {
+    "temporarySshKeysRemoved": 1,
+    "privateKeyDeleted": true,
+    "otherProjectMetadataPreserved": true
+  }
+}
