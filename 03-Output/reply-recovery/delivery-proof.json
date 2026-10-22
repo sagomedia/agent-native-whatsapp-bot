@@ -1,0 +1,20 @@
+{
+  "state": "delivered",
+  "attempts": 1,
+  "error": null,
+  "providerAccepted": true,
+  "callbacks": [
+    {
+      "state": "sent",
+      "error": null,
+      "timestamp": 1792685317
+    },
+    {
+      "state": "delivered",
+      "error": null,
+      "timestamp": 1792685318
+    }
+  ],
+  "pendingReplies": 0,
+  "unknownOriginalPreserved": true
+}
