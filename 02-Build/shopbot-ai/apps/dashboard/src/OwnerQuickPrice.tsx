@@ -12,8 +12,8 @@ async function facts(path:string,body:unknown):Promise<FactBatch>{
 export function OwnerQuickPrice({product,onClose,onSaved}:{product:Product;onClose:()=>void;onSaved:()=>Promise<void>}){
  const {t}=useOwnerLocale();
  const [price,setPrice]=useState(product.priceStatus==='confirm'?'':(product.pricePaise/100).toFixed(2)),[free,setFree]=useState(product.priceStatus==='free'),[busy,setBusy]=useState(false),[error,setError]=useState(''),[uncertain,setUncertain]=useState(false),[blocked,setBlocked]=useState(false);
- const dialog=useRef<HTMLDialogElement>(null),running=useRef(false),attempt=useRef<{batchId:string;fileHash:string;expectedChunk:number}|null>(null),opener=useRef(document.activeElement as HTMLElement|null);
- useEffect(()=>{const node=dialog.current;node?.showModal();return()=>{node?.close();opener.current?.focus();};},[]);
+ const dialog=useRef<HTMLDialogElement>(null),running=useRef(false),attempt=useRef<{batchId:string;fileHash:string;expectedChunk:number}|null>(null),input=useRef<HTMLInputElement>(null),opener=useRef(document.activeElement as HTMLElement|null);
+ useEffect(()=>{const node=dialog.current;node?.showModal();if(window.matchMedia('(min-width:801px)').matches)input.current?.focus();return()=>{node?.close();opener.current?.focus();};},[]);
  async function save(){
   if(running.current)return;running.current=true;setBusy(true);setError('');let applied=false,known=false,applying=!!attempt.current;
   try{
@@ -30,11 +30,11 @@ export function OwnerQuickPrice({product,onClose,onSaved}:{product:Product;onClo
   finally{running.current=false;setBusy(false);}
  }
  return <dialog className="owner-dialog owner-quick-price" ref={dialog} aria-labelledby="quick-price-title" onCancel={event=>{event.preventDefault();if(!busy&&!uncertain)onClose();}}>
-  <h2 id="quick-price-title">{t('Update shop price')}</h2><p><strong>{product.name}</strong><br/>{t('Selling unit:')} {product.unit}</p>
+  <form noValidate autoComplete="off" onSubmit={event=>{event.preventDefault();if(price.trim()&&!busy&&!blocked)void save();}}><h2 id="quick-price-title">{t('Update shop price')}</h2><p><strong>{product.name}</strong><br/>{t('Selling unit:')} {product.unit}</p>
   {error?<Notice error>{error}</Notice>:null}
-  <label>{t('Price / unit (₹)')}<input inputMode="decimal" value={price} disabled={busy||uncertain||blocked} onChange={event=>{setPrice(event.target.value);setFree(false);}}/></label>
+  <label>{t('Price / unit (₹)')}<input ref={input} name="shopPrice" inputMode="decimal" maxLength={24} value={price} disabled={busy||uncertain||blocked} onChange={event=>{setPrice(event.target.value);setFree(false);}}/></label>
   {price!==''&&Number(price)===0?<label className="owner-check"><input type="checkbox" checked={free} disabled={busy||uncertain||blocked} onChange={event=>setFree(event.target.checked)}/>{t('I confirm this item is free')}</label>:null}
   <div className="owner-quick-price-review"><p>{product.priceStatus==='confirm'?t('Price to confirm'):formatMoney(product.pricePaise)} → <strong>{/^\d+(?:\.\d{1,2})?$/.test(price)?formatMoney(Math.round(Number(price)*100)):'—'} / {product.unit}</strong></p><small>Saving confirms this shop price for the stated unit. Stock, visibility and other product facts stay unchanged.</small></div>
-  <div className="owner-actions"><button type="button" disabled={busy||uncertain} onClick={onClose}>{t('Cancel')}</button><button type="button" className="owner-primary" disabled={busy||blocked||!price.trim()} onClick={()=>void save()}>{t(busy?'Saving price…':uncertain?'Retry same update':'Save price')}</button></div>
- </dialog>;
+  <div className="owner-actions"><button type="button" disabled={busy||uncertain} onClick={onClose}>{t('Cancel')}</button><button type="submit" className="owner-primary" disabled={busy||blocked||!price.trim()}>{t(busy?'Saving price…':uncertain?'Retry same update':'Save price')}</button></div>
+ </form></dialog>;
 }

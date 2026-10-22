@@ -1,0 +1,57 @@
+import {setOwnerLanguage} from './owner-browser-tools.mjs';
+// Production assets and real local services, using only the disposable synthetic shop.
+import assert from 'node:assert/strict';
+import {mkdir,writeFile} from 'node:fs/promises';
+import {resolve} from 'node:path';
+const {chromium}=await import(process.env.PLAYWRIGHT_MODULE??'playwright');
+const base=process.env.OWNER_UI_URL??'http://127.0.0.1:3044',out=resolve(process.env.INVENTORY_EVIDENCE_DIR??'artifacts/inventory-workspace');
+assert.ok(['127.0.0.1','localhost'].includes(new URL(base).hostname));
+const snapshot=await (await fetch(base+'/api/owner/snapshot?details=0')).json();assert.equal(snapshot.store.synthetic,'true');assert.equal(snapshot.channel.liveSending,false);assert.equal(snapshot.inference.enabled,false);
+const {product}=await (await fetch(base+'/api/owner/catalog/products/H01')).json();
+await mkdir(out,{recursive:true});
+const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_BIN??'/usr/bin/google-chrome'}),page=await browser.newPage();page.setDefaultTimeout(15000);
+const errors=[],writes=[],layouts=[];let allowWrites=false;
+page.on('pageerror',error=>errors.push(error.message));
+await page.route('**/api/**',async route=>{if(route.request().method()!=='GET'){writes.push({path:new URL(route.request().url()).pathname,body:route.request().postDataJSON()});if(!allowWrites)return route.abort('blockedbyclient');}return route.continue();});
+const button=name=>page.getByRole('button',{name,exact:true});
+const go=async query=>{await page.goto(base+'/owner?view=catalog&'+query);};
+async function section(value,label){if((await page.viewportSize()).width>800)await page.getByRole('tab',{name:label,exact:true}).click();else await page.getByLabel('Product section',{exact:true}).selectOption(value);await page.locator('#product-panel-'+value).waitFor();}
+async function fits(message){assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),message);}
+try{
+ await page.setViewportSize({width:1440,height:1000});await go('inventory=1');await page.locator('.owner-inventory-table tbody tr').first().waitFor();
+ await page.locator('.owner-daily-nav').getByRole('link',{name:'Messages',exact:true}).click();assert.equal(await page.locator('.owner-header h1').isVisible(),true,'Cached inventory styles must preserve the desktop page title');await page.locator('.owner-daily-nav').getByRole('link',{name:'Products',exact:true}).click();await page.locator('.owner-inventory-table tbody tr').first().waitFor();for(const name of ['On shelf','Held for orders','Available stock'])await page.getByRole('columnheader',{name,exact:true}).waitFor();
+ const rowsVisible=await page.locator('.owner-inventory-table tbody tr').evaluateAll(rows=>rows.filter(row=>{const box=row.getBoundingClientRect();return box.top>=0&&box.bottom<=innerHeight;}).length);assert.ok(rowsVisible>=8,'At least eight complete inventory rows fit at 1440×1000');await page.screenshot({path:resolve(out,'inventory-1440.png')});
+ await go('inventory=0&product=H01');await page.getByLabel('Product name',{exact:true}).waitFor();
+ const totals=await page.locator('.owner-record-totals').innerText();for(const value of [product.stockOnHand,product.stockReserved,product.stock])assert.ok(totals.includes(String(value)));
+ assert.equal(await page.locator('.owner-product-workspace input[type=checkbox]').count(),0);
+ const price=page.getByLabel('Price per piece (₹)',{exact:true});await price.fill('246.55');await section('selling','Selling details');await section('general','General');assert.equal(await price.inputValue(),'246.55');await page.getByRole('combobox',{name:'Price status',exact:true}).selectOption('confirm');assert.equal(await price.inputValue(),'');await button('Review & publish changes').click();await page.getByRole('dialog').waitFor();assert.match(await page.getByRole('dialog').innerText(),/Price to confirm/);assert.deepEqual(writes,[]);await page.keyboard.press('Escape');await price.fill('246.55');
+ const general=page.getByRole('tab',{name:'General',exact:true});await general.focus();await page.keyboard.press('ArrowRight');assert.equal(await page.getByRole('tab',{name:'Selling details',exact:true}).getAttribute('aria-selected'),'true');await page.keyboard.press('End');assert.equal(await page.getByRole('tab',{name:'Customer search',exact:true}).getAttribute('aria-selected'),'true');await page.keyboard.press('Home');assert.equal(await general.getAttribute('aria-selected'),'true');
+ for(const [width,height] of [[1920,1080],[1440,1000],[1024,600],[768,1024],[390,844],[320,640]]){
+  await page.setViewportSize({width,height});await go('inventory=1');await page.locator('.owner-inventory-table tbody tr').first().waitFor();await fits('Inventory overflow '+width);if([390,320].includes(width))await page.screenshot({path:resolve(out,'inventory-'+width+'.png')});
+  for(const locale of ['en','ta']){
+   await setOwnerLanguage(page,locale);await go('inventory=0&product=H01');await page.locator('.owner-record-totals').waitFor();
+   const labels=locale==='en'?['General','Selling details','Stock','Photos','Customer search']:['பொது விவரங்கள்','விற்பனை விவரங்கள்','இருப்பு','படங்கள்','வாடிக்கையாளர் தேடல்'];
+   for(const [index,value] of ['general','selling','stock','photos','search'].entries()){
+    if(width>800)await page.locator('#product-tab-'+value).click();else await page.locator('.owner-record-section-picker select').selectOption(value);
+    await page.locator('#product-panel-'+value).waitFor();await fits(locale+' '+value+' '+width);assert.ok(await page.locator('.owner-save-actions button').evaluateAll(buttons=>buttons.every(el=>{const box=el.getBoundingClientRect();return box.left>=0&&box.right<=innerWidth+1&&el.scrollWidth<=el.clientWidth+1;})),'Product action labels must not clip');if(width===320&&value==='general'){const panel=await page.locator('#product-panel-general').boundingBox(),footer=await page.locator('.owner-editor-actionbar').boundingBox();assert.ok(footer.y-panel.y>=130,'At least 130px of product fields must remain visible on a short phone');}assert.equal(await page.locator('.owner-record-totals').isVisible(),true);assert.equal(await page.locator('.owner-product-workspace input[type=checkbox]').count(),0);
+    if([1440,390,320].includes(width))await page.screenshot({path:resolve(out,value+'-'+locale+'-'+width+'.png')});
+    layouts.push({width,height,locale,section:value});
+   }
+  }
+  await setOwnerLanguage(page,'en');
+ }
+ assert.deepEqual(writes,[]);
+ // Invalid reviews must not even prepare a draft. Publication requires one explicit modal confirmation.
+ await page.setViewportSize({width:1440,height:1000});await go('inventory=1');await button('New product').click();await page.getByLabel('Product name',{exact:true}).waitFor();await button('Review & publish product').click();assert.equal(await page.getByRole('dialog').count(),0);assert.equal(await page.locator('[name=productName]').getAttribute('aria-invalid'),'true');assert.deepEqual(writes,[]);
+ const name='Workspace review '+Date.now();await page.getByLabel('Product name',{exact:true}).fill(name);await page.getByLabel('Selling unit',{exact:true}).selectOption('piece');await button('Review & publish product').click();await page.locator('#product-panel-photos').waitFor();assert.equal(await page.locator('[name=photoMode]').getAttribute('aria-invalid'),'true');assert.deepEqual(writes,[]);
+ await page.getByLabel('Photo to publish',{exact:true}).selectOption('without');await button('Review & publish product').click();await page.getByRole('dialog').waitFor();assert.match(await page.getByRole('dialog').innerText(),/Price to confirm[\s\S]*Unknown[\s\S]*No product photo/);assert.equal(await page.getByRole('dialog').getByRole('checkbox').count(),0);assert.deepEqual(writes,[]);await page.screenshot({path:resolve(out,'single-publication-review.png')});await page.setViewportSize({width:320,height:640});await page.getByRole('dialog').getByRole('button',{name:'Confirm & publish',exact:true}).scrollIntoViewIfNeeded();assert.ok((await page.getByRole('dialog').boundingBox()).width<=304);await page.screenshot({path:resolve(out,'publication-en-320.png')});await page.keyboard.press('Escape');await setOwnerLanguage(page,'ta');await page.locator('.owner-save-actions>.owner-primary').click();await page.getByRole('dialog').getByRole('button',{name:'உறுதி செய்து வெளியிடு',exact:true}).scrollIntoViewIfNeeded();assert.ok((await page.getByRole('dialog').boundingBox()).width<=304);await page.screenshot({path:resolve(out,'publication-ta-320.png')});await page.keyboard.press('Escape');await setOwnerLanguage(page,'en');await page.setViewportSize({width:1440,height:1000});await button('Review & publish product').click();await page.getByRole('dialog').waitFor();assert.deepEqual(writes,[]);
+ allowWrites=true;await page.getByRole('dialog').getByRole('button',{name:'Confirm & publish',exact:true}).click();await page.getByText(/^Published · catalog/).waitFor();
+ const sku=new URL(page.url()).searchParams.get('product');assert.ok(sku);let saved=(await (await fetch(base+'/api/owner/catalog/products/'+encodeURIComponent(sku))).json()).product;
+ assert.equal(saved.name,name);assert.equal(saved.priceStatus,'confirm');assert.equal(saved.stockOnHand,null);assert.equal(saved.stock,null);assert.equal(!!saved.imageUrl,false);assert.deepEqual(saved.verification,{identity:true,photo:true,sellingUnit:true,price:true,stock:true});
+ const firstPublish=writes.find(write=>write.path.endsWith('/proposals/publish'));assert.equal(firstPublish.body.withoutPhoto,true);assert.equal(firstPublish.body.product.stock,null);assert.equal(firstPublish.body.product.priceStatus,'confirm');
+ // A later price edit uses the same single review and keeps unknown stock intact.
+ await page.getByLabel('Price per piece (₹)',{exact:true}).fill('15.50');assert.equal(await page.getByRole('combobox',{name:'Price status',exact:true}).inputValue(),'priced');await button('Review & publish changes').click();await page.getByRole('dialog').getByRole('button',{name:'Confirm & publish',exact:true}).click();await page.getByText(/^Published · catalog/).waitFor();saved=(await (await fetch(base+'/api/owner/catalog/products/'+encodeURIComponent(sku))).json()).product;assert.equal(saved.pricePaise,1550);assert.equal(saved.stockOnHand,null);
+ assert.deepEqual(errors,[]);
+ await writeFile(resolve(out,'results.json'),JSON.stringify({synthetic:true,productionAssets:true,realLocalApi:true,inventoryRowsVisibleAt1440:rowsVisible,layouts,zeroEditorCheckboxes:true,keyboardTabs:true,cachedNavigationStyleIsolation:true,editsSurviveSectionChanges:true,invalidReviewWrites:0,phonePublicationDialogs:['en','ta'],publicationModalConfirmations:2,publishWrites:writes.filter(write=>write.path.endsWith('/proposals/publish')).length,unknownPriceAndStockPreserved:true,automaticPriceStatus:true,priceToConfirmClearsObsoleteValue:true,approvedNoPhotoChoiceRetained:true,secondPriceSavedPaise:saved.pricePaise,pageErrors:errors},null,2));
+ console.log('Inventory workspace passed: 60 product section/language/viewport combinations, dense stock table, keyboard tabs, retained edits, no checklist, invalid-review prevention and real create/edit publication with unknown stock preserved.');
+}catch(error){console.error((await page.locator('body').innerText()).slice(0,5000));await page.screenshot({path:resolve(out,'failure.png')});throw error;}finally{await browser.close();}

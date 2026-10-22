@@ -1,0 +1,117 @@
+{
+  "synthetic": true,
+  "commerceWritesMocked": true,
+  "realCsvPreviewStagedOnly": true,
+  "checks": [
+    "Order → stock repair and order → conversation both return directly to the exact order; unavailable reply is named honestly; original customer photos have a direct link",
+    "Record advance focuses the transaction field; the minimum reference length is visible before verification",
+    "Every secondary product section survives refresh; changing sections preserves edits",
+    "Price and stock submit by Enter and retain the inventory even after previously opening that product",
+    "Uncertain stock retry keeps its exact payload and prevents returning before recovery",
+    "Matching retry repeats the exact 200-character query rather than editing it",
+    "Selected-draft failure retries the same record directly",
+    "Failed draft filters hide stale rows; closing review cancels late selection navigation",
+    "CSV upload fits the first short-phone screen; a response-lost partial batch resumes after refresh without reuploading or automatic writes",
+    "Unavailable CSV restore offers retry and never shows an apply action for stale data",
+    "Real CSV staging survives reload and one-click navigation back to Products, with browser Back restoring the proposal and no fact changes or apply calls"
+  ],
+  "layouts": [
+    {
+      "width": 1440,
+      "height": 1000,
+      "locale": "en",
+      "screen": "stock return"
+    },
+    {
+      "width": 1440,
+      "height": 1000,
+      "locale": "en",
+      "screen": "CSV start"
+    },
+    {
+      "width": 1440,
+      "height": 1000,
+      "locale": "ta",
+      "screen": "stock return"
+    },
+    {
+      "width": 1440,
+      "height": 1000,
+      "locale": "ta",
+      "screen": "CSV start"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "locale": "en",
+      "screen": "stock return"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "locale": "en",
+      "screen": "CSV start"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "locale": "ta",
+      "screen": "stock return"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "locale": "ta",
+      "screen": "CSV start"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "locale": "en",
+      "screen": "stock return"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "locale": "en",
+      "screen": "CSV start"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "locale": "ta",
+      "screen": "stock return"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "locale": "ta",
+      "screen": "CSV start"
+    },
+    {
+      "width": 320,
+      "height": 640,
+      "locale": "en",
+      "screen": "stock return"
+    },
+    {
+      "width": 320,
+      "height": 640,
+      "locale": "en",
+      "screen": "CSV start"
+    },
+    {
+      "width": 320,
+      "height": 640,
+      "locale": "ta",
+      "screen": "stock return"
+    },
+    {
+      "width": 320,
+      "height": 640,
+      "locale": "ta",
+      "screen": "CSV start"
+    }
+  ],
+  "pageErrors": []
+}

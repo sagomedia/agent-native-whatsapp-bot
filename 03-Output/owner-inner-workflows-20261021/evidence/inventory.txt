@@ -1,0 +1,1 @@
+Inventory workspace passed: 60 product section/language/viewport combinations, dense stock table, keyboard tabs, retained edits, no checklist, invalid-review prevention and real create/edit publication with unknown stock preserved.

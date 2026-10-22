@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: publication review preserves explicit unknown price and stock without requiring five acknowledgments
+ok 1 - publication review preserves explicit unknown price and stock without requiring five acknowledgments
+  ---
+  duration_ms: 5.667198
+  type: 'test'
+  ...
+# Subtest: publication review directs missing identity, selling unit and photo choice to their actual sections
+ok 2 - publication review directs missing identity, selling unit and photo choice to their actual sections
+  ---
+  duration_ms: 0.621219
+  type: 'test'
+  ...
+# Subtest: publication review rejects invalid commercial numbers and distinguishes free from unpriced
+ok 3 - publication review rejects invalid commercial numbers and distinguishes free from unpriced
+  ---
+  duration_ms: 1.120918
+  type: 'test'
+  ...
+# Subtest: publication review sends ambiguous pack selling decisions to Selling details
+ok 4 - publication review sends ambiguous pack selling decisions to Selling details
+  ---
+  duration_ms: 0.630579
+  type: 'test'
+  ...
+# Subtest: publication review catches duplicate or malformed specifications before preparing a draft
+ok 5 - publication review catches duplicate or malformed specifications before preparing a draft
+  ---
+  duration_ms: 0.438509
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 533.284694
