@@ -56,6 +56,7 @@ export function RedesignChats(){
   const [inbox,setInbox]=useState<Inbox|null>(null);
   const [inboxError,setInboxError]=useState('');
   const [messages,setMessages]=useState<Message[]>([]);
+  const [confirmedReplies,setConfirmedReplies]=useState<Message[]>([]);
   const [historyError,setHistoryError]=useState('');
   const [historyLoading,setHistoryLoading]=useState(false);
   const [olderCursor,setOlderCursor]=useState<string|null>(null);
@@ -102,6 +103,16 @@ export function RedesignChats(){
   const draft=drafts[selectedId]??'';
   const needsCount=inbox?.conversationCounts?.help??listed.filter(needsReply).length;
   const mobileDetail=!!urlConversation;
+  // A successful POST confirms persistence; history refreshes only reconcile status.
+  const sortedMessages=useMemo(()=>{
+    const known=new Set(messages.map(message=>message.id));
+    return [...messages,...confirmedReplies.filter(message=>!known.has(message.id))].filter(message=>message.conversation_id===selectedId);
+  },[messages,confirmedReplies,selectedId]);
+  const awaitingDelivery=sortedMessages.some(message=>message.direction==='outbound'&&['queued','accepted','sent'].includes(message.status));
+  useEffect(()=>{
+    const known=new Set(messages.map(message=>message.id));
+    setConfirmedReplies(current=>current.some(message=>known.has(message.id))?current.filter(message=>!known.has(message.id)):current);
+  },[messages]);
 
   useEffect(()=>{
     olderRequest.current?.abort();olderRequest.current=null;
@@ -121,13 +132,13 @@ export function RedesignChats(){
         if(!hasOlderPages.current){olderCursorRef.current=next.olderCursor;setOlderCursor(next.olderCursor);}
         setHistoryError('');setHistoryLoading(false);
       }catch(error){if(!signal.aborted){setHistoryError(error instanceof Error?error.message:'Messages could not be loaded.');setHistoryLoading(false);}}
-    },{intervalMs:5000});
-  },[selectedId,reloadHistory]);
+    },{intervalMs:awaitingDelivery?1500:5000});
+  },[selectedId,reloadHistory,awaitingDelivery]);
 
   useLayoutEffect(()=>{
     const node=timeline.current;
     if(!node)return;
-    const latest=messages.at(-1)?.id??'';
+    const latest=sortedMessages.at(-1)?.id??'';
     if(prependAnchor.current){
       const anchor=prependAnchor.current;
       node.scrollTop=anchor.top+node.scrollHeight-anchor.height;
@@ -136,7 +147,7 @@ export function RedesignChats(){
       node.scrollTop=node.scrollHeight;setUnseen(false);
     }else if(latest&&latest!==lastMessageId.current){setUnseen(true);}
     lastMessageId.current=latest;
-  },[messages,historyLoading]);
+  },[sortedMessages,historyLoading]);
 
   useEffect(()=>{
     const node=timeline.current;
@@ -194,19 +205,25 @@ export function RedesignChats(){
     attempts.current[conversation.id]=attempt;
     actionBusy.current=true;setBusy(true);setActionError('');setNotice('');
     try{
-      await redesignApi(`conversations/${conversation.id}/reply`,{id:attempt.id,text,revision:conversation.operator_revision});
+      const result=await redesignApi<{messageId:string}>(`conversations/${conversation.id}/reply`,{id:attempt.id,text,revision:conversation.operator_revision});
       delete attempts.current[conversation.id];
       setDrafts(current=>({...current,[conversation.id]:''}));
-      const next=await redesignApi<History>(`conversations/${conversation.id}`);
-      if(selectedRef.current===conversation.id){nearBottom.current=true;setMessages(current=>mergeMessages(current,next.messages));if(!hasOlderPages.current){olderCursorRef.current=next.olderCursor;setOlderCursor(next.olderCursor);}}
-      await refresh();
-      if(selectedRef.current===conversation.id)setNotice('Reply queued. Its delivery status will appear here.');
+      setConfirmedReplies(current=>[...current.filter(message=>message.id!==result.messageId),{
+        id:result.messageId,sequence:'0',conversation_id:conversation.id,direction:'outbound',text,
+        created_at:new Date().toISOString(),status:'queued',whatsapp:true,sender_kind:'owner',media_available:null,
+      }]);
+      if(selectedRef.current===conversation.id){
+        nearBottom.current=true;setNotice('Reply queued. Its delivery status will appear here.');
+        // Restart the existing history poll, cancelling any pre-send stale read.
+        setReloadHistory(value=>value+1);
+      }
+      // Refresh failures must never turn a committed reply into a send failure.
+      void refresh().catch(error=>setInboxError(error instanceof Error?error.message:'Chats could not be updated.'));
     }catch(error){if(selectedRef.current===conversation.id)setActionError(error instanceof Error?error.message:'Could not send your reply. Try again.');}
     finally{actionBusy.current=false;setBusy(false);}
   }
 
   const canSend=!!conversation&&conversation.actor!=='local-simulator'&&inbox?.channel.liveSending&&replyWindowOpen(conversation.last_inbound_at);
-  const sortedMessages=useMemo(()=>messages.filter(m=>m.conversation_id===selectedId),[messages,selectedId]);
   function choose(id:string){if(busy)return;navigateOwner({view:'conversations',conversation:id});}
 
   return <div className={`rd-chats ${mobileDetail?'rd-chats-detail-open':''}`}>
