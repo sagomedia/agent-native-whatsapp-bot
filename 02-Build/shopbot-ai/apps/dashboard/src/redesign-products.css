@@ -21,3 +21,6 @@
 .redesign .rd-products-stock-dialog>label>select{font:inherit;padding:12px;border:1px solid #cbd5dc;border-radius:7px;color:var(--rd-text);background:white;width:100%}
 .redesign .rd-products-variant-entry{display:grid;gap:10px;justify-items:start}
 @media(max-width:460px){.redesign .rd-variant-fields{grid-template-columns:minmax(0,1fr)}.redesign .rd-variant-row{padding:12px}.redesign .rd-variant-heading{align-items:start}.redesign .rd-product-variants{gap:14px}}
+.redesign .rd-products-variants-layout{grid-template-columns:minmax(0,1fr)}
+.redesign .rd-products-variants-layout>.rd-products-preview{display:none}
+@media(min-width:1100px){.redesign .rd-products-variants-layout .rd-variant-fields{grid-template-columns:1.2fr 1fr 1.25fr .8fr 1fr 1fr;align-items:end}.redesign .rd-products-variants-layout .rd-variant-fields input,.redesign .rd-products-variants-layout .rd-variant-fields select{padding:12px 10px}.redesign .rd-products-variants-layout .rd-variant-row{gap:10px}.redesign .rd-products-variants-layout .rd-variant-fields label{font-size:13px}}

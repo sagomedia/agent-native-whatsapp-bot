@@ -100,7 +100,7 @@ export function registerOwnerSimpleProducts(app:FastifyInstance,_pool:Pool,store
     if(v.color)specifications.color=v.color;
     const result=await saveSimpleProduct(c,storeId,{
      createId:v.id,name:groupName+' · '+label,pricePaise:v.pricePaise,unit:v.unit,quantityStep:1,stock:v.stock,active:p.active,
-     details:{...p.details,localNames:Object.fromEntries(Object.entries(p.details.localNames??{}).filter(([,value])=>value).map(([lang,value])=>[lang,(value+' · '+label).slice(0,160)])),specifications:{...specifications,...(specifications.description?{description:(label+'. '+specifications.description).slice(0,120)}:{})},sellingPolicy:{saleMode:'pack',...(v.packContents?{packContents:v.packContents}:{}),cutAllowed:false,continuousLengthAvailable:null}}
+     details:{...p.details,aliases:[...new Set([groupName.slice(0,119-label.length)+' '+label,groupName.slice(0,119-label.length)+' '+label.replace(/(\d)\s+(ml|litre|liter|kg|g|mm|cm)\b/gi,'$1$2'),...(p.details.aliases??[])])].slice(0,40),localNames:Object.fromEntries(Object.entries(p.details.localNames??{}).filter(([,value])=>value).map(([lang,value])=>[lang,value!.slice(0,160-label.length-3)+' · '+label])),specifications:{...specifications,...(specifications.description?{description:(label+'. '+specifications.description).slice(0,120)}:{})},sellingPolicy:{saleMode:'pack',...(v.packContents?{packContents:v.packContents}:{}),cutAllowed:false,continuousLengthAvailable:null}}
     },undefined,imagePath);
     await c.query('UPDATE products SET product_group_id=$3,product_group_name=$4,variant_label=$5 WHERE store_id=$1 AND sku=$2',[storeId,result.sku,groupId,groupName,label]);
     products.push(result);

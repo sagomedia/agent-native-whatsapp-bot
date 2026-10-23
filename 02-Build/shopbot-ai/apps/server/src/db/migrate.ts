@@ -505,7 +505,7 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
         ADD COLUMN variant_label text;
       ALTER TABLE products ADD CONSTRAINT product_variant_identity CHECK(
         (product_group_id IS NULL AND product_group_name IS NULL AND variant_label IS NULL) OR
-        (product_group_id IS NOT NULL AND length(product_group_name) BETWEEN 2 AND 100 AND length(variant_label) BETWEEN 1 AND 55));
+        (product_group_id IS NOT NULL AND product_group_name IS NOT NULL AND variant_label IS NOT NULL AND length(product_group_name) BETWEEN 2 AND 100 AND length(variant_label) BETWEEN 1 AND 55));
       CREATE UNIQUE INDEX products_group_variant ON products(store_id,product_group_id,lower(variant_label)) WHERE product_group_id IS NOT NULL;
       CREATE TABLE product_variant_batches(store_id uuid NOT NULL REFERENCES stores(id),id uuid NOT NULL,
         input_hash text NOT NULL,result jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(store_id,id));

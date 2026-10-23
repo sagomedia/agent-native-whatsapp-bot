@@ -6,6 +6,8 @@ import pg from 'pg';
 import {setupDatabase} from '../apps/server/src/db/migrate.js';
 import {setupImageDemo} from '../apps/server/src/services/demo-catalog.js';
 import {fixtureStore} from '../profiles/hardware.js';
+import {searchProducts} from '../apps/server/src/services/catalog.js';
+import {discoverProducts} from '../apps/server/src/services/catalog-discovery.js';
 import {createApp} from '../apps/server/src/http/app.js';
 
 const owner={hostname:'simple-product.example.test',issuer:'https://test.cloudflareaccess.com',audience:'owner-app',email:'owner@example.test',storeId:fixtureStore};
@@ -90,6 +92,7 @@ test('variants are atomic, searchable individual SKUs with shared photo, distinc
  assert.ok(saved.every(p=>p.local_names.ta.includes(p.variant_label)));assert.ok(saved.every(p=>p.specifications.description.includes(p.variant_label)));
  const pink=result.products[0],white=result.products[2];
  for(const q of ['pink paint 500 ml','500ml pink paint','suvar paint pink 500 ml','சுவர் பெயிண்ட் Pink 500 ml']){r=await app.inject({url:'/api/owner/catalog?q='+encodeURIComponent(q),headers});assert.equal(r.statusCode,200,r.body);assert.deepEqual(r.json().products.map((p:any)=>p.sku),[pink.sku],q);assert.equal(r.json().products[0].productGroup.id,result.groupId);}
+ const client=await pool.connect();try{const ctx={storeId:fixtureStore,conversationId:randomUUID(),actor:'fixture',role:'customer' as const};for(const q of ['pink paint 500 ml','pink paint 500ml']){assert.deepEqual((await searchProducts(client,ctx,q)).map(p=>p.sku),[pink.sku]);const discovery=await discoverProducts(client,ctx,q);assert.deepEqual(discovery.products.map(p=>p.sku),[pink.sku]);}const generic=await discoverProducts(client,ctx,'Fixture wall paint');assert.ok(generic.products.length>=2,'an unspecified size must retain alternatives');}finally{client.release();}
  const movement=()=>pool.query('SELECT count(*)::int AS n FROM inventory_movements WHERE store_id=$1 AND sku=$2',[fixtureStore,pink.sku]);const before=(await movement()).rows[0].n;
  await pool.query('UPDATE products SET reserved_stock=2 WHERE store_id=$1 AND sku=$2',[fixtureStore,pink.sku]);
  const restock={id:randomUUID(),expectedVersion:pink.inventoryVersion,kind:'restock',quantity:20,reason:'Received new tins'};
