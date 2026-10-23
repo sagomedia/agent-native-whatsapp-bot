@@ -28,6 +28,20 @@ export function indicativeEstimate(lines:DraftLine[]) {
  return {indicative,subtotalPaise:exact.knownSubtotalPaise+indicative.reduce((sum,line)=>sum+indicativeLineEstimate(line)!.totalPaise,0),unpriced:exact.excluded.filter(line=>!indicative.includes(line))};
 }
 
+export type OriginalEstimateSnapshot={lines:{id:string;pricePaise?:number;totalPaise?:number;approximate:boolean}[];subtotalPaise:number;unpriced:number;approximate:boolean};
+/** Reconstruct the submitted estimate from its frozen lines, never today's catalog. */
+export function originalEstimateSnapshot(lines:DraftLine[]):OriginalEstimateSnapshot {
+ const exact=estimateLines(lines),display=indicativeEstimate(lines);
+ return {
+  lines:lines.map(line=>{
+   if(exact.priced.includes(line))return {id:line.id,pricePaise:line.pricePaise!,totalPaise:lineTotal(line.pricePaise!,line.quantity!),approximate:false};
+   const indicative=indicativeLineEstimate(line);
+   return {id:line.id,...indicative,approximate:!!indicative};
+  }),
+  subtotalPaise:display.subtotalPaise,unpriced:display.unpriced.length,approximate:display.indicative.length>0,
+ };
+}
+
 /** The next missing fact for each excluded line, never a fabricated price. */
 export function estimatePendingReason(line:DraftLine):'product'|'unit'|'quantity'|'price'|'details' {
  const facts=counterLine(line);

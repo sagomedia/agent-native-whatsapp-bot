@@ -7,3 +7,8 @@
 .redesign .rd-orders .rd-orders-primary:hover:not(:disabled){background:#005b61}.redesign .rd-orders-dialog .rd-orders-primary:hover:not(:disabled){background:#005b61}
 
 .redesign .rd-orders-head-actions button{display:flex;align-items:center;gap:7px}.redesign .rd-orders-head-actions .owner-icon{width:18px;height:18px}
+
+.redesign .rd-orders-quoted-price{grid-column:1 / -1;font-size:12px;line-height:1.5;color:#52616b;margin-top:-5px;padding-left:69px}.redesign .rd-orders-quoted-price strong{color:var(--rd-text);font-weight:600}
+@media(max-width:1100px){.redesign .rd-orders-quoted-price{padding-left:51px}}
+@media(max-width:800px){.redesign .rd-orders-quoted-price{padding-left:52px}}
+@media(max-width:390px){.redesign .rd-orders-quoted-price{padding-left:42px}}

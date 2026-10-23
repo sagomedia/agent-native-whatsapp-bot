@@ -1,5 +1,6 @@
 import {ownerSnapshotQuery,ownerReadPageSize,ownerActiveSql,ownerStageSql,ownerSimpleStageSql,ownerSearchPattern} from '../services/owner-read-query.js';
 import {messageGallery} from '../services/message-gallery.js';
+import {originalEstimateSnapshot} from '../services/order-estimate.js';
 import {productColumns,productFromRow} from '../services/catalog.js';
 import {reserveRequest,closeRequestStock} from '../services/inventory.js';
 import {ToolError} from '../services/context.js';
@@ -145,6 +146,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       const requests=(await client.query(requestQuery+orderFilter+` ORDER BY CASE WHEN ${ownerActiveSql} THEN 0 ELSE 1 END,r.created_at DESC,r.id LIMIT $5 OFFSET $6`,[...orderValues,orderLimit,orderOffset])).rows;
       const orderPage={number:read.orderPage,size:orderLimit,total:orderTotal,ids:requests.map(r=>r.id),hasNext:orderOffset+orderLimit<orderTotal};
       if(read.order&&!requests.some(r=>r.id===read.order))requests.push(...(await client.query(requestQuery+' AND r.id=$2',[owner.storeId,read.order])).rows);
+      for(const request of requests)request.original_estimate=originalEstimateSnapshot(request.original_lines);
       const requestSkus=[...new Set(requests.flatMap(r=>(r.lines as OrderRequest['lines']).flatMap(l=>l.sku?[l.sku]:[])))];
       const stockProducts=requestSkus.length?(await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND sku=ANY($2::text[])`,[owner.storeId,requestSkus])).rows.map(productFromRow):[];
       const reservations=requests.length?(await client.query("SELECT request_id,sku,quantity FROM inventory_reservations WHERE store_id=$1 AND request_id=ANY($2::uuid[]) AND state='active'",[owner.storeId,requests.map(r=>r.id)])).rows:[];
