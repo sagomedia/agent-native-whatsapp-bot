@@ -3,24 +3,28 @@ import type {Pool,PoolClient} from 'pg';
 import {z} from 'zod';
 import type {OwnerConfig} from '../config.js';
 
-export type RemoteMcpConfig={publicUrl:string};
+export type RemoteMcpConfig={publicUrl:string;redirectUris?:string[]};
 export const mcpScopes=['catalog:read','catalog:draft'] as const;
 const digest=(s:string)=>createHash('sha256').update(s).digest('hex');
 const secret=()=>randomBytes(32).toString('base64url');
 export const oauthError=(error:string,statusCode=400)=>Object.assign(new Error(error),{statusCode});
-export function remoteMcpConfig(value:string|undefined,owner:OwnerConfig|undefined):RemoteMcpConfig|undefined{
+export function remoteMcpConfig(value:string|undefined,owner:OwnerConfig|undefined,redirectUrisValue?:string):RemoteMcpConfig|undefined{
  if(!value)return;
  const u=new URL(value);
  if(!owner||u.protocol!=='https:'||u.username||u.password||u.search||u.hash||u.pathname!=='/mcp'||u.port||u.hostname===owner.hostname)throw new Error('Remote MCP requires a separate HTTPS hostname, /mcp path and owner access configuration.');
- return {publicUrl:u.href};
+ let redirectUris:string[]|undefined;
+ if(redirectUrisValue!==undefined){try{
+  redirectUris=z.array(z.string().max(2048).refine(value=>{try{const r=new URL(value);return r.protocol==='https:'&&!r.username&&!r.password&&!r.hash&&!r.hostname.includes('*')&&r.href===value;}catch{return false;}})).max(32).parse(JSON.parse(redirectUrisValue));
+ }catch{throw new Error('Remote MCP redirect URIs must be a JSON array of at most 32 exact HTTPS URLs, without credentials, fragments or wildcards.');}}
+ return {publicUrl:u.href,...(redirectUris?{redirectUris}: {})};
 }
 export function mcpPublicPath(config:RemoteMcpConfig|undefined,host:string|undefined,path:string){
  return !!config&&host===new URL(config.publicUrl).host&&(path==='/mcp'||['/.well-known/oauth-protected-resource','/.well-known/oauth-protected-resource/mcp','/.well-known/oauth-authorization-server','/.well-known/openid-configuration','/mcp/oauth/register','/mcp/oauth/token','/mcp/oauth/revoke'].includes(path));
 }
-function redirectAllowed(value:string){
- try{const u=new URL(value);return !u.username&&!u.password&&!u.hash&&(u.protocol==='https:'&&['chatgpt.com','chat.openai.com','claude.ai'].includes(u.hostname)||u.protocol==='http:'&&['127.0.0.1','localhost','[::1]'].includes(u.hostname));}catch{return false;}
+function redirectAllowed(value:string,extra:string[]=[]){
+ try{const u=new URL(value);return !u.username&&!u.password&&!u.hash&&(u.protocol==='https:'&&(['chatgpt.com','chat.openai.com','claude.ai'].includes(u.hostname)||extra.includes(value))||u.protocol==='http:'&&['127.0.0.1','localhost','[::1]'].includes(u.hostname));}catch{return false;}
 }
-const registration=z.object({client_name:z.string().trim().min(1).max(100).default('AI catalog client'),redirect_uris:z.array(z.string().max(2048).refine(redirectAllowed)).min(1).max(8),token_endpoint_auth_method:z.literal('none').default('none'),grant_types:z.array(z.enum(['authorization_code','refresh_token'])).max(2).optional(),response_types:z.array(z.literal('code')).max(1).optional(),scope:z.string().max(200).optional()}).passthrough();
+const registration=(extra:string[]=[])=>z.object({client_name:z.string().trim().min(1).max(100).default('AI catalog client'),redirect_uris:z.array(z.string().max(2048).refine(value=>redirectAllowed(value,extra))).min(1).max(8),token_endpoint_auth_method:z.literal('none').default('none'),grant_types:z.array(z.enum(['authorization_code','refresh_token'])).max(2).optional(),response_types:z.array(z.literal('code')).max(1).optional(),scope:z.string().max(200).optional()}).passthrough();
 // OAuth extension parameters are permitted by RFC 6749. Only the recognized,
 // validated fields below can affect authorization; extras never grant rights.
 const authorization=z.object({client_id:z.string().min(1).max(200),redirect_uri:z.string().max(2048),response_type:z.literal('code'),code_challenge:z.string().regex(/^[A-Za-z0-9_-]{43}$/),code_challenge_method:z.literal('S256'),resource:z.string().max(2048),scope:z.string().max(200).optional(),state:z.string().min(1).max(2048)}).passthrough();
@@ -33,7 +37,7 @@ export class CatalogOAuth {
  resource(){return {resource:this.config.publicUrl,authorization_servers:[this.issuer],scopes_supported:mcpScopes,bearer_methods_supported:['header'],resource_name:'ShopBot merchant catalog'};}
  scopes(value?:string){const scopes=[...new Set((value?.trim()||mcpScopes.join(' ')).split(' ').filter(Boolean))];if(!scopes.includes('catalog:read')||scopes.some(s=>!mcpScopes.includes(s as typeof mcpScopes[number])))throw oauthError('invalid_scope');return scopes;}
  async register(input:unknown){
-  const p=registration.parse(input);this.scopes(p.scope);
+  const p=registration(this.config.redirectUris).parse(input);this.scopes(p.scope);
   // Persist a global ceiling too, so a restart does not reset abuse limits.
   const client=await this.pool.connect();try{await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock(73502841)');
    if(Number((await client.query("SELECT count(*) FROM mcp_oauth_clients WHERE created_at>now()-interval '24 hours'")).rows[0].count)>=100)throw oauthError('temporarily_unavailable',429);
@@ -44,7 +48,7 @@ export class CatalogOAuth {
  async prepare(input:unknown){
   const p=authorization.parse(input);if(p.resource!==this.config.publicUrl)throw oauthError('invalid_target');
   const client=(await this.pool.query('SELECT name,redirect_uris FROM mcp_oauth_clients WHERE client_id=$1',[p.client_id])).rows[0];
-  if(!client||!client.redirect_uris.includes(p.redirect_uri)||!redirectAllowed(p.redirect_uri))throw oauthError('invalid_request');
+  if(!client||!client.redirect_uris.includes(p.redirect_uri)||!redirectAllowed(p.redirect_uri,this.config.redirectUris))throw oauthError('invalid_request');
   const scopes=this.scopes(p.scope),id=randomUUID(),csrf=secret();
   await this.pool.query("DELETE FROM mcp_oauth_requests WHERE expires_at<now()-interval '1 day'");
   await this.pool.query('INSERT INTO mcp_oauth_requests(id,secret_hash,client_id,redirect_uri,challenge,state,scopes,resource) VALUES($1,$2,$3,$4,$5,$6,$7,$8)',[id,digest(csrf),p.client_id,p.redirect_uri,p.code_challenge,p.state,scopes,p.resource]);

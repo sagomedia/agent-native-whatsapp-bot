@@ -21,7 +21,7 @@ export async function registerRemoteMcp(app:FastifyInstance,pool:Pool,config:Con
  function publicGate(req:FastifyRequest,reply:FastifyReply){
   if(req.headers.host!==host){reply.code(404).send({error:'Not found'});return false;}
   const origin=req.headers.origin;
-  if(origin&&!['https://chatgpt.com','https://claude.ai','https://'+owner!.hostname].includes(origin)){reply.code(403).send({error:'Invalid request origin'});return false;}
+  if(origin&&!['https://chatgpt.com','https://claude.ai','https://gemini.google.com','https://'+owner!.hostname].includes(origin)){reply.code(403).send({error:'Invalid request origin'});return false;}
   reply.header('Cache-Control','no-store').header('Pragma','no-cache').header('X-Content-Type-Options','nosniff').header('Referrer-Policy','no-referrer');
   if(origin)reply.header('Access-Control-Allow-Origin',origin).header('Vary','Origin').header('Access-Control-Expose-Headers','WWW-Authenticate, MCP-Protocol-Version');
   return true;

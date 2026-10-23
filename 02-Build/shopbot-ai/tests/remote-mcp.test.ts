@@ -6,7 +6,7 @@ import pg from 'pg';
 import {Client,StreamableHTTPClientTransport} from '@modelcontextprotocol/client';
 import {setupDatabase} from '../apps/server/src/db/migrate.js';
 import {createApp} from '../apps/server/src/http/app.js';
-import {CatalogOAuth,remoteMcpConfig} from '../apps/server/src/mcp/oauth.js';
+import {CatalogOAuth,remoteMcpConfig,type RemoteMcpConfig} from '../apps/server/src/mcp/oauth.js';
 import {fixtureStore} from '../profiles/hardware.js';
 
 const owner={hostname:'mcp-owner.example.test',issuer:'https://example.cloudflareaccess.com',audience:'test-audience-mcp',email:'merchant@example.test',storeId:fixtureStore};
@@ -14,11 +14,11 @@ const remote={publicUrl:'https://mcp.example.test/mcp'},publicHost='mcp.example.
 const ownerHeaders={host:owner.hostname,'cf-access-jwt-assertion':'synthetic',origin:'https://'+owner.hostname,'x-shopbot-owner':'1','content-type':'application/json'};
 const verifier=()=>randomBytes(32).toString('base64url');
 const challenge=(s:string)=>createHash('sha256').update(s).digest('base64url');
-async function fixture(run:(pool:pg.Pool,oauth:CatalogOAuth,app:Awaited<ReturnType<typeof createApp>>)=>Promise<void>){
+async function fixture(run:(pool:pg.Pool,oauth:CatalogOAuth,app:Awaited<ReturnType<typeof createApp>>)=>Promise<void>,remoteConfig:RemoteMcpConfig=remote){
  assert.ok(process.env.DATABASE_URL,'An explicit disposable DATABASE_URL is required.');
  const admin=new pg.Pool({connectionString:process.env.DATABASE_URL}),schema='remote_mcp_'+randomUUID().replaceAll('-','');await admin.query('CREATE SCHEMA '+schema);
  const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:'-c search_path='+schema});let app:Awaited<ReturnType<typeof createApp>>|undefined;
- try{await setupDatabase(pool,'mock');app=await createApp({mode:'mock',host:'127.0.0.1',port:3017,databaseUrl:process.env.DATABASE_URL!,mediaDir:'/tmp/mcp-fixture',owner,remoteMcp:remote},pool,undefined,undefined,async token=>{if(token!=='synthetic')throw Error();return {email:owner.email,subject:'test-owner'};});await app.ready();await run(pool,new CatalogOAuth(pool,remote,owner),app);}
+ try{await setupDatabase(pool,'mock');app=await createApp({mode:'mock',host:'127.0.0.1',port:3017,databaseUrl:process.env.DATABASE_URL!,mediaDir:'/tmp/mcp-fixture',owner,remoteMcp:remoteConfig},pool,undefined,undefined,async token=>{if(token!=='synthetic')throw Error();return {email:owner.email,subject:'test-owner'};});await app.ready();await run(pool,new CatalogOAuth(pool,remoteConfig,owner),app);}
  finally{await app?.close();await pool.end();await admin.query('DROP SCHEMA '+schema+' CASCADE');await admin.end();}
 }
 async function authorize(oauth:CatalogOAuth,scope='catalog:read catalog:draft'){
@@ -130,3 +130,41 @@ test('2026 MCP discovery preserves method/name headers and legacy initialization
  const mismatch=await app.inject({method:'POST',url:'/mcp',headers:{...modernHeaders,'mcp-method':'tools/call','mcp-name':'catalog_search'},payload:{jsonrpc:'2.0',id:4,method:'tools/call',params:{_meta:meta,name:'catalog_inventory',arguments:{limit:1}}}});assert.equal(mismatch.statusCode,400);
  const preflight=await app.inject({method:'OPTIONS',url:'/mcp',headers:{host:publicHost,origin:'https://chatgpt.com'}});assert.match(preflight.headers['access-control-allow-headers']!,/MCP-Method/);
 }));
+
+test('reviewed exact third-party callbacks bind registration, consent and token exchange without allowing neighboring URLs',async()=>{
+ const callback='https://backend.composio.dev/api/v1/auth-apps/add';
+ const config=remoteMcpConfig(remote.publicUrl,owner,JSON.stringify([callback]))!;
+ assert.deepEqual(config.redirectUris,[callback]);
+ for(const value of ['not-json','{}','["http://example.test/callback"]','["https://user:secret@example.test/callback"]','["https://example.test/callback#fragment"]','["https://*.example.test/callback"]'])assert.throws(()=>remoteMcpConfig(remote.publicUrl,owner,value),/Remote MCP redirect URIs/);
+ await fixture(async(_pool,oauth,app)=>{
+  const registration={client_name:'Composio compatibility fixture',redirect_uris:[callback],token_endpoint_auth_method:'none',grant_types:['authorization_code','refresh_token'],response_types:['code'],scope:'catalog:read catalog:draft'};
+  const client=await app.inject({method:'POST',url:'/mcp/oauth/register',headers:{host:publicHost,'content-type':'application/json'},payload:registration});assert.equal(client.statusCode,201,client.body);assert.equal(client.json().redirect_uris[0],callback);
+  const v=verifier(),params={client_id:client.json().client_id,redirect_uri:callback,response_type:'code',code_challenge:challenge(v),code_challenge_method:'S256',resource:remote.publicUrl,scope:registration.scope,state:randomUUID()};
+  for(const bad of [callback+'/',callback+'?unapproved=1','https://backend.composio.dev/api/v1/auth-apps/other','https://backend.composio.dev.evil.test/api/v1/auth-apps/add']){
+   await assert.rejects(oauth.register({...registration,redirect_uris:[bad]}));await assert.rejects(oauth.prepare({...params,redirect_uri:bad}),/invalid_request/);
+  }
+  const page=await app.inject({url:'/api/owner/mcp/authorize?'+new URLSearchParams(params),headers:ownerHeaders});assert.equal(page.statusCode,200,page.body);assert.match(page.body,/backend.composio.dev/);
+  const id=/name="id" value="([^"]+)"/.exec(page.body)![1],csrf=/name="csrf" value="([^"]+)"/.exec(page.body)![1];
+  const decision=await app.inject({method:'POST',url:'/api/owner/mcp/authorize',headers:ownerHeaders,payload:{id,csrf,allow:true}});assert.equal(decision.statusCode,200,decision.body);
+  const redirect=new URL(decision.json().redirect);assert.equal(redirect.origin+redirect.pathname,callback);assert.equal(redirect.searchParams.get('state'),params.state);
+  const tokenInput={grant_type:'authorization_code',client_id:params.client_id,code:redirect.searchParams.get('code')!,redirect_uri:callback,code_verifier:v,resource:remote.publicUrl};
+  await assert.rejects(oauth.token({...tokenInput,redirect_uri:callback+'/'}),/invalid_grant/);
+  const token=await app.inject({method:'POST',url:'/mcp/oauth/token',headers:{host:publicHost,'content-type':'application/x-www-form-urlencoded'},payload:new URLSearchParams(tokenInput).toString()});assert.equal(token.statusCode,200,token.body);
+  const listed=await rpc(app,token.json().access_token,'tools/list');assert.equal(listed.statusCode,200,listed.body);assert.equal(result(listed.body).result.tools.length,6);
+  const refreshed=await oauth.token({grant_type:'refresh_token',client_id:params.client_id,resource:remote.publicUrl,refresh_token:token.json().refresh_token});assert.ok(await oauth.authenticate('Bearer '+refreshed.access_token));
+  const stricter=new CatalogOAuth(_pool,remote,owner);await assert.rejects(stricter.prepare(params),/invalid_request/);
+ },config);
+});
+
+test('Gemini user-bound callbacks are configured exactly and the Gemini web origin can discover MCP metadata',()=>{
+ const callback='https://oauth-redirect.googleusercontent.com/r/user_bound_custom-mcp-fixture-demo_sagoautomation_tech';
+ const config=remoteMcpConfig(remote.publicUrl,owner,JSON.stringify([callback]))!;
+ return fixture(async(_pool,oauth,app)=>{
+  const client=await oauth.register({client_name:'Gemini compatibility fixture',redirect_uris:[callback],token_endpoint_auth_method:'none'}),v=verifier();
+  const params={client_id:client.client_id,redirect_uri:callback,response_type:'code',code_challenge:challenge(v),code_challenge_method:'S256',resource:remote.publicUrl,state:randomUUID()};
+  const p=await oauth.prepare(params);const d=await oauth.consent({id:p.id,csrf:p.csrf,allow:true});const redirect=new URL(d.redirect);assert.equal(redirect.origin+redirect.pathname,callback);assert.equal(redirect.searchParams.get('iss'),new URL(remote.publicUrl).origin);
+  const token=await oauth.token({grant_type:'authorization_code',client_id:client.client_id,code:redirect.searchParams.get('code'),redirect_uri:callback,code_verifier:v,resource:remote.publicUrl});assert.ok(await oauth.authenticate('Bearer '+token.access_token));
+  await assert.rejects(oauth.register({redirect_uris:[callback.replace('fixture','another-user')]}));
+  const metadata=await app.inject({url:'/.well-known/oauth-protected-resource/mcp',headers:{host:publicHost,origin:'https://gemini.google.com'}});assert.equal(metadata.statusCode,200);assert.equal(metadata.headers['access-control-allow-origin'],'https://gemini.google.com');
+ },config);
+});

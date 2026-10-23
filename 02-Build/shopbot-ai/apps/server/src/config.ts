@@ -20,7 +20,7 @@ export function readConfig(env = process.env): Config {
   }
   const whatsapp=readWhatsAppConfig(env);
   if(whatsapp&&(whatsapp.hostname===owner?.hostname||owner&&whatsapp.storeId!==owner.storeId))throw new Error('WhatsApp needs a separate hostname and the configured owner store');
-  const remoteMcp=remoteMcpConfig(env.SHOPBOT_MCP_PUBLIC_URL,owner);
+  const remoteMcp=remoteMcpConfig(env.SHOPBOT_MCP_PUBLIC_URL,owner,env.SHOPBOT_MCP_REDIRECT_URIS);
   if(remoteMcp&&whatsapp&&new URL(remoteMcp.publicUrl).hostname!==whatsapp.hostname)throw new Error('Remote MCP must use the existing public channel hostname.');
   return { remoteMcp,catalogAi:owner&&whatsapp?.paidEnabled&&whatsapp.aiEnabled&&env.GEMINI_API_KEY?{apiKey:env.GEMINI_API_KEY}:undefined,owner,whatsapp,whatsAppPlanningPaise,mode, databaseUrl: env.DATABASE_URL, port, host: env.HOST ?? '127.0.0.1', mediaDir: env.MEDIA_DIR ?? './data/media' };
 }
