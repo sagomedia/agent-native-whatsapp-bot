@@ -371,7 +371,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     });
   });
   app.post<{Params:{id:string}}>('/api/owner/requests/:id/fulfillment',async(request,reply)=>{
-    const parsed=z.object({expected:z.enum(['awaiting_approval','preparing','ready_for_pickup','collected','cancelled']),status:z.enum(['ready_for_pickup','collected','cancelled']),packedChecked:z.boolean().optional(),expectedRevision:revision.optional(),reason:z.literal('not_picked_up').optional(),notify:z.boolean().default(false)}).strict().refine(p=>!p.reason||(p.status==='cancelled'&&p.expected==='ready_for_pickup'),'Not picked up only applies to cancellation of a ready order.').safeParse(request.body);
+    const parsed=z.object({expected:z.enum(['awaiting_approval','preparing','ready_for_pickup','collected','cancelled']),status:z.enum(['ready_for_pickup','collected','cancelled']),packedChecked:z.boolean().optional(),expectedRevision:revision.optional(),reason:z.literal('not_picked_up').optional(),notify:z.boolean().default(false)}).strict().refine(p=>!p.reason||(p.status==='cancelled'&&p.expected==='ready_for_pickup'&&p.expectedRevision!==undefined),'Not picked up only applies to cancellation of a ready order.').safeParse(request.body);
     if(!parsed.success||!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Invalid fulfillment update'});
     return write('request_fulfillment',request.params.id,async client=>{
       const p=parsed.data,row=(await client.query('SELECT * FROM order_requests WHERE store_id=$1 AND id=$2 FOR UPDATE',[owner.storeId,request.params.id])).rows[0];

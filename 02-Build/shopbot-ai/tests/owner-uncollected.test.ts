@@ -29,6 +29,7 @@ test('not-picked-up cancellation is scoped, revision checked, auditable, and rel
   const post=(body:object)=>app.inject({method:'POST',url,headers,payload:body});
   assert.equal((await app.inject({method:'POST',url,headers:{host:owner.hostname},payload})).statusCode,403);
   assert.equal((await post({...payload,expectedRevision:0})).statusCode,409);
+  const {expectedRevision:ignored,...missingRevision}=payload;assert.equal((await post(missingRevision)).statusCode,400);
   assert.equal((await post({...payload,expected:'preparing'})).statusCode,400);
   assert.equal((await post({...payload,reason:'other'})).statusCode,400);
   const otherStore=randomUUID();await pool.query("INSERT INTO stores(id,name,synthetic) VALUES($1,'Other fixture','true')",[otherStore]);
