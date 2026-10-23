@@ -371,21 +371,22 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     });
   });
   app.post<{Params:{id:string}}>('/api/owner/requests/:id/fulfillment',async(request,reply)=>{
-    const parsed=z.object({expected:z.enum(['awaiting_approval','preparing','ready_for_pickup','collected','cancelled']),status:z.enum(['ready_for_pickup','collected','cancelled']),packedChecked:z.boolean().optional(),notify:z.boolean().default(false)}).strict().safeParse(request.body);
+    const parsed=z.object({expected:z.enum(['awaiting_approval','preparing','ready_for_pickup','collected','cancelled']),status:z.enum(['ready_for_pickup','collected','cancelled']),packedChecked:z.boolean().optional(),expectedRevision:revision.optional(),reason:z.literal('not_picked_up').optional(),notify:z.boolean().default(false)}).strict().refine(p=>!p.reason||(p.status==='cancelled'&&p.expected==='ready_for_pickup'),'Not picked up only applies to cancellation of a ready order.').safeParse(request.body);
     if(!parsed.success||!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Invalid fulfillment update'});
     return write('request_fulfillment',request.params.id,async client=>{
       const p=parsed.data,row=(await client.query('SELECT * FROM order_requests WHERE store_id=$1 AND id=$2 FOR UPDATE',[owner.storeId,request.params.id])).rows[0];
       if(!row||row.acceptance!=='accepted')throw Object.assign(new Error('Accept the request before updating pickup status.'),{statusCode:409});
+      if(p.expectedRevision!==undefined&&row.effective_revision!==p.expectedRevision)throw Object.assign(new Error('This order changed. Refresh it before updating pickup status.'),{statusCode:409});
       if(['ready_for_pickup','collected'].includes(p.status)&&((await client.query("SELECT 1 FROM order_quotes WHERE request_id=$1 AND state='offered'",[row.id])).rowCount||(await client.query("SELECT 1 FROM order_amendments WHERE request_id=$1 AND state='owner_pending'",[row.id])).rowCount))throw Object.assign(new Error('Resolve the pending customer quote or amendment before marking ready or collected.'),{statusCode:409});
       if(p.status==='ready_for_pickup'&&p.packedChecked!==true&&row.packed_revision!==row.effective_revision)throw Object.assign(new Error('Check the physical products, quantities and pack sizes before marking ready.'),{statusCode:409});
       if(p.status==='collected'&&row.packed_revision!==row.effective_revision)throw Object.assign(new Error('Recheck this order and mark it ready before recording collection.'),{statusCode:409});
       if(p.status==='ready_for_pickup'&&p.packedChecked===true)await client.query('UPDATE order_requests SET packed_revision=effective_revision WHERE id=$1',[row.id]);
-      if(row.fulfillment===p.status)return {fulfillment:p.status,duplicate:true,...await notifyStatus(client,row,p.notify)};
+      if(row.fulfillment===p.status)return {fulfillment:p.status,duplicate:true,...(p.reason?{reason:p.reason}:{}),...await notifyStatus(client,row,p.notify)};
       if(row.fulfillment!==p.expected||!((['awaiting_approval','preparing'].includes(row.fulfillment)&&['ready_for_pickup','cancelled'].includes(p.status))||(row.fulfillment==='ready_for_pickup'&&['collected','cancelled'].includes(p.status))))throw Object.assign(new Error('Request status changed or that transition is not allowed. Refresh before updating.'),{statusCode:409});
       if(p.status==='cancelled')await client.query("UPDATE order_advances SET state='refund_pending',updated_at=now() WHERE request_id=$1 AND state='verified'",[request.params.id]);
       if(p.status==='collected'||p.status==='cancelled')await closeRequestStock(client,owner.storeId,row.id,p.status==='collected'?'collect':'release',owner.email);
       const changed=(await client.query('UPDATE order_requests SET fulfillment=$1 WHERE store_id=$2 AND id=$3 RETURNING *',[p.status,owner.storeId,row.id])).rows[0];
-      return {fulfillment:p.status,packedChecked:p.packedChecked??false,...await notifyStatus(client,changed,p.notify)};
+      return {fulfillment:p.status,...(p.reason?{reason:p.reason}:{}),packedChecked:p.packedChecked??false,...await notifyStatus(client,changed,p.notify)};
     });
   });
   app.post<{Params:{id:string}}>('/api/owner/requests/:id/inventory/reconcile',async(request,reply)=>{

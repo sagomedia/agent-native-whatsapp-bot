@@ -16,3 +16,11 @@
 .redesign .rd-orders-list,.redesign .rd-orders-detail{min-height:0;overflow:auto;overscroll-behavior:contain}
 .redesign .rd-orders-list-head{position:sticky;top:0;z-index:1}
 @media(max-width:800px){.redesign .rd-orders-list,.redesign .rd-orders-detail{height:100%}}
+
+.redesign .rd-orders-cancel-option{display:block;margin:14px auto 0;padding:7px 10px;border:0;background:transparent;color:#8b3c32;text-decoration:underline;text-underline-offset:3px;font-size:13px}
+.redesign .rd-orders-cancel-confirm{padding:22px 24px}
+.redesign .rd-orders-cancel-confirm>p{font-size:14px;line-height:1.6;margin-bottom:18px}
+.redesign .rd-orders-cancel-actions{display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap}
+.redesign .rd-orders-cancel-actions button{padding:10px 14px;border:1px solid #cbd3da;border-radius:5px;background:white;color:var(--rd-text);font-size:14px}
+.redesign .rd-orders-cancel-actions .rd-orders-cancel-submit{background:#923e33;border-color:#923e33;color:#fff}
+.redesign .rd-orders-cancel-actions .rd-orders-cancel-submit:hover:not(:disabled){background:#773128}
