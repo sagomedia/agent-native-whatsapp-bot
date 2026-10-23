@@ -83,7 +83,7 @@ test('a basic product edit preserves its measured selling increment',()=>fixture
 test('variants are atomic, searchable individual SKUs with shared photo, distinct stock and durable retries',()=>fixture(async(pool,app)=>{
  const photo={id:randomUUID(),mimeType:'image/jpeg',data:(await readFile('resources/catalog/ksmc-demo/images/H19.jpg')).toString('base64'),caption:''};
  const row=(size:string,color:string,stock:number)=>({id:randomUUID(),label:'',size,color,pricePaise:20000,stock,unit:'tin',packContents:{value:Number(size.split(' ')[0]),unit:'ml'}});
- const payload={id:randomUUID(),name:'Fixture wall paint',photo,details:{localNames:{ta:'சுவர் பெயிண்ட்','ta-Latn':'suvar paint'},aliases:['wall paint','suvar paint','சுவர் பெயிண்ட்'],keywords:['paint'],specifications:{description:'Wall paint'}},variants:[row('500 ml','Pink',5),row('1000 ml','Pink',9),row('500 ml','White',3),row('1500 ml','Pink',7)]};
+ const payload={id:randomUUID(),name:'Fixture wall paint',photo,details:{familyId:'paint',localNames:{ta:'சுவர் பெயிண்ட்','ta-Latn':'suvar paint'},aliases:['wall paint','suvar paint','சுவர் பெயிண்ட்'],keywords:['paint'],specifications:{description:'Wall paint'}},variants:[row('500 ml','Pink',5),row('1000 ml','Pink',9),row('500 ml','White',3),row('1500 ml','Pink',7)]};
  const batch=(body:unknown,extra={})=>app.inject({method:'POST',url:'/api/owner/products/variants',headers:{...headers,...extra},payload:JSON.stringify(body)});
  assert.equal((await batch(payload,{'cf-access-jwt-assertion':''})).statusCode,403);
  let r=await batch(payload);assert.equal(r.statusCode,200,r.body);const result=r.json();assert.equal(result.products.length,4);assert.equal(new Set(result.products.map((p:any)=>p.sku)).size,4);
