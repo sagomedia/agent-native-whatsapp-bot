@@ -103,6 +103,7 @@ test('variants are atomic, searchable individual SKUs with shared photo, distinc
  r=await batch(payload);assert.equal(r.statusCode,200,r.body);assert.equal(r.json().replayed,true);assert.equal(Number((await pool.query('SELECT stock FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,pink.sku])).rows[0].stock),25);
  assert.equal(Number((await pool.query('SELECT stock FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,white.sku])).rows[0].stock),3);
  assert.equal((await batch({...payload,name:'Changed name'})).statusCode,409);
+ assert.equal((await batch({...payload,id:randomUUID(),variants:[{...payload.variants[0],color:'Green'}]})).statusCode,409,'a saved row ID cannot be moved into another group');
  assert.equal((await batch({...payload,id:randomUUID(),sourceProduct:{sku:pink.sku,version:pink.version},photo:undefined,variants:[{...payload.variants[0],id:randomUUID()}]})).statusCode,409);
  const duplicateLabel={...payload,id:randomUUID(),photo:undefined,sourceProduct:{sku:pink.sku,version:pink.version},variants:[{...payload.variants[0],id:randomUUID(),size:'500ml'}]};assert.equal((await batch(duplicateLabel)).statusCode,409);
  const rename=await post(app,{sku:white.sku,version:white.version,name:'Fixture wall paint · Rose · 500 ml',unit:'tin',pricePaise:20000});assert.equal(rename.statusCode,200,rename.body);assert.equal((await pool.query('SELECT variant_label FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,white.sku])).rows[0].variant_label,'Rose · 500 ml');

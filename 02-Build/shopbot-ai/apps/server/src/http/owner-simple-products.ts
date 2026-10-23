@@ -93,6 +93,8 @@ export function registerOwnerSimpleProducts(app:FastifyInstance,_pool:Pool,store
    let imagePath=source?.image_path as string|undefined;
    if(media){const assetId=await saveCatalogPhoto(c,storeId,media);imagePath='/catalog-images/custom/'+assetId+'.jpg';}
    if(!imagePath||!(/^\/catalog-images\/custom\/[a-f0-9-]{36}\.jpg$/.test(imagePath)||/^\/demo-images\/H\d{2}\.jpg$/.test(imagePath)))throw invalid('Choose an exact product photo for these variants.');
+   const rowSkus=p.variants.map(v=>'SHOP-'+v.id.replaceAll('-','').slice(0,16).toUpperCase());
+   if((await c.query('SELECT 1 FROM products WHERE store_id=$1 AND sku=ANY($2::text[]) LIMIT 1',[storeId,rowSkus])).rowCount)throw invalid('A variant row was already saved. Reload before adding more variants.',409);
    const products=[];
    for(const [i,v] of p.variants.entries()){
     const label=labels[i],specifications={...p.details.specifications};
