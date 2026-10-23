@@ -155,8 +155,8 @@ async function saveSimpleProduct(c:PoolClient,storeId:string,p:z.infer<typeof si
     specifications,active,verified:active&&exactPhoto,verification,sellingPolicy:policy
    });
    let finalImagePath=imagePath??null;
-   if(media){const assetId=await saveCatalogPhoto(c,storeId,media);finalImagePath='/catalog-images/custom/'+assetId+'.jpg';
-    await c.query('UPDATE products SET image_path=$3 WHERE store_id=$1 AND sku=$2',[storeId,sku,finalImagePath]);}
+   if(media){const assetId=await saveCatalogPhoto(c,storeId,media);finalImagePath='/catalog-images/custom/'+assetId+'.jpg';}
+   if(media||sharedImage)await c.query('UPDATE products SET image_path=$3 WHERE store_id=$1 AND sku=$2',[storeId,sku,finalImagePath]);
    const row=(await c.query('SELECT sku,version,inventory_version,active,stock FROM products WHERE store_id=$1 AND sku=$2',[storeId,sku])).rows[0];
    return {sku:row.sku,version:row.version,inventoryVersion:row.inventory_version,active:row.active,
     stock:row.stock===null?null:Number(row.stock),imageUrl:finalImagePath,revision:saved.revision};

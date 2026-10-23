@@ -17,7 +17,7 @@ async function fixture(run:(pool:pg.Pool,app:Awaited<ReturnType<typeof createApp
  await admin.query(`CREATE SCHEMA ${schema}`);
  const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:`-c search_path=${schema}`});let app;
  try{await setupDatabase(pool,'mock');await setupImageDemo(pool,fixtureStore);
-  app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,host:'127.0.0.1',port:3017,mediaDir:'/tmp/test',owner},pool,undefined,undefined,async()=>({email:owner.email,subject:'owner'}));
+  app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,host:'127.0.0.1',port:3017,mediaDir:'/tmp/test',owner},pool,undefined,undefined,async token=>{if(token!=='synthetic')throw new Error('Invalid test owner token');return {email:owner.email,subject:'owner'};});
   await run(pool,app);
  }finally{await app?.close();await pool.end();await admin.query(`DROP SCHEMA ${schema} CASCADE`);await admin.end();}
 }
@@ -88,7 +88,7 @@ test('variants are atomic, searchable individual SKUs with shared photo, distinc
  assert.equal((await batch(payload,{'cf-access-jwt-assertion':''})).statusCode,403);
  let r=await batch(payload);assert.equal(r.statusCode,200,r.body);const result=r.json();assert.equal(result.products.length,4);assert.equal(new Set(result.products.map((p:any)=>p.sku)).size,4);
  const saved=(await pool.query('SELECT * FROM products WHERE store_id=$1 AND product_group_id=$2 ORDER BY name',[fixtureStore,result.groupId])).rows;
- assert.equal(saved.length,4);assert.equal(new Set(saved.map(p=>p.image_path)).size,1);assert.ok(saved.every(p=>p.product_group_name===payload.name&&p.name.startsWith(payload.name+' · ')));
+ assert.equal(saved.length,4);assert.equal(new Set(saved.map(p=>p.image_path)).size,1);assert.ok(saved.every(p=>p.image_path===result.products[0].imageUrl&&p.image_path),'every child must actually reference the stored shared photo');assert.ok(saved.every(p=>p.product_group_name===payload.name&&p.name.startsWith(payload.name+' · ')));
  assert.ok(saved.every(p=>p.local_names.ta.includes(p.variant_label)));assert.ok(saved.every(p=>p.specifications.description.includes(p.variant_label)));
  const pink=result.products[0],white=result.products[2];
  for(const q of ['pink paint 500 ml','500ml pink paint','suvar paint pink 500 ml','சுவர் பெயிண்ட் Pink 500 ml']){r=await app.inject({url:'/api/owner/catalog?q='+encodeURIComponent(q),headers});assert.equal(r.statusCode,200,r.body);assert.deepEqual(r.json().products.map((p:any)=>p.sku),[pink.sku],q);assert.equal(r.json().products[0].productGroup.id,result.groupId);}

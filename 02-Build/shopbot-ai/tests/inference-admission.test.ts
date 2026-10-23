@@ -151,6 +151,7 @@ test('additive v26 to current upgrade preserves prior requests, statuses, rate s
  await pool.query("INSERT INTO order_requests(id,store_id,conversation_id,actor,review_id,lines,total_paise) VALUES($1,$2,$3,$4,$5,'[]',1234)",[randomUUID(),fixtureStore,fixtureConversation,simulatorContext.actor,randomUUID()]);
  await pool.query("INSERT INTO whatsapp_statuses(phone_id,provider_id,recipient,state,provider_timestamp) VALUES('12345','old-delivery','919000000001','delivered',1)");
  // Reconstruct populated v26 in this disposable schema; production is untouched.
+ await pool.query('DROP TABLE product_variant_batches; ALTER TABLE products DROP COLUMN product_group_id,DROP COLUMN product_group_name,DROP COLUMN variant_label');
  await pool.query('DROP TABLE owner_order_reviews');
  await pool.query('ALTER TABLE whatsapp_conversations DROP COLUMN profile_name,DROP COLUMN profile_updated_at');
  await pool.query('DROP TABLE catalog_fact_batches,catalog_intake_items,catalog_intake_batches; DROP INDEX products_owner_name,products_owner_brand_name,products_owner_family_name,products_owner_updated,catalog_proposals_owner_state,catalog_proposals_canonical_pending,messages_unfinished_conversation_sequence,messages_conversation_sequence,catalog_photos_content; ALTER TABLE catalog_photos DROP COLUMN content_hash');
@@ -164,7 +165,7 @@ test('additive v26 to current upgrade preserves prior requests, statuses, rate s
   const after=(await pool.query('SELECT * FROM '+table)).rows.map(row=>{delete row.input_admission;delete row.inference_deadline_at;delete row.pricing;delete row.observation;delete row.release_fingerprint;for(const key of ['reply_decision','estimate_complete','excluded_line_ids','advance_required','effective_revision','effective_lines','effective_total_paise','packed_revision','inventory_state','inventory_untracked_line_ids'])delete row[key];return row;});assert.deepEqual(after,before[n],table);
  }
  assert.equal((await pool.query("SELECT inventory_state FROM order_requests")).rows[0].inventory_state,'legacy');assert.equal((await pool.query('SELECT * FROM inventory_movements')).rowCount,0);
- assert.equal((await pool.query('SELECT max(version) AS version FROM schema_migrations')).rows[0].version,43);assert.equal((await pool.query('SELECT * FROM owner_order_reviews')).rowCount,0);
+ assert.equal((await pool.query('SELECT max(version) AS version FROM schema_migrations')).rows[0].version,44);assert.equal((await pool.query('SELECT * FROM owner_order_reviews')).rowCount,0);
  assert.equal((await pool.query('SELECT version FROM schema_migrations WHERE version=40')).rowCount,1);assert.equal((await pool.query('SELECT * FROM order_quote_drafts')).rowCount,0);
  assert.equal((await pool.query('SELECT version FROM schema_migrations WHERE version=27')).rowCount,1);
  assert.equal((await pool.query('SELECT * FROM whatsapp_delivery_costs')).rowCount,0);assert.equal((await pool.query('SELECT version FROM schema_migrations WHERE version BETWEEN 27 AND 31')).rowCount,5);
