@@ -21,7 +21,9 @@ function redirectAllowed(value:string){
  try{const u=new URL(value);return !u.username&&!u.password&&!u.hash&&(u.protocol==='https:'&&['chatgpt.com','chat.openai.com','claude.ai'].includes(u.hostname)||u.protocol==='http:'&&['127.0.0.1','localhost','[::1]'].includes(u.hostname));}catch{return false;}
 }
 const registration=z.object({client_name:z.string().trim().min(1).max(100).default('AI catalog client'),redirect_uris:z.array(z.string().max(2048).refine(redirectAllowed)).min(1).max(8),token_endpoint_auth_method:z.literal('none').default('none'),grant_types:z.array(z.enum(['authorization_code','refresh_token'])).max(2).optional(),response_types:z.array(z.literal('code')).max(1).optional(),scope:z.string().max(200).optional()}).passthrough();
-const authorization=z.object({client_id:z.string().min(1).max(200),redirect_uri:z.string().max(2048),response_type:z.literal('code'),code_challenge:z.string().regex(/^[A-Za-z0-9_-]{43}$/),code_challenge_method:z.literal('S256'),resource:z.string().max(2048),scope:z.string().max(200).optional(),state:z.string().min(1).max(2048)}).strict();
+// OAuth extension parameters are permitted by RFC 6749. Only the recognized,
+// validated fields below can affect authorization; extras never grant rights.
+const authorization=z.object({client_id:z.string().min(1).max(200),redirect_uri:z.string().max(2048),response_type:z.literal('code'),code_challenge:z.string().regex(/^[A-Za-z0-9_-]{43}$/),code_challenge_method:z.literal('S256'),resource:z.string().max(2048),scope:z.string().max(200).optional(),state:z.string().min(1).max(2048)}).passthrough();
 type Grant={id:string;store_id:string;actor:string;client_id:string;scopes:string[];resource:string};
 export class CatalogOAuth {
  readonly issuer:string;
@@ -29,7 +31,7 @@ export class CatalogOAuth {
  constructor(private pool:Pool,readonly config:RemoteMcpConfig,private owner:OwnerConfig){this.issuer=new URL(config.publicUrl).origin;this.resourceMetadata=this.issuer+'/.well-known/oauth-protected-resource/mcp';}
  metadata(){return {issuer:this.issuer,authorization_endpoint:'https://'+this.owner.hostname+'/api/owner/mcp/authorize',token_endpoint:this.issuer+'/mcp/oauth/token',registration_endpoint:this.issuer+'/mcp/oauth/register',revocation_endpoint:this.issuer+'/mcp/oauth/revoke',response_types_supported:['code'],grant_types_supported:['authorization_code','refresh_token'],token_endpoint_auth_methods_supported:['none'],revocation_endpoint_auth_methods_supported:['none'],code_challenge_methods_supported:['S256'],scopes_supported:mcpScopes,authorization_response_iss_parameter_supported:true};}
  resource(){return {resource:this.config.publicUrl,authorization_servers:[this.issuer],scopes_supported:mcpScopes,bearer_methods_supported:['header'],resource_name:'ShopBot merchant catalog'};}
- scopes(value?:string){const scopes=[...new Set((value??mcpScopes.join(' ')).split(' ').filter(Boolean))];if(!scopes.includes('catalog:read')||scopes.some(s=>!mcpScopes.includes(s as typeof mcpScopes[number])))throw oauthError('invalid_scope');return scopes;}
+ scopes(value?:string){const scopes=[...new Set((value?.trim()||mcpScopes.join(' ')).split(' ').filter(Boolean))];if(!scopes.includes('catalog:read')||scopes.some(s=>!mcpScopes.includes(s as typeof mcpScopes[number])))throw oauthError('invalid_scope');return scopes;}
  async register(input:unknown){
   const p=registration.parse(input);this.scopes(p.scope);
   // Persist a global ceiling too, so a restart does not reset abuse limits.
@@ -62,7 +64,7 @@ export class CatalogOAuth {
   });
  }
  async token(input:unknown){
-  const p=z.object({grant_type:z.enum(['authorization_code','refresh_token']),client_id:z.string().min(1).max(200),code:z.string().max(200).optional(),redirect_uri:z.string().max(2048).optional(),code_verifier:z.string().regex(/^[A-Za-z0-9._~-]{43,128}$/).optional(),refresh_token:z.string().max(200).optional(),resource:z.string().max(2048),scope:z.string().max(200).optional()}).strict().parse(input);
+  const p=z.object({grant_type:z.enum(['authorization_code','refresh_token']),client_id:z.string().min(1).max(200),code:z.string().max(200).optional(),redirect_uri:z.string().max(2048).optional(),code_verifier:z.string().regex(/^[A-Za-z0-9._~-]{43,128}$/).optional(),refresh_token:z.string().max(200).optional(),resource:z.string().max(2048),scope:z.string().max(200).optional()}).passthrough().parse(input);
   if(p.resource!==this.config.publicUrl)throw oauthError('invalid_target');
   const outcome=await this.transaction(async c=>{
    let grant:Grant;

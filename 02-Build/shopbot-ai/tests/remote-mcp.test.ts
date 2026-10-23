@@ -102,3 +102,13 @@ test('official MCP HTTP client negotiates the deployed SDK protocol and calls ca
  const transport=new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${proxyAddress.port}/mcp`),{requestInit:{headers:{authorization:'Bearer '+t.access_token}}});
  try{await client.connect(transport);const tools=await client.listTools();assert.equal(tools.tools.length,6);const inventory=await client.callTool({name:'catalog_inventory',arguments:{limit:1}});assert.equal(inventory.isError,undefined);assert.equal(JSON.parse((inventory.content[0] as {text:string}).text).products.length,1);}finally{await client.close();await new Promise<void>((resolve,reject)=>proxy.close(e=>e?reject(e):resolve()));}
 }));
+
+test('OAuth accepts extension fields and blank default scopes without weakening resource, PKCE or callback binding',()=>fixture(async(_pool,oauth,app)=>{
+ const client=await oauth.register({client_name:'ChatGPT',redirect_uris:['https://chatgpt.com/connector_platform_oauth_redirect'],scope:''}),v=verifier();
+ const params={client_id:client.client_id,redirect_uri:client.redirect_uris[0],response_type:'code',code_challenge:challenge(v),code_challenge_method:'S256',resource:remote.publicUrl,scope:'',state:randomUUID(),response_mode:'query',prompt:'consent',access_type:'offline'};
+ const pending=await oauth.prepare(params);assert.deepEqual(pending.scopes,['catalog:read','catalog:draft']);
+ const decision=await oauth.consent({id:pending.id,csrf:pending.csrf,allow:true}),code=new URL(decision.redirect).searchParams.get('code');
+ const token=await oauth.token({grant_type:'authorization_code',client_id:client.client_id,code,redirect_uri:params.redirect_uri,code_verifier:v,resource:remote.publicUrl,client_secret:'',custom_extension:'ignored'});assert.equal(token.scope,'catalog:read catalog:draft');
+ await assert.rejects(oauth.prepare({...params,code_challenge_method:'plain'}));await assert.rejects(oauth.prepare({...params,resource:'https://other.test/mcp'}),/invalid_target/);await assert.rejects(oauth.prepare({...params,scope:'catalog:read orders:write'}),/invalid_scope/);
+ const incomplete={...params} as Record<string,string>;delete incomplete.resource;const error=await app.inject({url:'/api/owner/mcp/authorize?'+new URLSearchParams(incomplete),headers:ownerHeaders});assert.equal(error.statusCode,400);assert.match(error.body,/invalid OAuth field/);assert.match(error.body,/resource/);assert.ok(!error.body.includes(params.state));assert.ok(!error.body.includes(params.code_challenge));
+}));
