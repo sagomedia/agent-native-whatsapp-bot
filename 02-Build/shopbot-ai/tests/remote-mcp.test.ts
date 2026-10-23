@@ -121,7 +121,7 @@ test('2026 MCP discovery preserves method/name headers and legacy initialization
  }
  const modernHeaders={...headers,'mcp-protocol-version':'2026-07-28','mcp-method':'tools/list'};
  const meta={'io.modelcontextprotocol/protocolVersion':'2026-07-28','io.modelcontextprotocol/clientInfo':{name:'modern-fixture',version:'1'},'io.modelcontextprotocol/clientCapabilities':{}};
- const discovery=await app.inject({method:'POST',url:'/mcp',headers:{...modernHeaders,'mcp-method':'server/discover'},payload:{jsonrpc:'2.0',id:5,method:'server/discover',params:{_meta:meta}}});assert.equal(discovery.statusCode,200,discovery.body);assert.equal(discovery.json().result.serverInfo.name,'shopbot-owner-catalog');
+ const discovery=await app.inject({method:'POST',url:'/mcp',headers:{...modernHeaders,'mcp-method':'server/discover'},payload:{jsonrpc:'2.0',id:5,method:'server/discover',params:{_meta:meta}}});assert.equal(discovery.statusCode,200,discovery.body);assert.equal(discovery.json().result._meta['io.modelcontextprotocol/serverInfo'].name,'shopbot-owner-catalog');
  const payload={jsonrpc:'2.0',id:2,method:'tools/list',params:{_meta:meta}};
  const r=await app.inject({method:'POST',url:'/mcp',headers:modernHeaders,payload});assert.equal(r.statusCode,200,r.body);assert.equal(result(r.body).result.tools.length,6);
  const missing=await app.inject({method:'POST',url:'/mcp',headers:{...headers,'mcp-protocol-version':'2026-07-28'},payload});assert.equal(missing.statusCode,400);assert.equal(missing.json().error.code,-32020);
