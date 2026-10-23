@@ -112,3 +112,21 @@ test('OAuth accepts extension fields and blank default scopes without weakening 
  await assert.rejects(oauth.prepare({...params,code_challenge_method:'plain'}));await assert.rejects(oauth.prepare({...params,resource:'https://other.test/mcp'}),/invalid_target/);await assert.rejects(oauth.prepare({...params,scope:'catalog:read orders:write'}),/invalid_scope/);
  const incomplete={...params} as Record<string,string>;delete incomplete.resource;const error=await app.inject({url:'/api/owner/mcp/authorize?'+new URLSearchParams(incomplete),headers:ownerHeaders});assert.equal(error.statusCode,400);assert.match(error.body,/invalid OAuth field/);assert.match(error.body,/resource/);assert.ok(!error.body.includes(params.state));assert.ok(!error.body.includes(params.code_challenge));
 }));
+
+test('2026 MCP discovery preserves method/name headers and legacy initialization still works',()=>fixture(async(_pool,oauth,app)=>{
+ const a=await authorize(oauth),t=await oauth.token(a.tokenInput);
+ const headers={host:publicHost,authorization:'bearer '+t.access_token,'content-type':'application/json',accept:'application/json, text/event-stream'};
+ for(const version of ['2024-11-05','2025-03-26','2025-06-18','2025-11-25']){
+  const r=await app.inject({method:'POST',url:'/mcp',headers,payload:{jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:version,capabilities:{},clientInfo:{name:'legacy-fixture',version:'1'}}}});assert.equal(r.statusCode,200,r.body);assert.equal(result(r.body).result.protocolVersion,version);
+ }
+ const modernHeaders={...headers,'mcp-protocol-version':'2026-07-28','mcp-method':'tools/list'};
+ const meta={'io.modelcontextprotocol/protocolVersion':'2026-07-28','io.modelcontextprotocol/clientInfo':{name:'modern-fixture',version:'1'},'io.modelcontextprotocol/clientCapabilities':{}};
+ const discovery=await app.inject({method:'POST',url:'/mcp',headers:{...modernHeaders,'mcp-method':'server/discover'},payload:{jsonrpc:'2.0',id:5,method:'server/discover',params:{_meta:meta}}});assert.equal(discovery.statusCode,200,discovery.body);assert.equal(discovery.json().result.serverInfo.name,'shopbot-owner-catalog');
+ const payload={jsonrpc:'2.0',id:2,method:'tools/list',params:{_meta:meta}};
+ const r=await app.inject({method:'POST',url:'/mcp',headers:modernHeaders,payload});assert.equal(r.statusCode,200,r.body);assert.equal(result(r.body).result.tools.length,6);
+ const missing=await app.inject({method:'POST',url:'/mcp',headers:{...headers,'mcp-protocol-version':'2026-07-28'},payload});assert.equal(missing.statusCode,400);assert.equal(missing.json().error.code,-32020);
+ const wrong=await app.inject({method:'POST',url:'/mcp',headers:{...modernHeaders,'mcp-method':'tools/call'},payload});assert.equal(wrong.statusCode,400);
+ const call=await app.inject({method:'POST',url:'/mcp',headers:{...modernHeaders,'mcp-method':'tools/call','mcp-name':'catalog_inventory'},payload:{jsonrpc:'2.0',id:3,method:'tools/call',params:{_meta:meta,name:'catalog_inventory',arguments:{limit:1}}}});assert.equal(call.statusCode,200,call.body);assert.equal(result(call.body).result.isError,undefined);
+ const mismatch=await app.inject({method:'POST',url:'/mcp',headers:{...modernHeaders,'mcp-method':'tools/call','mcp-name':'catalog_search'},payload:{jsonrpc:'2.0',id:4,method:'tools/call',params:{_meta:meta,name:'catalog_inventory',arguments:{limit:1}}}});assert.equal(mismatch.statusCode,400);
+ const preflight=await app.inject({method:'OPTIONS',url:'/mcp',headers:{host:publicHost,origin:'https://chatgpt.com'}});assert.match(preflight.headers['access-control-allow-headers']!,/MCP-Method/);
+}));

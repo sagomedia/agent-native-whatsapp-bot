@@ -48,7 +48,7 @@ export async function registerRemoteMcp(app:FastifyInstance,pool:Pool,config:Con
   routes.post('/mcp/oauth/token',async(req,reply)=>publicJson(req,reply,async()=>{budget('token',60);return oauth.token(req.body);}));
   routes.post('/mcp/oauth/revoke',async(req,reply)=>publicJson(req,reply,async()=>{budget('revoke',30);return oauth.revoke(req.body);}));
  });
- app.options('/mcp',async(req,reply)=>{if(publicGate(req,reply))return reply.header('Access-Control-Allow-Methods','POST, GET, DELETE, OPTIONS').header('Access-Control-Allow-Headers','Authorization, Content-Type, Accept, MCP-Protocol-Version, MCP-Session-Id').code(204).send();});
+ app.options('/mcp',async(req,reply)=>{if(publicGate(req,reply))return reply.header('Access-Control-Allow-Methods','POST, GET, DELETE, OPTIONS').header('Access-Control-Allow-Headers','Authorization, Content-Type, Accept, MCP-Protocol-Version, MCP-Session-Id, MCP-Method, MCP-Name').code(204).send();});
  app.route({method:['GET','POST','DELETE'],url:'/mcp',bodyLimit:3_000_000,onRequest:async(req,reply)=>{
   if(!publicGate(req,reply))return;
   budget('mcp',180);
@@ -60,9 +60,17 @@ export async function registerRemoteMcp(app:FastifyInstance,pool:Pool,config:Con
   if(active>=6)return reply.header('Retry-After','2').code(429).send({error:'temporarily_unavailable'});
   active++;let released=false;const release=()=>{if(!released){released=true;active--;}};
   try{
-   const headers=new Headers();for(const name of ['accept','content-type','mcp-protocol-version','mcp-session-id']){const v=req.headers[name];if(typeof v==='string')headers.set(name,v);}
+   // Preserve protocol routing and parameter headers for both MCP eras. The
+   // 2026 transport cross-checks Mcp-Method / Mcp-Name against the body.
+   const headers=new Headers();for(const [name,value] of Object.entries(req.headers)){if((['accept','content-type'].includes(name)||name.startsWith('mcp-'))&&typeof value==='string')headers.set(name,value);}
    const request=new Request(remote.publicUrl,{method:req.method,headers,...(req.method==='POST'?{body:JSON.stringify(req.body)}:{})});
    const response=await handler.fetch(request,{parsedBody:req.body,authInfo:{token:req.headers.authorization!.slice(7),clientId:identity.clientId,scopes:identity.scopes,expiresAt:identity.expiresAt,resource:new URL(remote.publicUrl)}});
+   if(response.status>=400){
+    const body=req.body as {method?:unknown}|undefined;
+    const method=body&&typeof body==='object'&&['server/discover','initialize','notifications/initialized','tools/list','tools/call','ping'].includes(String(body.method))?body.method:'other';
+    // No credentials, tool arguments, protocol error text or customer data.
+    req.log.warn({mcp:{status:response.status,method,hasMethodHeader:headers.has('mcp-method'),hasNameHeader:headers.has('mcp-name')}},'MCP protocol request rejected');
+   }
    reply.code(response.status);response.headers.forEach((value,key)=>reply.header(key,value));
    if(!response.body){release();return reply.send();}
    const stream=Readable.fromWeb(response.body as unknown as NodeReadableStream<Uint8Array>);stream.once('close',release);stream.once('end',release);stream.once('error',release);return reply.send(stream);

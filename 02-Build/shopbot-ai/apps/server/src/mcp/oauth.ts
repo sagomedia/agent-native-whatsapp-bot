@@ -92,7 +92,7 @@ export class CatalogOAuth {
  }
  private async grant(c:PoolClient,id:string,client:string,resource:string):Promise<Grant>{const row=(await c.query('SELECT * FROM mcp_oauth_grants WHERE id=$1 AND client_id=$2 AND resource=$3 AND revoked_at IS NULL AND store_id=$4 AND actor=$5 FOR UPDATE',[id,client,resource,this.owner.storeId,this.owner.email])).rows[0];if(!row)throw oauthError('invalid_grant');return row;}
  async authenticate(authorization:string|undefined){
-  if(!authorization||!/^Bearer sbc_at_[A-Za-z0-9_-]{43}$/.test(authorization))return;
+  if(!authorization||!/^Bearer sbc_at_[A-Za-z0-9_-]{43}$/i.test(authorization))return;
   const row=(await this.pool.query("SELECT g.*,t.expires_at FROM mcp_oauth_tokens t JOIN mcp_oauth_grants g ON g.id=t.grant_id WHERE t.hash=$1 AND t.kind='access' AND t.expires_at>now() AND g.revoked_at IS NULL AND g.resource=$2 AND g.store_id=$3 AND g.actor=$4",[digest(authorization.slice(7)),this.config.publicUrl,this.owner.storeId,this.owner.email])).rows[0];
   if(!row||!row.scopes.includes('catalog:read'))return;
   return {storeId:row.store_id as string,actor:row.actor as string,clientId:row.client_id as string,grantId:row.id as string,scopes:row.scopes as string[],expiresAt:Math.floor(new Date(row.expires_at).getTime()/1000)};
