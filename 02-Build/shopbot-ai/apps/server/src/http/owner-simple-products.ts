@@ -87,7 +87,8 @@ export function registerOwnerSimpleProducts(app:FastifyInstance,_pool:Pool,store
     if(!p.sourceLabel)throw invalid('Enter a variant label for the existing product before adding variants.');
     if(labels.some(label=>label.toLowerCase().replace(/[\s·]+/g,'')===p.sourceLabel!.toLowerCase().replace(/[\s·]+/g,'')))throw invalid('A new variant duplicates the existing product.');
     const sourceName=groupName+' · '+p.sourceLabel;
-    await c.query('UPDATE products SET product_group_id=$3,product_group_name=$4,variant_label=$5,name=$6,version=version+1 WHERE store_id=$1 AND sku=$2',[storeId,source.sku,groupId,groupName,p.sourceLabel,sourceName]);
+    const localNames=Object.fromEntries(Object.entries(source.local_names??{}).filter(([,value])=>typeof value==='string'&&value).map(([lang,value])=>[lang,(value as string).slice(0,160-p.sourceLabel!.length-3)+' · '+p.sourceLabel]));
+    await c.query('UPDATE products SET product_group_id=$3,product_group_name=$4,variant_label=$5,name=$6,local_names=$7,version=version+1 WHERE store_id=$1 AND sku=$2',[storeId,source.sku,groupId,groupName,p.sourceLabel,sourceName,JSON.stringify(localNames)]);
    }
    let imagePath=source?.image_path as string|undefined;
    if(media){const assetId=await saveCatalogPhoto(c,storeId,media);imagePath='/catalog-images/custom/'+assetId+'.jpg';}
