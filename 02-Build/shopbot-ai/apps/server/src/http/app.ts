@@ -18,10 +18,13 @@ import type {AccessVerifier} from './access.js';
 import {WhatsAppChannel} from '../services/whatsapp-channel.js';
 import {registerWhatsApp,whatsappPath} from './whatsapp.js';
 import {renderPrivacy} from './privacy.js';
+import {registerRemoteMcp} from '../mcp/http.js';
+import {mcpPublicPath} from '../mcp/oauth.js';
 
 export async function createApp(config: Config, pool: Pool, nativeTest?:Interpreter,nativeStore=fixtureStore,ownerVerifier?:AccessVerifier,channel?:WhatsAppChannel,catalogGenerator?:CatalogGenerator) {
   if(config.owner&&(config.mode!=='mock'||nativeTest))throw new Error('Hosted owner preview requires mock mode with local AI disabled');
   if(config.owner&&!['127.0.0.1','::1','localhost'].includes(config.host))throw new Error('Owner preview must listen on loopback');
+  if(config.remoteMcp&&(!config.owner||!['127.0.0.1','::1','localhost'].includes(config.host)))throw new Error('Remote MCP requires protected owner access and a loopback listener.');
   if(config.whatsapp&&(!['127.0.0.1','::1','localhost'].includes(config.host)||nativeTest||config.mode!=='mock'))throw new Error('WhatsApp test connection requires loopback with local test endpoints disabled');
   const app = Fastify({ logger: {serializers:{req:(req:any)=>({method:req.method,url:req.url?.split('?')[0]})}}, bodyLimit: 16000 });
   app.setErrorHandler((error,request,reply)=>{
@@ -33,6 +36,7 @@ export async function createApp(config: Config, pool: Pool, nativeTest?:Interpre
   if(config.whatsapp){
     const hookPath=config.whatsapp.path??whatsappPath;
     app.addHook('onRequest',async(req,reply)=>{
+      if(mcpPublicPath(config.remoteMcp,req.headers.host,req.url.split('?')[0]))return;
       const publicCatalog=req.method==='GET'&&/^\/catalog-images\/(?:H\d{2}\.jpg|(?:custom|reference)\/[a-f0-9-]{36}\.jpg|messages\/[a-f0-9]{64}\.png)$/.test(req.url.split('?')[0]);
       const publicPayment=req.method==='GET'&&/^\/pay\/[a-f0-9-]{36}$/.test(req.url.split('?')[0]);
       const publicAudio=req.method==='GET'&&/^\/welcome-audio\/[a-f0-9]{64}\.ogg$/.test(req.url.split('?')[0]);
@@ -43,6 +47,7 @@ export async function createApp(config: Config, pool: Pool, nativeTest?:Interpre
   }
   const whatsapp=config.whatsapp?(channel??new WhatsAppChannel(pool,config.whatsapp)):undefined;
   await registerOwner(app,pool,config,ownerVerifier,catalogGenerator,whatsapp);
+  await registerRemoteMcp(app,pool,config);
   if(whatsapp)await registerWhatsApp(app,whatsapp);
   const privacyPolicy="default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
   if(config.whatsapp?.privacyPublished)app.get('/privacy',async(_req,reply)=>reply.header('Cache-Control','no-store').header('Content-Security-Policy',privacyPolicy).type('text/html').send(renderPrivacy(config.whatsapp?.aiEnabled,config.whatsapp?.mediaEnabled)));

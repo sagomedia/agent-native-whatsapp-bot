@@ -511,6 +511,18 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
         input_hash text NOT NULL,result jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(store_id,id));
       INSERT INTO schema_migrations(version) VALUES(44);
     `);}
+    const v45=await client.query('SELECT version FROM schema_migrations WHERE version=45');
+    if(!v45.rowCount){await client.query(`
+      CREATE TABLE mcp_oauth_clients(client_id text PRIMARY KEY,name text NOT NULL,redirect_uris jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+      CREATE TABLE mcp_oauth_requests(id uuid PRIMARY KEY,secret_hash text NOT NULL,client_id text NOT NULL REFERENCES mcp_oauth_clients(client_id),redirect_uri text NOT NULL,challenge text NOT NULL,state text NOT NULL,scopes text[] NOT NULL,resource text NOT NULL,expires_at timestamptz NOT NULL DEFAULT now()+interval '10 minutes');
+      CREATE TABLE mcp_oauth_grants(id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),actor text NOT NULL,client_id text NOT NULL REFERENCES mcp_oauth_clients(client_id),scopes text[] NOT NULL,resource text NOT NULL,revoked_at timestamptz,created_at timestamptz NOT NULL DEFAULT now());
+      CREATE TABLE mcp_oauth_codes(hash text PRIMARY KEY,grant_id uuid NOT NULL REFERENCES mcp_oauth_grants(id),redirect_uri text NOT NULL,challenge text NOT NULL,used_at timestamptz,expires_at timestamptz NOT NULL DEFAULT now()+interval '5 minutes');
+      CREATE TABLE mcp_oauth_tokens(hash text PRIMARY KEY,grant_id uuid NOT NULL REFERENCES mcp_oauth_grants(id),kind text NOT NULL CHECK(kind IN ('access','refresh')),used_at timestamptz,expires_at timestamptz NOT NULL);
+      CREATE INDEX mcp_oauth_grants_store ON mcp_oauth_grants(store_id,actor) WHERE revoked_at IS NULL;
+      CREATE INDEX mcp_oauth_tokens_grant ON mcp_oauth_tokens(grant_id);
+      CREATE INDEX mcp_oauth_requests_expiry ON mcp_oauth_requests(expires_at);
+      INSERT INTO schema_migrations(version) VALUES(45);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

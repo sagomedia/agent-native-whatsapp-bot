@@ -38,6 +38,7 @@ import {loadImage} from '../services/image-media.js';
 import {loadVoicePlayback} from '../services/voice-media.js';
 import type {Config} from '../config.js';
 import {createAccessVerifier,type AccessVerifier} from './access.js';
+import {mcpPublicPath} from '../mcp/oauth.js';
 import {geminiTextRate,rateHealth} from '../services/inference-budget.js';
 import {messagingCostSummary} from '../services/messaging-cost.js';
 import {runtimeReleaseMetadata,currentReleaseFingerprint} from '../services/release-manifest.js';
@@ -53,6 +54,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
   verify??=createAccessVerifier(owner);
   if(!(await pool.query('SELECT id FROM stores WHERE id=$1',[owner.storeId])).rowCount)throw new Error('Owner store must already exist');
   app.addHook('onRequest',async(request,reply)=>{
+    if(mcpPublicPath(config.remoteMcp,request.headers.host,request.url.split('?')[0]))return;
     const host=request.headers.host?.toLowerCase();
     const local=host!==undefined&&/^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
     const publicOwner=host===owner.hostname;
