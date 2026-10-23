@@ -98,3 +98,12 @@
   .redesign .rd-chats-order-link{display:block}
 }
 @media(max-width:350px){.redesign .rd-chats-row{gap:9px;padding-inline:12px}.redesign .rd-chats-avatar{width:40px;height:40px;font-size:18px}.redesign .rd-chats-filters button{padding-inline:10px}.redesign .rd-chats-control{padding-inline:12px}}
+
+.redesign .rd-chats{flex:1;overflow:hidden}
+.redesign .rd-chats-list,.redesign .rd-chats-thread{overflow:hidden}
+.redesign .rd-chats-rows{flex:1;overscroll-behavior:contain}
+.redesign .rd-chats-messages{overscroll-behavior:contain;overflow-anchor:none}
+.redesign .rd-chats-list-head,.redesign .rd-chats-pages,.redesign .rd-chats-list-foot,
+.redesign .rd-chats-thread-head,.redesign .rd-chats-control,.redesign .rd-chats-thread-alert,
+.redesign .rd-chats-thread-notice,.redesign .rd-chats-bottom,.redesign .rd-chats-order-link{flex-shrink:0}
+.redesign .rd-chats-compose textarea{min-height:34px;height:34px}

@@ -3,3 +3,17 @@
 @media(min-width:1500px){.redesign{grid-template-columns:270px minmax(0,1fr)}.redesign .rd-main:not(.rd-main-workspace){padding:42px 56px}}
 @media(max-width:1050px) and (min-width:761px){.redesign{grid-template-columns:185px minmax(0,1fr)}.redesign .rd-sidebar{padding-left:10px;padding-right:10px}.redesign .rd-main:not(.rd-main-workspace){padding:30px 24px}}
 @media(max-width:760px){.redesign{display:block;padding-bottom:76px}.redesign .rd-sidebar{display:none}.redesign .rd-mobile-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--rd-line);min-height:58px}.redesign .rd-mobile-header strong{font-size:21px;color:var(--rd-teal)}.redesign .rd-mobile-header a{display:flex;padding:6px}.redesign .rd-main{padding:22px 18px}.redesign .rd-main.rd-main-workspace{padding:0}.redesign .rd-mobile-nav{display:grid;grid-template-columns:repeat(3,1fr);position:fixed;bottom:0;inset-inline:0;background:white;border-top:1px solid var(--rd-line);z-index:12;padding:8px 10px max(8px,env(safe-area-inset-bottom));min-height:70px}.redesign .rd-mobile-nav a{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;text-decoration:none;color:var(--rd-muted);padding:4px}.redesign .rd-mobile-nav a>span{position:relative;display:flex}.redesign .rd-mobile-nav a[aria-current=page]{color:var(--rd-teal);font-weight:650}.redesign .rd-mobile-nav .rd-count{position:absolute;left:17px;top:-5px;min-width:17px;height:17px;font-size:10px}.redesign .rd-advanced{padding-bottom:40px}}
+
+/* Bound the workspace to the viewport; each column owns its scrolling. */
+.redesign{height:100dvh;min-height:0;overflow:hidden}
+.redesign .rd-sidebar{min-height:0;overflow:auto;overscroll-behavior:contain}
+.redesign .rd-body{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.redesign .rd-main{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain}
+.redesign .rd-main-workspace{display:flex;flex-direction:column;overflow:hidden}
+.redesign .rd-global-message{flex-shrink:0}
+@media(max-width:760px){
+  .redesign{display:flex;flex-direction:column;padding-bottom:0}
+  .redesign .rd-body{flex:1}
+  .redesign .rd-mobile-header{flex-shrink:0}
+  .redesign .rd-mobile-nav{position:static;flex-shrink:0}
+}
