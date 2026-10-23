@@ -36,7 +36,7 @@ export const variantBatchSchema=z.object({id:z.uuid(),name:z.string().trim().min
  details:simpleProductSchema.shape.details.unwrap().default({}),variants:z.array(variantRowSchema).min(1).max(20)
 }).strict().superRefine((p,ctx)=>{
  const labels=p.variants.map(variantLabel);
- if(labels.some(l=>!l||l.length>55)||new Set(labels.map(l=>l.toLowerCase())).size!==labels.length||new Set(p.variants.map(v=>v.id)).size!==p.variants.length)
+ if(labels.some(l=>!l||l.length>55)||new Set(labels.map(l=>l.toLowerCase().replace(/[\s·]+/g,''))).size!==labels.length||new Set(p.variants.map(v=>v.id)).size!==p.variants.length)
   ctx.addIssue({code:'custom',message:'Use unique variant labels up to 55 characters and unique row IDs.'});
 });
 
@@ -82,10 +82,10 @@ export function registerOwnerSimpleProducts(app:FastifyInstance,_pool:Pool,store
    if(source?.product_group_id&&groupName!==p.name)throw invalid('Keep the shared product name when adding variants.',409);
    const labels=p.variants.map(v=>variantLabel(v));
    const existing=(await c.query('SELECT lower(variant_label) AS label FROM products WHERE store_id=$1 AND product_group_id=$2',[storeId,groupId])).rows;
-   if(labels.some(label=>existing.some(r=>r.label===label.toLowerCase())))throw invalid('A variant with this name already exists. Open it to update price or stock.',409);
+   if(labels.some(label=>existing.some(r=>r.label.replace(/[\s·]+/g,'')===label.toLowerCase().replace(/[\s·]+/g,''))))throw invalid('A variant with this name already exists. Open it to update price or stock.',409);
    if(source&&!source.product_group_id){
     if(!p.sourceLabel)throw invalid('Enter a variant label for the existing product before adding variants.');
-    if(labels.some(label=>label.toLowerCase()===p.sourceLabel!.toLowerCase()))throw invalid('A new variant duplicates the existing product.');
+    if(labels.some(label=>label.toLowerCase().replace(/[\s·]+/g,'')===p.sourceLabel!.toLowerCase().replace(/[\s·]+/g,'')))throw invalid('A new variant duplicates the existing product.');
     const sourceName=groupName+' · '+p.sourceLabel;
     await c.query('UPDATE products SET product_group_id=$3,product_group_name=$4,variant_label=$5,name=$6,version=version+1 WHERE store_id=$1 AND sku=$2',[storeId,source.sku,groupId,groupName,p.sourceLabel,sourceName]);
    }
@@ -115,8 +115,6 @@ export function registerOwnerSimpleProducts(app:FastifyInstance,_pool:Pool,store
 async function saveSimpleProduct(c:PoolClient,storeId:string,p:z.infer<typeof simpleProductSchema>,media:Awaited<ReturnType<typeof normalizeImage>>|undefined,sharedImage?:string){
  const editing=!!p.sku,sku=p.sku??'SHOP-'+p.createId!.replaceAll('-','').slice(0,16).toUpperCase();
    const prior=(await c.query('SELECT * FROM products WHERE store_id=$1 AND sku=$2 FOR UPDATE',[storeId,sku])).rows[0];
-   if(prior?.product_group_id&&!p.name.startsWith(prior.product_group_name+' · '))throw invalid('Keep the shared product name followed by the variant label.');
-   if(prior?.product_group_id){const label=p.name.slice(prior.product_group_name.length+3).trim();if(!label||label.length>55)throw invalid('Use a variant label between 1 and 55 characters.');if((await c.query('SELECT 1 FROM products WHERE store_id=$1 AND product_group_id=$2 AND lower(variant_label)=lower($3) AND sku<>$4',[storeId,prior.product_group_id,label,sku])).rowCount)throw invalid('Another variant already has this label.',409);await c.query('UPDATE products SET variant_label=$3 WHERE store_id=$1 AND sku=$2',[storeId,sku,label]);}
    if(editing&&(!prior||prior.version!==p.version))throw invalid('This product changed. Reload before saving.',409);
    if(!editing&&prior){
     const same=prior.catalog_origin==='owner'&&prior.name===p.name&&prior.price_paise===p.pricePaise&&prior.unit===p.unit&&Number(prior.quantity_step)===(p.quantityStep??1)&&prior.active===(p.active??true)&&

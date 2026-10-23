@@ -104,6 +104,8 @@ test('variants are atomic, searchable individual SKUs with shared photo, distinc
  assert.equal(Number((await pool.query('SELECT stock FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,white.sku])).rows[0].stock),3);
  assert.equal((await batch({...payload,name:'Changed name'})).statusCode,409);
  assert.equal((await batch({...payload,id:randomUUID(),sourceProduct:{sku:pink.sku,version:pink.version},photo:undefined,variants:[{...payload.variants[0],id:randomUUID()}]})).statusCode,409);
+ const duplicateLabel={...payload,id:randomUUID(),photo:undefined,sourceProduct:{sku:pink.sku,version:pink.version},variants:[{...payload.variants[0],id:randomUUID(),size:'500ml'}]};assert.equal((await batch(duplicateLabel)).statusCode,409);
+ const rename=await post(app,{sku:white.sku,version:white.version,name:'Fixture wall paint · Rose · 500 ml',unit:'tin',pricePaise:20000});assert.equal(rename.statusCode,200,rename.body);assert.equal((await pool.query('SELECT variant_label FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,white.sku])).rows[0].variant_label,'Rose · 500 ml');
  const bad={...payload,id:randomUUID(),variants:[row('250 ml','Blue',1),{...row('750 ml','Blue',1),unit:'litre'}]};r=await batch(bad);assert.equal(r.statusCode,400,r.body);
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM products WHERE store_id=$1 AND product_group_name=$2',[fixtureStore,payload.name])).rows[0].n,4);
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM whatsapp_outbox')).rows[0].n,0);
@@ -124,4 +126,15 @@ test('adding variants to an existing standalone product preserves its SKU and va
  const current=(await pool.query('SELECT * FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,source.sku])).rows[0];
  assert.equal(current.sku,source.sku);assert.equal(current.price_paise,source.price_paise);assert.equal(current.stock,source.stock);assert.equal(current.image_path,source.image_path);assert.equal(current.product_group_id,r.json().groupId);assert.equal(current.name,'Fixture pliers · Original');
  r=await batch(payload);assert.equal(r.statusCode,200,r.body);assert.equal(r.json().replayed,true);
+}));
+
+test('twenty variants reuse one stored photo and one batch retry cannot duplicate inventory',()=>fixture(async(pool,app)=>{
+ const before=Number((await pool.query('SELECT count(*) FROM catalog_photos WHERE store_id=$1',[fixtureStore])).rows[0].count);
+ const payload={id:randomUUID(),name:'Fixture paint range',photo:{id:randomUUID(),mimeType:'image/jpeg',data:(await readFile('resources/catalog/ksmc-demo/images/H19.jpg')).toString('base64'),caption:''},details:{},variants:Array.from({length:20},(_,i)=>({id:randomUUID(),label:'Shade '+(i+1),color:'',size:'500 ml',unit:'tin',packContents:{value:500,unit:'ml'},pricePaise:10000+i*100,stock:i+1}))};
+ const save=()=>app.inject({method:'POST',url:'/api/owner/products/variants',headers,payload:JSON.stringify(payload)});
+ let r=await save();assert.equal(r.statusCode,200,r.body);assert.equal(r.json().products.length,20);const id=r.json().groupId;
+ assert.equal(Number((await pool.query('SELECT count(*) FROM catalog_photos WHERE store_id=$1',[fixtureStore])).rows[0].count),before+1);
+ r=await save();assert.equal(r.statusCode,200,r.body);assert.equal(r.json().replayed,true);
+ assert.equal(Number((await pool.query('SELECT count(*) FROM products WHERE store_id=$1 AND product_group_id=$2',[fixtureStore,id])).rows[0].count),20);
+ const totals=(await pool.query('SELECT sum(stock) AS stock,count(DISTINCT image_path) AS photos FROM products WHERE store_id=$1 AND product_group_id=$2',[fixtureStore,id])).rows[0];assert.equal(Number(totals.stock),210);assert.equal(Number(totals.photos),1);
 }));
