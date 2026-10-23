@@ -49,6 +49,7 @@ import {GoogleCatalogGenerator,type CatalogGenerator} from '../services/catalog-
 export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,verify?:AccessVerifier,catalogGenerator?:CatalogGenerator,whatsapp?:WhatsAppChannel){
   const owner=config.owner;
   if(!owner)return;
+  const needsReplySql=`(c.handoff_requested OR (c.operator_mode='owner' AND EXISTS(SELECT 1 FROM messages incoming WHERE incoming.conversation_id=c.id AND incoming.direction='inbound' AND incoming.sequence>coalesce((SELECT max(answer.sequence) FROM messages answer JOIN whatsapp_outbox outgoing ON outgoing.message_id=answer.id WHERE answer.conversation_id=c.id AND outgoing.sender_kind='owner' AND outgoing.state NOT IN ('failed','blocked','cancelled','unknown')),0))))`;
   verify??=createAccessVerifier(owner);
   if(!(await pool.query('SELECT id FROM stores WHERE id=$1',[owner.storeId])).rowCount)throw new Error('Owner store must already exist');
   app.addHook('onRequest',async(request,reply)=>{
@@ -73,6 +74,10 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       if(!['GET','HEAD'].includes(request.method)&&(request.headers.origin!=='https://'+owner.hostname||request.headers['x-shopbot-owner']!=='1'||!request.headers['content-type']?.startsWith('application/json')))return reply.code(403).send({error:'Invalid owner request origin'});
     }
   });
+  app.addHook('onSend',async(request,reply,payload)=>{
+    if(request.headers.host===owner.hostname&&request.url.split('?')[0].startsWith('/assets/')&&[200,304].includes(reply.statusCode))reply.header('Cache-Control','private, max-age=31536000, immutable');
+    return payload;
+  });
   async function write(action:string,target:string,run:(client:PoolClient)=>Promise<unknown>){
     const client=await pool.connect();
     try{
@@ -89,6 +94,16 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
   await registerOwnerCatalog(app,pool,owner.storeId,write,catalogGenerator??(config.catalogAi?new GoogleCatalogGenerator(config.catalogAi.apiKey):undefined));
   registerOwnerSimpleProducts(app,pool,owner.storeId,write);
   const release=runtimeReleaseMetadata();
+  // The navigation shell needs a shop name and help count, not order lines,
+  // conversation drafts, media metadata, and audit records on every refresh.
+  app.get('/api/owner/summary',async()=>{
+    const result=await pool.query(`SELECT s.id,s.name,s.synthetic,s.operator_paused,s.operator_revision,s.inventory_policy,
+      (SELECT count(*)::int FROM conversations c WHERE c.store_id=s.id) AS total,
+      (SELECT count(*)::int FROM conversations c WHERE c.store_id=s.id AND ${needsReplySql}) AS help
+      FROM stores s WHERE s.id=$1`,[owner.storeId]);
+    const {total,help,...store}=result.rows[0];
+    return {store,conversationCounts:{total,help}};
+  });
   app.get<{Querystring:{language?:string}}>('/api/owner/message-gallery',async(req,reply)=>{
     const language=z.enum(['ta','ta-Latn','en']).safeParse(req.query.language??'ta');
     if(!language.success)return reply.code(400).send({error:'Choose Tamil, Tanglish or English.'});
@@ -112,7 +127,6 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     try{
       await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
       const store=(await client.query('SELECT id,name,synthetic,operator_paused,operator_revision,inventory_policy FROM stores WHERE id=$1',[owner.storeId])).rows[0];
-      const needsReplySql=`(c.handoff_requested OR (c.operator_mode='owner' AND EXISTS(SELECT 1 FROM messages incoming WHERE incoming.conversation_id=c.id AND incoming.direction='inbound' AND incoming.sequence>coalesce((SELECT max(answer.sequence) FROM messages answer JOIN whatsapp_outbox outgoing ON outgoing.message_id=answer.id WHERE answer.conversation_id=c.id AND outgoing.sender_kind='owner' AND outgoing.state NOT IN ('failed','blocked','cancelled','unknown')),0))))`;
       const conversationQuery=`SELECT c.id,c.actor,w.profile_name AS customer_name,w.recipient AS customer_phone,c.operator_mode,c.operator_revision,c.reply_language,c.draft,c.version,
         ${needsReplySql} AS needs_reply,
         CASE WHEN c.pending->>'kind'='review' THEN jsonb_build_object('reviewId',c.pending->>'id','expiresAt',c.pending->>'expiresAt','totalPaise',c.pending->'totalPaise','itemCount',jsonb_array_length(c.draft)) ELSE NULL END AS checkout,

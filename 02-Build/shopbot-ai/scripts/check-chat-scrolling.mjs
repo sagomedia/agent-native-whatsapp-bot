@@ -14,7 +14,7 @@ const orders=Array.from({length:30},(_,i)=>({id:`order-${i}`,conversation_id:'ch
 await page.route('**/api/owner/**',async route=>{
  const url=new URL(route.request().url()),path=url.pathname.replace('/api/owner/','');
  let data;
- if(path==='snapshot')data={conversations,conversationCounts:{help:0,total:60},inboxPage:{number:1,total:60,hasNext:false,ids:conversations.map(c=>c.id)},store:{name:'Scrolling fixture',operator_paused:false},channel:{liveSending:true},requests:orders,amendments:[],orderPage:{number:1,total:30,hasNext:false,ids:orders.map(o=>o.id)},requestCounts:{new:30,ready_for_pickup:0,completed:0,active:30,history:0}};
+ if(path==='snapshot'||path==='summary')data={conversations,conversationCounts:{help:0,total:60},inboxPage:{number:1,total:60,hasNext:false,ids:conversations.map(c=>c.id)},store:{name:'Scrolling fixture',operator_paused:false},channel:{liveSending:true},requests:orders,amendments:[],orderPage:{number:1,total:30,hasNext:false,ids:orders.map(o=>o.id)},requestCounts:{new:30,ready_for_pickup:0,completed:0,active:30,history:0}};
  else if(path.endsWith('/control')){const c=conversations.find(c=>path.includes(c.id));c.operator_mode=JSON.parse(route.request().postData()).mode;c.operator_revision++;data={};}
  else if(/^conversations\/chat-\d+$/.test(path)){
   const id=path.split('/')[1],before=url.searchParams.get('before');reads.push({id,before});

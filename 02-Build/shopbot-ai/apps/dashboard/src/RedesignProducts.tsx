@@ -3,6 +3,7 @@ import {SELLING_UNITS} from '../../../packages/contracts/selling-units.js';
 import {indicativePriceFor} from '../../../packages/contracts/indicative-prices.js';
 import {useOwnerLocale} from './owner-locale.js';
 import {redesignApi} from './redesign-api.js';
+import {photoVariant} from './owner-ui.js';
 import './redesign-products.css';
 
 type Product={productGroup?:{id:string;name:string;label:string};sku:string;version:number;inventoryVersion:number;name:string;localNames?:{ta?:string;'ta-Latn'?:string};pricePaise:number;priceStatus:'priced'|'confirm'|'free';indicativePrice?:unknown;unit:string;stock:number|null;stockOnHand:number|null;stockReserved:number;quantityStep:number;imageUrl?:string;active:boolean;brand?:string;familyId?:string;specifications?:Record<string,string>;sellingPolicy?:{saleMode?:'pack'|'measured';packContents?:{value:number;unit:string};cutAllowed?:boolean;continuousLengthAvailable?:number|null};aliases?:string[];keywords?:string[]};
@@ -94,4 +95,4 @@ function fromProduct(p:Product):Form{return {name:p.name,price:String(priceValue
 function displayPrice(p:Product){const value=priceValue(p);return value?money(value):'Price needed';}
 function stockClass(p:Product){return p.stockOnHand===null?'unknown':p.stock!==null&&p.stock<=0?'out':p.stock!==null&&p.stock<=5?'low':'normal';}
 function stockText(p:Product){return p.stockOnHand===null?'Not entered':p.stock!==null&&p.stock<=0?'Out of stock':String(p.stock)+' '+plural(p.unit,p.stock??0);}
-function ProductImage({src,name,large=false}:{src:string;name:string;large?:boolean}){const [broken,setBroken]=useState(false);useEffect(()=>setBroken(false),[src]);return <span className={'rd-products-image'+(large?' large':'')}>{src&&!broken?<img src={src} alt="" onError={()=>setBroken(true)}/>:<span aria-hidden="true">{imgText(name)}</span>}</span>;}
+function ProductImage({src,name,large=false}:{src:string;name:string;large?:boolean}){const [broken,setBroken]=useState(false);useEffect(()=>setBroken(false),[src]);return <span className={'rd-products-image'+(large?' large':'')}>{src&&!broken?<img src={photoVariant(src,large?640:128)} alt="" loading={large?'eager':'lazy'} decoding="async" onError={()=>setBroken(true)}/>:<span aria-hidden="true">{imgText(name)}</span>}</span>;}

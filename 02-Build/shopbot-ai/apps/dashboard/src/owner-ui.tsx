@@ -41,7 +41,7 @@ export function EmptyState({title, children}: {title: string; children: ReactNod
   return <div className="owner-empty"><h2>{title}</h2><div>{children}</div></div>;
 }
 /** Only owner catalog images support precomputed variants; customer media stays unchanged. */
-function photoVariant(src:string,size:number){
+export function photoVariant(src:string,size:number){
  if(!/^\/api\/owner\/(?:products\/[^/]+\/image|catalog\/proposals\/[^/]+\/photos\/[^/?]+)(?:\?|$)/.test(src)||/[?&]original=1(?:&|$)/.test(src))return src;
  const [path,query]=src.split('?'),params=new URLSearchParams(query);params.set('size',String(size));return path+'?'+params;
 }

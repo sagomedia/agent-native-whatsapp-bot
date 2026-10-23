@@ -4,6 +4,27 @@ import {setTimeout as wait} from 'node:timers/promises';
 import {visiblePoll} from '../apps/dashboard/src/owner-polling.js';
 import {latestCatalogRead} from '../apps/dashboard/src/owner-catalog-loading.js';
 class Doc extends EventTarget{hidden=false;}
+async function flush(){await Promise.resolve();await Promise.resolve();await Promise.resolve();}
+test('owner polling avoids offline traffic, cancels in-flight reads, and resumes when connectivity returns',async t=>{
+ t.mock.timers.enable({apis:['setTimeout']});const doc=new Doc(),win=new EventTarget(),nav={onLine:false};let calls=0,signal:AbortSignal|undefined;
+ const stop=visiblePoll(async s=>{calls++;signal=s;await new Promise<void>((_resolve,reject)=>s.addEventListener('abort',()=>reject(s.reason),{once:true}));},{intervalMs:5000,doc,win,nav});
+ try{
+  t.mock.timers.tick(60000);assert.equal(calls,0);
+  nav.onLine=true;win.dispatchEvent(new Event('online'));assert.equal(calls,1);
+  nav.onLine=false;win.dispatchEvent(new Event('offline'));assert.equal(signal?.aborted,true);await flush();
+  t.mock.timers.tick(60000);assert.equal(calls,1);
+  nav.onLine=true;win.dispatchEvent(new Event('online'));assert.equal(calls,2);
+ }finally{stop();await flush();}
+});
+test('owner polling backs off repeated failures and resets to its normal cadence after success',async t=>{
+ t.mock.timers.enable({apis:['setTimeout']});const doc=new Doc(),win=new EventTarget();let calls=0,fail=true;
+ const stop=visiblePoll(async()=>{calls++;if(fail)throw new Error('Offline upstream');},{intervalMs:5000,doc,win,nav:{onLine:true}});
+ try{
+  await flush();assert.equal(calls,1);t.mock.timers.tick(9999);assert.equal(calls,1);t.mock.timers.tick(1);await flush();assert.equal(calls,2);
+  t.mock.timers.tick(19999);assert.equal(calls,2);fail=false;t.mock.timers.tick(1);await flush();assert.equal(calls,3);
+  t.mock.timers.tick(5000);await flush();assert.equal(calls,4);
+ }finally{stop();}
+});
 test('owner polling waits for completion, pauses hidden and aborts on disposal',async()=>{
  const doc=new Doc(),win=new EventTarget();let calls=0,finish:()=>void=()=>{},signal:AbortSignal|undefined;
  const stop=visiblePoll(async s=>{calls++;signal=s;await new Promise<void>(resolve=>{finish=resolve;});},{intervalMs:5,doc,win});

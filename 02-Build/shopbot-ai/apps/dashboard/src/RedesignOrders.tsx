@@ -3,7 +3,7 @@ import type {DraftLine} from '../../../packages/contracts/index.js';
 import {formatMoney} from '../../../packages/contracts/money.js';
 import {initialQuoteLines} from '../../../packages/contracts/owner-quote.js';
 import {SELLING_UNITS} from '../../../packages/contracts/selling-units.js';
-import {navigateOwner,useOwnerUrl} from './owner-ui.js';
+import {navigateOwner,useOwnerUrl,photoVariant} from './owner-ui.js';
 import {OwnerIcon} from './OwnerIcon.js';
 import {visiblePoll} from './owner-polling.js';
 import {redesignApi} from './redesign-api.js';
@@ -42,7 +42,7 @@ function validation(lines:EditLine[]):string{
  for(const l of lines){if(!l.name.trim()||!l.unit.trim()||l.quantity===''||!Number.isFinite(Number(l.quantity))||Number(l.quantity)<=0||Number(l.quantity)>100||Math.abs(Number(l.quantity)*1000-Math.round(Number(l.quantity)*1000))>1e-7||l.price===''||!Number.isFinite(Number(l.price))||Number(l.price)<0||Number(l.price)>1000000||Math.abs(Number(l.price)*100-Math.round(Number(l.price)*100))>1e-7)return `${l.name||'Item'}: enter a name, quantity (up to 100), selling unit and price with up to two decimals.`;if(Number(l.price)===0&&!l.free)return `${l.name}: enter a price or mark the item free.`;if(!l.sku&&!l.manualConfirmed)return `${l.name}: choose the item or confirm it with Use store item.`;}
  return '';
 }
-function Thumb({line}:{line:EditLine}){return line.sku&&line.photo?<img alt="" src={'/api/owner/products/'+encodeURIComponent(line.sku)+'/image'+(line.productVersion?'?v='+line.productVersion:'')} onError={e=>{e.currentTarget.style.display='none';}}/>:<span aria-hidden="true">{line.name.slice(0,1)||'?'}</span>;}
+function Thumb({line}:{line:EditLine}){return line.sku&&line.photo?<img alt="" src={photoVariant('/api/owner/products/'+encodeURIComponent(line.sku)+'/image'+(line.productVersion?'?v='+line.productVersion:''),128)} loading="lazy" decoding="async" onError={e=>{e.currentTarget.style.display='none';}}/>:<span aria-hidden="true">{line.name.slice(0,1)||'?'}</span>;}
 
 export function RedesignOrders(){
  const params=useOwnerUrl(),rawStage=params.get('orderStage')??'new',stage=stages.some(s=>s[0]===rawStage)?rawStage:'new',page=Math.max(1,Number(params.get('orderPage'))||1),search=params.get('orderSearch')??'',selectedId=params.get('order');
@@ -50,7 +50,7 @@ export function RedesignOrders(){
  const retry=useRef<{key:string;id:string}|undefined>(undefined),dialog=useRef<HTMLDialogElement>(null),returnFocus=useRef<HTMLElement|null>(null);
  useEffect(()=>setQuery(search),[search]);
  useEffect(()=>{const timer=setTimeout(()=>{if(query!==search)navigateOwner({orderSearch:query||null,orderPage:null,order:null},true);},250);return()=>clearTimeout(timer);},[query,search]);
- useEffect(()=>visiblePoll(async signal=>{try{const read=new URLSearchParams({details:'0',orderStage:stage,orderSearch:search,orderPage:String(page)});if(selectedId)read.set('order',selectedId);const data=await redesignApi<Snapshot>('snapshot?'+read,undefined,signal);if(!signal.aborted){setSnapshot(data);setError('');}}catch(e){if(!signal.aborted)setError((e as Error).message);}},{intervalMs:5000}),[stage,search,page,selectedId,refresh]);
+ useEffect(()=>visiblePoll(async signal=>{try{const read=new URLSearchParams({details:'0',orderStage:stage,orderSearch:search,orderPage:String(page)});if(selectedId)read.set('order',selectedId);const data=await redesignApi<Snapshot>('snapshot?'+read,undefined,signal);if(!signal.aborted){setSnapshot(data);setError('');}}catch(e){if(!signal.aborted)setError((e as Error).message);throw e;}},{intervalMs:5000}),[stage,search,page,selectedId,refresh]);
  const listed=snapshot?.requests.filter(r=>snapshot.orderPage.ids.includes(r.id))??[],order=snapshot?.requests.find(r=>r.id===selectedId)??(!selectedId?listed[0]:undefined),amendment=snapshot?.amendments.find(a=>a.request_id===order?.id),source=order?sourceKey(order,amendment):'';
  useEffect(()=>{if(!order)return;setEditor(old=>old?.orderId===order.id&&old.dirty?old:makeEditor(order,amendment));},[order?.id,source]);
  const originalLines=order?.original_lines??[],originalEstimate=order?.original_estimate;

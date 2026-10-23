@@ -4,7 +4,7 @@ The current release adds owner review drafts, Codex MCP over stdio, retained int
 
 ## Build and identify the release
 
-From this app directory, use Node 22.22.1, PostgreSQL 17 and FFmpeg. Run `npm ci`, `npm run build`, `npm run test:integration` against a disposable local database, and `python3 -m unittest discover -s scripts -p 'test_catalog_cleanup.py'`.
+From this app directory, use Node 22.23.4, PostgreSQL 17 and FFmpeg. Run `npm ci`, `npm run build`, `npm run test:integration` against a disposable local database, and `python3 -m unittest discover -s scripts -p 'test_catalog_cleanup.py'`.
 
 Commit the reviewed source, then run `npm run release:manifest`. This command requires a clean checkout, rebuilds it, checks that HEAD and the checkout stayed unchanged, and hashes the compiled server, dashboard, public resources and dependency lock. `npm run build` alone does not mint release proof.
 

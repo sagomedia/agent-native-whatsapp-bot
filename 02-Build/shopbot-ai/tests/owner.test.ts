@@ -85,6 +85,12 @@ test('owner isolation, CSRF, takeover, stale controls, pause and request decisio
   assert.equal((await app.inject({url:'/api/simulator',headers})).statusCode,404);
   assert.equal((await app.inject({url:'/api/owner/snapshot',headers:{...headers,host:'wrong.example.test'}})).statusCode,404);
   const snapshot=(await app.inject({url:'/api/owner/snapshot',headers})).json();assert.equal(snapshot.conversations.length,1);assert.equal(snapshot.channel.liveSending,false);assert.equal(snapshot.store.id,fixtureStore);
+  assert.equal((await app.inject({url:'/api/owner/summary',headers:{host:owner.hostname}})).statusCode,403);
+  assert.equal((await app.inject({url:'/api/owner/summary',headers:{...headers,host:'other.example.test'}})).statusCode,404);
+  const summaryResponse=await app.inject({url:'/api/owner/summary',headers}),summary=summaryResponse.json();
+  assert.equal(summaryResponse.statusCode,200);assert.equal(summary.store.id,fixtureStore);assert.equal(summary.store.name,snapshot.store.name);
+  assert.equal(summary.conversationCounts.total,snapshot.conversationCounts.total);assert.equal(summary.conversationCounts.help,snapshot.conversationCounts.help);
+  assert.deepEqual(Object.keys(summary).sort(),['conversationCounts','store']);assert.match(summaryResponse.headers['cache-control']!,/no-store/);
   assert.equal((await app.inject({url:'/api/owner/conversations/'+otherConversation,headers})).statusCode,404);
   assert.equal((await post('conversations/'+otherConversation+'/control',{mode:'owner',revision:0})).statusCode,409);
   assert.equal((await post('pause',{paused:true,revision:0},{...headers,origin:'https://foreign.test'})).statusCode,403);

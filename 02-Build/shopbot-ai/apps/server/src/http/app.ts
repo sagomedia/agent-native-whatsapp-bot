@@ -24,6 +24,12 @@ export async function createApp(config: Config, pool: Pool, nativeTest?:Interpre
   if(config.owner&&!['127.0.0.1','::1','localhost'].includes(config.host))throw new Error('Owner preview must listen on loopback');
   if(config.whatsapp&&(!['127.0.0.1','::1','localhost'].includes(config.host)||nativeTest||config.mode!=='mock'))throw new Error('WhatsApp test connection requires loopback with local test endpoints disabled');
   const app = Fastify({ logger: {serializers:{req:(req:any)=>({method:req.method,url:req.url?.split('?')[0]})}}, bodyLimit: 16000 });
+  app.setErrorHandler((error,request,reply)=>{
+    const failure=error as Error&{statusCode?:number;code?:string};
+    const status=failure.statusCode&&failure.statusCode>=400&&failure.statusCode<600?failure.statusCode:500;
+    if(status>=500){request.log.error({code:failure.code??'internal_failure'},'Request failed');return reply.code(status).send({error:'The service could not complete this request. Please try again.'});}
+    return reply.code(status).send({error:failure.message});
+  });
   if(config.whatsapp){
     const hookPath=config.whatsapp.path??whatsappPath;
     app.addHook('onRequest',async(req,reply)=>{
@@ -77,7 +83,7 @@ export async function createApp(config: Config, pool: Pool, nativeTest?:Interpre
     });
     const dashboard = resolve('dist/dashboard');
     if (existsSync(dashboard)) {
-      await app.register(staticPlugin, { root: dashboard });
+      await app.register(staticPlugin, { root: dashboard, preCompressed:true, cacheControl:!config.owner });
       if(config.owner){app.get('/owner',async(_request,reply)=>reply.sendFile('index.html'));app.get('/',async(_request,reply)=>reply.redirect('/owner'));}
       if(nativeTest&&existsSync('resources/catalog/ksmc-demo/images')) await app.register(staticPlugin,{root:resolve('resources/catalog/ksmc-demo/images'),prefix:'/demo-images/',decorateReply:false});
       if(nativeTest) app.get('/native-test',async(_request,reply)=>reply.sendFile('index.html'));

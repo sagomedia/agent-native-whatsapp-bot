@@ -18,11 +18,11 @@ The sections below are historical installation guidance. Statements about channe
 
 # Native e2-micro preview
 
-This deployment uses an off-server build, the checksum-verified Node 22.22.1 Linux x64 runtime, production dependencies, PostgreSQL 17 from Debian and a bounded systemd service. It avoids loading the existing development Docker image onto the 10 GB VM. The app and database bind to loopback. No public route or WhatsApp sender is created by the installer.
+This deployment uses an off-server build, the checksum-verified Node 22.23.4 Linux x64 runtime, production dependencies, PostgreSQL 17 from Debian and a bounded systemd service. It avoids loading the existing development Docker image onto the 10 GB VM. The app and database bind to loopback. No public route or WhatsApp sender is created by the installer.
 
 Before installation, back up both older applications' configuration, SQLite databases and media. Use SQLite's online backup API and verify the copies with `PRAGMA integrity_check`; retain the service enablement states. Leave the original app/source/data in place for rollback.
 
-From `02-Build/shopbot-ai`, run the required build, catalog tests and integration suite using a disposable database. Then run `python3 deploy/native/package-release.py --node-archive /absolute/path/to/node-v22.22.1-linux-x64.tar.xz --node-shasums /absolute/path/to/SHASUMS256.txt --output-dir /tmp/shopbot-vps-release`. The packager excludes environment files, owner-only catalog material, local data, tests and development dependencies. Inspect the produced manifest, archive size and SHA-256 before upload.
+From `02-Build/shopbot-ai`, run the required build, catalog tests and integration suite using a disposable database. Then run `python3 deploy/native/package-release.py --node-archive /absolute/path/to/node-v22.23.4-linux-x64.tar.xz --node-shasums /absolute/path/to/SHASUMS256.txt --output-dir /tmp/shopbot-vps-release`. The packager excludes environment files, owner-only catalog material, local data, tests and development dependencies. Inspect the produced manifest, archive size and SHA-256 before upload.
 
 On the VPS, verify the archive hash, extract into `/opt/shopbot-vps/releases/<release-id>` with root ownership and read/execute access for the service, and run `sudo bash <release>/deploy/install.sh`. Capture the install log privately. The installer starts a mock preview with paid inference disabled and budget zero; it retains an existing `/etc/shopbot-vps.env` rather than overwriting it. The PostgreSQL settings are intended for this newly installed dedicated cluster, not another existing database server.
 

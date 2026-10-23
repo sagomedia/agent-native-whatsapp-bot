@@ -1,7 +1,7 @@
 import {verifyVoiceDecoder} from './services/voice-media.js';
 import {setupImageDemo} from './services/demo-catalog.js';
 import {GoogleInterpreter,readNativeSettings} from './adapters/google-interpreter.js';
-import pg from 'pg';
+import {createRuntimePool} from './db/pool.js';
 import { mkdir } from 'node:fs/promises';
 import { readConfig } from './config.js';
 import { setupDatabase } from './db/migrate.js';
@@ -15,7 +15,7 @@ import {verifyRelease,bindRuntimeRelease} from './services/release-manifest.js';
 await verifyRelease();
 const config = readConfig();
 if(config.whatsapp?.mediaEnabled)await verifyVoiceDecoder();
-const pool = new pg.Pool({ connectionString: config.databaseUrl, max: 10 });
+const pool = createRuntimePool(config.databaseUrl,()=>console.error('An idle database connection failed; new requests will reconnect.'));
 let stopJobs: (() => Promise<void>) | undefined;
 let stopWhatsApp: (() => Promise<void>) | undefined;
 let app: Awaited<ReturnType<typeof createApp>> | undefined;

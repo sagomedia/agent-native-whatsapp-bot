@@ -92,7 +92,7 @@ export function RedesignChats(){
       const next=await redesignApi<Inbox>('snapshot?'+read,undefined,signal);
       if(signal.aborted)return;
       setInbox(next);setInboxError('');
-    }catch(error){if(!signal.aborted)setInboxError(error instanceof Error?error.message:'Chats could not be loaded.');}
+    }catch(error){if(!signal.aborted)setInboxError(error instanceof Error?error.message:'Chats could not be loaded.');throw error;}
   },{intervalMs:5000}),[inboxPage,serverQuery,urlConversation,filter]);
 
   const listed=inbox?.conversations.filter(c=>inbox.inboxPage?.ids?.includes(c.id)??true)??[];
@@ -131,7 +131,7 @@ export function RedesignChats(){
         setMessages(current=>mergeMessages(current,next.messages));
         if(!hasOlderPages.current){olderCursorRef.current=next.olderCursor;setOlderCursor(next.olderCursor);}
         setHistoryError('');setHistoryLoading(false);
-      }catch(error){if(!signal.aborted){setHistoryError(error instanceof Error?error.message:'Messages could not be loaded.');setHistoryLoading(false);}}
+      }catch(error){if(!signal.aborted){setHistoryError(error instanceof Error?error.message:'Messages could not be loaded.');setHistoryLoading(false);}throw error;}
     },{intervalMs:awaitingDelivery?1500:5000});
   },[selectedId,reloadHistory,awaitingDelivery]);
 
