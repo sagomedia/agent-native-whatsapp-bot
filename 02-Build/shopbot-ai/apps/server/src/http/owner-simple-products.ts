@@ -27,6 +27,19 @@ export const simpleProductSchema=z.object({
   sellingPolicy:sellingPolicySchema.optional()}).strict().optional()
 }).strict();
 
+export const variantRowSchema=z.object({id:z.uuid(),label:z.string().trim().max(55),size:z.string().trim().max(40),color:z.string().trim().max(40),
+ pricePaise:z.number().int().positive().max(2147483647),stock:stock.nullable(),unit:sellingUnitSchema,
+ packContents:sellingPolicySchema.shape.packContents}).strict();
+export const variantLabel=(v:{label:string;size:string;color:string})=>[v.label,v.color,v.size].filter(Boolean).join(' · ');
+export const variantBatchSchema=z.object({id:z.uuid(),name:z.string().trim().min(2).max(100),active:z.boolean().default(true),
+ photo:imageUploadSchema.optional(),sourceProduct:z.object({sku:z.string().max(64),version:z.number().int().positive()}).strict().optional(),sourceLabel:z.string().trim().min(1).max(55).optional(),
+ details:simpleProductSchema.shape.details.unwrap().default({}),variants:z.array(variantRowSchema).min(1).max(20)
+}).strict().superRefine((p,ctx)=>{
+ const labels=p.variants.map(variantLabel);
+ if(labels.some(l=>!l||l.length>55)||new Set(labels.map(l=>l.toLowerCase())).size!==labels.length||new Set(p.variants.map(v=>v.id)).size!==p.variants.length)
+  ctx.addIssue({code:'custom',message:'Use unique variant labels up to 55 characters and unique row IDs.'});
+});
+
 export function registerOwnerSimpleProducts(app:FastifyInstance,_pool:Pool,storeId:string,write:Write){
  app.post('/api/owner/store/details',async(req,reply)=>{
   const parsed=z.object({name:z.string().trim().min(2).max(120),expectedName:z.string().min(1).max(120)}).strict().safeParse(req.body);
@@ -49,8 +62,61 @@ export function registerOwnerSimpleProducts(app:FastifyInstance,_pool:Pool,store
   const media=p.photo?await normalizeImage(p.photo):undefined;
   if(media)media.variants=await prepareCatalogImageVariants(media.image);
   const sku=p.sku??'SHOP-'+p.createId!.replaceAll('-','').slice(0,16).toUpperCase();
-  return write('catalog_product_simple',storeId,async c=>{
+  return write('catalog_product_simple',storeId,c=>saveSimpleProduct(c,storeId,p,media));
+ });
+ app.post('/api/owner/products/variants',{bodyLimit:3000000},async(req,reply)=>{
+  const parsed=variantBatchSchema.safeParse(req.body);
+  if(!parsed.success)return reply.code(400).send({error:'Check the product name and each variant’s size, price, stock and selling unit. Use distinct variant names.'});
+  const p=parsed.data,inputHash=createHash('sha256').update(JSON.stringify(p)).digest('hex');
+  if(!p.photo&&!p.sourceProduct)return reply.code(400).send({error:'Add a shared photo or choose an existing product photo.'});
+  const media=p.photo?await normalizeImage(p.photo):undefined;
+  if(media)media.variants=await prepareCatalogImageVariants(media.image);
+  return write('catalog_product_variants',p.id,async c=>{
+   const previous=(await c.query('SELECT input_hash,result FROM product_variant_batches WHERE store_id=$1 AND id=$2',[storeId,p.id])).rows[0];
+   if(previous){if(previous.input_hash!==inputHash)throw invalid('This variant batch was already saved with different details. Reload before adding more.',409);return {...previous.result,replayed:true};}
+   let source:any;
+   if(p.sourceProduct){source=(await c.query('SELECT * FROM products WHERE store_id=$1 AND sku=$2 FOR UPDATE',[storeId,p.sourceProduct.sku])).rows[0];
+    if(!source||source.version!==p.sourceProduct.version)throw invalid('The source product changed. Reload before adding variants.',409);
+   }
+   const groupId=source?.product_group_id??p.id,groupName=source?.product_group_name??p.name;
+   if(source?.product_group_id&&groupName!==p.name)throw invalid('Keep the shared product name when adding variants.',409);
+   const labels=p.variants.map(v=>variantLabel(v));
+   const existing=(await c.query('SELECT lower(variant_label) AS label FROM products WHERE store_id=$1 AND product_group_id=$2',[storeId,groupId])).rows;
+   if(labels.some(label=>existing.some(r=>r.label===label.toLowerCase())))throw invalid('A variant with this name already exists. Open it to update price or stock.',409);
+   if(source&&!source.product_group_id){
+    if(!p.sourceLabel)throw invalid('Enter a variant label for the existing product before adding variants.');
+    if(labels.some(label=>label.toLowerCase()===p.sourceLabel!.toLowerCase()))throw invalid('A new variant duplicates the existing product.');
+    const sourceName=groupName+' · '+p.sourceLabel;
+    await c.query('UPDATE products SET product_group_id=$3,product_group_name=$4,variant_label=$5,name=$6,version=version+1 WHERE store_id=$1 AND sku=$2',[storeId,source.sku,groupId,groupName,p.sourceLabel,sourceName]);
+   }
+   let imagePath=source?.image_path as string|undefined;
+   if(media){const assetId=await saveCatalogPhoto(c,storeId,media);imagePath='/catalog-images/custom/'+assetId+'.jpg';}
+   if(!imagePath||!(/^\/catalog-images\/custom\/[a-f0-9-]{36}\.jpg$/.test(imagePath)||/^\/demo-images\/H\d{2}\.jpg$/.test(imagePath)))throw invalid('Choose an exact product photo for these variants.');
+   const products=[];
+   for(const [i,v] of p.variants.entries()){
+    const label=labels[i],specifications={...p.details.specifications};
+    delete specifications.size;delete specifications.color;delete specifications.colour;
+    if(v.size)specifications.size=v.size;
+    if(v.color)specifications.color=v.color;
+    const result=await saveSimpleProduct(c,storeId,{
+     createId:v.id,name:groupName+' · '+label,pricePaise:v.pricePaise,unit:v.unit,quantityStep:1,stock:v.stock,active:p.active,
+     details:{...p.details,localNames:Object.fromEntries(Object.entries(p.details.localNames??{}).filter(([,value])=>value).map(([lang,value])=>[lang,(value+' · '+label).slice(0,160)])),specifications:{...specifications,...(specifications.description?{description:(label+'. '+specifications.description).slice(0,120)}:{})},sellingPolicy:{saleMode:'pack',...(v.packContents?{packContents:v.packContents}:{}),cutAllowed:false,continuousLengthAvailable:null}}
+    },undefined,imagePath);
+    await c.query('UPDATE products SET product_group_id=$3,product_group_name=$4,variant_label=$5 WHERE store_id=$1 AND sku=$2',[storeId,result.sku,groupId,groupName,label]);
+    products.push(result);
+   }
+   const result={groupId,groupName,products};
+   await c.query('INSERT INTO product_variant_batches(store_id,id,input_hash,result) VALUES($1,$2,$3,$4)',[storeId,p.id,inputHash,JSON.stringify(result)]);
+   return result;
+  });
+ });
+}
+
+async function saveSimpleProduct(c:PoolClient,storeId:string,p:z.infer<typeof simpleProductSchema>,media:Awaited<ReturnType<typeof normalizeImage>>|undefined,sharedImage?:string){
+ const editing=!!p.sku,sku=p.sku??'SHOP-'+p.createId!.replaceAll('-','').slice(0,16).toUpperCase();
    const prior=(await c.query('SELECT * FROM products WHERE store_id=$1 AND sku=$2 FOR UPDATE',[storeId,sku])).rows[0];
+   if(prior?.product_group_id&&!p.name.startsWith(prior.product_group_name+' · '))throw invalid('Keep the shared product name followed by the variant label.');
+   if(prior?.product_group_id){const label=p.name.slice(prior.product_group_name.length+3).trim();if(!label||label.length>55)throw invalid('Use a variant label between 1 and 55 characters.');if((await c.query('SELECT 1 FROM products WHERE store_id=$1 AND product_group_id=$2 AND lower(variant_label)=lower($3) AND sku<>$4',[storeId,prior.product_group_id,label,sku])).rowCount)throw invalid('Another variant already has this label.',409);await c.query('UPDATE products SET variant_label=$3 WHERE store_id=$1 AND sku=$2',[storeId,sku,label]);}
    if(editing&&(!prior||prior.version!==p.version))throw invalid('This product changed. Reload before saving.',409);
    if(!editing&&prior){
     const same=prior.catalog_origin==='owner'&&prior.name===p.name&&prior.price_paise===p.pricePaise&&prior.unit===p.unit&&Number(prior.quantity_step)===(p.quantityStep??1)&&prior.active===(p.active??true)&&
@@ -63,7 +129,7 @@ export function registerOwnerSimpleProducts(app:FastifyInstance,_pool:Pool,store
      (!p.details?.sellingPolicy||isDeepStrictEqual(prior.selling_policy,p.details.sellingPolicy));
     const photoId=/^\/catalog-images\/custom\/([a-f0-9-]{36})\.jpg$/.exec(prior.image_path??'')?.[1];
     const hash=media&&createHash('sha256').update(media.image).digest('hex');
-    const samePhoto=!!photoId&&!!hash&&(await c.query('SELECT 1 FROM catalog_photos WHERE store_id=$1 AND id=$2 AND content_hash=$3',[storeId,photoId,hash])).rowCount===1;
+    const samePhoto=sharedImage?prior.image_path===sharedImage:!!photoId&&!!hash&&(await c.query('SELECT 1 FROM catalog_photos WHERE store_id=$1 AND id=$2 AND content_hash=$3',[storeId,photoId,hash])).rowCount===1;
     if(same&&samePhoto)return {sku,version:prior.version,inventoryVersion:prior.inventory_version,active:prior.active,
      stock:prior.stock===null?null:Number(prior.stock),imageUrl:prior.image_path,replayed:true};
     throw invalid('This product was already created with different details. Reload it before saving.',409);
@@ -74,7 +140,7 @@ export function registerOwnerSimpleProducts(app:FastifyInstance,_pool:Pool,store
    const specifications=details.specifications??prior?.specifications??{};
    const issues=sellingBasisIssues({name:p.name,unit:p.unit,specifications,sellingPolicy:policy});
    if(issues.length)throw invalid(issues.join(' '));
-   const imagePath=media?undefined:prior?.image_path as string|undefined;
+   const imagePath=sharedImage??(media?undefined:prior?.image_path as string|undefined);
    const exactPhoto=!!media||!!imagePath&&(/^\/catalog-images\/custom\/[a-f0-9-]{36}\.jpg$/.test(imagePath)||/^\/demo-images\/H\d{2}\.jpg$/.test(imagePath));
    if(active&&!exactPhoto)throw invalid('Choose an exact product photo before showing this item in the shop.');
    const onHand=Object.hasOwn(p,'stock')?p.stock!:prior?.stock===null?null:prior?Number(prior.stock):null;
@@ -93,6 +159,4 @@ export function registerOwnerSimpleProducts(app:FastifyInstance,_pool:Pool,store
    const row=(await c.query('SELECT sku,version,inventory_version,active,stock FROM products WHERE store_id=$1 AND sku=$2',[storeId,sku])).rows[0];
    return {sku:row.sku,version:row.version,inventoryVersion:row.inventory_version,active:row.active,
     stock:row.stock===null?null:Number(row.stock),imageUrl:finalImagePath,revision:saved.revision};
-  });
- });
 }

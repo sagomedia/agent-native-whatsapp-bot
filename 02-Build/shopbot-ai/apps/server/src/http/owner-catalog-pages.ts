@@ -27,7 +27,14 @@ export async function ownerProductPage(c:PoolClient,storeId:string,input:z.infer
  if(cursor&&input.sort==='updated'&&!Number.isFinite(Date.parse(cursor.key)))throw invalid('Invalid catalog date cursor.');
  const values:unknown[]=[storeId],where=['store_id=$1'];const bind=(value:unknown)=>{values.push(value);return '$'+values.length;};
  // Literal substring matching works for Tamil names and SKUs without treating % or _ as wildcards.
- if(input.q){const p=bind('%'+input.q.replace(/[\\%_]/g,'\\$&')+'%');where.push(`(sku ILIKE ${p} OR name ILIKE ${p} OR local_names::text ILIKE ${p} OR brand ILIKE ${p} OR aliases::text ILIKE ${p} OR keywords::text ILIKE ${p})`);}
+ if(input.q){
+  // Word order and the punctuation separating variant labels must not hide stock.
+  // Split joined numeric units (500ml) as well as whitespace; bind every literal.
+  const terms=input.q.replace(/(\d)([a-zA-Z])/g,'$1 $2').split(/\s+/).filter(Boolean).slice(0,20);
+  for(const term of terms){if(/^\d+(?:\.\d+)?$/.test(term)){const number=bind('(^|[^[:digit:].])'+term.replaceAll('.','[.]')+'([^[:digit:].]|$)');where.push(`search_text ~ ${number}`);continue;}const p=bind('%'+term.replace(/[\\%_]/g,'\\$&')+'%');
+   where.push(`(sku ILIKE ${p} OR name ILIKE ${p} OR local_names::text ILIKE ${p} OR brand ILIKE ${p} OR aliases::text ILIKE ${p} OR keywords::text ILIKE ${p} OR specifications::text ILIKE ${p})`);}
+ }
+
  if(input.visibility)where.push(`active=${bind(input.visibility==='visible')}`);
  if(input.stock==='unknown')where.push('stock IS NULL');
  if(input.stock==='out')where.push('stock IS NOT NULL AND stock-reserved_stock<=0');

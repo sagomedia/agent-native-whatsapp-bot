@@ -2,3 +2,22 @@
 
 .redesign .rd-products-form fieldset{display:grid;gap:22px;border:0;padding:0;margin:0;min-width:0}.redesign .rd-products-form textarea{font:inherit;resize:vertical;min-height:88px;border:1px solid #cbd5dc;border-radius:7px;padding:12px 14px;color:var(--rd-text);background:white;width:100%;box-sizing:border-box}.redesign .rd-products-form textarea:focus-visible{outline:3px solid #45a7ae;outline-offset:2px}
 .redesign .rd-products-form-actions>button:not(.rd-products-primary){color:var(--rd-teal)}
+
+.redesign .rd-products-group-label{display:block;color:var(--rd-muted);font-size:12px;margin-top:4px}
+.redesign .rd-product-variants{min-width:0;border-top:1px solid var(--rd-line);padding-top:20px;display:grid;gap:16px}
+.redesign .rd-variant-heading,.redesign .rd-variant-row-title,.redesign .rd-variant-row-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.redesign .rd-variant-heading h2{font-size:19px;margin:0}
+.redesign .rd-variant-heading button,.redesign .rd-variant-row-title button,.redesign .rd-variant-row-actions button,.redesign .rd-products-variant-entry>button{border:0;background:transparent;color:var(--rd-teal);text-decoration:underline;padding:6px 0;text-underline-offset:3px}
+.redesign .rd-variant-row{border:1px solid var(--rd-line);border-radius:7px;padding:16px;display:grid;gap:14px;min-width:0}
+.redesign .rd-variant-row-title strong{overflow-wrap:anywhere}
+.redesign .rd-variant-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.redesign .rd-variant-fields label{min-width:0}
+.redesign .rd-variant-row-actions small{color:var(--rd-muted);font-size:12px;line-height:1.5;flex:1;min-width:150px}
+.redesign .rd-product-search-details summary{cursor:pointer;font-weight:650;color:var(--rd-teal)}
+.redesign .rd-product-search-details[open]{display:grid;gap:16px}
+.redesign .rd-product-search-details[open]>label,.redesign .rd-product-search-details[open]>.rd-alias-suggestions{margin-top:16px}
+.redesign .rd-alias-suggestions{display:grid;gap:10px}
+.redesign .rd-products-stock-dialog>label{display:grid;gap:8px;margin-top:18px;font-weight:600}
+.redesign .rd-products-stock-dialog>label>select{font:inherit;padding:12px;border:1px solid #cbd5dc;border-radius:7px;color:var(--rd-text);background:white;width:100%}
+.redesign .rd-products-variant-entry{display:grid;gap:10px;justify-items:start}
+@media(max-width:460px){.redesign .rd-variant-fields{grid-template-columns:minmax(0,1fr)}.redesign .rd-variant-row{padding:12px}.redesign .rd-variant-heading{align-items:start}.redesign .rd-product-variants{gap:14px}}
