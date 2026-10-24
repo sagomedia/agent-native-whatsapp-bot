@@ -10,7 +10,7 @@ import {productFromRow} from './catalog.js';
 import {sellingBasisIssues,sellingBasisPreview} from '../../../../packages/contracts/selling-basis.js';
 import {imageUploadSchema} from './image-media.js';
 
-export type CatalogPrincipal={storeId:string;actor:string;canWrite?:boolean;canPublish?:boolean;grantId?:string;ownerActor?:string;resource?:string;accessExpiresAt?:number};
+export type CatalogPrincipal={storeId:string;actor:string;canWrite?:boolean;canPublish?:boolean;canReadOwner?:boolean;canManageOrders?:boolean;grantId?:string;ownerActor?:string;resource?:string;accessExpiresAt?:number};
 export const chatError=(code:string,message:string,statusCode=409)=>Object.assign(new Error(message),{code,statusCode});
 const uuid=z.uuid(),revision=z.number().int().positive();
 export const chatPrepareSchema=z.object({operationId:uuid,id:uuid.optional(),version:revision.optional(),batchId:z.string().min(1).max(100).default('owner-chat'),clientItemId:z.string().min(1).max(100).optional(),details:catalogDraftSchema,base:z.object({sku:z.string().min(1).max(64),version:revision}).strict().optional()}).strict();
@@ -22,7 +22,8 @@ function canonical(value:any):any{return Array.isArray(value)?value.map(canonica
 export const chatHash=(value:unknown)=>createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex');
 
 /** Credentials and grants are adapter-owned, never MCP tool parameters. */
-export async function assertCatalogPermission(c:PoolClient,p:CatalogPrincipal,permission:'catalog:read'|'catalog:draft'|'catalog:publish'){
+export async function assertCatalogPermission(c:PoolClient,p:CatalogPrincipal,permission:'catalog:read'|'catalog:draft'|'catalog:publish'|'owner:read'|'orders:write'){
+ if(permission==='owner:read'&&!p.canReadOwner||permission==='orders:write'&&(!p.canReadOwner||!p.canManageOrders))throw chatError('insufficient_scope','Reconnect this agent with the required owner permission.',403);
  if(permission==='catalog:draft'&&p.canWrite===false||permission==='catalog:publish'&&!p.canPublish)throw chatError('insufficient_scope','Reconnect this agent with the required catalog permission.',403);
  if(p.accessExpiresAt!==undefined&&p.accessExpiresAt<=Date.now()/1000)throw chatError('unauthorized','The connection expired. Refresh its authorization.',401);
  if(p.grantId){
@@ -30,7 +31,7 @@ export async function assertCatalogPermission(c:PoolClient,p:CatalogPrincipal,pe
   if(!grant||grant.store_id!==p.storeId||grant.actor!==p.ownerActor||grant.resource!==p.resource||!grant.scopes.includes(permission))throw chatError('insufficient_scope','The connection was revoked or does not permit this action.',403);
  }
 }
-export async function mutate<T>(pool:Pool,p:CatalogPrincipal,permission:'catalog:draft'|'catalog:publish',operationId:string,action:string,input:unknown,run:(c:PoolClient)=>Promise<T>):Promise<T>{
+export async function mutate<T>(pool:Pool,p:CatalogPrincipal,permission:'catalog:draft'|'catalog:publish'|'orders:write',operationId:string,action:string,input:unknown,run:(c:PoolClient)=>Promise<T>):Promise<T>{
  return catalogWrite(pool,p.storeId,p.actor,'mcp_chat_'+action,operationId,async c=>{
   await assertCatalogPermission(c,p,permission);
   const hash=chatHash(input),old=(await c.query('SELECT * FROM catalog_chat_operations WHERE store_id=$1 AND id=$2',[p.storeId,operationId])).rows[0];

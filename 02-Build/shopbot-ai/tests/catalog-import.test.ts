@@ -52,7 +52,7 @@ test('dashboard import is authenticated, rejects wrong origin, previews and adds
 class MemoryTransport{peer?:MemoryTransport;onmessage?:(m:any)=>void;onclose?:()=>void;onerror?:(e:Error)=>void;async start(){}async send(m:any){queueMicrotask(()=>this.peer?.onmessage?.(m));}async close(){this.onclose?.();}}
 test('MCP import guide, preview and actual host file handoff complete the direct import workflow',()=>fixture(async pool=>{
  const original=await photo(),server=catalogMcpServer(pool,principal,{download:async()=>({mimeType:'image/jpeg',data:original.data})}),client=new Client({name:'import-fixture',version:'1'}),a=new MemoryTransport(),b=new MemoryTransport();a.peer=b;b.peer=a;await server.connect(a);await client.connect(b);
- try{const tools=(await client.listTools()).tools;assert.equal(tools.length,17);assert.deepEqual(tools.find(t=>t.name==='catalog_import_item')!._meta?.['openai/fileParams'],['file']);
+ try{const tools=(await client.listTools()).tools;assert.equal(tools.length,20);assert.deepEqual(tools.find(t=>t.name==='catalog_import_item')!._meta?.['openai/fileParams'],['file']);
  const guide=await client.callTool({name:'catalog_import_guide',arguments:{}});assert.equal(guide.isError,undefined);assert.ok((guide.structuredContent as any).agentPrompt.includes('products.json'));
  const preview=await client.callTool({name:'catalog_import_preview',arguments:importExample});assert.equal(preview.isError,undefined,JSON.stringify(preview));
  const args={batchId:importExample.batchId,item:importExample.products[0],file:{download_url:'https://files.oaiusercontent.com/fixture',file_id:'fixture'}};

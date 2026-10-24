@@ -1,4 +1,4 @@
-Current inventory/import update: the default Products page has no draft tab. Complete ChatGPT additions and the dedicated Import products flow add canonical inventory directly. Needs attention identifies incomplete inventory facts. Read CATALOG-CHAT.md for the shared 1–200 item import format, agent prompt and 10/16/19 tool counts by grant. Legacy staging remains internal for compatibility and photo/edit review.
+Current inventory/import update: the default Products page has no draft tab. Complete ChatGPT additions and the dedicated Import products flow add canonical inventory directly. Needs attention identifies incomplete inventory facts. Read CATALOG-CHAT.md for the shared 1–200 item import format, agent prompt and 12/15/20 catalog tool counts by grant; see MCP-OWNER-WORKFLOWS.md for owner permissions and up to 40 tools. Legacy staging remains internal for compatibility and photo/edit review.
 
 # Direct product addition and internal diagnostics
 
@@ -8,9 +8,9 @@ After an owner has explicitly granted catalog publication, the connected agent c
 
 The agent shows the product card and follows owner intent/host confirmation. The selling unit comes from the actual price basis or unambiguous reviewed product context; ask when pack versus piece is unclear. Explicit zero stock is valid. Zero price requires `priceStatus: free`; unknown price/quantity are incomplete work. A single transaction retains original bytes, publishes through existing catalog/inventory services, records an operation receipt and rejects canonical-name duplicates across hidden/published products and drafts. Different variants need distinct names. Exact-name detection is not comprehensive fuzzy duplicate identification.
 
-Use `catalog_prepare` → `catalog_attach_media` → `catalog_review` → `catalog_commit` for existing edits, partial progress and cleaned-image workflows. Retain the original, show the original/cleaned images and obtain the seller's chosen primary image. Marketing/uncertain imagery cannot be primary. Older review-later publication contracts remain compatible; the direct-add tool enforces the complete-product minimum. A delegated agent action is never recorded as independent proof of a human click.
+Use `catalog_prepare` → `catalog_attach_media` → `catalog_review` → `catalog_commit` for existing edits and cleaned-image workflows. Missing new-product facts stay in chat. Retain the original, show the original/cleaned images and obtain the seller's chosen primary image. Marketing/uncertain imagery cannot be primary. Older review-later publication contracts remain compatible; the direct-add tool enforces the complete-product minimum. A delegated agent action is never recorded as independent proof of a human click.
 
-`catalog_get_product` reads an exact edit target; `catalog_check_duplicates` checks canonical names; `workflow_status` retrieves this actor's durable receipt after a lost response. Reuse an operation ID only with identical inputs. Complete additions do not remain in Drafts. Incomplete proposals appear under the visible Products → Drafts navigation with source, date and new/edit distinction. The older Saved drafts link remains compatible. Dashboard and MCP read the same store proposals.
+`catalog_get_product` reads an exact edit target; `catalog_check_duplicates` checks canonical names; `workflow_status` retrieves this actor's durable receipt after a lost response. Reuse an operation ID only with identical inputs. Complete additions do not remain in Drafts. Legacy proposals remain available through compatibility routes and existing-product edit review; the default Products page has no new-product draft tab.
 
 Existing grants are unchanged. Publication requires its explicit OAuth opt-in; draft/read connections cannot publish. Refresh the connector tool snapshot after updating. No hard-delete tool is supplied.
 
@@ -43,3 +43,8 @@ Reports never enter customer response generation. The workflow distinguishes sus
 ## Integration
 
 This implementation was prepared against source `274e73b` with existing customer-guard migration 46 retained. Catalog chat uses additive migration 47; internal diagnostics uses 48. Compare with the newest integration schema and reconcile numbers before deployment. The artifact includes the earlier chat-publication work reconciled onto the newer customer experience source; do not apply the old migration-46 catalog patch as well.
+
+
+## Expanded owner MCP
+
+Read MCP-OWNER-WORKFLOWS.md for the owner/order tool matrix, explicit OAuth opt-ins, private conversation summaries and guarded order workflows. Existing catalog-only connections keep their permissions. No schema migration is required.

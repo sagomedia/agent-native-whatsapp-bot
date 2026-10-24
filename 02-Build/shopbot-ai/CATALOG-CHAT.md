@@ -35,7 +35,7 @@ Existing search, inventory, draft list, propose, edit_draft and stage_photo tool
 - `catalog_review`: a product card, selling basis, before/after fields, selected image preview and an immutable 30-minute review reference. Missing requirements produce focused questions.
 - `catalog_commit`: publish an exact current review under a publication grant. It is exposed only to publication-capable connections.
 
-Read-only grants expose ten read tools; draft grants expose sixteen tools; publication grants expose nineteen. `add_product` and `edit_product` MCP prompts and `catalog://owner/workflow` provide reusable guidance. A standalone skill is included at `resources/mcp/catalog-management/SKILL.md`. Hosts choose whether to use prompts/skills; tool descriptions and explicit structured next steps also guide ordinary conversations.
+Catalog read grants expose twelve tools; edit grants expose fifteen; publication grants expose twenty. Owner-read adds thirteen tools and order-write adds seven, for forty with all supported permissions. `add_product` and `edit_product` MCP prompts and `catalog://owner/workflow` provide reusable guidance. A standalone skill is included at `resources/mcp/catalog-management/SKILL.md`. Hosts choose whether to use prompts/skills; tool descriptions and explicit structured next steps also guide ordinary conversations.
 
 ## What review means
 
@@ -72,3 +72,6 @@ MCP catalog_import_guide returns the agent prompt and example; catalog_import_pr
 The main product view removes the draft tab and redundant bulk-update menu. Needs attention filters canonical inventory for hidden products, missing photos, unconfirmed prices, unknown stock or unverified facts. Unknown stock remains distinct from out-of-stock. Legacy staging APIs are retained for compatibility, image provenance and in-chat edits, not as the required result of adding a complete product.
 
 After deploying an updated MCP server, refresh the connection metadata in ChatGPT and start a new conversation. To use direct additions or imports on a previously draft-only connection, reconnect once and select the publication permission on the protected owner consent page. Refreshing tool metadata alone cannot grant publication. No existing grant is silently widened.
+
+
+Owner operations expansion: see MCP-OWNER-WORKFLOWS.md. The owner/order opt-ins expose private dashboard reads and versioned order actions separately from existing catalog access.
