@@ -1,3 +1,4 @@
+import {recipientAllowed} from './customer-admission.js';
 import {randomUUID} from 'node:crypto';
 import type {PoolClient} from 'pg';
 import type {RichReply} from '../../../../packages/contracts/index.js';
@@ -13,7 +14,7 @@ export async function queueOrderNotice(client:PoolClient,storeId:string,requestI
  const previous=(await client.query('SELECT n.message_id,o.state FROM request_notifications n JOIN whatsapp_outbox o ON o.message_id=n.message_id WHERE n.request_id=$1 AND n.status_key=$2',[requestId,'event:'+key])).rows[0];
  if(previous&&!['cancelled','blocked'].includes(previous.state))return {customerNotification:previous.state==='unknown'?'outcome_unknown':'already_queued',messageId:previous.message_id};
  const row=(await client.query('SELECT c.*,w.recipient,w.phone_id,w.last_inbound_at,s.operator_paused FROM order_requests r JOIN conversations c ON c.id=r.conversation_id AND c.store_id=r.store_id JOIN stores s ON s.id=c.store_id LEFT JOIN whatsapp_conversations w ON w.conversation_id=c.id WHERE r.id=$1 AND r.store_id=$2 FOR UPDATE OF c',[requestId,storeId])).rows[0];
- if(!row||!config?.sendEnabled||row.operator_paused||row.operator_mode==='owner'||row.phone_id!==config.phoneId||!config.recipients.includes(row.recipient)||!row.last_inbound_at||Date.now()-new Date(row.last_inbound_at).getTime()>=24*3600000)return {customerNotification:'not_sent',reason:'Sending is unavailable, the owner is handling this conversation, or the reply window is closed.'};
+ if(!row||!config?.sendEnabled||row.operator_paused||row.operator_mode==='owner'||row.phone_id!==config.phoneId||!recipientAllowed(config,row.recipient)||!row.last_inbound_at||Date.now()-new Date(row.last_inbound_at).getTime()>=24*3600000)return {customerNotification:'not_sent',reason:'Sending is unavailable, the owner is handling this conversation, or the reply window is closed.'};
  const ctx={storeId,conversationId:row.id,actor:row.actor,role:'customer' as const};
  const state=await loadState(client,ctx),binding=conversationBinding(state,await loadAssistantMemory(client,ctx));
  const groupId=randomUUID(),parts=rich.parts??[undefined];

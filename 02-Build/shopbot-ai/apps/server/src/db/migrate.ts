@@ -523,6 +523,16 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       CREATE INDEX mcp_oauth_requests_expiry ON mcp_oauth_requests(expires_at);
       INSERT INTO schema_migrations(version) VALUES(45);
     `);}
+    const v46=await client.query('SELECT version FROM schema_migrations WHERE version=46');
+    if(!v46.rowCount){await client.query(`
+      CREATE TABLE whatsapp_customer_guards (
+        conversation_id uuid PRIMARY KEY REFERENCES conversations(id),operator_revision integer NOT NULL,
+        window_started_at timestamptz NOT NULL DEFAULT clock_timestamp(),window_count integer NOT NULL DEFAULT 0,
+        last_received_at timestamptz NOT NULL DEFAULT clock_timestamp(),last_key text,repeat_count integer NOT NULL DEFAULT 0,
+        off_topic_count integer NOT NULL DEFAULT 0,reason text,last_media_key text,last_media_at timestamptz,media_repeat_count integer NOT NULL DEFAULT 0
+      );
+      INSERT INTO schema_migrations(version) VALUES(46);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

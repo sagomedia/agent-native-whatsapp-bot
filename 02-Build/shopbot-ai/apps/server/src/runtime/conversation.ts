@@ -123,7 +123,7 @@ function discoverySelection(item:Extract<Interpretation['operations'][number],{k
 }
 export class ConversationRuntime {
   readonly tools:RetailTools;
-  constructor(private pool:Pool,private provider:Interpreter,private options:{advance?:UpiAdvanceConfig;partialReviews?:boolean;welcomeAudio?:string;allowPaidInference?:boolean;allowFreeInference?:boolean;discoveryStages?:boolean;mediaRecommendations?:boolean;sequentialItems?:boolean;visualOrdering?:boolean;maxDraftLines?:number;queueReply?:(client:PoolClient,ctx:ActorContext,id:string,reply:RichReply)=>Promise<void>}={}) {
+  constructor(private pool:Pool,private provider:Interpreter,private options:{advance?:UpiAdvanceConfig;partialReviews?:boolean;welcomeAudio?:string;allowPaidInference?:boolean;allowFreeInference?:boolean;discoveryStages?:boolean;mediaRecommendations?:boolean;sequentialItems?:boolean;visualOrdering?:boolean;maxDraftLines?:number;observeTurn?:(client:PoolClient,ctx:ActorContext,offTopic:boolean|null)=>Promise<boolean>;queueReply?:(client:PoolClient,ctx:ActorContext,id:string,reply:RichReply)=>Promise<void>}={}) {
     if(provider.mode==='live') {
       if(!(provider.freeQuota?options.allowFreeInference:options.allowPaidInference)||!provider.billing) throw new ToolError('Live interpretation is disabled until explicitly authorized metered configuration is supplied');
       if(rateHealth(provider.billing).status==='invalid')validateRateCard(provider.billing);
@@ -261,6 +261,15 @@ export class ConversationRuntime {
       }
       const held=await client.query("SELECT id FROM messages WHERE id=$1 AND conversation_id=$2 AND status='processing' AND claim_token=$3 AND lease_until>clock_timestamp()",[claimed.id,ctx.conversationId,claimed.token]);
       if(!held.rowCount) return; // Another worker acquired the expired lease; old result is discarded.
+      const shoppingSignal=deterministic||interpretation?.operations.length||interpretation?.assistance||interpretation?.priceQuery||interpretation?.next==='assist';
+      const unrelated=!failure&&!shoppingSignal&&
+        (interpretation?.conversation==='unrelated'||interpretation?.understanding?.intents.every(i=>i==='unrelated'));
+      const socialOnly=interpretation?.conversation==='greeting'||interpretation?.conversation==='thanks';
+      const offTopic=unrelated||voiceFailureKind==='unreadable'?true:failure||socialOnly?null:false;
+      if(await this.options.observeTurn?.(client,ctx,offTopic)){
+        if(claimed.event.type==='voice'&&interpretation?.transcript)await client.query('UPDATE messages SET text=$2 WHERE id=$1',[claimed.id,interpretation.transcript]);
+        return;
+      }
       await client.query('SAVEPOINT turn_effects');
       if(Date.now()>=claimed.deadlineAt){failure='The turn deadline was reached. Your list is retained.';failureReason='turn_deadline';}
       const current=await loadState(client,ctx);

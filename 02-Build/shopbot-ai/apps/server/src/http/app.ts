@@ -50,8 +50,8 @@ export async function createApp(config: Config, pool: Pool, nativeTest?:Interpre
   await registerRemoteMcp(app,pool,config);
   if(whatsapp)await registerWhatsApp(app,whatsapp);
   const privacyPolicy="default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
-  if(config.whatsapp?.privacyPublished)app.get('/privacy',async(_req,reply)=>reply.header('Cache-Control','no-store').header('Content-Security-Policy',privacyPolicy).type('text/html').send(renderPrivacy(config.whatsapp?.aiEnabled,config.whatsapp?.mediaEnabled)));
-  if(config.owner)app.get('/api/owner/privacy-draft',async(_req,reply)=>reply.header('Content-Security-Policy',privacyPolicy).type('text/html').send(renderPrivacy(config.whatsapp?.aiEnabled,config.whatsapp?.mediaEnabled)));
+  if(config.whatsapp?.privacyPublished)app.get('/privacy',async(_req,reply)=>reply.header('Cache-Control','no-store').header('Content-Security-Policy',privacyPolicy).type('text/html').send(renderPrivacy(config.whatsapp?.aiEnabled,config.whatsapp?.mediaEnabled,config.whatsapp?.audience)));
+  if(config.owner)app.get('/api/owner/privacy-draft',async(_req,reply)=>reply.header('Content-Security-Policy',privacyPolicy).type('text/html').send(renderPrivacy(config.whatsapp?.aiEnabled,config.whatsapp?.mediaEnabled,config.whatsapp?.audience)));
   app.get('/catalog-images/messages/:hash',async(req,reply)=>{const image=readVisualImage((req.params as {hash:string}).hash);if(!image)return reply.code(404).send();return reply.type('image/png').header('Cache-Control','public, max-age=86400, immutable').header('X-Content-Type-Options','nosniff').send(image);});
 
   const escapeHtml=(value:string)=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
