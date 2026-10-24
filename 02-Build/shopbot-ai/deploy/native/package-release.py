@@ -63,6 +63,9 @@ for name in ['catalog.json', 'catalog-map.json']:
     shutil.copy2(app / 'resources/catalog/ksmc-demo' / name, catalog / name)
 shutil.copytree(app / 'resources/catalog/ksmc-demo/images', catalog / 'images')
 shutil.copytree(app / 'resources/fonts',stage / 'app/resources/fonts')
+# Versioned agent instructions are public runtime artifacts, covered by release proof.
+if (app/'resources/mcp').exists():
+    shutil.copytree(app/'resources/mcp',stage/'app/resources/mcp')
 if (app/'resources/welcome').exists():
     shutil.copytree(app/'resources/welcome',stage/'app/resources/welcome')
 dependency_additions=[]
