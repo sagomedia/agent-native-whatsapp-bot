@@ -182,3 +182,7 @@ Verified incoming WhatsApp webhooks now retain the sender-matched profile name a
 ## Obsolete review queue recovery
 
 The sender now isolates never-attempted historical system notices when an explicitly superseded uncertain review blocks them and a later customer turn already has a current assistant reply. Notices remain blocked for owner review; older unsent assistant fallbacks are cancelled. Unknown delivery evidence is preserved. Recovery takes the conversation lock, scopes store/channel and operator revision, records an audit event, and retains active-review, current multipart, attempted-notice and owner-control guards.
+
+### Carousel-first conversation follow-up (2026-10-24)
+
+Product photos lead selection before a missing count. Quantity questions retain the selected photo; visual correction targeting and focused removal recover uncertain voice terms without accepting invented changes. Known products can be individually selected beside an unmatched shop-check request. Full-list delivery/approval and separate submission consent remain required. Literal 3M display fixed without catalog changes. Validation: 931 integration tests, 4 catalog cleanup tests and production build passed. Device acceptance pending. Evidence: `../../03-Output/carousel-first-conversation/README.md` (issue #75).

@@ -39,15 +39,15 @@ function detail(before:DraftLine,after:DraftLine,state:CartSnapshot):string|unde
  return next;
 }
 
-function fragment(change:Change,state:CartSnapshot):string {
- const name=fitText(lineName(change.line,state).replace(/\s+/g,' ').trim(),70);
+function fragment(change:Change,state:CartSnapshot,maxNameLength=70):string {
+ const name=fitText(lineName(change.line,state).replace(/\s+/g,' ').trim(),maxNameLength);
  if(change.kind==='removed')return say(state,`Removed ${name}`,`${name} நீக்கப்பட்டது`,`${name} remove panniyachu`);
  if(change.kind==='added')return say(state,`Added ${name}${change.detail?` (${change.detail})`:''}`,`${name} சேர்க்கப்பட்டது${change.detail?` (${change.detail})`:''}`,`${name} serththaachu${change.detail?` (${change.detail})`:''}`);
  return say(state,`Changed ${name}${change.detail?` (${change.detail})`:''}`,`${name} மாற்றப்பட்டது${change.detail?` (${change.detail})`:''}`,`${name} maaththiyaachu${change.detail?` (${change.detail})`:''}`);
 }
 
 /** A factual, optional context line for a successfully committed cart mutation. */
-export function cartChangeFeedback(before:CartSnapshot,after:CartSnapshot):string|undefined {
+export function cartChangeFeedback(before:CartSnapshot,after:CartSnapshot,maxNameLength=70):string|undefined {
  const old=new Map(before.draft.map(line=>[line.id,line]));
  const current=new Map(after.draft.map(line=>[line.id,line]));
  const changes:Change[]=[];
@@ -62,7 +62,7 @@ export function cartChangeFeedback(before:CartSnapshot,after:CartSnapshot):strin
  // change must still fit beside the next question in one WhatsApp message.
  const shown:string[]=[];
  for(const change of changes){
-  const candidate=fragment(change,after);
+  const candidate=fragment(change,after,maxNameLength);
   if(shown.length===3||candidate.length>170||[...shown,candidate].join('; ').length>185)break;
   shown.push(candidate);
  }

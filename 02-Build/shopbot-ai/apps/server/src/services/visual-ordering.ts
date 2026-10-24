@@ -76,12 +76,13 @@ export function visualListView(state:ConversationState):RichReply {
 export function visualCartMutation(before:ConversationState,after:ConversationState,options:{contextLines?:string[];fullList?:boolean}={}):RichReply|undefined {
  if(!before.draft.length||before.lastRequestId||after.lastRequestId)return;
  if(options.fullList||before.draft.some(line=>!after.draft.some(next=>next.id===line.id)))return withContext(visualListView(after),options.contextLines);
- // Completing a previously missing count or adding another item still needs
- // the ordinary complete product review, including any unresolved variants.
- if(after.draft.some(line=>!before.draft.some(old=>old.id===line.id))||after.pending?.kind!=='products'||!productCheckCoversDraft(after,after.pending))return;
+ // Focus a routine count/addition update only when every product is identified.
+ // Full-list approval stays behind View full list and its delivery proof.
+ if(after.pending?.kind!=='products'||!productCheckCoversDraft(after,after.pending))return;
  const changed=after.draft.filter(line=>{
   const old=before.draft.find(previous=>previous.id===line.id);
-  return old?.sku&&old.sku===line.sku&&(old.quantity!==null||JSON.stringify(old.requestedAmount)!==JSON.stringify(line.requestedAmount))&&JSON.stringify([old.quantity,old.unit,old.requestedQuantity,old.requestedUnit,old.requestedAmount,old.amountMode])!==JSON.stringify([line.quantity,line.unit,line.requestedQuantity,line.requestedUnit,line.requestedAmount,line.amountMode]);
+  if(!old)return !!line.sku;
+  return old.sku&&old.sku===line.sku&&JSON.stringify([old.quantity,old.unit,old.requestedQuantity,old.requestedUnit,old.requestedAmount,old.amountMode])!==JSON.stringify([line.quantity,line.unit,line.requestedQuantity,line.requestedUnit,line.requestedAmount,line.amountMode]);
  });
  if(!changed.length)return;
  if(changed.length===after.draft.length)return withContext(visualListView(after),options.contextLines);
@@ -105,16 +106,13 @@ export function visualProductReview(state:ConversationState,compact=false,clarif
    const caption=family?localName(family.label,family.localNames,state):a.query;
    return product?{kind:'product',lineId:line.id,product,caption:productCaption(product,state,[caption,product.specifications?.size]),buttons:[select]}:instruction(caption,[say(state,'Shop needs to check this type','இந்த வகையை கடை சரிபார்க்கணும்','Intha vagai kadai check pannanum')],caption,[select]);
   });
-  const buttons=cards.map((card,index)=>{
-   const alternative=intent.alternatives![index],family=meaning.discovery?.facets.find(f=>f.key==='family')?.values.find(v=>v.value===alternative.familyId);
-   return {...card.buttons![0],label:family?localName(family.label,family.localNames,state):alternative.query};
-  });
-  return reply('identify',[part([],question,buttons)],'product_meaning');
+  return reply('identify',[part(cards,question)],'product_meaning');
  }
  const ambiguous=check.groups.find(g=>g.products.length>1||!state.draft.find(l=>l.id===g.lineId)?.sku),missing=state.draft.filter(l=>!l.sku&&!l.candidates?.length||l.resolution==='unavailable');
  const identified=productCheckCoversDraft(state,check);
  const confirmShown=identified||!!state.allowPartialReview&&check.groups.length>0&&check.groups.every(g=>g.products.length===1&&state.draft.find(l=>l.id===g.lineId)?.sku===g.products[0].sku);
- const approve:Button={label:say(state,'Correct, show bill','சரி, Bill காட்டு','Sari, bill kaattu'),event:{id:randomUUID(),type:'confirm_products',batchId:check.id}};
+ const needsCount=state.draft.some(line=>line.sku&&line.quantity===null&&!line.shopCheckDeferred);
+ const approve:Button={label:needsCount?say(state,'Items correct','பொருட்கள் சரி','Porutkal sari'):say(state,'Correct, show bill','சரி, Bill காட்டு','Sari, bill kaattu'),event:{id:randomUUID(),type:'confirm_products',batchId:check.id}};
  const edit=change(state);
  if(ambiguous){
   const line=state.draft.find(l=>l.id===ambiguous.lineId)!;
@@ -123,7 +121,12 @@ export function visualProductReview(state:ConversationState,compact=false,clarif
   const question=catalogQuestion(clarifyQuestion,state,ambiguous.products)??(line.discovery?.matchStatus==='alternatives'?say(state,'These options differ from your request. Choose one only if you want it instead.','இவை நீங்கள் கேட்ட விவரத்திலிருந்து வேறுபடும். மாற்றாக வேண்டுமென்றால் மட்டும் தேர்வு செய்யுங்கள்.','Ivai neenga ketta vivarathilirunthu maarupadum. Maaththa venumna mattum choose pannunga.'):alternative?say(state,`You asked for ${line.packUnitAlternative!.requested.value} ${line.packUnitAlternative!.requested.unit}. This product is in the catalog with a different pack unit. Check the photo and pack label. Would you like this pack?`,`${line.packUnitAlternative!.requested.value} ${unitName(line.packUnitAlternative!.requested.unit,state)} கேட்டீங்க.\nஇந்த பெயர்ல கடைல இருக்குற pack-ஐ காட்டுறேன்.\nPhoto-வும் pack அளவும் பாருங்க. இது வேணுமா?`,`${line.packUnitAlternative!.requested.value} ${line.packUnitAlternative!.requested.unit} ketteenga. Intha peyarla kadaiyila irukkura pack-ai kaatturen. Photo-vum pack size-um paarunga. Ithu venumaa?`):say(state,`Which ${lineName(line,state)} do you need?`,`${lineName(line,state)} — எது வேணும்?`,`${lineName(line,state)} — ethu venum?`));
   return reply('identify',[part(choices,question)],alternative?'pack_unit_alternative':'product_or_specification');
  }
- const cards=draftReviewCards(state);
+ const cards=draftReviewCards(state).map(card=>{
+  // A separate unlisted request must not prevent selecting a known product.
+  // Individual selection confirms only this displayed SKU, never the full list.
+  if(!confirmShown&&card.kind==='product'&&check.groups.some(group=>group.lineId===card.lineId&&group.products.some(product=>product.sku===card.product.sku))&&!state.draft.find(line=>line.id===card.lineId)?.productConfirmation)return {...card,buttons:[{label:say(state,'This item is right','இந்தப் பொருள் சரி','Intha porul sari'),event:{id:randomUUID(),type:'select_product' as const,batchId:check.id,lineId:card.lineId!,sku:card.product.sku}},...(card.buttons??[])]};
+  return card;
+ });
  const estimate=estimateLines(state.draft);
  const total=[estimateTotalText(state),estimatePendingSummary(state)].filter(Boolean).join('\n');
  const estimateButton:Button={label:say(state,'Show estimate','Bill காட்டு','Bill kaattu'),event:{id:randomUUID(),type:'review_partial',expectedVersion:state.version}};
@@ -134,14 +137,14 @@ export function visualProductReview(state:ConversationState,compact=false,clarif
   const controls=[...(primary?[primary]:[]),change(state),action(state,'view_products',say(state,'See photos','Photo காட்டு','Photo kaattu'))];
   return textPresentation([title,total].join('\n'),controls,missing.length?'shop_check':'products');
  }
- const guidance=compact?say(state,'Check the requested amount and selling unit.','கேட்ட அளவும் கடை அளவும் சரியா பாருங்க.','Ketta alavum kadai alavum sariyaa paarunga.'):say(state,'Swipe to check → Then tap Show bill.','படங்களை நகர்த்திப் பாருங்க → சரின்னா Bill காட்டு.','Photos-ai nagarththi paarunga → sarinna Bill kaattu.');
+ const guidance=compact?say(state,'Check the requested amount and selling unit.','கேட்ட அளவும் கடை அளவும் சரியா பாருங்க.','Ketta alavum kadai alavum sariyaa paarunga.'):needsCount?say(state,'Check the photos. Are these the right items?','படங்களைப் பாருங்க. பொருட்கள் சரியா?','Photos paarunga. Porutkal sariyaa?'):say(state,'Swipe to check → Then tap Show bill.','படங்களை நகர்த்திப் பாருங்க → சரின்னா Bill காட்டு.','Photos-ai nagarththi paarunga → sarinna Bill kaattu.');
  const guide:VisualCard={kind:'instruction',reviewGuide:true,title,lines:[say(state,'Check every item','ஒவ்வொரு item-யும் பாருங்க','Ovvoru item-aiyum paarunga'),total],caption:guidance,buttons:[change(state)]};
  // The first card explains the swipe; the final group owns approval. Every
  // group remains in the same delivery binding, so no unseen page can be approved.
  const reviewCards=compact?focused:cards.length===1?cards:[guide,...cards],parts:ReplyPart[]=[];
  for(let offset=0;offset<reviewCards.length;offset+=10){
   const final=offset+10>=reviewCards.length;
-  const group=reviewCards.slice(offset,offset+10).map(card=>({...card,buttons:final&&primary?[primary,...(card.buttons??[change(state)]).slice(0,1)]:card.buttons?.slice(0,1)??[change(state)]}));
+  const group=reviewCards.slice(offset,offset+10).map(card=>({...card,buttons:final&&primary?[primary,...(card.buttons??[change(state)]).slice(0,1)]:card.buttons?.slice(0,2)??[change(state)]}));
   parts.push(part(group,offset===0?(catalogQuestion(clarifyQuestion,state,check.groups.flatMap(g=>g.products))??(compact?guidance:title)):say(state,'More items → Check these too.','மீதமுள்ள items-யும் பாருங்க →','Meethamulla items-aiyum paarunga →')));
  }
  return reply(missing.length?'shop_check':'products',parts,missing.length?missing.find(l=>l.catalogIssue)?.catalogIssue??'catalog_missing':undefined);
@@ -174,7 +177,14 @@ export function visualEstimate(state:ConversationState,lines:ConversationState['
 export function visualReply(base:RichReply,state:ConversationState,request?:OrderRequest|null):RichReply {
  const plan=planReply(base,state,request);
  if(!state.visualOrdering||plan.purpose==='read_only')return base;
- if(plan.purpose==='error'||base.clarificationReason==='intent_clarification'||base.clarificationReason==='keep_only_target')return nativeReply(base,state);
+ if(plan.purpose==='error'){
+  if(base.clarificationReason?.startsWith('interpretation_')&&state.draft.length&&!state.lastRequestId){
+   const question=say(state,'I kept your list. Choose the item to correct.','பட்டியல் அப்படியே இருக்கு. மாற்ற வேண்டிய பொருளைத் தேர்வு செய்யுங்க.','List appadiye irukku. Maatha vendiya porulai choose pannunga.');
+   const picker=visualEditPicker(state);return {...picker,stage:'error',text:question,parts:picker.parts?.map(part=>({...part,text:question})),clarificationReason:base.clarificationReason,replyLanguage:state.replyLanguage};
+  }
+  return nativeReply(base,state);
+ }
+ if(['cart_edit_target','intent_clarification','keep_only_target'].includes(base.clarificationReason??''))return visualTargetQuestion(base,state);
  if(base.handoffRequested)return nativeReply({...base,stage:'status',handoffRequested:true},state);
  if(request){return {...(base.stage==='submitted'?visualBill(state,request):visualStatus(state,request)),replyLanguage:state.replyLanguage};}
  if(base.stage==='returning')return base;
@@ -194,7 +204,9 @@ export function visualReply(base:RichReply,state:ConversationState,request?:Orde
  }
  if(state.editingLineId){
   const selected=state.draft.find(l=>l.id===state.editingLineId),product=selected?.candidates?.find(p=>p.sku===selected.sku);
-  if(product){const question=say(state,'What should change: product, size or count?','பொருள், அளவு, எண்ணிக்கை — என்ன மாற்றணும்?','Porul, size, count — enna maathanum?');return {...reply('correction',[part([{kind:'product',lineId:selected!.id,product,caption:productCaption(product,state,[product.specifications?.size,question]),buttons:base.buttons?.slice(0,3)}],question)],'selected_item_change'),replyLanguage:state.replyLanguage};}
+  const remove:Button|undefined=selected?{label:say(state,'Remove this','இதை நீக்கு','Ithai neekku'),event:{id:randomUUID(),type:'set_quantity',lineId:selected.id,quantity:0,expectedVersion:state.version}}:undefined;
+  if(selected&&!product){const question=say(state,'What should change? Say the correction or “remove it”.','என்ன மாற்றணும்? சரியான விவரம் அல்லது “இதை நீக்கு” சொல்லுங்க.','Enna maathanum? Sariyana vivaram illa “ithai neekku” sollunga.');return {...reply('correction',[part([instruction(lineName(selected,state),[say(state,'Request awaiting shop checking','கடை சரிபார்க்க வேண்டிய கோரிக்கை','Kadai check panna vendiya request')],lineName(selected,state),remove?[remove]:[])],question)],'selected_item_change'),replyLanguage:state.replyLanguage};}
+  if(product){const question=say(state,'What should change: product, size or count?','பொருள், அளவு, எண்ணிக்கை — என்ன மாற்றணும்?','Porul, size, count — enna maathanum?');return {...reply('correction',[part([{kind:'product',lineId:selected!.id,product,caption:productCaption(product,state,[product.specifications?.size,question]),buttons:[...(base.buttons??[]).slice(0,2),...(remove?[remove]:[])]}],question)],'selected_item_change'),replyLanguage:state.replyLanguage};}
  }
  const questionId=state.pending?.kind==='question'?state.pending.lineId:undefined;
  const line=plan.purpose==='clarification'?plan.line:state.draft.find(l=>l.id===questionId);
@@ -219,8 +231,9 @@ export function visualReply(base:RichReply,state:ConversationState,request?:Orde
   }
   const step=product.quantityStep||1;
   const quantityButtons:Button[]=needsCount?[1,2,5].map(n=>Math.round(n*step*1000)/1000).filter(n=>n>0&&n<=100).map(quantity=>({label:`${quantity} ${unitName(product.unit,state,quantity)}`,event:{id:randomUUID(),type:'set_quantity',lineId:line.id,quantity,expectedVersion:state.version}})):base.buttons?.slice(0,3)??[];
-  const text=[`*${productName(product,state)}*`,needsCount?say(state,`How many ${unitName(product.unit,state)}?`,`எத்தனை ${unitName(product.unit,state)} வேணும்?`,`Eththanai ${unitName(product.unit,state)} venum?`):prompt,needsCount?productPriceText(product,state):requestedAmountText(line,state),state.draft.length>1?say(state,'Your other items are kept.','மத்த items list-ல இருக்கு.','Maththa items list-la irukku.'):undefined].filter(Boolean).join('\n');
-  return nativeReply({...base,text,stage:'quantity',clarificationReason:'purchase_count',contextLines:base.contextLines?.slice(0,1),buttons:quantityButtons},state);
+  const question=say(state,`How many ${unitName(product.unit,state)}?`,`எத்தனை ${unitName(product.unit,state)} வேணும்?`,`Eththanai ${unitName(product.unit,state)} venum?`);
+  const card:VisualCard={kind:'product',lineId:line.id,product,caption:productCaption(product,state,[question,measurementText(details,state)]),buttons:quantityButtons};
+  return withContext({...reply('quantity',[part([card],question)],'purchase_count'),replyLanguage:state.replyLanguage},base.contextLines);
  }
  if(base.cards?.length){
   const cards:VisualCard[]=base.cards.slice(0,3).map(c=>({kind:'product',product:c.product,caption:productCaption(c.product,state,[c.product.brand,measurementText(c.product.specifications?.size??'',state),productPriceText(c.product,state),productStockText(c.product,state),c.matchLabel,c.quantityLabel]),buttons:[...(c.action?[{label:c.label,event:c.action}]:[]),...(base.buttons??[]).filter(b=>!(b.event.type==='shopping_action'&&b.event.action==='handoff'))].slice(0,3)}));
@@ -231,6 +244,25 @@ export function visualReply(base:RichReply,state:ConversationState,request?:Orde
  const welcomeButtons:Button[]=[{label:'தமிழ்',event:{id:randomUUID(),type:'change_language',language:'ta'}},{label:'Tanglish',event:{id:randomUUID(),type:'change_language',language:'ta-Latn'}},action(state,'browse',say(state,'Browse items','பொருள் தேடு','Porul thedu'))];
  const message=stage==='welcome'?customerCopy('welcome',state):base.text;
  return nativeReply({...base,text:message,stage,buttons:stage==='welcome'?welcomeButtons:base.buttons?.slice(0,3)},state);
+}
+function visualTargetQuestion(base:RichReply,state:ConversationState):RichReply {
+ const cards:VisualCard[]=[];
+ for(const button of base.buttons??[]){
+  const event=button.event;
+  if(!('lineId' in event)||typeof event.lineId!=='string')continue;
+  const line=state.draft.find(line=>line.id===event.lineId);if(!line)continue;
+  const product=line.candidates?.find(product=>product.sku===line.sku);
+  const number=state.draft.indexOf(line)+1;
+  const label=say(state,`Item ${number}`,`பொருள் ${number}`,`Porul ${number}`);
+  const choice={...button,label};
+  cards.push(product?{kind:'product',lineId:line.id,product,caption:productCaption(product,state,[line.quantity===null?undefined:`${line.quantity} ${unitName(line.unit??'unit',state,line.quantity)}`]),buttons:[choice]}:instruction(lineName(line,state),[say(state,'Request awaiting shop checking','கடை சரிபார்க்க வேண்டிய கோரிக்கை','Kadai check panna vendiya request')],lineName(line,state),[choice]));
+ }
+ if(!cards.length)return nativeReply(base,state);
+ const counts=(base.buttons??[]).flatMap(button=>button.event.type==='set_quantity'?[button.event.quantity]:[]);
+ const count=counts.length&&new Set(counts).size===1?counts[0]:undefined;
+ const question=base.clarificationReason==='intent_clarification'?count!==undefined?say(state,`Which item should have count ${count}?`,`எந்தப் பொருளுக்கு எண்ணிக்கை ${count} வேணும்?`,`Entha porulukku count ${count} venum?`):say(state,'Which item did you mean?','எந்தப் பொருளைச் சொன்னீங்க?','Entha porulai sonneenga?'):base.text;
+ const parts:ReplyPart[]=[];for(let offset=0;offset<cards.length;offset+=10)parts.push(part(cards.slice(offset,offset+10),question));
+ return {...reply('identify',parts,base.clarificationReason),buttons:base.buttons,replyLanguage:state.replyLanguage};
 }
 function nativeReply(base:RichReply,state:ConversationState):RichReply {
  return {...base,text:[...base.contextLines??[],base.text].filter(Boolean).join('\n'),parts:undefined,cards:undefined,presentation:base.buttons?.length?'list':'text',outboundMessages:1,replyLanguage:state.replyLanguage};

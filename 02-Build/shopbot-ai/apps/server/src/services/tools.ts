@@ -397,7 +397,7 @@ export class RetailTools {
         ?active&&!active.sku&&active.productIntent?.kind!=='ambiguous'&&needsPipeType(active.query??active.name)?active:undefined
         :state.draft.find(l=>!l.sku&&l.productIntent?.kind!=='ambiguous'&&needsPipeType(l.query??l.name));
       const missingCount=state.visualOrdering&&!pipeTypeLine&&!state.draft.some(l=>!l.sku&&!l.shopCheckDeferred&&l.candidates?.length||l.productIntent?.kind==='ambiguous')
-        ?state.draft.find(l=>l.sku&&!l.shopCheckDeferred&&l.resolution==='needs_quantity'&&l.quantity===null&&l.requestedQuantity===undefined&&!l.requestedAmount):undefined;
+        ?state.draft.find(l=>l.sku&&(!state.requireProductConfirmation||productConfirmed(l))&&!l.shopCheckDeferred&&l.resolution==='needs_quantity'&&l.quantity===null&&l.requestedQuantity===undefined&&!l.requestedAmount):undefined;
       if(missingCount){
         state.pending={kind:'question',id:randomUUID(),lineId:missingCount.id,version:state.version};await saveState(client,ctx,state);
         return {state,message:say(state,`How many ${missingCount.unit??'packs'} of ${lineName(missingCount,state)}?`,`${lineName(missingCount,state)} — எத்தனை ${unitName(missingCount.unit??'unit',state)} வேணும்?`,`${lineName(missingCount,state)} — eththanai ${missingCount.unit??'packs'} venum?`)};

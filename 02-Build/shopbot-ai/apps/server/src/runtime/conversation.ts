@@ -618,7 +618,7 @@ export class ConversationRuntime {
       rich=materializeVisualReply({...editVisual??visualReply({...rich,compactReview:alreadySeen&&!cartMutated},finalState,replyRequest),storeName:claimed.catalogMap?.store.name});
       // Confirm only persisted customer CRUD, after presentation has chosen its
       // primary question. Read-only refreshes and rejected plans say nothing.
-      const feedback=cartBefore.draft.length>0&&finalState.visualOrdering&&!failure&&rich.stage!=='error'&&cartMutated&&!cartBefore.lastRequestId&&!finalState.lastRequestId?cartChangeFeedback(cartBefore,finalState):undefined;
+      const feedback=cartBefore.draft.length>0&&finalState.visualOrdering&&!failure&&rich.stage!=='error'&&cartMutated&&!cartBefore.lastRequestId&&!finalState.lastRequestId?cartChangeFeedback(cartBefore,finalState,rich.parts?.some(part=>part.cards.length)?30:70):undefined;
       if(feedback)rich={...rich,text:feedback+'\n'+rich.text,parts:rich.parts?.map((part,index)=>index===0?{...part,text:feedback+'\n'+part.text}:part)};
       message=rich.text;
       if(finalState.visualOrdering)await cancelSupersededReviews(client,ctx.conversationId,finalState.version,conversationBinding(finalState,await loadAssistantMemory(client,ctx)));

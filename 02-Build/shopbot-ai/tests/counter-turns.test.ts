@@ -81,16 +81,19 @@ const fiveItems:Operation[]=[
 ];
 const shoppingList='one 1 inch pipe, one 0.75 inch pipe, one scraper, one PVC pipe cutter, one 10L can white paint';
 
-test('missing pack count asks a focused question before photo confirmation, never send or a zero bill',()=>fixture(async(pool,inbox)=>{
+test('missing pack count follows photo confirmation, never send or a zero bill',()=>fixture(async(pool,inbox)=>{
   const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:'PAINT10',quantity:null,packSize:{value:10,unit:'litre'}}]),{visualOrdering:true});
   let snapshot=await turn(inbox,runtime,'10L white paint');
   const reply=lastReply(snapshot);
   assert.equal(snapshot.conversation.draft[0].quantity,null);
   assert.ok(!buttons(reply).some(b=>b.event.type==='shopping_action'&&b.event.action==='finish_order'));
   assert.doesNotMatch(textOnPhone(reply),/₹0\.00|send my list to the store|Review the estimated bill/i);
-  assert.equal(lastReply(snapshot).stage,'quantity');
-  snapshot=await turn(inbox,runtime,'two cans');
+  assert.equal(lastReply(snapshot).stage,'products');
   snapshot=await turn(inbox,runtime,action(snapshot,e=>e.type==='confirm_products'));
+  assert.equal(lastReply(snapshot).stage,'quantity');
+  assert.ok(lastReply(snapshot).parts?.some(part=>part.cards.some(card=>card.kind==='product')));
+  snapshot=await turn(inbox,runtime,'two cans');
+  if(snapshot.conversation.pending?.kind==='products')snapshot=await turn(inbox,runtime,action(snapshot,e=>e.type==='confirm_products'));
   assert.equal(snapshot.conversation.pending?.kind,'review');
   assert.equal(snapshot.conversation.draft[0].quantity,2);
   assert.equal(snapshot.requests.length,0);
