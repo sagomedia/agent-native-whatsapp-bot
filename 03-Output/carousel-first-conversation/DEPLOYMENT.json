@@ -1,0 +1,50 @@
+{
+  "started_at": "2026-10-24T10:10:21.726661+00:00",
+  "old_release": "preview-b6cdc8a78144",
+  "new_release": "preview-5ded7dd8f333",
+  "source_commit": "1ff00226da962abd35c707dc6639071df1c6f9d4",
+  "artifact_hash": "8f0dcf1017bf7f04df17a2497c51236b7249b487e65a787e256412c39b39b12c",
+  "before": {
+    "products": 340,
+    "orders": 17,
+    "messages": 721,
+    "schema": 46,
+    "catalog_revision": 1901
+  },
+  "unit": "shopbot-carousel-upgrade-5ded7dd8f333.service",
+  "models_and_prompt_unchanged": true,
+  "completed_at": "2026-10-24T10:21:39.309361+00:00",
+  "upgrade_result": "inactive/success/0 verified",
+  "health": {
+    "status": "ready",
+    "mode": "mock"
+  },
+  "service": {
+    "NRestarts": "0",
+    "ActiveState": "active",
+    "SubState": "running"
+  },
+  "backup": "/var/backups/shopbot-migration/owner-20261024T101124Z",
+  "backup_database_bytes": 190848637,
+  "backup_restore_listing": "passed",
+  "environment_unchanged": true,
+  "environment_mode": "0600",
+  "after": {
+    "products": 340,
+    "orders": 17,
+    "messages": 721,
+    "schema": 46,
+    "catalog_revision": 1901
+  },
+  "validation": {
+    "integration_tests_passed": 931,
+    "integration_tests_failed": 0,
+    "catalog_cleanup_tests_passed": 4,
+    "verified_build": "passed",
+    "hosted_checks": "both passed for implementation commit",
+    "real_whatsapp_device_acceptance": "pending owner test"
+  },
+  "pull_request": "https://github.com/sagomedia/agent-native-whatsapp-bot/pull/76",
+  "issue": "https://github.com/sagomedia/agent-native-whatsapp-bot/issues/75",
+  "archive_sha256": "534ceb94a6dd1171dc995e7cce94a7e8347fc21414b5bb0bdedd7c582242fa7d"
+}
