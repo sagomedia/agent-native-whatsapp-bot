@@ -31,6 +31,7 @@ import {randomUUID} from 'node:crypto';
 import {requestStatusText} from '../services/request-status.js';
 import type {OrderRequest} from '../../../../packages/contracts/index.js';
 import {registerOwnerCatalog} from './owner-catalog.js';
+import {registerOwnerImport} from './owner-import.js';
 import {registerOwnerSimpleProducts} from './owner-simple-products.js';
 import {registerOwnerFacts} from './owner-facts.js';
 import {registerOwnerOperations} from './owner-operations.js';
@@ -96,6 +97,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
   registerOwnerOperations(app,pool,owner.storeId);
   await registerOwnerCatalog(app,pool,owner.storeId,write,catalogGenerator??(config.catalogAi?new GoogleCatalogGenerator(config.catalogAi.apiKey):undefined));
   registerOwnerSimpleProducts(app,pool,owner.storeId,write);
+  registerOwnerImport(app,pool,owner.storeId,owner.email);
   const release=runtimeReleaseMetadata();
   // The navigation shell needs a shop name and help count, not order lines,
   // conversation drafts, media metadata, and audit records on every refresh.

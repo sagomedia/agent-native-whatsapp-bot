@@ -115,7 +115,7 @@ test('official MCP client prepares, transfers a real host file, reviews images a
  await server.connect(a);await client.connect(b);
  const call=async(name:string,args:any)=>{const r=await client.callTool({name,arguments:args});assert.equal(r.isError,undefined,JSON.stringify(r));assert.ok(r.structuredContent);return r;};
  try{
-  const tools=(await client.listTools()).tools;assert.equal(tools.length,16);assert.deepEqual(tools.find(t=>t.name==='catalog_attach_media')!._meta?.['openai/fileParams'],['file']);
+  const tools=(await client.listTools()).tools;assert.equal(tools.length,19);assert.deepEqual(tools.find(t=>t.name==='catalog_attach_media')!._meta?.['openai/fileParams'],['file']);
   const prompts=await client.listPrompts();assert.ok(prompts.prompts.some(p=>p.name==='edit_product'));const prompt=await client.getPrompt({name:'add_product'});assert.ok(JSON.stringify(prompt).includes('catalog_commit'));
   const context=(await call('catalog_context',{})).structuredContent as any;assert.equal(context.permissions.publish,true);assert.equal(context.policy.serverSideInference,false);
   const prepared=(await call('catalog_prepare',{operationId:op(),details:fields})).structuredContent as any;

@@ -1,3 +1,5 @@
+Current inventory/import update: the default Products page has no draft tab. Complete ChatGPT additions and the dedicated Import products flow add canonical inventory directly. Needs attention identifies incomplete inventory facts. Read CATALOG-CHAT.md for the shared 1–200 item import format, agent prompt and 10/16/19 tool counts by grant. Legacy staging remains internal for compatibility and photo/edit review.
+
 # Direct product addition and internal diagnostics
 
 ## Merchant chat

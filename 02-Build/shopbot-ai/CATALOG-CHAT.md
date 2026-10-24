@@ -35,7 +35,7 @@ Existing search, inventory, draft list, propose, edit_draft and stage_photo tool
 - `catalog_review`: a product card, selling basis, before/after fields, selected image preview and an immutable 30-minute review reference. Missing requirements produce focused questions.
 - `catalog_commit`: publish an exact current review under a publication grant. It is exposed only to publication-capable connections.
 
-Read-only grants expose five read tools; draft grants expose eleven tools; publication grants expose twelve. `add_product` and `edit_product` MCP prompts and `catalog://owner/workflow` provide reusable guidance. A standalone skill is included at `resources/mcp/catalog-management/SKILL.md`. Hosts choose whether to use prompts/skills; tool descriptions and explicit structured next steps also guide ordinary conversations.
+Read-only grants expose ten read tools; draft grants expose sixteen tools; publication grants expose nineteen. `add_product` and `edit_product` MCP prompts and `catalog://owner/workflow` provide reusable guidance. A standalone skill is included at `resources/mcp/catalog-management/SKILL.md`. Hosts choose whether to use prompts/skills; tool descriptions and explicit structured next steps also guide ordinary conversations.
 
 ## What review means
 
@@ -60,3 +60,15 @@ Additive migration **47** adds asset provenance and review/operation receipts. T
 Implementation and tests are isolated from other chats and deployed services. No live catalog publication, grant upgrade or deployment was performed. Integrate only this patch onto the latest source, verify migration numbering and current release state, run the combined regression suite and retain a database backup before activation. The current connected app remains unchanged until activation; existing accounts must opt in before they see `catalog_commit`.
 
 Selected-batch approval, relative stock-receiving tools, archive/restore tools and undo/history were design extensions, not new MCP operations in this first implementation. Product field/alias/price and explicit stock-count edits are supported through versioned proposals. Supplier/shelf-photo preparation can feed the same workflow without a new ingestion service.
+
+## Direct product import
+
+Products → More → Import products now opens a dedicated import flow. Copy the agent prompt, choose products.json and its exact original JPG/PNG/WebP files, check the preview, then add ready rows directly to inventory. This does not create an owner-facing draft queue. Required facts are name, seller price in rupees, physical quantity, selling unit and original photo. Aliases, keywords, localized names, brand and specifications are optional. The browser shows per-row problems and receipts; it never overwrites an existing product. Stable batchId/item IDs make identical retries safe. A changed saved item must be edited through its current product revision instead of reimporting it.
+
+The file schema, example and agent prompt are shared by dashboard and MCP at packages/contracts/catalog-import.ts. The server converts rupees to integer paise and quantity to canonical stock. Up to 200 rows are checked, with one bounded photo transaction per addition. Exact duplicate names/units, missing facts, malformed image references and invalid selling basis are rejected. Source photos remain retained privately. AI-generated or cleaned photos must use the existing provenance/review workflow instead of masquerading as originals.
+
+MCP catalog_import_guide returns the agent prompt and example; catalog_import_preview checks schema and duplicates without saving; catalog_import_item adds one confirmed row under catalog:publish. The latter accepts bounded photo bytes or supported host file handoff. All imports use the shared direct-add product service, permission checks, store lock, audit and operation receipts.
+
+The main product view removes the draft tab and redundant bulk-update menu. Needs attention filters canonical inventory for hidden products, missing photos, unconfirmed prices, unknown stock or unverified facts. Unknown stock remains distinct from out-of-stock. Legacy staging APIs are retained for compatibility, image provenance and in-chat edits, not as the required result of adding a complete product.
+
+After deploying an updated MCP server, refresh the connection metadata in ChatGPT and start a new conversation. To use direct additions or imports on a previously draft-only connection, reconnect once and select the publication permission on the protected owner consent page. Refreshing tool metadata alone cannot grant publication. No existing grant is silently widened.
