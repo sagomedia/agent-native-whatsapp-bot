@@ -4,7 +4,8 @@ import {z} from 'zod';
 import type {OwnerConfig} from '../config.js';
 
 export type RemoteMcpConfig={publicUrl:string;redirectUris?:string[]};
-export const mcpScopes=['catalog:read','catalog:draft'] as const;
+export const mcpScopes=['catalog:read','catalog:draft','catalog:publish','owner:read','orders:write'] as const;
+const defaultScopes=['catalog:read','catalog:draft'];
 const digest=(s:string)=>createHash('sha256').update(s).digest('hex');
 const secret=()=>randomBytes(32).toString('base64url');
 export const oauthError=(error:string,statusCode=400)=>Object.assign(new Error(error),{statusCode});
@@ -35,7 +36,7 @@ export class CatalogOAuth {
  constructor(private pool:Pool,readonly config:RemoteMcpConfig,private owner:OwnerConfig){this.issuer=new URL(config.publicUrl).origin;this.resourceMetadata=this.issuer+'/.well-known/oauth-protected-resource/mcp';}
  metadata(){return {issuer:this.issuer,authorization_endpoint:'https://'+this.owner.hostname+'/api/owner/mcp/authorize',token_endpoint:this.issuer+'/mcp/oauth/token',registration_endpoint:this.issuer+'/mcp/oauth/register',revocation_endpoint:this.issuer+'/mcp/oauth/revoke',response_types_supported:['code'],grant_types_supported:['authorization_code','refresh_token'],token_endpoint_auth_methods_supported:['none'],revocation_endpoint_auth_methods_supported:['none'],code_challenge_methods_supported:['S256'],scopes_supported:mcpScopes,authorization_response_iss_parameter_supported:true};}
  resource(){return {resource:this.config.publicUrl,authorization_servers:[this.issuer],scopes_supported:mcpScopes,bearer_methods_supported:['header'],resource_name:'ShopBot merchant catalog'};}
- scopes(value?:string){const scopes=[...new Set((value?.trim()||mcpScopes.join(' ')).split(' ').filter(Boolean))];if(!scopes.includes('catalog:read')||scopes.some(s=>!mcpScopes.includes(s as typeof mcpScopes[number])))throw oauthError('invalid_scope');return scopes;}
+ scopes(value?:string){const scopes=[...new Set((value?.trim()||defaultScopes.join(' ')).split(' ').filter(Boolean))];if(scopes.includes('orders:write')&&!scopes.includes('owner:read'))throw oauthError('invalid_scope');if(!scopes.includes('catalog:read')||scopes.some(s=>!mcpScopes.includes(s as typeof mcpScopes[number])))throw oauthError('invalid_scope');return scopes;}
  async register(input:unknown){
   const p=registration(this.config.redirectUris).parse(input);this.scopes(p.scope);
   // Persist a global ceiling too, so a restart does not reset abuse limits.
@@ -55,15 +56,18 @@ export class CatalogOAuth {
   return {id,csrf,name:client.name as string,redirectUri:p.redirect_uri,scopes};
  }
  async consent(input:unknown){
-  const p=z.object({id:z.uuid(),csrf:z.string().regex(/^[A-Za-z0-9_-]{43}$/),allow:z.boolean()}).strict().parse(input);
+  const p=z.object({id:z.uuid(),csrf:z.string().regex(/^[A-Za-z0-9_-]{43}$/),allow:z.boolean(),publish:z.boolean().default(false),ownerRead:z.boolean().default(false),ordersWrite:z.boolean().default(false)}).strict().parse(input);
   return this.transaction(async c=>{
    const request=(await c.query('DELETE FROM mcp_oauth_requests WHERE id=$1 AND secret_hash=$2 AND expires_at>now() RETURNING *',[p.id,digest(p.csrf)])).rows[0];if(!request)throw oauthError('invalid_request');
    const redirect=new URL(request.redirect_uri);redirect.searchParams.set('state',request.state);redirect.searchParams.set('iss',this.issuer);
    if(!p.allow){redirect.searchParams.set('error','access_denied');return {redirect:redirect.href};}
+   if(p.publish&&!request.scopes.includes('catalog:draft'))throw oauthError('invalid_scope');
+   if(p.ordersWrite&&!p.ownerRead)throw oauthError('invalid_scope');
+   const scopes=[...new Set([...request.scopes.filter((s:string)=>!['catalog:publish','owner:read','orders:write'].includes(s)),...(p.publish?['catalog:publish']:[]),...(p.ownerRead?['owner:read']:[]),...(p.ordersWrite?['orders:write']:[])])];
    const grant=randomUUID(),code=secret();
-   await c.query('INSERT INTO mcp_oauth_grants(id,store_id,actor,client_id,scopes,resource) VALUES($1,$2,$3,$4,$5,$6)',[grant,this.owner.storeId,this.owner.email,request.client_id,request.scopes,request.resource]);
+   await c.query('INSERT INTO mcp_oauth_grants(id,store_id,actor,client_id,scopes,resource) VALUES($1,$2,$3,$4,$5,$6)',[grant,this.owner.storeId,this.owner.email,request.client_id,scopes,request.resource]);
    await c.query('INSERT INTO mcp_oauth_codes(hash,grant_id,redirect_uri,challenge) VALUES($1,$2,$3,$4)',[digest(code),grant,request.redirect_uri,request.challenge]);
-   await c.query("INSERT INTO owner_audit(store_id,email,action,target_id,details) VALUES($1,$2,'mcp_connect',$3,$4)",[this.owner.storeId,this.owner.email,grant,JSON.stringify({clientId:request.client_id,scopes:request.scopes})]);
+   await c.query("INSERT INTO owner_audit(store_id,email,action,target_id,details) VALUES($1,$2,'mcp_connect',$3,$4)",[this.owner.storeId,this.owner.email,grant,JSON.stringify({clientId:request.client_id,scopes})]);
    redirect.searchParams.set('code',code);return {redirect:redirect.href};
   });
  }

@@ -18,3 +18,5 @@
   .redesign .rd-mobile-nav{position:static;flex-shrink:0}
 }
 .redesign .rd-unread-count{background:#be3030;color:white;min-width:20px;text-align:center;border-radius:12px;padding:2px 6px;font-size:12px;line-height:16px}
+
+.redesign .rd-advanced.owner-shell{display:block;min-height:0;background:transparent;--ui-accent:var(--rd-teal);--ui-accent-hover:var(--rd-teal);--ui-selected:var(--rd-tint);--ui-border:var(--rd-line)}

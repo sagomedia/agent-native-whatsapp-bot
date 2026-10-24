@@ -1,3 +1,5 @@
+import {migrateDeveloperDiagnostics} from './developer-diagnostics.js';
+import {migrateCatalogChat} from './catalog-chat.js';
 import type { Pool } from 'pg';
 import type { Config } from '../config.js';
 import { assertMock } from '../config.js';
@@ -533,8 +535,10 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       );
       INSERT INTO schema_migrations(version) VALUES(46);
     `);}
-    const v47=await client.query('SELECT version FROM schema_migrations WHERE version=47');
-    if(!v47.rowCount){await client.query(`
+    await migrateCatalogChat(client);
+    await migrateDeveloperDiagnostics(client);
+    const v49=await client.query('SELECT version FROM schema_migrations WHERE version=49');
+    if(!v49.rowCount){await client.query(`
       CREATE TABLE owner_order_reads (
         request_id uuid PRIMARY KEY REFERENCES order_requests(id) ON DELETE CASCADE,
         attention_key text NOT NULL,seen_at timestamptz NOT NULL DEFAULT now()
@@ -545,7 +549,7 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
         anchor_offset integer NOT NULL DEFAULT 0,seen_at timestamptz NOT NULL DEFAULT now()
       );
       CREATE INDEX messages_owner_unread ON messages(conversation_id,sequence) WHERE direction='inbound';
-      INSERT INTO schema_migrations(version) VALUES(47);
+      INSERT INTO schema_migrations(version) VALUES(49);
     `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
