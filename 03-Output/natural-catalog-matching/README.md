@@ -20,7 +20,15 @@ No migration, merchant catalog rewrite, new model, inference stage or budget cha
 
 Synthetic fixture coverage: 60 query wordings/negative cases, eight multi-turn conversations, typed attribute propagation, rating protection, explicit alternative selection and real partial request submission. Existing voice, confirmation, quantity, price, catalog-scale and public-admission suites are also required.
 
-Tests use a disposable local PostgreSQL cluster and mocked AI/WhatsApp providers. Live replay is read-only and makes no AI calls. See deployment evidence for final run counts and the before/after live search results.
+Final committed-source integration run: **923 passed, zero failures** (170.06 seconds). Four catalog cleanup checks and the verified production build passed. Both hosted Build and test checks passed for implementation commit `324aee0b38e2e3d3cca3db395e378ce3621b8ef3`.
+
+Tests use a disposable local PostgreSQL cluster and mocked AI/WhatsApp providers. Live replay is read-only and makes no AI calls. See `LIVE-REPLAY.json` for before/after read-only live inventory results. All eight acceptance checks passed: face mask, N95, paint, reordered paint equivalence, labelled red alternatives, Tamil N95 and typed pack constraints. The repair finds seven white 4 L paint candidates; the customer view stays capped at four choices. Warm median reads in this small sample were 52 ms for N95 face mask, 110 ms for white 4 L paint, and 223 ms for red alternatives. N99 no-match was slower (103 ms versus 63 ms), reflecting the added bounded rejection diagnostics; this is not a load-test claim.
+
+## Deployment
+
+Release `preview-b6cdc8a78144` is active and ready on the VPS. Native upgrade completed successfully with database/environment backup `/var/backups/shopbot-migration/owner-20261024T091123Z`; `pg_restore --list` passed. Product/order/message counts remained 340/16/695, schema remained 46, private environment bytes remained unchanged, and service restart count was zero. Store discovery revision changed from 1900 to 1901 with a single audit entry. `DEPLOYMENT.json` records checksums and the receipt.
+
+Rollback uses the retained `preview-039da2e54e1b` native release and the existing rollback procedure. The database was not migrated or reset; no historical media was replayed.
 
 ## Owner/device acceptance still required
 
