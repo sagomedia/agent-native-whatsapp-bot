@@ -1,3 +1,4 @@
+import {trackItemClarification} from '../services/item-clarification.js';
 import {cartChangeFeedback} from '../services/cart-change-feedback.js';
 import {listViewRequest} from '../services/list-view-intent.js';
 import {canAddToOrder,orderListChoice,askOrderItems,refreshOrderListChoice} from '../services/order-list-choice.js';
@@ -176,7 +177,7 @@ export class ConversationRuntime {
       }else deterministic=this.knownAction(claimed);
     } catch(error) {failure=error instanceof Error?error.message:'Invalid callback';}
     const quoteRecheck=claimed.event.type==='text'&&isRecheck(claimed.event.text)&&claimed.memory?.purpose==='quote'&&claimed.memory.sourceVersion===claimed.state.version;
-    if(quoteRecheck)interpretation={operations:[],next:'price',priceQuery:claimed.memory!.queries[0],priceQuantity:claimed.memory!.quoteQuantity,priceUnit:claimed.memory!.quoteUnit};
+    if(quoteRecheck)interpretation={operations:[],next:'price',priceQuery:claimed.memory!.queries[0],priceQuantity:claimed.memory!.quoteQuantity,priceUnit:claimed.memory!.quoteUnit,priceSearch:claimed.memory!.quoteSearch};
     if(!deterministic&&claimed.event.type==='text'&&submissionIntent(claimed.event.text))deterministic=this.knownAction({...claimed,event:{...claimed.event,text:'send it'}});
     let social=claimed.event.type==='text'?socialIntent(claimed.event.text):undefined;
     if(claimed.state.lastRequestId&&!claimed.state.pending&&claimed.event.type==='text'&&acknowledgementOnly(claimed.event.text))social='thanks';
@@ -456,7 +457,7 @@ export class ConversationRuntime {
 
           }
           else if(interpretation) {
-            if(interpretation.next==='price') result=await invoke({name:'search_products',args:{query:interpretation.priceQuery!,quantity:interpretation.priceQuantity,requestedUnit:interpretation.priceUnit}});
+            if(interpretation.next==='price') result=await invoke({name:'search_products',args:{query:interpretation.priceQuery!,quantity:interpretation.priceQuantity,requestedUnit:interpretation.priceUnit,search:interpretation.priceSearch}});
             else {
               let state=current;
               if(state.editingLineId&&interpretation.operations.length&&!interpretation.understanding?.keepOnly){
@@ -499,7 +500,13 @@ export class ConversationRuntime {
               const quantity=deterministic?.name==='search_products'?deterministic.args.quantity:interpretation?.priceQuantity,unit=deterministic?.name==='search_products'?deterministic.args.requestedUnit:interpretation?.priceUnit;
               // A price interruption must not erase the current version-bound edit.
               const preserveGoal=retainedCartGoal&&!interpretation?.operations.length&&(interpretation?.next==='price'||deterministic?.name==='search_products');
-              if(query&&!preserveGoal)result.discoveryBindingId=await saveAssistantMemory(client,ctx,{purpose:!!result.discovery||claimed.event.type==='browse'||interpretation?.conversation==='browse'?'discovery':'quote',queries:[query],lineId:null,sourceVersion:current.version,quoteQuantity:quantity,quoteUnit:unit,...(deterministic?.name==='discover_products'&&claimed.memory?.sourceVersion===current.version?{requestedQuantity:claimed.memory.requestedQuantity,requestedUnit:claimed.memory.requestedUnit}:{}),observations:[{tool:result.discovery?'discover_products':'search_products',query,products:result.products,totalCount:result.totalCount??result.products.length,discovery:result.discovery}]});
+              if(query&&!preserveGoal)result.discoveryBindingId=await saveAssistantMemory(client,ctx,{purpose:interpretation?.next==='price'||deterministic?.name==='search_products'?'quote':'discovery',queries:[query],lineId:null,sourceVersion:current.version,quoteQuantity:quantity,quoteUnit:unit,quoteSearch:deterministic?.name==='search_products'?deterministic.args.search:interpretation?.priceSearch,...(deterministic?.name==='discover_products'&&claimed.memory?.sourceVersion===current.version?{requestedQuantity:claimed.memory.requestedQuantity,requestedUnit:claimed.memory.requestedUnit}:{}),observations:[{tool:result.discovery?'discover_products':'search_products',query,products:result.products,totalCount:result.totalCount??result.products.length,discovery:result.discovery}]});
+            }
+            if(['text','voice'].includes(claimed.event.type)&&!deterministic&&!assistance&&!rechecking&&interpretation&&interpretation.next!=='price'&&!interpretation.conversation&&(interpretation.operations.length>0||!!interpretation.clarifyQuestion)&&!result.request){
+              const updated=await loadState(client,ctx);
+              const targeted=interpretation.operations.find(op=>op.kind==='resolve_line');
+              const targetId=targeted?.kind==='resolve_line'?targeted.lineId:interpretation.operations.some(op=>op.kind==='add_item')?updated.draft.find(l=>!claimed.state.draft.some(old=>old.id===l.id))?.id:undefined;
+              if(trackItemClarification(claimed.state,updated,targetId)){await client.query('UPDATE conversations SET draft=$1::jsonb WHERE id=$2 AND store_id=$3',[JSON.stringify(updated.draft),ctx.conversationId,ctx.storeId]);result.state=updated;}
             }
             rich=presentReply(result,result.state??current,interpretation,claimed.event);replyRequest=result.request;if(result.request&&(deterministic?.name==='submit_order_request'||explicitSend&&deterministic?.name==='confirm_product_choices'))rich.stage='submitted';
             if(claimed.event.type==='text'&&canonicalShortcut(claimed.event.text)==='yes'&&deterministic?.name==='get_draft'&&claimed.memory?.sourceVersion===current.version) {
@@ -716,7 +723,7 @@ export class ConversationRuntime {
     }
     if(isRecheck(e.text)) {
       if(claim.bindingId&&claim.bindingId!==conversationBinding(s,claim.memory))throw new ToolError('That recheck referred to an earlier question. Please name the current item; your list is unchanged.','stale_question');
-      if(claim.memory?.purpose==='quote'&&claim.memory.sourceVersion===s.version)return {name:'search_products',args:{query:claim.memory.queries[0],quantity:claim.memory.quoteQuantity,requestedUnit:claim.memory.quoteUnit}};
+      if(claim.memory?.purpose==='quote'&&claim.memory.sourceVersion===s.version)return {name:'search_products',args:{query:claim.memory.queries[0],quantity:claim.memory.quoteQuantity,requestedUnit:claim.memory.quoteUnit,search:claim.memory.quoteSearch}};
       if(s.pending?.kind==='products')return {name:'preview_order',args:{expectedVersion:s.version}};
       return {name:'get_draft',args:{}};
     }

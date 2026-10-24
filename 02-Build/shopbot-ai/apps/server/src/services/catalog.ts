@@ -1,3 +1,4 @@
+import {naturalCatalogQuery} from './catalog-request.js';
 import {canonicalMeasurementUnit} from '../../../../packages/contracts/measurements.js';
 import type { PoolClient } from 'pg';
 import {availableStock,stockMilli,stockDecimal} from '../../../../packages/contracts/stock-quantity.js';
@@ -13,8 +14,8 @@ export function matches(query: string, values: string[]) {
   const covered=(i:number):boolean=>i===needles.length||haystack.has(needles[i])&&covered(i+1)||i+1<needles.length&&/^[a-z]+$/.test(needles[i]+needles[i+1])&&haystack.has(needles[i]+needles[i+1])&&covered(i+2);
   return needles.length > 0 && covered(0);
 }
-const values=(p:Product)=>[p.name,p.unit,p.category??'',...p.aliases];
-export function exactProductMatch(query:string,p:Product){return normalize(query)===normalize(p.sku)||matches(query,values(p));}
+const values=(p:Product)=>[p.name,p.unit,p.category??'',p.brand??'',...Object.values(p.localNames??{}),...Object.values(p.specifications??{}),...p.aliases];
+export function exactProductMatch(query:string,p:Product){return normalize(query)===normalize(p.sku)||matches(naturalCatalogQuery(query),values(p));}
 export const productColumns='sku,name,local_names,unit,price_paise,stock,version,aliases,quantity_step,category,image_path,family_id,brand,specifications,keywords,price_status,indicative_price,selling_unit_verified,selling_policy,reserved_stock,inventory_version,product_group_id,product_group_name,variant_label';
 export function productFromRow(p:any):Product {
  return {...(p.selling_policy?.saleMode||p.selling_policy?.packContents||p.selling_policy?.cutAllowed||p.selling_policy?.continuousLengthAvailable?{sellingPolicy:p.selling_policy}:{}),sku:p.sku,name:p.name,...(p.product_group_id?{productGroup:{id:p.product_group_id,name:p.product_group_name,label:p.variant_label}}:{}),localNames:p.local_names,unit:p.unit,pricePaise:p.price_paise,priceStatus:p.price_status,...(p.indicative_price?{indicativePrice:p.indicative_price}:{}),sellingUnitVerified:p.selling_unit_verified,stock:availableStock(p.stock,p.reserved_stock??0),stockOnHand:p.stock===null?null:Number(p.stock),stockReserved:Number(p.reserved_stock??0),inventoryVersion:p.inventory_version??1,version:p.version,aliases:p.aliases,quantityStep:Number(p.quantity_step),...(p.category?{category:p.category}:{}),...(p.image_path?{imageUrl:p.image_path,...(/^\/catalog-images\/reference\/[a-f0-9-]{36}\.jpg$/.test(p.image_path)?{imageReference:true}:{})}:{}),...(p.family_id?{familyId:p.family_id}:{}),...(p.brand?{brand:p.brand}:{}),...(p.specifications&&Object.keys(p.specifications).length?{specifications:p.specifications}:{}),...(p.keywords?.length?{keywords:p.keywords}:{})};

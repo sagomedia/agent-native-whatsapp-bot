@@ -64,8 +64,8 @@ function validateQuantity(product: Product, quantity: number | null) {
   const step = Math.round(product.quantityStep * 1000);
   if (scaled <= 0 || quantity > 100 || !step || scaled % step !== 0) throw new ToolError(`Use increments of ${product.quantityStep} ${product.unit} for ${product.name}.`);
 }
-type LineEvidence=Pick<DraftLine,'packUnitAlternative'|'budgetCountDerived'|'sourceUncertainty'|'requestedBudgetPaise'|'packSize'|'productMeasures'|'productIntent'|'requestedAmount'|'amountMode'|'supportingPhrase'|'quantityEvidenceVersion'>;
-function lineEvidence(value:LineEvidence):LineEvidence {return Object.fromEntries(['packUnitAlternative','budgetCountDerived','sourceUncertainty','requestedBudgetPaise','packSize','productMeasures','productIntent','requestedAmount','amountMode','supportingPhrase','quantityEvidenceVersion'].flatMap(key=>value[key as keyof LineEvidence]===undefined?[]:[[key,value[key as keyof LineEvidence]]])) as LineEvidence;}
+type LineEvidence=Pick<DraftLine,'clarification'|'packUnitAlternative'|'budgetCountDerived'|'sourceUncertainty'|'requestedBudgetPaise'|'packSize'|'productMeasures'|'productIntent'|'requestedAmount'|'amountMode'|'supportingPhrase'|'quantityEvidenceVersion'>;
+function lineEvidence(value:LineEvidence):LineEvidence {return Object.fromEntries(['clarification','packUnitAlternative','budgetCountDerived','sourceUncertainty','requestedBudgetPaise','packSize','productMeasures','productIntent','requestedAmount','amountMode','supportingPhrase','quantityEvidenceVersion'].flatMap(key=>value[key as keyof LineEvidence]===undefined?[]:[[key,value[key as keyof LineEvidence]]])) as LineEvidence;}
 function resolvedLine(product: Product, quantity: number | null, query: string, id: string = randomUUID(), requestedUnit?:string,evidence:LineEvidence={}): DraftLine {
   evidence=lineEvidence(evidence);
   if(evidence.productMeasures&&!matchesProductMeasures(product,evidence.productMeasures))throw new ToolError('The shop must verify the requested product dimensions.');
@@ -101,11 +101,12 @@ function resolvedLine(product: Product, quantity: number | null, query: string, 
 }
 async function resolveLine(client: PoolClient, ctx: ActorContext, query: string, quantity: number | null, id: string = randomUUID(),requestedUnit?:string,search?:DiscoveryPlan,evidence:LineEvidence={},previous?:DraftLine): Promise<DraftLine> {
   evidence=lineEvidence(evidence);
+  search={keywords:[query.slice(0,120)],...search,allowAlternatives:search?.allowAlternatives??true};
   if(evidence.sourceUncertainty?.includes('unreadable')&&!(previous&&query!==previous.query&&evidence.supportingPhrase))return {...evidence,id,query,quantity:null,name:query,resolution:'unavailable',catalogIssue:'unreadable',candidates:[]};
   if(await catalogEnabled(client,ctx)){
     let searchQuery=packSearchQuery(query,evidence.packSize);
     let discovery=evidence.productIntent?.kind==='ambiguous'?await discoverProductMeanings(client,ctx,query,evidence.productIntent):await discoverProducts(client,ctx,searchQuery,search);
-    if(!discovery.products.length&&evidence.packSize&&evidence.productIntent?.kind!=='ambiguous'){
+    if(discovery.matchStatus!=='alternatives'&&!discovery.products.length&&evidence.packSize&&evidence.productIntent?.kind!=='ambiguous'){
       const root=packSearchQuery(query,evidence.packSize,true);
       // Retry packaging wording only after the named product failed retrieval.
       // Real containers (watering cans, storage boxes) keep their first matches.
@@ -118,14 +119,14 @@ async function resolveLine(client: PoolClient, ctx: ActorContext, query: string,
     if(evidence.productIntent?.kind==='ambiguous')return {...evidence,id,query,quantity,name:query,...(requestedUnit?{requestedUnit:normalizeUnit(requestedUnit)}:{}),resolution:'needs_choice',candidates:discovery.products,discovery};
     if(evidence.productMeasures){discovery.products=discovery.products.filter(p=>matchesProductMeasures(p,evidence.productMeasures!));const allowed=new Set(discovery.products.map(p=>p.sku));discovery.rankings=discovery.rankings.filter(r=>allowed.has(r.sku));if(!discovery.products.length)discovery.noExactMatch=true;}
     let retrievedProducts=[...discovery.products];
-    if(evidence.packSize){
+    if(evidence.packSize&&discovery.matchStatus!=='alternatives'){
       const requested=evidence.packSize;
       discovery.products=discovery.products.filter(product=>{const verified=catalogPack(product);return verified&&sameUnit(requested.unit,verified.unit)&&requested.value===verified.value;});
       const allowed=new Set(discovery.products.map(product=>product.sku));
       discovery.rankings=discovery.rankings.filter(ranking=>allowed.has(ranking.sku));
       if(!discovery.products.length)discovery.noExactMatch=true;
     }
-    if(!discovery.products.length&&evidence.packSize&&!evidence.productMeasures?.length){
+    if(discovery.matchStatus!=='alternatives'&&!discovery.products.length&&evidence.packSize&&!evidence.productMeasures?.length){
       const pack=evidence.packSize;
       const strip=(text:string)=>packSearchQuery(packSearchQuery(text,parsePackSize(text),true),pack,true);
       const specifications=Object.fromEntries(Object.entries(search?.specifications??{}).filter(([,value])=>{const m=parsePackSize(value);return !m||m.value!==pack.value||!sameUnit(m.unit,pack.unit);}));
@@ -141,7 +142,7 @@ async function resolveLine(client: PoolClient, ctx: ActorContext, query: string,
     // Keep a real identity match visible when only the pack dimension differs.
     // This is an alternative requiring a fresh customer choice, never a
     // litre/kg conversion or an automatically selected/quoted catalog item.
-    if(!discovery.products.length&&evidence.packSize&&!evidence.productMeasures?.length){
+    if(discovery.matchStatus!=='alternatives'&&!discovery.products.length&&evidence.packSize&&!evidence.productMeasures?.length){
       const requested=evidence.packSize;
       const alternatives=retrievedProducts.filter(product=>{const actual=catalogPack(product);return actual&&actual.value===requested.value&&!sameUnit(actual.unit,requested.unit)&&convertAmount(actual,requested.unit)===null;});
       if(alternatives.length){
@@ -149,8 +150,8 @@ async function resolveLine(client: PoolClient, ctx: ActorContext, query: string,
         return {...evidence,id,query,quantity,name:query,...(requestedUnit?{requestedUnit:normalizeUnit(requestedUnit)}:{}),resolution:'needs_choice',catalogIssue:'pack_unit_mismatch',packUnitAlternative:{requested},candidates:alternatives,discovery};
       }
     }
-    const exact=discovery.products.filter(p=>exactProductMatch(searchQuery,p));
-    if(!exact.length&&discovery.products.length===1&&evidence.packSize&&(!search?.familyId||search.familyId===discovery.products[0].familyId))exact.push(discovery.products[0]);
+    const exact=discovery.matchStatus==='alternatives'?[]:discovery.products.filter(p=>exactProductMatch(searchQuery,p));
+    if(discovery.matchStatus!=='alternatives'&&!exact.length&&discovery.products.length===1&&evidence.packSize&&(!search?.familyId||search.familyId===discovery.products[0].familyId))exact.push(discovery.products[0]);
     if(exact.length===1&&!/^(?:cutter|blade|கட்டர்|பிளேடு)$/i.test(query.trim())){const line=resolvedLine(exact[0],quantity,query,id,requestedUnit,evidence);line.candidates=discovery.products;line.discovery=discovery;return line;}
     return {...evidence,id,query,quantity,name:query,...(requestedUnit?{requestedUnit:normalizeUnit(requestedUnit)}:{}),resolution:discovery.products.length?'needs_choice':'unavailable',candidates:discovery.products,discovery};
   }
@@ -215,15 +216,16 @@ export class RetailTools {
     if(call.name==='get_catalog_map')return {catalogMap:await getCatalogMap(client,ctx,call.args.departmentId,call.args),message:'Store departments and product families.'};
     if(call.name==='discover_products'){const discovery=await discoverProducts(client,ctx,call.args.query,call.args.search);return {discovery,products:discovery.products,totalCount:discovery.totalCount,message:'Check these catalog suggestions.'};}
     if(call.name==='search_products') {
-      const products=await searchProducts(client,ctx,call.args.query);
-      const product=products.length===1&&exactProductMatch(call.args.query,products[0])?products[0]:undefined;
+      const discovery=await catalogEnabled(client,ctx)?await discoverProducts(client,ctx,call.args.query,{keywords:[call.args.query.slice(0,120)],...call.args.search,allowAlternatives:call.args.search?.allowAlternatives??true}):undefined;
+      const products=discovery?.products??await searchProducts(client,ctx,call.args.query);
+      const product=discovery?.matchStatus!=='alternatives'&&products.length===1&&exactProductMatch(call.args.query,products[0])?products[0]:undefined;
       let quote:ToolResult['quote'];
       if(product&&product.priceStatus!=='confirm'&&(product.pricePaise>0||product.priceStatus==='free')&&call.args.quantity!==undefined){
         const count=!call.args.requestedUnit||sameUnit(call.args.requestedUnit,product.unit)?call.args.quantity:amountToCount({requestedAmount:{value:call.args.quantity,unit:call.args.requestedUnit}} as DraftLine,product);
         if(count!==null){validateQuantity(product,count);quote={quantity:count,unit:product.unit,totalPaise:lineTotal(product.pricePaise,count)};}
       }
       const mismatch=product&&call.args.requestedUnit&&!sameUnit(call.args.requestedUnit,product.unit)?` This item is priced per ${product.unit}, not ${call.args.requestedUnit}; the shop must confirm any conversion.`:'';
-      return {quote,totalCount:products.length,products:products.slice(0,10),message:products.length?products.slice(0,5).map(p=>`${p.name}: ${productPriceText(p,'en')}. ${productStockText(p,'en')}.`).join('\n'):'No catalog match. Try a size or a more specific name.',...(mismatch?{message:`${product!.name}: ${formatMoney(product!.pricePaise)} / ${product!.unit}.${mismatch}`}:{})};
+      return {quote,...(discovery?{discovery}:{}),totalCount:products.length,products:products.slice(0,10),message:products.length?products.slice(0,5).map(p=>`${p.name}: ${productPriceText(p,'en')}. ${productStockText(p,'en')}.`).join('\n'):'No catalog match. Try a size or a more specific name.',...(mismatch?{message:`${product!.name}: ${formatMoney(product!.pricePaise)} / ${product!.unit}.${mismatch}`}:{})};
     }
     if(call.name==='get_draft') return {state,message:renderDraft(state)||'Your draft is empty.'};
     if(call.name==='get_order_status') {
@@ -249,7 +251,7 @@ export class RetailTools {
           const eligible=await discoverProducts(client,ctx,old.discovery.query,old.discovery.plan);
           if(!eligible.products.some(p=>p.sku===choice.sku))throw new ToolError('That option no longer matches the requested item. Review the latest choices.','stale_confirmation');
         }
-        const alternative=old.packUnitAlternative&&!old.packUnitAlternative.acceptedSku;
+        const alternative=old.packUnitAlternative&&!old.packUnitAlternative.acceptedSku||old.discovery?.matchStatus==='alternatives';
         const evidence=alternative?{...old,packSize:catalogPack(product)}:old;
         const line=resolvedLine(product,old.requestedQuantity??old.quantity,old.query??product.name,old.id,old.requestedUnit,evidence);
         if(old.packUnitAlternative)line.packUnitAlternative={...old.packUnitAlternative,acceptedSku:product.sku};
@@ -284,7 +286,8 @@ export class RetailTools {
             if(!eligible.products.some(p=>p.sku===op.query))throw new ToolError('That option no longer matches the requested item. Review the latest choices.','stale_confirmation');
           }
           if(old.resolution==='needs_unit'&&op.quantity!==undefined&&!op.requestedUnit)throw new ToolError(`Please include the unit, for example 2 ${old.unit??'units'}. I can’t convert ${old.requestedUnit??'the requested amount'} without a verified pack size or length.`);
-          const next=await resolveLine(client,ctx,op.query??old.sku??old.query??old.name,op.quantity??old.requestedQuantity??old.quantity,old.id,op.requestedUnit??(!op.query?old.requestedUnit:undefined),op.search??(!op.query?old.discovery?.plan:undefined),{sourceUncertainty:op.sourceUncertainty,requestedBudgetPaise:op.requestedBudgetPaise,packSize:op.packSize,productMeasures:op.productMeasures,productIntent:op.productIntent,requestedAmount:op.requestedAmount,amountMode:op.amountMode,supportingPhrase:op.supportingPhrase,quantityEvidenceVersion:state.visualOrdering?1:undefined},old);
+          const acceptedAlternative=!!op.query&&old.discovery?.matchStatus==='alternatives'&&old.candidates?.find(p=>p.sku===op.query);
+          const next=await resolveLine(client,ctx,op.query??old.sku??old.query??old.name,op.quantity??old.requestedQuantity??old.quantity,old.id,op.requestedUnit??(!op.query?old.requestedUnit:undefined),op.search??(!op.query?old.discovery?.plan:undefined),{sourceUncertainty:op.sourceUncertainty,requestedBudgetPaise:op.requestedBudgetPaise,packSize:acceptedAlternative?catalogPack(acceptedAlternative):op.packSize,productMeasures:op.productMeasures,productIntent:op.productIntent,requestedAmount:op.requestedAmount,amountMode:op.amountMode,supportingPhrase:op.supportingPhrase,quantityEvidenceVersion:state.visualOrdering?1:undefined},old);
           if(!op.query)next.query=old.query??old.name;
           state.draft[index]=preserveConfirmation(old,next);
           if(ctx.selectedCatalogSku===next.sku&&next.candidates?.some(p=>p.sku===next.sku)&&ctx.selectedCatalogProduct&&productIdentity(ctx.selectedCatalogProduct)===productIdentity(next.candidates.find(p=>p.sku===next.sku)!))markProductConfirmed(next,next.candidates.find(p=>p.sku===next.sku)!);

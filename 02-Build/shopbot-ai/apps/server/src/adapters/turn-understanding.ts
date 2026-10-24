@@ -1,3 +1,4 @@
+import {understandingSearch} from '../services/catalog-request.js';
 import {spokenTamilInstruction} from './tamil-style.js';
 import {listViewRequest} from '../services/list-view-intent.js';
 import {amendmentIntent} from '../services/order-amendments.js';
@@ -117,7 +118,8 @@ export function understandingToInterpretation(value:unknown,input:Interpretation
   // Explicit extracted identity constraints are retained even if query omitted one.
   const full=[...named.filter(word=>!query.toLowerCase().includes(word.toLowerCase())),query].join(' ');
   if(full.length>200)throw new Error('Requested item identity is too long');
-  const evidence={supportingPhrase:item.sourceText,...(item.packSize?{packSize:item.packSize}:{}),...(item.dimensions?.length?{productMeasures:item.dimensions}:{}),...(item.requestedAmount?{requestedAmount:item.requestedAmount}:{}),...(item.amountMode?{amountMode:item.amountMode}:{}),...(item.requestedContainer?{requestedUnit:item.requestedContainer}:{}),...(item.requestedBudgetPaise?{requestedBudgetPaise:item.requestedBudgetPaise}:{}),...(item.unresolved.length?{sourceUncertainty:item.unresolved}:{}),...(item.query===null?{sourceUncertainty:['unreadable']}: {})};
+  const itemSearch=understandingSearch({...item,query:full});
+  const evidence={...(itemSearch?{search:itemSearch}:{}),supportingPhrase:item.sourceText,...(item.packSize?{packSize:item.packSize}:{}),...(item.dimensions?.length?{productMeasures:item.dimensions}:{}),...(item.requestedAmount?{requestedAmount:item.requestedAmount}:{}),...(item.amountMode?{amountMode:item.amountMode}:{}),...(item.requestedContainer?{requestedUnit:item.requestedContainer}:{}),...(item.requestedBudgetPaise?{requestedBudgetPaise:item.requestedBudgetPaise}:{}),...(item.unresolved.length?{sourceUncertainty:item.unresolved}:{}),...(item.query===null?{sourceUncertainty:['unreadable']}: {})};
   const count=item.unresolved.includes('quantity')?null:item.purchaseCount;
   if(!input.image&&!input.state.lastRequestId){
    const selection=input.cartTargetSelections?.find(choice=>choice.kind==='item'&&choice.index===item.ordinal);
@@ -242,8 +244,8 @@ export function understandingToInterpretation(value:unknown,input:Interpretation
  let result:Interpretation={operations,next:operations.length?'review':'continue',understanding:u,...(deferredCartTargets.length?{deferredCartTargets}:{}),...(input.audio?{transcript:u.transcript}:{}),...(u.shopQuestions.length?{shopQuestions:u.shopQuestions}:{}),...(u.clarifyQuestion?{clarifyQuestion:u.clarifyQuestion}:{}),...(u.intents.includes('estimate')||operations.length&&u.intents.includes('price')?{estimateRequested:true}: {})};
  if(!operations.length){
   const items=u.requestedItems.filter(i=>i.query&&!i.crossedOut);
-  if(u.intents.includes('price')&&items.length===1)result={...result,next:'price',priceQuery:items[0].query!,priceQuantity:items[0].purchaseCount??undefined,priceUnit:items[0].requestedContainer};
-  else if((imageReadOnly||u.intents.includes('lookup'))&&items.length){const first=items[0];result={...result,next:'assist',assistance:{rootQuery:first.query!,queries:items.slice(0,3).map(i=>i.query!),question:u.clarifyQuestion,search:{keywords:[first.query!],...(first.brand?{brand:first.brand}: {})}}};}
+  if(u.intents.includes('price')&&items.length===1)result={...result,next:'price',priceQuery:items[0].query!,priceQuantity:items[0].purchaseCount??undefined,priceUnit:items[0].requestedContainer,priceSearch:understandingSearch(items[0])};
+  else if((imageReadOnly||u.intents.includes('lookup'))&&items.length){const first=items[0];result={...result,next:'assist',assistance:{rootQuery:first.query!,queries:items.slice(0,3).map(i=>i.query!),question:u.clarifyQuestion,search:understandingSearch(first)}};}
   else if(u.intents.includes('help')||u.intents.includes('cancel')&&input.state.lastRequestId)result.conversation='handoff';
   else if(u.intents.includes('cancel')){result.conversation='pause';result.clarifyQuestion??=say(input.state,'Should I remove one item or clear the whole list?','ஒரு பொருளை நீக்கவா அல்லது முழு பட்டியலையும் காலி செய்யவா?','Oru porulai neekkava illa muzhu list-ai clear pannava?');}
   else if(u.shopQuestions.length)result.conversation='shop_question';
