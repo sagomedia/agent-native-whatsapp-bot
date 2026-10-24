@@ -1,0 +1,11 @@
+# VPS activation — 22 October 2026
+
+The minimal owner redesign is active at https://shopbot-preview.sagoautomation.tech/owner in release `preview-ebb2f177e88a`, compiled source `91e8ca3`. The previous release `preview-6da2b6f4898a` is retained. The deployed source preserves the already running 90-second audio support, customer identities, and current WhatsApp reply/notice recovery fixes.
+
+Build/typecheck and all **874** integration tests passed for the combined source. Hosted push validation passed. The release was checksum-staged and content-verified using the identical existing runtime/dependency lock. A private backup was restored into a separate database; migration 42→43 and repeat migration preserved counts. A health probe initially used the owner hostname and correctly received 404; the corrected loopback health probe and read-only owner/order/catalog/asset probes passed. No live authentication policy was changed for those in-process probes.
+
+Activation used the existing guarded upgrade helper. Fresh private database/configuration backup: `/var/backups/shopbot-migration/owner-20261022T193516Z`. After restart the service is active and ready, schema 43 is installed, and the environment hash is unchanged. Products **337**, orders **12**, and messages **616** were retained. Public owner access still redirects through its access protection.
+
+As requested for this all-demo store, **295** valid matching-unit demo price values were explicitly prepared as ordinary demo prices, with zero skips. The operation was synthetic-store-only, bound to its preview hash, preserved old order snapshots, and retained original price provenance in the owner audit. Merchant verification was not fabricated. No real-device payment or bank-reference visibility test was performed.
+
+Executable recovery must retain the expanded database schema. Restoring an old database backup over later activity would lose that activity. Older receipt UI does not fully support owner-confirmed receipts with null bank references, so repair forward is preferable after such records exist. Temporary deployment access used an expiring Google Cloud SSH key; account, recipient, inference and spending settings were preserved.

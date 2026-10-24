@@ -1,6 +1,6 @@
 import './theme.css';
 import {NativeChat} from './NativeChat.js';
-import {OwnerDashboard} from './OwnerDashboard.js';
+import {RedesignDashboard} from './RedesignDashboard.js';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Snapshot, SimulatorEvent, DraftLine } from '../../../packages/contracts/index.js';
@@ -69,4 +69,4 @@ function App() {
     </div>
   </main>;
 }
-createRoot(document.getElementById('root')!).render(window.location.pathname==='/owner'?<OwnerDashboard/>:nativeTest?<NativeChat/>:<App/>);
+createRoot(document.getElementById('root')!).render(window.location.pathname==='/owner'?<RedesignDashboard/>:nativeTest?<NativeChat/>:<App/>);

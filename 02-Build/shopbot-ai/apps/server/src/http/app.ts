@@ -18,15 +18,25 @@ import type {AccessVerifier} from './access.js';
 import {WhatsAppChannel} from '../services/whatsapp-channel.js';
 import {registerWhatsApp,whatsappPath} from './whatsapp.js';
 import {renderPrivacy} from './privacy.js';
+import {registerRemoteMcp} from '../mcp/http.js';
+import {mcpPublicPath} from '../mcp/oauth.js';
 
 export async function createApp(config: Config, pool: Pool, nativeTest?:Interpreter,nativeStore=fixtureStore,ownerVerifier?:AccessVerifier,channel?:WhatsAppChannel,catalogGenerator?:CatalogGenerator) {
   if(config.owner&&(config.mode!=='mock'||nativeTest))throw new Error('Hosted owner preview requires mock mode with local AI disabled');
   if(config.owner&&!['127.0.0.1','::1','localhost'].includes(config.host))throw new Error('Owner preview must listen on loopback');
+  if(config.remoteMcp&&(!config.owner||!['127.0.0.1','::1','localhost'].includes(config.host)))throw new Error('Remote MCP requires protected owner access and a loopback listener.');
   if(config.whatsapp&&(!['127.0.0.1','::1','localhost'].includes(config.host)||nativeTest||config.mode!=='mock'))throw new Error('WhatsApp test connection requires loopback with local test endpoints disabled');
   const app = Fastify({ logger: {serializers:{req:(req:any)=>({method:req.method,url:req.url?.split('?')[0]})}}, bodyLimit: 16000 });
+  app.setErrorHandler((error,request,reply)=>{
+    const failure=error as Error&{statusCode?:number;code?:string};
+    const status=failure.statusCode&&failure.statusCode>=400&&failure.statusCode<600?failure.statusCode:500;
+    if(status>=500){request.log.error({code:failure.code??'internal_failure'},'Request failed');return reply.code(status).send({error:'The service could not complete this request. Please try again.'});}
+    return reply.code(status).send({error:failure.message});
+  });
   if(config.whatsapp){
     const hookPath=config.whatsapp.path??whatsappPath;
     app.addHook('onRequest',async(req,reply)=>{
+      if(mcpPublicPath(config.remoteMcp,req.headers.host,req.url.split('?')[0]))return;
       const publicCatalog=req.method==='GET'&&/^\/catalog-images\/(?:H\d{2}\.jpg|(?:custom|reference)\/[a-f0-9-]{36}\.jpg|messages\/[a-f0-9]{64}\.png)$/.test(req.url.split('?')[0]);
       const publicPayment=req.method==='GET'&&/^\/pay\/[a-f0-9-]{36}$/.test(req.url.split('?')[0]);
       const publicAudio=req.method==='GET'&&/^\/welcome-audio\/[a-f0-9]{64}\.ogg$/.test(req.url.split('?')[0]);
@@ -37,10 +47,11 @@ export async function createApp(config: Config, pool: Pool, nativeTest?:Interpre
   }
   const whatsapp=config.whatsapp?(channel??new WhatsAppChannel(pool,config.whatsapp)):undefined;
   await registerOwner(app,pool,config,ownerVerifier,catalogGenerator,whatsapp);
+  await registerRemoteMcp(app,pool,config);
   if(whatsapp)await registerWhatsApp(app,whatsapp);
   const privacyPolicy="default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
-  if(config.whatsapp?.privacyPublished)app.get('/privacy',async(_req,reply)=>reply.header('Cache-Control','no-store').header('Content-Security-Policy',privacyPolicy).type('text/html').send(renderPrivacy(config.whatsapp?.aiEnabled,config.whatsapp?.mediaEnabled)));
-  if(config.owner)app.get('/api/owner/privacy-draft',async(_req,reply)=>reply.header('Content-Security-Policy',privacyPolicy).type('text/html').send(renderPrivacy(config.whatsapp?.aiEnabled,config.whatsapp?.mediaEnabled)));
+  if(config.whatsapp?.privacyPublished)app.get('/privacy',async(_req,reply)=>reply.header('Cache-Control','no-store').header('Content-Security-Policy',privacyPolicy).type('text/html').send(renderPrivacy(config.whatsapp?.aiEnabled,config.whatsapp?.mediaEnabled,config.whatsapp?.audience)));
+  if(config.owner)app.get('/api/owner/privacy-draft',async(_req,reply)=>reply.header('Content-Security-Policy',privacyPolicy).type('text/html').send(renderPrivacy(config.whatsapp?.aiEnabled,config.whatsapp?.mediaEnabled,config.whatsapp?.audience)));
   app.get('/catalog-images/messages/:hash',async(req,reply)=>{const image=readVisualImage((req.params as {hash:string}).hash);if(!image)return reply.code(404).send();return reply.type('image/png').header('Cache-Control','public, max-age=86400, immutable').header('X-Content-Type-Options','nosniff').send(image);});
 
   const escapeHtml=(value:string)=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
@@ -77,7 +88,7 @@ export async function createApp(config: Config, pool: Pool, nativeTest?:Interpre
     });
     const dashboard = resolve('dist/dashboard');
     if (existsSync(dashboard)) {
-      await app.register(staticPlugin, { root: dashboard });
+      await app.register(staticPlugin, { root: dashboard, preCompressed:true, cacheControl:!config.owner });
       if(config.owner){app.get('/owner',async(_request,reply)=>reply.sendFile('index.html'));app.get('/',async(_request,reply)=>reply.redirect('/owner'));}
       if(nativeTest&&existsSync('resources/catalog/ksmc-demo/images')) await app.register(staticPlugin,{root:resolve('resources/catalog/ksmc-demo/images'),prefix:'/demo-images/',decorateReply:false});
       if(nativeTest) app.get('/native-test',async(_request,reply)=>reply.sendFile('index.html'));

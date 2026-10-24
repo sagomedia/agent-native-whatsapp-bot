@@ -1,0 +1,44 @@
+{
+  "release": "preview-039da2e54e1b",
+  "service": "NRestarts=0\nExecMainStartTimestamp=Sat 2026-10-24 07:21:45 UTC\nActiveState=active\nSubState=running",
+  "runtime": {
+    "WHATSAPP_AUDIENCE": "public",
+    "WHATSAPP_APP_ID": "926846486795289",
+    "WHATSAPP_WABA_ID": "1375393257743788",
+    "WHATSAPP_PHONE_ID": "1293537160520581",
+    "WHATSAPP_PROCESS_ENABLED": "true",
+    "WHATSAPP_SEND_ENABLED": "true",
+    "WHATSAPP_AI_ENABLED": "true",
+    "AI_BUDGET_USD": "4.5"
+  },
+  "readiness": {
+    "status": 200,
+    "body": {
+      "status": "ready",
+      "mode": "mock"
+    }
+  },
+  "privacy": {
+    "status": 200,
+    "public_privacy": true,
+    "test_sender_copy": false
+  },
+  "schema_version": "46",
+  "database_backup_directory": "/var/backups/shopbot-migration/owner-20261024T071931Z",
+  "dump_bytes": 188990825,
+  "archive_list_valid": true,
+  "private_env_backup_present": true,
+  "previous_release": "/opt/shopbot-vps/releases/preview-1d796298ef7a",
+  "source_commit": "0c56017aebf9df3446536a99921358532f21e272",
+  "archive_sha256": "28beaa9b38747b55807a460c524b1857aec275fc9d957a8b1bb2bb45f40a2612",
+  "verified_artifact_sha256": "7a40c98919fee164df8facbf92e4c0c60db9061891fab540212d9e79f62c6006",
+  "validation": {
+    "full_integration_passed": 914,
+    "focused_admission_passed": 11,
+    "catalog_checks_passed": 4,
+    "production_build": "passed"
+  },
+  "activation_helper_timeout_seconds": 180,
+  "independent_live_verification": "ready, public audience active, zero restarts; verified after the activation helper timed out",
+  "device_acceptance": "A fresh message from a second, previously unlisted phone remains pending."
+}

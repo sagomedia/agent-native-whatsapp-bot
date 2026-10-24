@@ -1,3 +1,4 @@
+import {recipientAllowed,admitCustomerMessage,admitCustomerMedia,observeCustomerIntent,queueHandoffNotice} from './customer-admission.js';
 import {recoverReviewQueue} from './review-queue-recovery.js';
 import {refreshOrderListChoice} from './order-list-choice.js';
 import {normalizeVoice} from './voice-media.js';
@@ -41,7 +42,10 @@ export class WhatsAppChannel {
   constructor(private pool:Pool,readonly config:WhatsAppConfig,private request:WhatsAppFetch=fetch,private provider?:Interpreter){
     if(config.aiEnabled&&(!provider||provider.mode!=='live'||!provider.freeQuota&&(!config.paidEnabled||!config.budgetMicrousd||config.budgetMicrousd>5000000)))throw new Error('WhatsApp AI requires the configured free-tier or explicitly budgeted interpreter');
     if(!config.aiEnabled&&provider)throw new Error('WhatsApp AI has not been enabled');
-    this.runtime=new ConversationRuntime(pool,provider??new MockInterpreter(),{allowFreeInference:!!config.aiEnabled,allowPaidInference:!!config.aiEnabled&&!!config.paidEnabled,discoveryStages:!!config.discoveryStages,mediaRecommendations:!!config.mediaRecommendations,sequentialItems:!!config.sequentialItems,visualOrdering:!!config.visualOrdering,maxDraftLines:config.maxDraftLines,advance:config.advance,partialReviews:config.partialReviews,welcomeAudio:config.welcomeAudio,queueReply:async(client,ctx,messageId,rich)=>{
+    this.runtime=new ConversationRuntime(pool,provider??new MockInterpreter(),{observeTurn:config.audience==='public'?async(client,ctx,offTopic)=>{
+      if(!await observeCustomerIntent(client,ctx,offTopic))return false;
+      await queueHandoffNotice(client,ctx,await loadState(client,ctx),config.sendEnabled);return true;
+    }:undefined,allowFreeInference:!!config.aiEnabled,allowPaidInference:!!config.aiEnabled&&!!config.paidEnabled,discoveryStages:!!config.discoveryStages,mediaRecommendations:!!config.mediaRecommendations,sequentialItems:!!config.sequentialItems,visualOrdering:!!config.visualOrdering,maxDraftLines:config.maxDraftLines,advance:config.advance,partialReviews:config.partialReviews,welcomeAudio:config.welcomeAudio,queueReply:async(client,ctx,messageId,rich)=>{
       const rateMicroInr=config.serviceRateMicroInr??(config.serviceRatePaise===undefined?undefined:config.serviceRatePaise*10000);
       if(rateMicroInr!==undefined&&Number.isSafeInteger(rateMicroInr)&&rateMicroInr>=0&&Number.isSafeInteger(rateMicroInr*rich.outboundMessages)){
         rich.deliveryEstimate={category:'service',ratePaise:rateMicroInr/10000,totalPaise:rateMicroInr*rich.outboundMessages/10000,rateMicroInr,totalMicroInr:rateMicroInr*rich.outboundMessages,estimateOnly:true};
@@ -90,7 +94,7 @@ export class WhatsAppChannel {
           const v=change.value;
           if(change.field!=='messages'||v.metadata?.phone_number_id!==c.phoneId)continue;
           for(const m of v.messages??[]){
-            if(!c.recipients.includes(m.from))continue;
+            if(!recipientAllowed(c,m.from))continue;
             const seconds=Number(m.timestamp);
             if(!Number.isSafeInteger(seconds)||seconds<1||seconds>Date.now()/1000+300)continue;
             if((await client.query('SELECT 1 FROM whatsapp_inbound WHERE phone_id=$1 AND provider_id=$2',[c.phoneId,m.id])).rowCount)continue;
@@ -142,6 +146,13 @@ export class WhatsAppChannel {
             await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,payload,binding_id,created_at) VALUES($1,$2,'inbound',$3,$4,$5::jsonb,$6,to_timestamp($7))",[messageId,ctx.conversationId,text,event?'pending':'processed',JSON.stringify(event??{id:messageId,type:'text',text}),binding,seconds]);
             await client.query('INSERT INTO whatsapp_inbound(phone_id,provider_id,message_id) VALUES($1,$2,$3)',[c.phoneId,m.id,messageId]);
             if(media)await client.query('INSERT INTO whatsapp_media(message_id,media_id,kind,source_version) VALUES($1,$2,$3,$4)',[messageId,media.id,media.kind,state.version]);
+            if(c.audience==='public'){
+              const decision=await admitCustomerMessage(client,ctx,{text:event?.type==='text'?event.text:undefined,version:state.version,binding});
+              if(decision!=='allow'){
+                await client.query("UPDATE messages SET status='processed',reply_decision=$2 WHERE id=$1",[messageId,decision==='quiet'?'duplicate_suppressed':'held_for_owner']);
+                await queueHandoffNotice(client,ctx,state,c.sendEnabled);accepted++;continue;
+              }
+            }
             if(event&&c.sendEnabled){
               const control=(await client.query('SELECT operator_mode,operator_revision FROM conversations WHERE id=$1',[ctx.conversationId])).rows[0];
               const already=(await client.query("SELECT 1 FROM messages m JOIN whatsapp_outbox o ON o.message_id=m.id WHERE m.conversation_id=$1 AND o.operator_revision=$2 AND m.payload->>'clarificationReason'='owner_handling' LIMIT 1",[ctx.conversationId,control.operator_revision])).rowCount;
@@ -166,7 +177,7 @@ export class WhatsAppChannel {
           }
           for(const s of v.statuses??[]){
             await recordDeliveryPricing(client,{storeId:c.storeId,phoneId:c.phoneId,accountTimezone:c.accountTimezone,accountCurrency:c.accountCurrency,rateCard:c.pricingRateCard},s);
-            if(!c.recipients.includes(s.recipient_id))continue;
+            if(!recipientAllowed(c,s.recipient_id))continue;
             await client.query('INSERT INTO whatsapp_statuses(phone_id,provider_id,recipient,state,provider_timestamp,callback_id,error_code,pricing) VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb) ON CONFLICT(phone_id,provider_id,state,provider_timestamp) DO UPDATE SET pricing=coalesce(whatsapp_statuses.pricing,excluded.pricing)',[c.phoneId,s.id,s.recipient_id,s.status,Number(s.timestamp),s.biz_opaque_callback_data??null,s.errors?.[0]?.code??null,JSON.stringify(s.pricing??null)]);
           }
           await client.query('UPDATE whatsapp_channels SET last_received_at=now() WHERE phone_id=$1',[c.phoneId]);
@@ -183,16 +194,18 @@ export class WhatsAppChannel {
     const client=await this.pool.connect();let row:any;
     try{
       await client.query('BEGIN');
-      row=(await client.query(`SELECT a.*,m.conversation_id,c.actor,c.operator_revision FROM whatsapp_media a JOIN messages m ON m.id=a.message_id JOIN conversations c ON c.id=m.conversation_id JOIN whatsapp_conversations w ON w.conversation_id=c.id WHERE c.store_id=$1 AND w.phone_id=$2 AND (a.state='pending' OR a.state='fetching' AND a.lease_until<=now()) AND m.id=(SELECT head.id FROM messages head WHERE head.conversation_id=c.id AND head.status IN ('pending','processing') ORDER BY head.sequence LIMIT 1) ORDER BY m.sequence LIMIT 1 FOR UPDATE OF a SKIP LOCKED`,[this.config.storeId,this.config.phoneId])).rows[0];
+      row=(await client.query(`SELECT a.*,m.conversation_id,m.reply_decision,c.actor,c.operator_revision FROM whatsapp_media a JOIN messages m ON m.id=a.message_id JOIN conversations c ON c.id=m.conversation_id JOIN whatsapp_conversations w ON w.conversation_id=c.id WHERE c.store_id=$1 AND w.phone_id=$2 AND (a.state='pending' OR a.state='fetching' AND a.lease_until<=now()) AND (m.reply_decision='held_for_owner' OR m.id=(SELECT head.id FROM messages head WHERE head.conversation_id=c.id AND head.status IN ('pending','processing') ORDER BY head.sequence LIMIT 1)) ORDER BY m.sequence LIMIT 1 FOR UPDATE OF a SKIP LOCKED`,[this.config.storeId,this.config.phoneId])).rows[0];
       if(row)row.claimLease=(await client.query("UPDATE whatsapp_media SET state='fetching',lease_until=now()+interval '120 seconds' WHERE message_id=$1 RETURNING lease_until::text AS lease",[row.message_id])).rows[0].lease;
       await client.query('COMMIT');
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
     if(!row)return false;
     let media:Awaited<ReturnType<typeof downloadWhatsAppMedia>>|undefined,mediaError:string|null=null;
+    let receivedHash=row.original_audio?createHash('sha256').update(row.original_mime_type).update(row.original_audio).digest('hex'):undefined;
     try{
       if(row.kind==='voice'&&row.original_audio&&row.original_mime_type){
         media=await normalizeVoice({id:row.message_id,mimeType:row.original_mime_type,data:row.original_audio.toString('base64')});
       }else media=await downloadWhatsAppMedia(this.config,this.request,row.media_id,row.kind,row.message_id,async source=>{
+        receivedHash=createHash('sha256').update(source.mimeType).update(source.audio).digest('hex');
         const saved=await this.pool.query("UPDATE whatsapp_media SET original_audio=$1,original_mime_type=$2,downloaded_at=now() WHERE message_id=$3 AND state='fetching' AND lease_until=$4::timestamptz AND lease_until>now()",[source.audio,source.mimeType,row.message_id,row.claimLease]);
         if(!saved.rowCount)throw new Error('Media work lease expired before saving the downloaded recording');
       });
@@ -206,9 +219,18 @@ export class WhatsAppChannel {
       if(media&&'image' in media)await held.query('INSERT INTO image_media(id,store_id,conversation_id,actor,source_hash,image,width,height,source_version) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT DO NOTHING',[row.message_id,ctx.storeId,ctx.conversationId,ctx.actor,media.sourceHash,media.image,media.width,media.height,row.source_version]);
       else if(media&&'audio' in media)await held.query('INSERT INTO voice_media(id,store_id,conversation_id,actor,source_hash,audio,duration_seconds,source_version) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING',[row.message_id,ctx.storeId,ctx.conversationId,ctx.actor,media.sourceHash,media.audio,media.durationSeconds,row.source_version]);
       await held.query("UPDATE whatsapp_media SET state=$1,lease_until=NULL,last_error=$2 WHERE message_id=$3",[media?'ready':'failed',media?null:mediaError,row.message_id]);
-      if(!media){
+      let mediaDecision:'allow'|'quiet'|'owner'='allow';
+      const attachmentHash=media?.sourceHash??receivedHash;
+      if(attachmentHash&&this.config.audience==='public'&&row.reply_decision!=='held_for_owner'){
+        const decision=mediaDecision=await admitCustomerMedia(held,ctx,`${row.kind}:${row.source_version}:${attachmentHash}`);
+        if(decision!=='allow'){
+          await held.query("UPDATE messages SET status='processed',claim_token=NULL,lease_until=NULL,reply_decision=$2 WHERE id=$1",[row.message_id,decision==='quiet'?'duplicate_suppressed':'held_for_owner']);
+          await queueHandoffNotice(held,ctx,await loadState(held,ctx),this.config.sendEnabled);
+        }
+      }
+      if(!media&&row.reply_decision!=='held_for_owner'&&mediaDecision==='allow'){
         await held.query("UPDATE messages SET status='processed' WHERE id=$1",[row.message_id]);
-        const state=await loadState(held,ctx),memory=await loadAssistantMemory(held,ctx),reply=plainReply(row.kind==='voice'?say(state,mediaError==='media_duration_invalid'?'Please send a voice note under 30 seconds; your list is kept.':mediaError==='media_decode_timeout'?'Audio processing took too long. Your list is kept. Please try a shorter voice note or send text.':'That voice note did not open; your list is kept.',mediaError==='media_duration_invalid'?'30 seconds-க்குள்ள voice அனுப்புங்க. உங்க list அப்படியே இருக்கு.':mediaError==='media_decode_timeout'?'Voice process பண்ண நேரம் ஆகிடுச்சு. உங்க list அப்படியே இருக்கு. சின்ன voice அல்லது text அனுப்புங்க.':'Voice-ஐ open பண்ண முடியல. உங்க list அப்படியே இருக்கு.',mediaError==='media_duration_invalid'?'30 seconds-kulla voice anuppunga. Unga list appadiye irukku.':mediaError==='media_decode_timeout'?'Voice process panna neram aagiduchu. Unga list appadiye irukku. Chinna voice illa text anuppunga.':'Voice-ai open panna mudiyala. Unga list appadiye irukku.'):say(state,'That photo did not open; your list is kept.','அந்தப் படத்தைத் திறக்க முடியவில்லை; உங்கள் பட்டியல் உள்ளது.','Antha photo-ai thirakka mudiyala; unga list irukku.')),replyId=randomUUID();
+        const state=await loadState(held,ctx),memory=await loadAssistantMemory(held,ctx),reply=plainReply(row.kind==='voice'?say(state,mediaError==='media_duration_invalid'?'Please send a voice note up to 90 seconds; your list is kept.':mediaError==='media_decode_timeout'?'Audio processing took too long. Your list is kept. Please try a shorter voice note or send text.':'That voice note did not open; your list is kept.',mediaError==='media_duration_invalid'?'90 seconds-க்குள்ள voice அனுப்புங்க. உங்க list அப்படியே இருக்கு.':mediaError==='media_decode_timeout'?'Voice process பண்ண நேரம் ஆகிடுச்சு. உங்க list அப்படியே இருக்கு. சின்ன voice அல்லது text அனுப்புங்க.':'Voice-ஐ open பண்ண முடியல. உங்க list அப்படியே இருக்கு.',mediaError==='media_duration_invalid'?'90 seconds-kulla voice anuppunga. Unga list appadiye irukku.':mediaError==='media_decode_timeout'?'Voice process panna neram aagiduchu. Unga list appadiye irukku. Chinna voice illa text anuppunga.':'Voice-ai open panna mudiyala. Unga list appadiye irukku.'):say(state,'That photo did not open; your list is kept.','அந்தப் படத்தைத் திறக்க முடியவில்லை; உங்கள் பட்டியல் உள்ளது.','Antha photo-ai thirakka mudiyala; unga list irukku.')),replyId=randomUUID();
         reply.replyLanguage=state.replyLanguage;
         reply.buttons=[shoppingButton(state,'browse',say(state,'Browse items','பொருட்களைப் பார்','Porutkal paaru')),shoppingButton(state,'handoff',say(state,'Talk to shop','கடையிடம் பேசு','Kadaiyila pesu'))];
         const rendered=renderWhatsAppReply(reply,replyId,this.config.hostname);
@@ -255,7 +277,7 @@ export class WhatsAppChannel {
     if(!this.config.processEnabled)return false;
     if(this.config.typingEnabled&&this.config.sendEnabled){
       const c=this.config;
-      const indicated=await this.pool.query(`WITH candidate AS (SELECT m.id,i.provider_id FROM messages m JOIN conversations v ON m.conversation_id=v.id JOIN whatsapp_conversations w ON v.id=w.conversation_id JOIN whatsapp_inbound i ON i.message_id=m.id JOIN stores s ON v.store_id=s.id WHERE s.id=$1 AND w.phone_id=$2 AND w.recipient=ANY($3::text[]) AND NOT s.operator_paused AND v.operator_mode='assistant' AND w.last_inbound_at>now()-interval '24 hours' AND m.status='pending' AND m.typing_indicated_at IS NULL AND (m.not_before IS NULL OR m.not_before<=now()) AND m.id=(SELECT oldest.id FROM messages oldest WHERE oldest.conversation_id=v.id AND oldest.status='pending' ORDER BY oldest.sequence LIMIT 1) ORDER BY m.sequence LIMIT 1 FOR UPDATE OF m SKIP LOCKED) UPDATE messages m SET typing_indicated_at=now() FROM candidate c WHERE m.id=c.id RETURNING c.provider_id`,[c.storeId,c.phoneId,c.recipients]);
+      const indicated=await this.pool.query(`WITH candidate AS (SELECT m.id,i.provider_id FROM messages m JOIN conversations v ON m.conversation_id=v.id JOIN whatsapp_conversations w ON v.id=w.conversation_id JOIN whatsapp_inbound i ON i.message_id=m.id JOIN stores s ON v.store_id=s.id WHERE s.id=$1 AND w.phone_id=$2 AND ($4::boolean OR w.recipient=ANY($3::text[])) AND NOT s.operator_paused AND v.operator_mode='assistant' AND w.last_inbound_at>now()-interval '24 hours' AND m.status='pending' AND m.typing_indicated_at IS NULL AND (m.not_before IS NULL OR m.not_before<=now()) AND m.id=(SELECT oldest.id FROM messages oldest WHERE oldest.conversation_id=v.id AND oldest.status='pending' ORDER BY oldest.sequence LIMIT 1) ORDER BY m.sequence LIMIT 1 FOR UPDATE OF m SKIP LOCKED) UPDATE messages m SET typing_indicated_at=now() FROM candidate c WHERE m.id=c.id RETURNING c.provider_id`,[c.storeId,c.phoneId,c.recipients,c.audience==='public']);
       for(const row of indicated.rows.slice(0,1)){try{await this.request(`https://graph.facebook.com/${c.graphVersion}/${c.phoneId}/messages`,{method:'POST',headers:{authorization:'Bearer '+c.accessToken,'content-type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',status:'read',message_id:row.provider_id,typing_indicator:{type:'text'}}),signal:AbortSignal.timeout(1500)});}catch{}}
     }
     if(!options.skipMedia)await this.processMediaNext();
@@ -316,7 +338,7 @@ export class WhatsAppChannel {
         (o.sender_kind='owner' AND c.operator_mode='owner' OR o.sender_kind='system' OR o.sender_kind='assistant' AND NOT s.operator_paused AND c.operator_mode='assistant') ORDER BY m.sequence LIMIT 1 FOR UPDATE OF o,c SKIP LOCKED`,[c.phoneId,c.storeId])).rows[0];
       if(!row){await client.query('COMMIT');return false;}
       if(row.sender_kind==='assistant'&&(row.operator_paused||row.operator_mode==='owner')){await client.query('COMMIT');return false;}
-      if(row.operator_revision!==row.current_revision||!c.recipients.includes(row.recipient)||Date.now()-new Date(row.last_inbound_at).getTime()>=24*3600000){
+      if(row.operator_revision!==row.current_revision||!recipientAllowed(c,row.recipient)||Date.now()-new Date(row.last_inbound_at).getTime()>=24*3600000){
         await this.setDelivery(client,row.message_id,'blocked','stale_reply_or_closed_window');await client.query('COMMIT');return true;
       }
       await client.query("UPDATE whatsapp_outbox SET state='sending',attempts=attempts+1,started_at=now() WHERE message_id=$1",[row.message_id]);

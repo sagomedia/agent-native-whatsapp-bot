@@ -33,8 +33,8 @@ with tarfile.open(a.archive,'r:gz') as archive:
     previous=base/old
     assert previous.is_dir() and not previous.is_symlink()
     old_manifest=json.loads((previous/'manifest.json').read_text())
-    assert old_manifest['node_version']==manifest['node_version']=='22.22.1'
-    assert subprocess.check_output([str(previous/'node/bin/node'),'--version'],text=True).strip()=='v22.22.1'
+    assert old_manifest['node_version']==manifest['node_version']=='22.23.4'
+    assert subprocess.check_output([str(previous/'node/bin/node'),'--version'],text=True).strip()=='v22.23.4'
     new_lock_bytes=archive.extractfile(name+'/app/package-lock.json').read()
     old_lock_bytes=(previous/'app/package-lock.json').read_bytes()
     additions=manifest.get('dependency_additions',[])

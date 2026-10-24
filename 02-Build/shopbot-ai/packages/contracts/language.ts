@@ -12,7 +12,14 @@ export type LanguageContext=(Pick<ConversationState,'replyLanguage'>&Partial<Pic
 export function languageOf(context:LanguageContext):ReplyLanguage {return typeof context==='string'?context:context.replyLanguage??'en';}
 export function say(context:LanguageContext,en:string,ta:string,tanglish:string):string {const language=languageOf(context);return language==='ta'?ta:language==='ta-Latn'?tanglish:en;}
 export function localName(name:string,names:LocalNames|undefined,context:LanguageContext):string {return names?.[languageOf(context)]??name;}
-export function productName(product:Product,context:LanguageContext):string {return measurementText(localName(product.name,product.localNames,context),context);}
+export function productName(product:Product,context:LanguageContext):string {
+ const name=localName(product.name,product.localNames,context),brand=product.brand?.trim();
+ // A literal catalog brand such as 3M is identity, not a length. Translate
+ // measurements only outside its spans, without altering merchant catalog data.
+ if(!brand)return measurementText(name,context);
+ const escaped=brand.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+ return name.split(new RegExp(`((?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}]))`,/^\d+(?:mm|cm|kg|m|l)$/i.test(brand)?'gu':'giu')).map((part,index)=>index%2?part:measurementText(part,context)).join('');
+}
 export function lineName(line:ConversationState['draft'][number],context:LanguageContext):string {
  const product=line.candidates?.find(p=>p.sku===line.sku);
  if(product)return productName(product,context);
@@ -126,6 +133,6 @@ export function productPriceText(product:Product,context:LanguageContext):string
 }
 export function productStockText(product:Product,context:LanguageContext):string {
  if(product.stock===null)return say(context,'Availability: shop to check','கிடைக்குமானு கடை check பண்ணும்','Kidaikkumaanu kadai check pannum');
- if(product.stock===0)return say(context,'Currently out of stock','இப்போது இருப்பு இல்லை','Ippo stock illai');
- return say(context,'Available · shop record','கடை list-ல stock இருக்கு','Kadai list-la stock irukku');
+ if(product.stock===0)return say(context,'Recorded stock: 0 · shop will check','பதிவில் stock 0 · கடை சரிபார்க்கும்','Record-la stock 0 · kadai check pannum');
+ return say(context,'Recorded stock · shop will confirm','பதிவில் stock இருக்கு · கடை உறுதி செய்யும்','Record-la stock irukku · kadai confirm pannum');
 }

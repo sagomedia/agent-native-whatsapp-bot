@@ -15,7 +15,7 @@ export function makeProductCheck(state:ConversationState,sequential=false):Produ
     // Exact matches can be approved together after variant choices. A line
     // already awaiting a quantity above must still keep its focused question.
     const uncertain=state.draft.find(line=>!line.shopCheckDeferred&&(line.productIntent?.kind==='ambiguous'||!line.sku&&line.candidates?.length));
-    const groups=state.draft.flatMap(line=>{const products=line.sku?line.candidates?.filter(p=>p.sku===line.sku)??[]:line.id===uncertain?.id?line.candidates?.slice(0,3)??[]:[];return products.length||line.productIntent?.kind==='ambiguous'?[{lineId:line.id,products,discovery:line.discovery}]:[];});
+    const groups=state.draft.flatMap(line=>{const products=line.sku?line.candidates?.filter(p=>p.sku===line.sku)??[]:line.id===uncertain?.id?line.candidates?.slice(0,4)??[]:[];return products.length||line.productIntent?.kind==='ambiguous'?[{lineId:line.id,products,discovery:line.discovery}]:[];});
     const check:ProductCheck={kind:'products',id:randomUUID(),version:state.version,expiresAt:new Date(Date.now()+15*60*1000).toISOString(),groups,remaining:state.draft.filter(l=>!l.sku).length,listHash:hash};
     if(productCheckCoversDraft(state,check)&&canQuoteDraft(state))check.completeReview=true;
     return check;

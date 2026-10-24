@@ -24,7 +24,7 @@ for required_cli in ['dist/scripts/import-bulk-catalog.js', 'dist/scripts/catalo
     assert (app / required_cli).is_file(), f'Required compiled catalog CLI is missing: {required_cli}; run npm run build'
 proof=json.loads((app/'dist/release-manifest.json').read_text())
 subprocess.run(['node','--input-type=module','-e',"import {verifyRelease} from './dist/apps/server/src/services/release-manifest.js'; await verifyRelease(process.cwd(),true);"],cwd=app,check=True)
-node_name = 'node-v22.22.1-linux-x64.tar.xz'
+node_name = 'node-v22.23.4-linux-x64.tar.xz'
 expected = None
 if args.node_archive:
     assert args.node_shasums, 'Node checksums are required for a new runtime'
@@ -63,6 +63,9 @@ for name in ['catalog.json', 'catalog-map.json']:
     shutil.copy2(app / 'resources/catalog/ksmc-demo' / name, catalog / name)
 shutil.copytree(app / 'resources/catalog/ksmc-demo/images', catalog / 'images')
 shutil.copytree(app / 'resources/fonts',stage / 'app/resources/fonts')
+# Versioned agent instructions are public runtime artifacts, covered by release proof.
+if (app/'resources/mcp').exists():
+    shutil.copytree(app/'resources/mcp',stage/'app/resources/mcp')
 if (app/'resources/welcome').exists():
     shutil.copytree(app/'resources/welcome',stage/'app/resources/welcome')
 dependency_additions=[]
@@ -137,7 +140,7 @@ manifest = {
     'base_lock_sha256':base_lock_sha256,
     'source_tree_sha256': source_hash.hexdigest(),
     'source_files': source_files,
-    'node_version': '22.22.1',
+    'node_version': '22.23.4',
     'node_archive_sha256': expected,
     'runtime_from_release': args.reuse_release,
     'runtime_dependencies_lock_sha256': hashlib.sha256((app / 'package-lock.json').read_bytes()).hexdigest(),

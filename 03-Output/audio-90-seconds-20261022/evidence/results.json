@@ -1,0 +1,28 @@
+{
+  "simulatedMicrophone": true,
+  "realMediaUploads": false,
+  "results": [
+    {
+      "locale": "en",
+      "recordsPast30": true,
+      "recordsThrough88": true,
+      "autoStopsAt89": true,
+      "previewBeforeSend": true
+    },
+    {
+      "locale": "ta",
+      "recordsPast30": true,
+      "recordsThrough88": true,
+      "autoStopsAt89": true,
+      "previewBeforeSend": true
+    },
+    {
+      "locale": "ta-Latn",
+      "recordsPast30": true,
+      "recordsThrough88": true,
+      "autoStopsAt89": true,
+      "previewBeforeSend": true
+    }
+  ],
+  "pageErrors": []
+}

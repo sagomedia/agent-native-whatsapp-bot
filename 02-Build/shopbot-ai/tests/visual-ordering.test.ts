@@ -11,7 +11,7 @@ import {SimulatorService,simulatorContext} from '../apps/server/src/services/sim
 import {ConversationRuntime} from '../apps/server/src/runtime/conversation.js';
 import type {Interpreter} from '../apps/server/src/adapters/interpreter.js';
 import {protectQuantityEvidence,amountToCount} from '../apps/server/src/services/quantity-evidence.js';
-import {visualSvg,renderVisualImage,INVOICE_ROWS_PER_PAGE} from '../apps/server/src/services/visual-images.js';
+import {visualSvg,renderVisualImage,materializeVisualReply,INVOICE_ROWS_PER_PAGE} from '../apps/server/src/services/visual-images.js';
 import {renderWhatsAppReply} from '../apps/server/src/services/whatsapp-reply.js';
 import {planWhatsAppReply} from '../apps/server/src/services/whatsapp-plan.js';
 import {WhatsAppChannel} from '../apps/server/src/services/whatsapp-channel.js';
@@ -92,8 +92,14 @@ for(const mode of ['text','voice'])test(`${mode}: observed one 10-litre box rema
  assert.equal(s.conversation.draft[0].quantity,1);assert.equal(s.conversation.draft[0].packSize?.value,10);assert.equal(s.conversation.draft[0].supportingPhrase,phrase);s=await event(inbox,runtime,approve(s));const image=invoiceCards(s)[0];assert.ok(image.kind!=='product');assert.equal(image.billRows![0].packSize,'10 litre');assert.equal(image.billRows![0].count,'1 can');
 }));
 
-test('missing count is a focused native question before the product review; the count never implies product consent',()=>fixture(async(pool,inbox)=>{
- const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:'TEST0',quantity:10,requestedUnit:'litre'}]),{visualOrdering:true});let s=await text(inbox,runtime,'10L paint');assert.equal(s.conversation.draft[0].quantity,null);assert.equal(last(s).stage,'quantity');assert.ok(!last(s).parts?.some(p=>p.cards.length));assert.ok(buttons(last(s)).some(b=>b.event.type==='set_quantity'));s=await text(inbox,runtime,'2 cans');assert.equal(s.conversation.draft[0].quantity,2);assert.equal(s.conversation.draft[0].productConfirmation,undefined);s=await event(inbox,runtime,approve(s));assert.equal(last(s).stage,'bill');assert.ok(s.conversation.draft[0].productConfirmation);assert.equal(s.requests.length,0);
+test('select the photographed product before a missing count; quantity has its photo and never submits',()=>fixture(async(pool,inbox)=>{
+ const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:'TEST0',quantity:10,requestedUnit:'litre'}]),{visualOrdering:true});
+ let s=await text(inbox,runtime,'10L paint');assert.equal(s.conversation.draft[0].quantity,null);assert.equal(last(s).stage,'products');assert.ok(invoiceCards(s).some(card=>card.kind==='product'));assert.ok(!buttons(last(s)).some(b=>b.event.type==='set_quantity'));assert.equal(s.conversation.draft[0].productConfirmation,undefined);
+ const approval=approve(s);assert.equal(buttons(last(s)).find(b=>b.event.type==='confirm_products')!.label,'Items correct');
+ s=await event(inbox,runtime,approval);assert.equal(last(s).stage,'quantity');assert.ok(s.conversation.draft[0].productConfirmation);assert.equal(invoiceCards(s).filter(c=>c.kind==='product').length,1);assert.equal(last(s).text,'How many can?');assert.ok(buttons(last(s)).some(b=>b.event.type==='set_quantity'));assert.ok(!buttons(last(s)).some(b=>b.event.type==='confirm'));assert.equal(s.requests.length,0);
+ s=await text(inbox,runtime,'2 cans');assert.equal(s.conversation.draft[0].quantity,2);assert.ok(s.conversation.draft[0].productConfirmation);assert.equal(s.requests.length,0);
+ // The complete list and final bill keep distinct delivery/consent checks.
+ if(s.conversation.pending?.kind==='products')s=await event(inbox,runtime,approve(s));assert.equal(last(s).stage,'bill');assert.ok(buttons(last(s)).some(b=>b.event.type==='confirm'));assert.equal(s.requests.length,0);
 }));
 
 test('targeted correction shows its affected photo and requires fresh consent; clear all actually resets',()=>fixture(async(pool,inbox)=>{
@@ -144,7 +150,7 @@ for(const mode of ['text','voice'])for(const [phrase,count,size,unit,sku] of [['
  await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,image_path,specifications) VALUES($1,'PIPE-ONE','1 inch PVC pipe','piece',12500,100,'/demo-images/H01.jpg','{\"size\":\"1 inch\"}')",[simulatorContext.storeId]);
  const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:sku,quantity:size,requestedUnit:unit}],phrase),{visualOrdering:true,mediaRecommendations:true});let s:Snapshot;
  if(mode==='text')s=await text(inbox,runtime,phrase);else{const id=randomUUID(),pcm=Buffer.alloc(32000);for(let i=0;i<16000;i++)pcm.writeInt16LE(Math.round(Math.sin(i*.17)*1200),i*2);await inbox.ingest({id,type:'voice',mediaId:id},await normalizeVoice({id,mimeType:'audio/wav',data:pcmWav(pcm).toString('base64')}));await runtime.processNext(inbox.context);s=await inbox.snapshot();}
- assert.equal(s.conversation.draft[0].quantity,count);if(unit==='inch'){assert.deepEqual(s.conversation.draft[0].productMeasures,[{value:size,unit}]);assert.equal(s.conversation.draft[0].packSize,undefined);}else assert.deepEqual(s.conversation.draft[0].packSize,{value:size,unit});assert.equal(s.requests.length,0);assert.equal(last(s).stage,count===null?'quantity':'products');
+ assert.equal(s.conversation.draft[0].quantity,count);if(unit==='inch'){assert.deepEqual(s.conversation.draft[0].productMeasures,[{value:size,unit}]);assert.equal(s.conversation.draft[0].packSize,undefined);}else assert.deepEqual(s.conversation.draft[0].packSize,{value:size,unit});assert.equal(s.requests.length,0);assert.equal(last(s).stage,'products');
 }));
 
 test('expired reviews and changed prices require a fresh review; late confirmations never submit',()=>fixture(async(pool,inbox)=>{
@@ -152,7 +158,7 @@ test('expired reviews and changed prices require a fresh review; late confirmati
 }));
 
 test('legacy ambiguous litre quantity is kept for fresh clarification, not treated as ten cans',()=>fixture(async(pool,inbox)=>{
- await pool.query('UPDATE conversations SET draft=$1,pending=NULL WHERE id=$2',[JSON.stringify([{id:randomUUID(),query:'TEST0',sku:'TEST0',name:'Test paint 0',quantity:10,unit:'can',requestedUnit:'litre',pricePaise:10000,productVersion:1,resolution:'needs_unit',discovery:{plan:{specifications:{size:'10L'}}}}]),inbox.context.conversationId]);const runtime=new ConversationRuntime(pool,planner([]),{visualOrdering:true});let s=await text(inbox,runtime,'review');assert.equal(s.conversation.draft[0].quantity,null);assert.equal(s.conversation.draft[0].packSize?.value,10);assert.equal(last(s).stage,'quantity');assert.ok(!buttons(last(s)).some(b=>b.event.type==='confirm'));
+ await pool.query('UPDATE conversations SET draft=$1,pending=NULL WHERE id=$2',[JSON.stringify([{id:randomUUID(),query:'TEST0',sku:'TEST0',name:'Test paint 0',quantity:10,unit:'can',requestedUnit:'litre',pricePaise:10000,productVersion:1,resolution:'needs_unit',discovery:{plan:{specifications:{size:'10L'}}}}]),inbox.context.conversationId]);const runtime=new ConversationRuntime(pool,planner([]),{visualOrdering:true});let s=await text(inbox,runtime,'review');assert.equal(s.conversation.draft[0].quantity,null);assert.equal(s.conversation.draft[0].packSize?.value,10);assert.equal(last(s).stage,'products');assert.ok(!buttons(last(s)).some(b=>b.event.type==='confirm'));
 }));
 
 test('50-item edit picker covers every stable ID and keeps approval off the product buttons',()=>fixture(async(pool,inbox)=>{
@@ -195,3 +201,39 @@ test('reference product captions retain their label and pending price before cha
   const payload=renderWhatsAppReply(rich,randomUUID(),'example.test').payload as any;assert.ok(payload.interactive.body.text.endsWith(label));
  }
 });
+
+test('visual target clarification preserves bound edit actions beside product photos and unknown requests',()=>{
+ const product:Product={sku:'MASK',name:'3M 8210 N95 mask',brand:'3M',unit:'piece',pricePaise:22000,stock:10,version:1,aliases:[],quantityStep:1,imageUrl:'/demo-images/H01.jpg'};
+ const state:ConversationState={visualOrdering:true,replyLanguage:'en',version:7,draft:[{id:randomUUID(),name:product.name,query:'N95 mask',sku:product.sku,quantity:2,unit:'piece',resolution:'matched',candidates:[product]},{id:randomUUID(),name:'fish',query:'fish',quantity:null,resolution:'unavailable'}],pending:null,fulfillment:'pickup',lastRequestId:null};
+ const actions=state.draft.map((line,index)=>({label:line.name,event:{id:randomUUID(),type:'resolve_cart_target' as const,memoryId:randomUUID(),targetKind:'edit' as const,targetIndex:index,lineId:line.id,expectedVersion:7}}));
+ const base:RichReply={version:1,kind:'text',text:'Which item should I remove?',stage:'identify',clarificationReason:'cart_edit_target',buttons:actions,presentation:'list',outboundMessages:1};
+ const before=structuredClone(state),rich=visualReply(base,state),cards=rich.parts!.flatMap(p=>p.cards);assert.equal(cards.length,2);assert.equal(cards[0].kind,'product');assert.equal(cards[1].kind,'instruction');assert.deepEqual(cards.flatMap(c=>c.buttons!.map(b=>b.event)),actions.map(b=>b.event));assert.equal(rich.text,base.text);assert.deepEqual(state,before);assert.equal(cards[0].caption.includes('3 metres'),false);assert.match(cards[0].caption,/3M/);assert.equal(cards[1].caption,'fish');
+ const rendered=renderWhatsAppReply(materializeVisualReply(rich,mkdtempSync('/tmp/carousel-target-')),randomUUID(),'shop.example.test');assert.equal(rendered.format,'carousel');assert.deepEqual(rendered.actions.filter(action=>action.event.type==='resolve_cart_target').map(action=>action.event),actions.map(b=>b.event));
+});
+
+test('an evidence rejection offers visual correction without claiming an edit or approving the list',()=>{
+ const state:ConversationState={visualOrdering:true,replyLanguage:'en',version:1,draft:[{id:randomUUID(),name:'unlisted pipe',query:'unlisted pipe',quantity:1,resolution:'unavailable'}],pending:null,fulfillment:'pickup',lastRequestId:null};
+ const before=structuredClone(state),rich=visualReply({version:1,kind:'text',text:'Cannot apply that change.',stage:'error',clarificationReason:'interpretation_evidence',presentation:'text',outboundMessages:1},state);
+ assert.deepEqual(state,before);assert.equal(rich.stage,'error');assert.ok(rich.parts?.some(part=>part.cards.length));assert.match(rich.text,/kept your list/);assert.doesNotMatch(rich.text,/removed|changed/i);assert.ok(buttons(rich).some(button=>button.event.type==='edit_item'));assert.ok(!buttons(rich).some(button=>['confirm','confirm_products'].includes(button.event.type)));
+});
+
+test('unknown request correction keeps its name visible without pretending it has a catalog photo',()=>{
+ const id=randomUUID(),state:ConversationState={visualOrdering:true,replyLanguage:'en',version:1,draft:[{id,name:'fish',query:'fish',quantity:null,resolution:'unavailable'}],editingLineId:id,pending:null,fulfillment:'pickup',lastRequestId:null};
+ const rich=visualReply({version:1,kind:'text',text:'Change this',presentation:'text',outboundMessages:1},state);assert.equal(rich.stage,'correction');assert.match(rich.text,/remove it/);assert.equal(rich.parts![0].cards[0].kind,'instruction');assert.equal(rich.parts![0].cards[0].caption,'fish');
+});
+
+test('two missing counts progress one photographed item at a time and preserve an earlier supplied count',()=>fixture(async(pool,inbox)=>{
+ const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:'TEST0',quantity:null},{kind:'add_item',query:'TEST1',quantity:null},{kind:'add_item',query:'TEST2',quantity:4}]),{visualOrdering:true});
+ let s=await text(inbox,runtime,'three paints');const ids=s.conversation.draft.map(line=>line.id);assert.equal(invoiceCards(s).filter(card=>card.kind==='product').length,3);
+ s=await event(inbox,runtime,approve(s));assert.equal(last(s).stage,'quantity');assert.deepEqual(invoiceCards(s).filter(card=>card.kind==='product').map(card=>card.lineId),[ids[0]]);
+ s=await event(inbox,runtime,buttons(last(s)).find(button=>button.event.type==='set_quantity'&&button.event.quantity===2)!.event);assert.equal(last(s).stage,'quantity');assert.deepEqual(invoiceCards(s).filter(card=>card.kind==='product').map(card=>card.lineId),[ids[1]]);assert.deepEqual(s.conversation.draft.map(line=>line.quantity),[2,null,4]);
+ s=await event(inbox,runtime,buttons(last(s)).find(button=>button.event.type==='set_quantity'&&button.event.quantity===5)!.event);assert.deepEqual(s.conversation.draft.map(line=>line.quantity),[2,5,4]);assert.equal(s.requests.length,0);if(s.conversation.pending?.kind==='products')s=await event(inbox,runtime,approve(s));assert.equal(last(s).stage,'bill');assert.equal(s.requests.length,0);
+}));
+
+test('a visual removal button drops only the selected unlisted request and cannot replay after the list changes',()=>fixture(async(pool,inbox)=>{
+ const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:'TEST0',quantity:2},{kind:'add_item',query:'unlisted fish',quantity:null}]),{visualOrdering:true});
+ let s=await text(inbox,runtime,'paint and unlisted fish');const known=structuredClone(s.conversation.draft[0]),unknown=s.conversation.draft[1];
+ s=await event(inbox,runtime,{id:randomUUID(),type:'edit_item',lineId:unknown.id,expectedVersion:s.conversation.version});const remove=buttons(last(s)).find(button=>button.event.type==='set_quantity'&&button.event.quantity===0)!.event;assert.ok(remove);
+ s=await event(inbox,runtime,remove);assert.equal(s.conversation.draft.length,1);assert.equal(s.conversation.draft[0].id,known.id);assert.equal(s.conversation.draft[0].quantity,2);assert.equal(s.requests.length,0);
+ s=await event(inbox,runtime,{...remove,id:randomUUID()});assert.equal(s.conversation.draft.length,1);assert.equal(s.conversation.draft[0].id,known.id);assert.equal(s.requests.length,0);
+}));

@@ -30,10 +30,10 @@ test('caption keeps actual identity, distinguishing variant, price and reference
  assert.ok(caption.endsWith('Reference படம்'));
 });
 
-test('long names retain the first count detail and factual out-of-stock warning',()=>{
+test('long names retain the first count detail and advisory recorded-stock warning',()=>{
  const caption=buildProductCaption({...product,name:'Premium pipe '.repeat(100),stock:0},'ta',['எண்ணிக்கை: 5',productPriceText(product,'ta')]);
  assert.ok(caption.includes('எண்ணிக்கை: 5'));
- assert.ok(caption.includes('இப்போது இருப்பு இல்லை'));
+ assert.ok(caption.includes('பதிவில் stock 0 · கடை சரிபார்க்கும்'));
  assert.ok(caption.includes('20 மி.மீ.'));
  assert.ok(caption.includes('₹125.00'));
  assert.equal(caption.split('₹125.00').length,2);

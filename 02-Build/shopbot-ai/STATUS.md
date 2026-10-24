@@ -1,3 +1,15 @@
+## 22 October 2026 — minimal redesign active on the VPS
+
+Activated release `preview-ebb2f177e88a` from source `91e8ca3` after 874 passing integration tests, verified packaging, private backup/restore rehearsal and read-only page checks. Schema 43 is active, existing data and environment are retained, and 90-second voice support is preserved. Prepared 295 ordinary prices in the explicitly synthetic demo store with provenance retained. See [deployment proof](../../03-Output/minimal-owner-redesign-20261022/DEPLOYMENT.md). Real-device QR reference visibility remains untested.
+
+## 22 October 2026 — deployment preserves 90-second voice notes
+
+Preserved audio policy and additive migration 41 from verified source `17175d8` while preparing the minimal owner redesign release. This keeps the already deployed voice-note duration support alongside schemas 42 and 43.
+
+## 22 October 2026 — minimal owner redesign
+
+Implemented the approved Orders, Chats, Products and Settings redesign with three order stages, optional revised bills, original bill preservation, a product picker and order-only store items, advisory recorded stock, one-action product creation, and owner-checked ₹10 receipt confirmation without a compulsory bank reference. Desktop/mobile flows use the same visual language. See [scope, implementation and verification](../../03-Output/minimal-owner-redesign-20261022/README.md), tracked in issue #69. Local synthetic rehearsal only; no runtime deployment or real-device UPI verification.
+
 ## 21 October 2026 — owner interface visual revision
 
 Reworked all six owner views around stable desktop navigation, compact phone controls, readable forms and semantic status colors. Today brings real orders onto the first phone screen; Products groups price/stock/actions; full editor and Settings gain section navigation; CSV previews become phone cards. Order/message filters show loading instead of a false empty result from previous data. Full PostgreSQL suite **843/843**, build/typecheck, catalog **4/4**, existing workflow/quote/completeness browser checks, 36 production page layouts, 12 English/Tamil short-phone order combinations and actual isolated API workflows pass. See [design, before/after screens and verification](../../03-Output/owner-design-20261021/README.md). Draft PR #54; no deployment. Staff, physical-device, native copy and live-provider acceptance remain open under issue #52.
@@ -170,3 +182,13 @@ Verified incoming WhatsApp webhooks now retain the sender-matched profile name a
 ## Obsolete review queue recovery
 
 The sender now isolates never-attempted historical system notices when an explicitly superseded uncertain review blocks them and a later customer turn already has a current assistant reply. Notices remain blocked for owner review; older unsent assistant fallbacks are cancelled. Unknown delivery evidence is preserved. Recovery takes the conversation lock, scopes store/channel and operator revision, records an audit event, and retains active-review, current multipart, attempted-notice and owner-control guards.
+
+### Carousel-first conversation follow-up (2026-10-24)
+
+Product photos lead selection before a missing count. Quantity questions retain the selected photo; visual correction targeting and focused removal recover uncertain voice terms without accepting invented changes. Known products can be individually selected beside an unmatched shop-check request. Full-list delivery/approval and separate submission consent remain required. Literal 3M display fixed without catalog changes. Validation: 931 integration tests, 4 catalog cleanup tests and production build passed. Device acceptance pending. Evidence: `../../03-Output/carousel-first-conversation/README.md` (issue #75).
+
+### Owner unread indicators and reading position (2026-10-24)
+
+Small red order dots and navigation counts distinguish unopened attention snapshots from order workflow status. Chats count unread customer messages independently of bot replies, restore a saved message/offset across navigation and reload, retain scroll position during arrivals, and show a new-message divider and latest control. Authenticated, store-scoped additive migration 49 follows the deployed owner-workflow migrations 47/48. Hidden panels and background tabs do not advance reading progress. Verified with synthetic desktop/mobile browser checks, complete 650-message pagination, all 972 integration tests, four catalog cleanup checks and the production build. Evidence: `../../03-Output/owner-unread-reading-position/README.md`; actual owner device acceptance remains open in issue #77.
+
+Unread dashboard deployed as `preview-a98eaa334e98` from `d4330dc`; live artifact/process/readiness and migration 49 verified with zero restarts. Private database backup validated; 342 products, 18 orders, 745 messages, catalog revision and environment retained. Both hosted implementation checks passed; PR #78. Actual owner device acceptance remains open in #77.

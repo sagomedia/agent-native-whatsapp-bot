@@ -1,0 +1,40 @@
+{
+  "status": "deployed",
+  "url": "https://shopbot-preview.sagoautomation.tech/owner",
+  "release": "preview-ebb2f177e88a",
+  "previousRelease": "preview-6da2b6f4898a",
+  "sourceCommit": "91e8ca37684a2b07075e665f6493d205870515c5",
+  "artifactHash": "ddaa7ad7068bf09b2dc0ab450116113df5564968dd35ecab4acd1246db877213",
+  "archiveSha256": "639e128fcd4cfc2f376828ff133d152f8e71de2485ad250e52d4d413a492799c",
+  "service": "active",
+  "readiness": "passed",
+  "schema": 43,
+  "environmentUnchanged": true,
+  "backup": "/var/backups/shopbot-migration/owner-20261022T193516Z",
+  "rehearsalBackup": "/var/backups/shopbot-migration/redesign-preflight-20261022T192420Z",
+  "recordCounts": {
+    "products": 337,
+    "orders": 12,
+    "messages": 616
+  },
+  "voiceMaxSeconds": 90,
+  "demoPrices": {
+    "updated": 295,
+    "skipped": 0,
+    "syntheticStoreOnly": true,
+    "existingOrdersPreserved": true,
+    "sourceMetadataRetainedInOwnerAudit": true
+  },
+  "localIntegration": {
+    "passed": 874,
+    "failed": 0,
+    "skipped": 0
+  },
+  "hostedPushValidation": "passed",
+  "publicOwnerHttp": 302,
+  "ownerAccessProtection": "retained",
+  "restoreAndMigrationRehearsal": "passed; repeat migration preserved record counts",
+  "readOnlyCandidateOwnerReads": "passed",
+  "preflightHealthCorrection": "Initial owner-host health probe returned the expected isolation 404. Corrected localhost health and owner page/catalog/order/asset read-only probes passed.",
+  "realPaymentReferenceVisibility": "not tested"
+}

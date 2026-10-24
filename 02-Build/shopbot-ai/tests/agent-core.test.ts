@@ -95,22 +95,19 @@ test('compound edits and yes-but-edit create a fresh review; stale, unrelated an
   await turn(service,'review');state=await turn(service,'yes');assert.equal(state.requests.length,1);
 }));
 
-test('price/availability changes require new review; immutable requests preserve prices and state',async()=>fixture(async(pool,service)=>{
+test('price changes require new review while stock stays advisory; immutable requests preserve prices and state',async()=>fixture(async(pool,service)=>{
   await turn(service,'I need two PTFE tape rolls');
   await pool.query('UPDATE products SET price_paise=4000,version=version+1 WHERE store_id=$1 AND sku=$2',[simulatorContext.storeId,'PTFE-TAPE']);
   let state=await turn(service,'yes');assert.equal(state.requests.length,0);assert.equal(state.conversation.pending,null);
   state=await turn(service,'review');assert.equal(state.conversation.pending?.kind==='review'?state.conversation.pending.totalPaise:0,8000);
   await pool.query('UPDATE products SET stock=1 WHERE store_id=$1 AND sku=$2',[simulatorContext.storeId,'PTFE-TAPE']);
-  await turn(service,'yes');assert.equal((await service.snapshot()).requests.length,0);
-  state=await turn(service,'review');assert.equal(state.conversation.draft[0].resolution,'unavailable');
-  await pool.query('UPDATE products SET stock=2 WHERE store_id=$1 AND sku=$2',[simulatorContext.storeId,'PTFE-TAPE']);
-  state=await turn(service,'review');assert.equal(state.conversation.draft[0].resolution,'matched');assert.equal(state.conversation.pending?.kind,'review');
-  await pool.query('UPDATE products SET stock=1 WHERE store_id=$1 AND sku=$2',[simulatorContext.storeId,'PTFE-TAPE']);
-  state=await turn(service,'review');assert.equal(state.conversation.draft[0].resolution,'unavailable');
-  state=await turn(service,'change the tape to one');assert.equal(state.conversation.pending?.kind,'review');
-  state=await turn(service,'yes');assert.equal(state.requests[0].totalPaise,4000);
-  await pool.query('UPDATE products SET price_paise=99999 WHERE store_id=$1 AND sku=$2',[simulatorContext.storeId,'PTFE-TAPE']);
-  assert.equal((await service.snapshot()).requests[0].lines[0].pricePaise,4000);
+  state=await turn(service,'yes');assert.equal(state.requests.length,1);
+  assert.equal(state.requests[0].lines[0].quantity,2);assert.equal(state.requests[0].totalPaise,8000);
+  assert.equal(state.requests[0].lines[0].resolution,'matched');
+  assert.equal(Number((await pool.query('SELECT stock FROM products WHERE store_id=$1 AND sku=$2',[simulatorContext.storeId,'PTFE-TAPE'])).rows[0].stock),1);
+  await pool.query('UPDATE products SET price_paise=99999,stock=0 WHERE store_id=$1 AND sku=$2',[simulatorContext.storeId,'PTFE-TAPE']);
+  const saved=(await service.snapshot()).requests[0];
+  assert.equal(saved.lines[0].pricePaise,4000);assert.equal(saved.lines[0].quantity,2);assert.equal(saved.totalPaise,8000);
 }));
 
 test('shared tools support a second store/profile and decimal units; tenant/actor/role injection is rejected',async()=>fixture(async(pool,service,tools)=>{

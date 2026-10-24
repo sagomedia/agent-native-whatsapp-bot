@@ -198,5 +198,5 @@ test('a catalogued item with insufficient stock is not described as missing from
  const provider:Interpreter={name:'known-stock',mode:'mock',interpret:async()=>({output:{operations:[{kind:'add_item',query:'H19',quantity:1}],next:'review'},usage:null,truncated:false})};
  const runtime=new ConversationRuntime(pool,provider,{sequentialItems:true});let s=await text(inbox,runtime,'one H19');
  if(s.conversation.pending?.kind==='products')s=await turn(inbox,runtime,last(s).cards![0].action!);
- assert.match(last(s).text,/பட்டியலில் உள்ளது|இருப்பு/);assert.doesNotMatch(last(s).text,/கண்டுபிடிக்க முடியவில்லை/);assert.equal(s.requests.length,0);
+ assert.match(last(s).text,/இருப்பையும் தயார் நிலையையும் கடை உறுதி செய்யும்/);assert.equal(s.conversation.draft[0].resolution,'matched');assert.equal(s.conversation.pending?.kind,'review');assert.doesNotMatch(last(s).text,/கண்டுபிடிக்க முடியவில்லை/);assert.equal(s.requests.length,0);
 }));

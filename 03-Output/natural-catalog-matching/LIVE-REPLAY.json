@@ -1,0 +1,387 @@
+{
+  "passed": true,
+  "checks": {
+    "faceMaskFound": true,
+    "n95Found": true,
+    "paintFound": true,
+    "reorderedPaintFound": true,
+    "paintQueryEquivalent": true,
+    "redLabelled": true,
+    "tamilN95Found": true,
+    "typedPackFound": true
+  },
+  "read_only": true,
+  "ai_calls": 0,
+  "baseline_release": "preview-039da2e54e1b",
+  "candidate_release": "preview-b6cdc8a78144",
+  "note": "Four consecutive reads per query/version, first discarded from warm median. Small same-host sample, not a load test. Internal retrieval may return more candidates than the four-photo customer view.",
+  "queries": [
+    {
+      "query": "face mask",
+      "baseline": {
+        "count": 0,
+        "skus": [],
+        "status": null,
+        "warm_median_ms": 133.27,
+        "sample_ms": [
+          1091.69,
+          133.27,
+          141.18,
+          123.56
+        ]
+      },
+      "repair": {
+        "count": 1,
+        "skus": [
+          "CANON-CAT100-099"
+        ],
+        "status": "exact",
+        "warm_median_ms": 61.28,
+        "sample_ms": [
+          135.81,
+          61.28,
+          55.31,
+          68.95
+        ],
+        "differences": []
+      }
+    },
+    {
+      "query": "N95 mask",
+      "baseline": {
+        "count": 1,
+        "skus": [
+          "CANON-CAT100-099"
+        ],
+        "status": null,
+        "warm_median_ms": 65.57,
+        "sample_ms": [
+          57.57,
+          66.5,
+          65.57,
+          55.5
+        ]
+      },
+      "repair": {
+        "count": 1,
+        "skus": [
+          "CANON-CAT100-099"
+        ],
+        "status": "exact",
+        "warm_median_ms": 58.93,
+        "sample_ms": [
+          51.21,
+          58.93,
+          77.87,
+          54.16
+        ],
+        "differences": []
+      }
+    },
+    {
+      "query": "N95 face mask",
+      "baseline": {
+        "count": 0,
+        "skus": [],
+        "status": null,
+        "warm_median_ms": 62.3,
+        "sample_ms": [
+          70.4,
+          65.7,
+          61.77,
+          62.3
+        ]
+      },
+      "repair": {
+        "count": 1,
+        "skus": [
+          "CANON-CAT100-099"
+        ],
+        "status": "exact",
+        "warm_median_ms": 52.12,
+        "sample_ms": [
+          54.62,
+          49.6,
+          62.45,
+          52.12
+        ],
+        "differences": []
+      }
+    },
+    {
+      "query": "Asian paint white colour",
+      "baseline": {
+        "count": 0,
+        "skus": [],
+        "status": null,
+        "warm_median_ms": 200.44,
+        "sample_ms": [
+          180.69,
+          200.44,
+          200.62,
+          178.77
+        ]
+      },
+      "repair": {
+        "count": 10,
+        "skus": [
+          "CANON-CAT100-051",
+          "CANON-CAT100-054",
+          "CANON-CAT100-056",
+          "CANON-CAT100-069",
+          "SHOP-3DB752A98B9B41BF",
+          "CANON-KSMC-001",
+          "CANON-KSMC-0011",
+          "CANON-KSMC-0014",
+          "CANON-KSMC-0019",
+          "CANON-KSMC-002"
+        ],
+        "status": "ambiguous",
+        "warm_median_ms": 62.18,
+        "sample_ms": [
+          76.9,
+          92.65,
+          62.18,
+          61.28
+        ],
+        "differences": []
+      }
+    },
+    {
+      "query": "Asian paint white colour 4L",
+      "baseline": {
+        "count": 0,
+        "skus": [],
+        "status": null,
+        "warm_median_ms": 241.61,
+        "sample_ms": [
+          260.21,
+          258.95,
+          240.84,
+          241.61
+        ]
+      },
+      "repair": {
+        "count": 7,
+        "skus": [
+          "CANON-CAT100-051",
+          "CANON-CAT100-054",
+          "CANON-KSMC-001",
+          "CANON-KSMC-0011",
+          "CANON-KSMC-0014",
+          "CANON-KSMC-002",
+          "CANON-KSMC-006"
+        ],
+        "status": "ambiguous",
+        "warm_median_ms": 110.46,
+        "sample_ms": [
+          106.22,
+          110.46,
+          141.12,
+          105.62
+        ],
+        "differences": []
+      }
+    },
+    {
+      "query": "4 litre white Asian paint",
+      "baseline": {
+        "count": 0,
+        "skus": [],
+        "status": null,
+        "warm_median_ms": 93.56,
+        "sample_ms": [
+          80.46,
+          107.38,
+          93.56,
+          76.51
+        ]
+      },
+      "repair": {
+        "count": 7,
+        "skus": [
+          "CANON-CAT100-051",
+          "CANON-CAT100-054",
+          "CANON-KSMC-001",
+          "CANON-KSMC-0011",
+          "CANON-KSMC-0014",
+          "CANON-KSMC-002",
+          "CANON-KSMC-006"
+        ],
+        "status": "ambiguous",
+        "warm_median_ms": 89.57,
+        "sample_ms": [
+          94.53,
+          85.74,
+          89.57,
+          90.08
+        ],
+        "differences": []
+      }
+    },
+    {
+      "query": "Asian paint red 4L",
+      "baseline": {
+        "count": 0,
+        "skus": [],
+        "status": null,
+        "warm_median_ms": 247.93,
+        "sample_ms": [
+          258.28,
+          288.72,
+          247.93,
+          247.9
+        ]
+      },
+      "repair": {
+        "count": 3,
+        "skus": [
+          "CANON-CAT100-051",
+          "CANON-CAT100-054",
+          "CANON-KSMC-001"
+        ],
+        "status": "alternatives",
+        "warm_median_ms": 223.07,
+        "sample_ms": [
+          322.42,
+          277.51,
+          223.07,
+          219.38
+        ],
+        "differences": [
+          {
+            "sku": "CANON-CAT100-051",
+            "differences": [
+              {
+                "field": "colour",
+                "requested": "red",
+                "actual": "White"
+              }
+            ]
+          },
+          {
+            "sku": "CANON-CAT100-054",
+            "differences": [
+              {
+                "field": "colour",
+                "requested": "red",
+                "actual": "White (BR White)"
+              }
+            ]
+          },
+          {
+            "sku": "CANON-KSMC-001",
+            "differences": [
+              {
+                "field": "colour",
+                "requested": "red",
+                "actual": "white"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "query": "N95 மாஸ்க்",
+      "baseline": {
+        "count": 1,
+        "skus": [
+          "CANON-CAT100-099"
+        ],
+        "status": null,
+        "warm_median_ms": 73.04,
+        "sample_ms": [
+          62.18,
+          74.66,
+          73.04,
+          63.2
+        ]
+      },
+      "repair": {
+        "count": 1,
+        "skus": [
+          "CANON-CAT100-099"
+        ],
+        "status": "exact",
+        "warm_median_ms": 51.2,
+        "sample_ms": [
+          55.27,
+          49.71,
+          51.2,
+          52.87
+        ],
+        "differences": []
+      }
+    },
+    {
+      "query": "N99 mask",
+      "baseline": {
+        "count": 0,
+        "skus": [],
+        "status": null,
+        "warm_median_ms": 62.59,
+        "sample_ms": [
+          59.57,
+          71.65,
+          62.59,
+          62.53
+        ]
+      },
+      "repair": {
+        "count": 0,
+        "skus": [],
+        "status": "not_found",
+        "warm_median_ms": 102.92,
+        "sample_ms": [
+          103.46,
+          102.92,
+          102.39,
+          117.93
+        ],
+        "differences": []
+      }
+    },
+    {
+      "query": "Asian paint white 4 kg",
+      "baseline": {
+        "count": 0,
+        "skus": [],
+        "status": null,
+        "warm_median_ms": 201.41,
+        "sample_ms": [
+          261.06,
+          208.36,
+          201.41,
+          200.83
+        ]
+      },
+      "repair": {
+        "count": 1,
+        "skus": [
+          "SHOP-3DB752A98B9B41BF"
+        ],
+        "status": "alternatives",
+        "warm_median_ms": 231.58,
+        "sample_ms": [
+          296.65,
+          276.02,
+          218.68,
+          231.58
+        ],
+        "differences": [
+          {
+            "sku": "SHOP-3DB752A98B9B41BF",
+            "differences": [
+              {
+                "field": "pack",
+                "requested": "4 kg",
+                "actual": "10 kg, 10 kg"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

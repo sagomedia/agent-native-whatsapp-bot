@@ -27,7 +27,9 @@ export async function normalizeImage(input:z.infer<typeof imageUploadSchema>,opt
  const detected=bytes[0]===255&&bytes[1]===216&&bytes[2]===255?'image/jpeg':bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))?'image/png':bytes.toString('ascii',0,4)==='RIFF'&&bytes.toString('ascii',8,12)==='WEBP'?'image/webp':null;
  if(detected!==input.mimeType)throw new ToolError('The file is not a supported JPG, PNG or WebP image.');
  const probe=JSON.parse((await run('ffprobe',['-v','error','-protocol_whitelist','pipe','-select_streams','v:0','-show_entries','stream=width,height','-of','json','-i','pipe:0'],bytes,8192,processingTimeoutMs)).toString());
- const {width,height}=probe.streams?.[0]??{};if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1||width>8192||height>8192||width*height>16000000)throw new ToolError('Use a photo up to 16 megapixels and 8192 pixels per side.');
+ const {width,height}=probe.streams?.[0]??{};
+ if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1)throw new ToolError('That image could not be read: no readable dimensions. Use a complete JPG, PNG or WebP file.','invalid_photo_bytes');
+ if(width>8192||height>8192||width*height>16000000)throw new ToolError('Use a photo up to 16 megapixels and 8192 pixels per side.','photo_too_large');
  // A single bounded frame, without EXIF/location metadata or animation.
  const image=await run('ffmpeg',['-hide_banner','-loglevel','error','-threads','1','-protocol_whitelist','pipe','-i','pipe:0','-frames:v','1','-vf',`scale='min(${maxSide},iw)':'min(${maxSide},ih)':force_original_aspect_ratio=decrease`,'-map_metadata','-1','-q:v','3','-f','image2pipe','-vcodec','mjpeg','pipe:1'],bytes,MAX_BYTES,processingTimeoutMs);
  if(!image.length||image[0]!==255||image[1]!==216)throw new ToolError('That image could not be decoded.');

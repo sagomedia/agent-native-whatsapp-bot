@@ -1,0 +1,50 @@
+{
+  "started_at": "2026-10-24T09:11:23.024832+00:00",
+  "old_release": "preview-039da2e54e1b",
+  "new_release": "preview-b6cdc8a78144",
+  "artifact_hash": "930aa042f3e0d2322b23194a0fe7b2936c984bcae87826cbf96065c74a5578b0",
+  "before": {
+    "catalog_revision": 1900,
+    "product_count": 340,
+    "orders": 16,
+    "messages": 695
+  },
+  "unit": "shopbot-natural-upgrade-b6cdc8a78144.service",
+  "completed_at": "2026-10-24T09:18:11.223296+00:00",
+  "health": {
+    "status": "ready",
+    "mode": "mock"
+  },
+  "service": {
+    "NRestarts": "0",
+    "ActiveState": "active",
+    "SubState": "running"
+  },
+  "backup": "/var/backups/shopbot-migration/owner-20261024T091123Z",
+  "backup_database_bytes": 189679699,
+  "backup_restore_listing": "passed",
+  "environment_unchanged": true,
+  "environment_mode": "0600",
+  "after": {
+    "catalog_revision": 1901,
+    "product_count": 340,
+    "orders": 16,
+    "messages": 695,
+    "schema": 46
+  },
+  "models_and_budget_unchanged": true,
+  "public_audience": true,
+  "source_commit": "324aee0b38e2e3d3cca3db395e378ce3621b8ef3",
+  "archive_sha256": "f3aaa9bafc1b39a880cebd8d171c8bcaf1ac9340207c72f999d60bac21c198f4",
+  "validation": {
+    "integration_tests_passed": 923,
+    "integration_tests_failed": 0,
+    "catalog_cleanup_tests_passed": 4,
+    "verified_build": "passed",
+    "hosted_build_and_test_checks": "both passed for implementation commit",
+    "live_read_only_acceptance_checks_passed": 8,
+    "real_whatsapp_device_acceptance": "pending owner test"
+  },
+  "pull_request": "https://github.com/sagomedia/agent-native-whatsapp-bot/pull/74",
+  "issue": "https://github.com/sagomedia/agent-native-whatsapp-bot/issues/73"
+}

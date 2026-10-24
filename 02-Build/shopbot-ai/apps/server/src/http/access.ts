@@ -15,9 +15,10 @@ export function createAccessVerifier(config:OwnerConfig,loadKeys=async():Promise
   if(!Array.isArray(data.keys)||data.keys.length>32)throw new Error('Invalid Access keys');
   return data.keys;
 }):AccessVerifier {
-  let keys:SigningKey[]=[],fetched=0,inFlight:Promise<void>|undefined;
+  let keys:SigningKey[]=[],fetched=0,retryAfter=0,inFlight:Promise<void>|undefined;
   async function refresh(){
-    if(!inFlight)inFlight=loadKeys().then(result=>{keys=result;fetched=Date.now();}).finally(()=>{inFlight=undefined;});
+    if(!inFlight&&Date.now()<retryAfter)throw new Error('Access keys unavailable');
+    if(!inFlight)inFlight=loadKeys().then(result=>{keys=result;fetched=Date.now();retryAfter=0;}).catch(()=>{retryAfter=Date.now()+5000;throw new Error('Access keys unavailable');}).finally(()=>{inFlight=undefined;});
     await inFlight;
   }
   return async token=>{

@@ -1,0 +1,44 @@
+{
+  "previousRelease": "preview-6b3ef5daa8f3",
+  "release": "preview-a98eaa334e98",
+  "source": "d4330dc59f1a2fabfa66345779265b960515cc35",
+  "artifact": "d41c2948e976034929700ae77404f55fb6b917de56f651cac42a3fee80016ff5",
+  "before": {
+    "schema": 48,
+    "products": 342,
+    "orders": 18,
+    "messages": 745,
+    "catalogRevision": 1978
+  },
+  "environmentSha256": "d189e9318a405347a58f7dc4ab166920eee3f0f0a3b371bebd634c397c9aa939",
+  "environmentMode": "0o600",
+  "startedAt": "2026-10-24T18:40:39.284940+00:00",
+  "after": {
+    "schema": 49,
+    "products": 342,
+    "orders": 18,
+    "messages": 745,
+    "catalogRevision": 1978,
+    "readTables": 2
+  },
+  "backup": "/var/backups/shopbot-migration/owner-20261024T184041Z",
+  "backupRestoreListVerified": true,
+  "environmentUnchanged": true,
+  "upgrade": {
+    "Result": "success",
+    "ExecMainStatus": "0",
+    "ActiveState": "inactive",
+    "SubState": "dead"
+  },
+  "service": {
+    "MainPID": "795143",
+    "NRestarts": "0",
+    "ActiveState": "active"
+  },
+  "ready": {
+    "status": "ready",
+    "mode": "mock"
+  },
+  "processDirectoryVerified": true,
+  "artifactVerified": true
+}

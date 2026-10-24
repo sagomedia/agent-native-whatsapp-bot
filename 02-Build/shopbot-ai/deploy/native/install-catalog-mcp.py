@@ -16,6 +16,9 @@ else:
  subprocess.run(['runuser','-u','postgres','--','psql','-X','-q','-d','shopbot_vps_preview','-v','ON_ERROR_STOP=1'],input=script,text=True,stdout=subprocess.DEVNULL,check=True)
  envfile.write_text('SHOPBOT_MCP_DATABASE_URL=postgres://'+role+':'+password+'@127.0.0.1:5432/shopbot_vps_preview\nSHOPBOT_MCP_STORE_ID=00000000-0000-4000-8000-000000000001\nSHOPBOT_MCP_ACTOR=codex-catalog-owner\n')
  account=pwd.getpwnam('shopbot-vps');envfile.chmod(0o600);os.chown(envfile,account.pw_uid,account.pw_gid)
+# Apply additive draft-service grants on upgrades without resetting the private role/password.
+# Published-product, order and budget privileges remain absent.
+sql("GRANT SELECT ON catalog_photos,catalog_image_variants TO "+role+"; GRANT INSERT ON catalog_image_variants TO "+role+"; GRANT SELECT,INSERT ON catalog_chat_reviews,catalog_chat_operations TO "+role)
 proof=json.loads(sql("SELECT json_build_object('inventoryRead',has_table_privilege('shopbot_catalog_mcp','products','SELECT'),'draftInsert',has_table_privilege('shopbot_catalog_mcp','catalog_proposals','INSERT'),'publishedProductWrite',has_table_privilege('shopbot_catalog_mcp','products','UPDATE'),'orderRead',has_table_privilege('shopbot_catalog_mcp','order_requests','SELECT'),'orderWrite',has_table_privilege('shopbot_catalog_mcp','order_requests','UPDATE'),'budgetRead',has_table_privilege('shopbot_catalog_mcp','inference_budgets','SELECT'))"))
 assert proof['inventoryRead'] and proof['draftInsert'] and not any(proof[k] for k in ['publishedProductWrite','orderRead','orderWrite','budgetRead'])
 print(json.dumps({'privateEnvironmentInstalled':True,'dedicatedInventoryRole':True,'permissions':proof}))

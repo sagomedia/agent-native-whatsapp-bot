@@ -132,10 +132,10 @@ test('explicit piece counts after an amount clarification override the old amoun
  await text(i,r,'three products');await text(i,r,'hose 50m');const s=await text(i,r,'I want five pieces');assert.equal(hose(s).quantity,5);assert.equal(hose(s).requestedAmount,undefined);assert.equal(hose(s).catalogIssue,undefined);
 }));
 
-test('insufficient stock keeps the photo and names the real stock issue',()=>fixture(async(pool,i)=>{
+test('insufficient recorded stock keeps the matched photo selectable',()=>fixture(async(pool,i)=>{
  await pool.query("UPDATE products SET selling_unit_verified=true,stock=2 WHERE store_id=$1 AND sku='H13'",[demoCatalogStore]);
  const r=new ConversationRuntime(pool,planner(input=>!input.state.draft.length?{next:'review',operations:seed}:{next:'review',operations:[{kind:'set_amount',reference:input.state.draft[2].id,amount:{value:50,unit:'m'},supportingPhrase:'hose 50m'}]}),{visualOrdering:true});
- await text(i,r,'three products');const s=await text(i,r,'hose 50m');assert.equal(hose(s).quantity,5);assert.equal(hose(s).catalogIssue,'insufficient_stock');assert.ok(cards(s).some(c=>c.kind==='product'&&c.product.sku==='H13')||last(s).parts?.flatMap(p=>p.buttons??[]).some(b=>b.event.type==='shopping_action'&&b.event.action==='view_products'));assert.equal(s.requests.length,0);
+ await text(i,r,'three products');const s=await text(i,r,'hose 50m');assert.equal(hose(s).quantity,5);assert.equal(hose(s).catalogIssue,undefined);assert.equal(hose(s).resolution,'matched');assert.equal(s.conversation.pending?.kind,'products');assert.ok(cards(s).some(c=>c.kind==='product'&&c.product.sku==='H13')||last(s).parts?.flatMap(p=>p.buttons??[]).some(b=>b.event.type==='shopping_action'&&b.event.action==='view_products'));assert.equal(s.requests.length,0);
 }));
 
 test('fresh review repairs a legacy amount-as-variant error only against its own previously shown photo',()=>fixture(async(pool,i)=>{

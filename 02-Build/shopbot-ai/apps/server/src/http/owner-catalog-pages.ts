@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {productColumns,productFromRow} from '../services/catalog.js';
 
 const pageFields={q:z.string().trim().max(200).default(''),limit:z.coerce.number().int().min(1).max(100).default(25),cursor:z.string().max(4000).optional()};
-export const productPageSchema=z.object({...pageFields,visibility:z.enum(['','visible','draft']).default(''),stock:z.enum(['','out','unknown']).default(''),family:z.string().max(80).default(''),brand:z.string().max(120).default(''),exception:z.enum(['','missing_photo','pending_price','pending_review','review_conflicts']).default(''),sort:z.enum(['name','sku','updated']).default('name')}).strict();
+export const productPageSchema=z.object({...pageFields,visibility:z.enum(['','visible','draft']).default(''),stock:z.enum(['','out','unknown','low','attention']).default(''),family:z.string().max(80).default(''),brand:z.string().max(120).default(''),exception:z.enum(['','missing_photo','pending_price','pending_review','review_conflicts']).default(''),sort:z.enum(['name','sku','updated']).default('name')}).strict();
 export const proposalPageSchema=z.object({...pageFields,batch:z.string().max(100).default(''),exception:z.enum(['','conflicts','issues','missing_photo','pending_price','unknown_stock']).default('')}).strict();
 const invalid=(message:string,statusCode=400)=>Object.assign(new Error(message),{statusCode});
 const signature=(input:Record<string,unknown>)=>createHash('sha256').update(JSON.stringify({...input,cursor:undefined})).digest('hex');
@@ -27,10 +27,19 @@ export async function ownerProductPage(c:PoolClient,storeId:string,input:z.infer
  if(cursor&&input.sort==='updated'&&!Number.isFinite(Date.parse(cursor.key)))throw invalid('Invalid catalog date cursor.');
  const values:unknown[]=[storeId],where=['store_id=$1'];const bind=(value:unknown)=>{values.push(value);return '$'+values.length;};
  // Literal substring matching works for Tamil names and SKUs without treating % or _ as wildcards.
- if(input.q){const p=bind('%'+input.q.replace(/[\\%_]/g,'\\$&')+'%');where.push(`(sku ILIKE ${p} OR name ILIKE ${p} OR local_names::text ILIKE ${p} OR brand ILIKE ${p} OR aliases::text ILIKE ${p} OR keywords::text ILIKE ${p})`);}
+ if(input.q){
+  // Word order and the punctuation separating variant labels must not hide stock.
+  // Split joined numeric units (500ml) as well as whitespace; bind every literal.
+  const terms=input.q.replace(/(\d)([a-zA-Z])/g,'$1 $2').split(/\s+/).filter(Boolean).slice(0,20);
+  for(const term of terms){if(/^\d+(?:\.\d+)?$/.test(term)){const number=bind('(^|[^[:digit:].])'+term.replaceAll('.','[.]')+'([^[:digit:].]|$)');where.push(`search_text ~ ${number}`);continue;}const p=bind('%'+term.replace(/[\\%_]/g,'\\$&')+'%');
+   where.push(`(sku ILIKE ${p} OR name ILIKE ${p} OR local_names::text ILIKE ${p} OR brand ILIKE ${p} OR aliases::text ILIKE ${p} OR keywords::text ILIKE ${p} OR specifications::text ILIKE ${p})`);}
+ }
+
  if(input.visibility)where.push(`active=${bind(input.visibility==='visible')}`);
+ if(input.stock==='attention')where.push("(NOT active OR stock IS NULL OR price_status='confirm' OR image_path IS NULL OR image_path='' OR NOT selling_unit_verified OR NOT merchant_verification @> '{\"identity\":true,\"photo\":true,\"sellingUnit\":true,\"price\":true,\"stock\":true}'::jsonb)");
  if(input.stock==='unknown')where.push('stock IS NULL');
  if(input.stock==='out')where.push('stock IS NOT NULL AND stock-reserved_stock<=0');
+ if(input.stock==='low')where.push('stock IS NOT NULL AND stock-reserved_stock>0 AND stock-reserved_stock<=5');
  if(input.family)where.push(`family_id=${bind(input.family)}`);
  if(input.brand)where.push(`brand=${bind(input.brand)}`);
  const pendingReview=`NOT merchant_verification @> '{"identity":true,"photo":true,"sellingUnit":true,"price":true,"stock":true}'::jsonb`;
@@ -67,6 +76,6 @@ export async function ownerProposalPage(c:PoolClient,storeId:string,input:z.infe
  if(input.exception)where.push(groups[input.exception]);
  const total=(await c.query(`SELECT count(*)::int AS total FROM catalog_proposals p WHERE ${where.join(' AND ')}`,values)).rows[0].total;
  if(cursor)where.push(`(p.created_at,p.id)>(${bind(cursor.key)}::timestamptz,${bind(cursor.id)}::uuid)`);
- const rows=(await c.query(`SELECT p.id,p.version,p.batch_id,p.client_item_id,p.details->>'name' AS name,p.details->>'sku' AS sku,p.base_sku,p.base_version,p.created_at::text AS cursor_key,${draftConflicts} AS conflict,jsonb_array_length(coalesce(p.provenance->'issues','[]')) AS "issueCount" FROM catalog_proposals p WHERE ${where.join(' AND ')} ORDER BY p.created_at,p.id LIMIT ${bind(input.limit+1)}`,values)).rows;
+ const rows=(await c.query(`SELECT p.id,p.version,p.batch_id,p.client_item_id,p.details->>'name' AS name,p.details->>'sku' AS sku,p.provenance->>'source' AS source,p.actor,p.created_at,p.base_sku,p.base_version,p.created_at::text AS cursor_key,${draftConflicts} AS conflict,jsonb_array_length(coalesce(p.provenance->'issues','[]')) AS "issueCount" FROM catalog_proposals p WHERE ${where.join(' AND ')} ORDER BY p.created_at,p.id LIMIT ${bind(input.limit+1)}`,values)).rows;
  const loaded=rows.slice(0,input.limit),last=loaded.at(-1);return {proposals:loaded.map(({cursor_key,...row})=>row),total,summary,limit:input.limit,nextCursor:rows.length>input.limit&&last?nextCursor(scope,query,0,last.cursor_key,last.id):null};
 }

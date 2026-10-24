@@ -1,3 +1,5 @@
+import {migrateDeveloperDiagnostics} from './developer-diagnostics.js';
+import {migrateCatalogChat} from './catalog-chat.js';
 import type { Pool } from 'pg';
 import type { Config } from '../config.js';
 import { assertMock } from '../config.js';
@@ -469,12 +471,85 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       );
       INSERT INTO schema_migrations(version) VALUES(40);
     `);}
+    const v41=await client.query('SELECT version FROM schema_migrations WHERE version=41');
+    if(!v41.rowCount){await client.query(`
+      ALTER TABLE voice_media DROP CONSTRAINT voice_media_audio_check;
+      ALTER TABLE voice_media ADD CONSTRAINT voice_media_audio_check CHECK(octet_length(audio)<=2880044);
+      ALTER TABLE voice_media DROP CONSTRAINT voice_media_duration_seconds_check;
+      ALTER TABLE voice_media ADD CONSTRAINT voice_media_duration_seconds_check CHECK(duration_seconds>0 AND duration_seconds<=90);
+      ALTER TABLE whatsapp_media DROP CONSTRAINT whatsapp_media_original_audio_check;
+      ALTER TABLE whatsapp_media ADD CONSTRAINT whatsapp_media_original_audio_check CHECK(original_audio IS NULL OR octet_length(original_audio) BETWEEN 1 AND 4194304);
+      INSERT INTO schema_migrations(version) VALUES(41);
+    `);}
     const v42=await client.query('SELECT version FROM schema_migrations WHERE version=42');
     if(!v42.rowCount){await client.query(`
       ALTER TABLE whatsapp_conversations
         ADD COLUMN profile_name text CHECK(profile_name IS NULL OR length(profile_name) BETWEEN 1 AND 200),
         ADD COLUMN profile_updated_at timestamptz;
       INSERT INTO schema_migrations(version) VALUES(42);
+    `);}
+    const v43=await client.query('SELECT version FROM schema_migrations WHERE version=43');
+    if(!v43.rowCount){await client.query(`
+      ALTER TABLE order_advances DROP CONSTRAINT IF EXISTS order_advances_check;
+      ALTER TABLE order_advances ADD CONSTRAINT order_advances_verified_owner_check
+        CHECK(state NOT IN ('verified','refund_pending','refunded') OR (verified_by IS NOT NULL AND verified_at IS NOT NULL));
+      CREATE TABLE owner_order_reviews (
+        id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),request_id uuid NOT NULL REFERENCES order_requests(id),
+        input_hash text NOT NULL CHECK(input_hash ~ '^[a-f0-9]{64}$'),
+        result jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX owner_order_reviews_request ON owner_order_reviews(store_id,request_id,created_at DESC);
+      INSERT INTO schema_migrations(version) VALUES(43);
+    `);}
+    const v44=await client.query('SELECT version FROM schema_migrations WHERE version=44');
+    if(!v44.rowCount){await client.query(`
+      ALTER TABLE products ADD COLUMN product_group_id uuid,ADD COLUMN product_group_name text,
+        ADD COLUMN variant_label text;
+      ALTER TABLE products ADD CONSTRAINT product_variant_identity CHECK(
+        (product_group_id IS NULL AND product_group_name IS NULL AND variant_label IS NULL) OR
+        (product_group_id IS NOT NULL AND product_group_name IS NOT NULL AND variant_label IS NOT NULL AND length(product_group_name) BETWEEN 2 AND 100 AND length(variant_label) BETWEEN 1 AND 55));
+      CREATE UNIQUE INDEX products_group_variant ON products(store_id,product_group_id,lower(regexp_replace(variant_label,'[[:space:]·]+','','g'))) WHERE product_group_id IS NOT NULL;
+      CREATE TABLE product_variant_batches(store_id uuid NOT NULL REFERENCES stores(id),id uuid NOT NULL,
+        input_hash text NOT NULL,result jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(store_id,id));
+      INSERT INTO schema_migrations(version) VALUES(44);
+    `);}
+    const v45=await client.query('SELECT version FROM schema_migrations WHERE version=45');
+    if(!v45.rowCount){await client.query(`
+      CREATE TABLE mcp_oauth_clients(client_id text PRIMARY KEY,name text NOT NULL,redirect_uris jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+      CREATE TABLE mcp_oauth_requests(id uuid PRIMARY KEY,secret_hash text NOT NULL,client_id text NOT NULL REFERENCES mcp_oauth_clients(client_id),redirect_uri text NOT NULL,challenge text NOT NULL,state text NOT NULL,scopes text[] NOT NULL,resource text NOT NULL,expires_at timestamptz NOT NULL DEFAULT now()+interval '10 minutes');
+      CREATE TABLE mcp_oauth_grants(id uuid PRIMARY KEY,store_id uuid NOT NULL REFERENCES stores(id),actor text NOT NULL,client_id text NOT NULL REFERENCES mcp_oauth_clients(client_id),scopes text[] NOT NULL,resource text NOT NULL,revoked_at timestamptz,created_at timestamptz NOT NULL DEFAULT now());
+      CREATE TABLE mcp_oauth_codes(hash text PRIMARY KEY,grant_id uuid NOT NULL REFERENCES mcp_oauth_grants(id),redirect_uri text NOT NULL,challenge text NOT NULL,used_at timestamptz,expires_at timestamptz NOT NULL DEFAULT now()+interval '5 minutes');
+      CREATE TABLE mcp_oauth_tokens(hash text PRIMARY KEY,grant_id uuid NOT NULL REFERENCES mcp_oauth_grants(id),kind text NOT NULL CHECK(kind IN ('access','refresh')),used_at timestamptz,expires_at timestamptz NOT NULL);
+      CREATE INDEX mcp_oauth_grants_store ON mcp_oauth_grants(store_id,actor) WHERE revoked_at IS NULL;
+      CREATE INDEX mcp_oauth_tokens_grant ON mcp_oauth_tokens(grant_id);
+      CREATE INDEX mcp_oauth_requests_expiry ON mcp_oauth_requests(expires_at);
+      INSERT INTO schema_migrations(version) VALUES(45);
+    `);}
+    const v46=await client.query('SELECT version FROM schema_migrations WHERE version=46');
+    if(!v46.rowCount){await client.query(`
+      CREATE TABLE whatsapp_customer_guards (
+        conversation_id uuid PRIMARY KEY REFERENCES conversations(id),operator_revision integer NOT NULL,
+        window_started_at timestamptz NOT NULL DEFAULT clock_timestamp(),window_count integer NOT NULL DEFAULT 0,
+        last_received_at timestamptz NOT NULL DEFAULT clock_timestamp(),last_key text,repeat_count integer NOT NULL DEFAULT 0,
+        off_topic_count integer NOT NULL DEFAULT 0,reason text,last_media_key text,last_media_at timestamptz,media_repeat_count integer NOT NULL DEFAULT 0
+      );
+      INSERT INTO schema_migrations(version) VALUES(46);
+    `);}
+    await migrateCatalogChat(client);
+    await migrateDeveloperDiagnostics(client);
+    const v49=await client.query('SELECT version FROM schema_migrations WHERE version=49');
+    if(!v49.rowCount){await client.query(`
+      CREATE TABLE owner_order_reads (
+        request_id uuid PRIMARY KEY REFERENCES order_requests(id) ON DELETE CASCADE,
+        attention_key text NOT NULL,seen_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE TABLE owner_chat_reads (
+        conversation_id uuid PRIMARY KEY REFERENCES conversations(id) ON DELETE CASCADE,
+        read_sequence bigint NOT NULL CHECK(read_sequence>0),anchor_sequence bigint NOT NULL CHECK(anchor_sequence>0),
+        anchor_offset integer NOT NULL DEFAULT 0,seen_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX messages_owner_unread ON messages(conversation_id,sequence) WHERE direction='inbound';
+      INSERT INTO schema_migrations(version) VALUES(49);
     `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
