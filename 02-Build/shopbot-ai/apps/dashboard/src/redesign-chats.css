@@ -107,3 +107,7 @@
 .redesign .rd-chats-thread-head,.redesign .rd-chats-control,.redesign .rd-chats-thread-alert,
 .redesign .rd-chats-thread-notice,.redesign .rd-chats-bottom,.redesign .rd-chats-order-link{flex-shrink:0}
 .redesign .rd-chats-compose textarea{min-height:34px;height:34px}
+.redesign .rd-chats-unread-count{flex-shrink:0;min-width:22px;padding:3px 6px;border-radius:12px;background:#be3030;color:#fff;text-align:center;font-size:12px;font-weight:700;line-height:16px}
+.redesign .rd-chats-unread-divider{clear:both;display:flex;align-items:center;gap:12px;margin:18px 0;color:#a42626;font-size:12px;font-weight:600}
+.redesign .rd-chats-unread-divider:before,.redesign .rd-chats-unread-divider:after{content:'';height:1px;background:#e4bbbb;flex:1}
+.redesign [data-chat-content]{display:flow-root;min-height:100%}

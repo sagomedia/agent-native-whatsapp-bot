@@ -90,7 +90,7 @@ test('owner isolation, CSRF, takeover, stale controls, pause and request decisio
   const summaryResponse=await app.inject({url:'/api/owner/summary',headers}),summary=summaryResponse.json();
   assert.equal(summaryResponse.statusCode,200);assert.equal(summary.store.id,fixtureStore);assert.equal(summary.store.name,snapshot.store.name);
   assert.equal(summary.conversationCounts.total,snapshot.conversationCounts.total);assert.equal(summary.conversationCounts.help,snapshot.conversationCounts.help);
-  assert.deepEqual(Object.keys(summary).sort(),['conversationCounts','store']);assert.match(summaryResponse.headers['cache-control']!,/no-store/);
+  assert.deepEqual(Object.keys(summary).sort(),['attention','conversationCounts','store']);assert.match(summaryResponse.headers['cache-control']!,/no-store/);
   assert.equal((await app.inject({url:'/api/owner/conversations/'+otherConversation,headers})).statusCode,404);
   assert.equal((await post('conversations/'+otherConversation+'/control',{mode:'owner',revision:0})).statusCode,409);
   assert.equal((await post('pause',{paused:true,revision:0},{...headers,origin:'https://foreign.test'})).statusCode,403);

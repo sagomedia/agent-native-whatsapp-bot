@@ -533,6 +533,20 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       );
       INSERT INTO schema_migrations(version) VALUES(46);
     `);}
+    const v47=await client.query('SELECT version FROM schema_migrations WHERE version=47');
+    if(!v47.rowCount){await client.query(`
+      CREATE TABLE owner_order_reads (
+        request_id uuid PRIMARY KEY REFERENCES order_requests(id) ON DELETE CASCADE,
+        attention_key text NOT NULL,seen_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE TABLE owner_chat_reads (
+        conversation_id uuid PRIMARY KEY REFERENCES conversations(id) ON DELETE CASCADE,
+        read_sequence bigint NOT NULL CHECK(read_sequence>0),anchor_sequence bigint NOT NULL CHECK(anchor_sequence>0),
+        anchor_offset integer NOT NULL DEFAULT 0,seen_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX messages_owner_unread ON messages(conversation_id,sequence) WHERE direction='inbound';
+      INSERT INTO schema_migrations(version) VALUES(47);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

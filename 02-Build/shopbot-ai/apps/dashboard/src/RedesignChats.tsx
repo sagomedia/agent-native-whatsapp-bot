@@ -1,3 +1,4 @@
+import {useOwnerChatReading,type ChatReading} from './owner-chat-reading.js';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {RichReply} from '../../../packages/contracts/index.js';
 import {customerLabel, clockTime, day, replyWindowOpen, type CustomerIdentity} from './owner-model.js';
@@ -9,7 +10,7 @@ import './redesign-chats.css';
 
 type Conversation = CustomerIdentity & {
   id:string; actor:string; operator_mode:'assistant'|'owner'; operator_revision:number;
-  handoff_requested:boolean; needs_reply?:boolean; last_text:string|null;
+  handoff_requested:boolean; needs_reply?:boolean; unread_count?:number;owner_read_sequence?:string; last_text:string|null;
   updated_at:string|null; last_inbound_at:string|null; pending:number;
 };
 type Inbox = {
@@ -24,7 +25,7 @@ type Message = {
   created_at:string; status:string; whatsapp:boolean; sender_kind?:string;
   media_available:boolean|null; media_state?:string; payload?:Partial<RichReply>&{type?:string;mediaId?:string};
 };
-type History = {messages:Message[]; olderCursor:string|null};
+type History = {messages:Message[]; olderCursor:string|null;newerCursor?:string|null;reading:ChatReading;deliveryUpdates?:{id:string;status:string;sender_kind?:string}[]};
 type Attempt = {id:string; text:string};
 
 // Keep previously loaded history while refreshing delivery status and new replies.
@@ -72,10 +73,11 @@ export function RedesignChats(){
   const attempts=useRef<Record<string,Attempt>>({});
   const actionBusy=useRef(false);
   const selectedRef=useRef('');
-  const timeline=useRef<HTMLDivElement>(null);
-  const nearBottom=useRef(true);
+  const [reading,setReading]=useState<ChatReading|null>(null);
+  const initialHistory=useRef(true),latestSequence=useRef(''),newerCursor=useRef<string|null>(null),historyGeneration=useRef(0);
+  const [jumping,setJumping]=useState(false);
   const [unseen,setUnseen]=useState(false);
-  const [awayFromLatest,setAwayFromLatest]=useState(false);
+
   const lastMessageId=useRef('');
   const [reloadHistory,setReloadHistory]=useState(0);
 
@@ -108,6 +110,9 @@ export function RedesignChats(){
     const known=new Set(messages.map(message=>message.id));
     return [...messages,...confirmedReplies.filter(message=>!known.has(message.id))].filter(message=>message.conversation_id===selectedId);
   },[messages,confirmedReplies,selectedId]);
+  const reader=useOwnerChatReading(selectedId,!!urlConversation,sortedMessages,historyLoading,reading);
+  const {timeline,nearBottom}=reader;
+  const awayFromLatest=reader.away;
   const awaitingDelivery=sortedMessages.some(message=>message.direction==='outbound'&&['queued','accepted','sent'].includes(message.status));
   useEffect(()=>{
     const known=new Set(messages.map(message=>message.id));
@@ -118,7 +123,7 @@ export function RedesignChats(){
     olderRequest.current?.abort();olderRequest.current=null;
     olderCursorRef.current=null;hasOlderPages.current=false;prependAnchor.current=null;
     setMessages([]);setHistoryLoading(!!selectedId);setOlderLoading(false);setHistoryError('');setOlderCursor(null);setNotice('');setActionError('');
-    nearBottom.current=true;lastMessageId.current='';setUnseen(false);setAwayFromLatest(false);
+    initialHistory.current=true;latestSequence.current='';newerCursor.current=null;setReading(null);lastMessageId.current='';setUnseen(false);
     return ()=>{olderRequest.current?.abort();};
   },[selectedId]);
 
@@ -126,10 +131,14 @@ export function RedesignChats(){
     if(!selectedId)return;
     return visiblePoll(async signal=>{
       try{
-        const next=await redesignApi<History>(`conversations/${encodeURIComponent(selectedId)}`,undefined,signal);
-        if(signal.aborted)return;
-        setMessages(current=>mergeMessages(current,next.messages));
-        if(!hasOlderPages.current){olderCursorRef.current=next.olderCursor;setOlderCursor(next.olderCursor);}
+        const generation=historyGeneration.current;
+        const suffix=initialHistory.current?'?resume=1':latestSequence.current?`?after=${latestSequence.current}`:'';
+        const next=await redesignApi<History>(`conversations/${encodeURIComponent(selectedId)}${suffix}`,undefined,signal);
+        if(signal.aborted||generation!==historyGeneration.current)return;
+        if(initialHistory.current){setReading(next.reading);initialHistory.current=false;olderCursorRef.current=next.olderCursor;setOlderCursor(next.olderCursor);}
+        newerCursor.current=next.newerCursor??null;
+        if(next.messages.length)latestSequence.current=next.messages.at(-1)!.sequence;
+        setMessages(current=>mergeMessages(current.map(message=>{const update=next.deliveryUpdates?.find(update=>update.id===message.id);return update?{...message,...update}:message;}),next.messages));
         setHistoryError('');setHistoryLoading(false);
       }catch(error){if(!signal.aborted){setHistoryError(error instanceof Error?error.message:'Messages could not be loaded.');setHistoryLoading(false);}throw error;}
     },{intervalMs:awaitingDelivery?1500:5000});
@@ -143,19 +152,20 @@ export function RedesignChats(){
       const anchor=prependAnchor.current;
       node.scrollTop=anchor.top+node.scrollHeight-anchor.height;
       prependAnchor.current=null;
-    }else if(nearBottom.current){
-      node.scrollTop=node.scrollHeight;setUnseen(false);
+    }else if(reader.initialized.current&&nearBottom.current){
+      node.scrollTop=node.scrollHeight;setUnseen(false);reader.record();
     }else if(latest&&latest!==lastMessageId.current){setUnseen(true);}
     lastMessageId.current=latest;
   },[sortedMessages,historyLoading]);
 
-  useEffect(()=>{
-    const node=timeline.current;
-    if(!node)return;
-    const resize=new ResizeObserver(()=>{if(nearBottom.current)node.scrollTop=node.scrollHeight;});
-    resize.observe(node);
-    return ()=>resize.disconnect();
-  },[selectedId,!!conversation]);
+
+  async function jumpLatest(){
+    if(jumping)return;const id=selectedId;historyGeneration.current++;setJumping(true);olderRequest.current?.abort();prependAnchor.current=null;
+    try{const next=await redesignApi<History>(`conversations/${encodeURIComponent(id)}`);if(selectedRef.current!==id)return;
+     hasOlderPages.current=false;olderCursorRef.current=next.olderCursor;setOlderCursor(next.olderCursor);newerCursor.current=null;latestSequence.current=next.messages.at(-1)?.sequence??'';
+     nearBottom.current=true;setMessages(next.messages);setUnseen(false);setReloadHistory(value=>value+1);
+    }catch(error){if(selectedRef.current===id)setHistoryError(error instanceof Error?error.message:'Latest messages could not be loaded.');}finally{setJumping(false);}
+  }
 
   async function loadOlder(){
     const cursor=olderCursorRef.current,node=timeline.current;
@@ -230,7 +240,7 @@ export function RedesignChats(){
     <section className="rd-chats-list" aria-label="Chats">
       <header className="rd-chats-list-head"><h1>Chats</h1><label className="rd-chats-search"><SearchIcon/><span className="rd-chats-sr-only">Search chats</span><input type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder="Search chats" autoComplete="off"/></label><div className="rd-chats-filters" role="group" aria-label="Filter chats"><button type="button" className={filter==='all'?'is-active':''} aria-pressed={filter==='all'} onClick={()=>{setFilter('all');navigateOwner({inboxPage:null,conversation:null},true);}}>All</button><button type="button" className={filter==='needs'?'is-active':''} aria-pressed={filter==='needs'} onClick={()=>{setFilter('needs');navigateOwner({inboxPage:null,conversation:null},true);}}>Needs reply {needsCount>0&&<span className="rd-chats-count">{needsCount}</span>}</button></div></header>
       {inboxError&&<p className="rd-chats-alert" role="alert">Chats are not updating. <button type="button" onClick={()=>void refresh().catch(()=>{})}>Try again</button></p>}
-      {!inbox&&!inboxError?<p className="rd-chats-empty">Loading chats…</p>:shown.length===0?<div className="rd-chats-empty"><p>{query?'No matching chats.':filter==='needs'?'No chats need your reply.':'No chats yet.'}</p>{filter==='needs'&&<button type="button" className="rd-chats-outline" onClick={()=>setFilter('all')}>View all chats</button>}</div>:<div className="rd-chats-rows" role="region" aria-label="Chat list" tabIndex={0}>{shown.map(c=><button type="button" key={c.id} disabled={busy} className={`rd-chats-row ${selectedId===c.id?'is-selected':''}`} aria-current={selectedId===c.id?'true':undefined} onClick={()=>choose(c.id)}><span className="rd-chats-avatar" aria-hidden="true">{initials(displayName(c))}</span><span className="rd-chats-row-main"><span className="rd-chats-row-top"><strong>{displayName(c)}</strong><time>{c.updated_at?clockTime(c.updated_at):''}</time></span><span className="rd-chats-preview">{c.last_text||'No messages yet'}</span>{needsReply(c)?<span className="rd-chats-needs-label">Needs your reply</span>:c.operator_mode==='owner'?<span className="rd-chats-owner-label">You’re replying</span>:null}</span>{needsReply(c)&&<span className="rd-chats-dot" aria-label="Needs reply"/>}</button>)}</div>}
+      {!inbox&&!inboxError?<p className="rd-chats-empty">Loading chats…</p>:shown.length===0?<div className="rd-chats-empty"><p>{query?'No matching chats.':filter==='needs'?'No chats need your reply.':'No chats yet.'}</p>{filter==='needs'&&<button type="button" className="rd-chats-outline" onClick={()=>setFilter('all')}>View all chats</button>}</div>:<div className="rd-chats-rows" role="region" aria-label="Chat list" tabIndex={0}>{shown.map(c=><button type="button" key={c.id} disabled={busy} className={`rd-chats-row ${selectedId===c.id?'is-selected':''}`} aria-current={selectedId===c.id?'true':undefined} onClick={()=>choose(c.id)}><span className="rd-chats-avatar" aria-hidden="true">{initials(displayName(c))}</span><span className="rd-chats-row-main"><span className="rd-chats-row-top"><strong>{displayName(c)}</strong><time>{c.updated_at?clockTime(c.updated_at):''}</time></span><span className="rd-chats-preview">{c.last_text||'No messages yet'}</span>{needsReply(c)?<span className="rd-chats-needs-label">Needs your reply</span>:c.operator_mode==='owner'?<span className="rd-chats-owner-label">You’re replying</span>:null}</span>{(c.unread_count??0)>0?<span className="rd-chats-unread-count" aria-label={`${c.unread_count} unread customer messages`}>{c.unread_count!>99?'99+':c.unread_count}</span>:needsReply(c)?<span className="rd-chats-dot" aria-label="Needs reply"/>:null}</button>)}</div>}
       {inbox?.inboxPage&&inbox.inboxPage.total>inbox.inboxPage.ids.length&&<div className="rd-chats-pages"><button type="button" disabled={inboxPage<=1} onClick={()=>navigateOwner({inboxPage:String(inboxPage-1),conversation:null})}>Previous</button><span>Page {inboxPage}</span><button type="button" disabled={!inbox.inboxPage.hasNext} onClick={()=>navigateOwner({inboxPage:String(inboxPage+1),conversation:null})}>Next</button></div>}
       {filter==='needs'&&shown.length>0&&<div className="rd-chats-list-foot"><span>Other chats are handled by the bot</span><button type="button" className="rd-chats-outline" onClick={()=>setFilter('all')}>View all chats</button></div>}
     </section>
@@ -239,14 +249,17 @@ export function RedesignChats(){
         <header className="rd-chats-thread-head"><button type="button" className="rd-chats-back" aria-label="Back to chats" disabled={busy} onClick={()=>navigateOwner({conversation:null})}>←</button><span className="rd-chats-avatar" aria-hidden="true">{initials(displayName(conversation))}</span><div className="rd-chats-thread-person"><h2>{displayName(conversation)}</h2><span>{phone(conversation)}</span></div><span className={`rd-chats-status ${conversation.operator_mode==='owner'?'is-owner':''}`}>{conversation.operator_mode==='owner'?"You're replying":'Bot handling this chat'}</span></header>
         {conversation.operator_mode==='owner'&&<div className="rd-chats-control"><strong>You’re replying</strong><button type="button" className="rd-chats-outline" disabled={busy} onClick={()=>void control('assistant')}>Let bot reply</button></div>}
         {actionError&&<div className="rd-chats-thread-alert" role="alert">{actionError}</div>}
+        {reader.readError&&<div className="rd-chats-thread-alert" role="status">{reader.readError}</div>}
         {notice&&<div className="rd-chats-thread-notice" role="status">{notice}</div>}
-        <div className="rd-chats-messages" role="log" aria-live="polite" aria-label="Messages" tabIndex={0} ref={timeline} onLoadCapture={()=>{if(nearBottom.current&&timeline.current)timeline.current.scrollTop=timeline.current.scrollHeight;}} onScroll={()=>{const node=timeline.current;if(node){nearBottom.current=node.scrollHeight-node.scrollTop-node.clientHeight<80;setAwayFromLatest(!nearBottom.current);if(nearBottom.current)setUnseen(false);if(node.scrollTop<100)void loadOlder();}}}>
+        <div className="rd-chats-messages" role="log" aria-live="polite" aria-label="Messages" tabIndex={0} ref={timeline} onLoadCapture={()=>{if(nearBottom.current&&timeline.current)timeline.current.scrollTop=timeline.current.scrollHeight;}} onScroll={()=>{reader.record();const node=timeline.current;if(node){if(nearBottom.current)setUnseen(false);if(node.scrollTop<100&&reader.initialized.current)void loadOlder();}}}>
           {historyError&&<div className="rd-chats-history-error" role="alert">Messages are not updating. <button type="button" onClick={()=>setReloadHistory(value=>value+1)}>Try again</button></div>}
+          <div data-chat-content>
           {historyLoading?<p className="rd-chats-history-empty">Loading messages…</p>:sortedMessages.length===0?<p className="rd-chats-history-empty">No messages yet.</p>:<>
             <div className="rd-chats-history-actions">{olderCursor?<button type="button" disabled={olderLoading} onClick={()=>void loadOlder()}>{olderLoading?'Loading older messages…':'Earlier messages'}</button>:null}</div>
-            {sortedMessages.map((m,index)=><div key={m.id} className="rd-chats-message-group">{index===0||day(sortedMessages[index-1].created_at)!==day(m.created_at)?<div className="rd-chats-date"><span>{day(m.created_at)}</span></div>:null}<article className={`rd-chats-bubble ${m.direction==='outbound'?'is-outbound':''}`}><p>{m.text}</p>{m.payload?.type==='image'&&m.payload.mediaId&&m.media_available&&<img src={`/api/owner/conversations/${encodeURIComponent(selectedId)}/media/image/${encodeURIComponent(m.payload.mediaId)}`} alt="Customer photo" loading="lazy"/>}{m.payload?.type==='voice'&&m.payload.mediaId&&m.media_available&&<audio controls preload="none" src={`/api/owner/conversations/${encodeURIComponent(selectedId)}/media/voice/${encodeURIComponent(m.payload.mediaId)}`}/> }{m.media_available===false&&m.payload?.type&&<small className="rd-chats-media-note">{m.media_state==='pending'||m.media_state==='fetching'?'Attachment is loading.':'Attachment is unavailable.'}</small>}{m.direction==='outbound'&&m.payload?.version===1&&m.payload.parts&&<VisualReplyView reply={m.payload as RichReply} productImage={sku=>`/api/owner/products/${encodeURIComponent(sku)}/image`} messageImage={url=>`/api/owner/message-images/${encodeURIComponent(url.split('/').at(-1)??'')}`}/>}<small className="rd-chats-message-meta">{clockTime(m.created_at)}{m.direction==='outbound'?` · ${m.sender_kind==='owner'?'You':'Bot'} · ${delivery(m.status,m.whatsapp)}`:''}</small></article></div>)}
+            {sortedMessages.map((m,index)=><div key={m.id} className="rd-chats-message-group" data-message-sequence={m.sequence}>{index===0||day(sortedMessages[index-1].created_at)!==day(m.created_at)?<div className="rd-chats-date"><span>{day(m.created_at)}</span></div>:null}{reader.boundary===m.sequence&&<div className="rd-chats-unread-divider" role="separator" aria-label="New messages"><span>New messages</span></div>}<article className={`rd-chats-bubble ${m.direction==='outbound'?'is-outbound':''}`}><p>{m.text}</p>{m.payload?.type==='image'&&m.payload.mediaId&&m.media_available&&<img src={`/api/owner/conversations/${encodeURIComponent(selectedId)}/media/image/${encodeURIComponent(m.payload.mediaId)}`} alt="Customer photo" loading="lazy"/>}{m.payload?.type==='voice'&&m.payload.mediaId&&m.media_available&&<audio controls preload="none" src={`/api/owner/conversations/${encodeURIComponent(selectedId)}/media/voice/${encodeURIComponent(m.payload.mediaId)}`}/> }{m.media_available===false&&m.payload?.type&&<small className="rd-chats-media-note">{m.media_state==='pending'||m.media_state==='fetching'?'Attachment is loading.':'Attachment is unavailable.'}</small>}{m.direction==='outbound'&&m.payload?.version===1&&m.payload.parts&&<VisualReplyView reply={m.payload as RichReply} productImage={sku=>`/api/owner/products/${encodeURIComponent(sku)}/image`} messageImage={url=>`/api/owner/message-images/${encodeURIComponent(url.split('/').at(-1)??'')}`}/>}<small className="rd-chats-message-meta">{clockTime(m.created_at)}{m.direction==='outbound'?` · ${m.sender_kind==='owner'?'You':'Bot'} · ${delivery(m.status,m.whatsapp)}`:''}</small></article></div>)}
           </>}
-          {awayFromLatest&&<button type="button" className="rd-chats-new" onClick={()=>{nearBottom.current=true;timeline.current?.scrollTo({top:timeline.current.scrollHeight});setUnseen(false);setAwayFromLatest(false);}}>{unseen?'New messages ↓':'Latest messages ↓'}</button>}
+          </div>
+          {(awayFromLatest||newerCursor.current)&&<button type="button" className="rd-chats-new" disabled={jumping} onClick={()=>void jumpLatest()}>{jumping?'Loading…':unseen?'New messages ↓':'Latest messages ↓'}</button>}
         </div>
         <div className="rd-chats-bottom">{conversation.operator_mode==='assistant'?<button type="button" className="rd-chats-primary" disabled={busy} onClick={()=>void control('owner')}>Reply myself</button>:!canSend?<p className="rd-chats-cannot-send">{conversation.actor==='local-simulator'?'This demo chat cannot send replies.':!inbox?.channel.liveSending?'Customer replies are unavailable right now.':'The WhatsApp reply window has closed.'}</p>:<form className="rd-chats-compose" onSubmit={event=>{event.preventDefault();void send();}}><label className="rd-chats-sr-only" htmlFor="rd-chats-reply">Reply to customer</label><textarea id="rd-chats-reply" rows={1} maxLength={4096} placeholder="Write your reply…" value={draft} disabled={busy} onChange={event=>{const value=event.target.value;setDrafts(current=>({...current,[selectedId]:value}));if(attempts.current[selectedId]?.text!==value.trim())delete attempts.current[selectedId];}}/><button type="submit" className="rd-chats-send" disabled={busy||!draft.trim()} aria-label="Send reply"><SendIcon/></button></form>}</div>
         <div className="rd-chats-order-link"><OwnerLink values={{view:'requests',requests:'all',order:null,orderSearch:conversation.id,orderPage:null}}>View this customer’s orders</OwnerLink></div>

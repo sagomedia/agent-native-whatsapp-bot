@@ -1,4 +1,4 @@
-export async function redesignApi<T = any>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+export async function redesignApi<T = any>(path: string, body?: unknown, signal?: AbortSignal, options?:{keepalive?:boolean}): Promise<T> {
  // Writes may include photo processing or AI suggestions. Never automatically
  // replay them: the server may have committed even when its response was lost.
  const controller=new AbortController();
@@ -6,7 +6,7 @@ export async function redesignApi<T = any>(path: string, body?: unknown, signal?
  if(signal?.aborted)cancel();else signal?.addEventListener('abort',cancel,{once:true});
  const timer=setTimeout(()=>controller.abort(new DOMException('Request timed out','TimeoutError')),body===undefined?20000:120000);
  try{
-  const response = await fetch('/api/owner/' + path, body === undefined ? {cache:'no-store',signal:controller.signal} : {method:'POST',headers:{'content-type':'application/json','x-shopbot-owner':'1'},body:JSON.stringify(body),signal:controller.signal});
+  const response = await fetch('/api/owner/' + path, body === undefined ? {cache:'no-store',signal:controller.signal} : {method:'POST',keepalive:options?.keepalive,headers:{'content-type':'application/json','x-shopbot-owner':'1'},body:JSON.stringify(body),signal:controller.signal});
   if(response.status===401||response.status===403||response.redirected){await response.body?.cancel();throw Object.assign(new Error('Your sign-in may have expired. Refresh this page to sign in again.'),{status:403});}
   const json=response.headers.get('content-type')?.includes('application/json');
   if(!json){await response.body?.cancel();throw new Error('The server returned an unexpected response. Please try again.');}

@@ -1,3 +1,5 @@
+import {registerOwnerReading} from './owner-reading.js';
+import {ownerAttentionCounts,orderAttentionSql,orderUnreadSql,chatUnreadSql,messageSequence} from '../services/owner-reading.js';
 import {recipientAllowed} from '../services/customer-admission.js';
 import {ownerSnapshotQuery,ownerReadPageSize,ownerActiveSql,ownerStageSql,ownerSimpleStageSql,ownerSearchPattern} from '../services/owner-read-query.js';
 import {messageGallery} from '../services/message-gallery.js';
@@ -92,6 +94,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       await client.query('COMMIT');return result;
     }catch(error){await client.query('ROLLBACK');if(error instanceof ToolError)Object.assign(error,{statusCode:error.code==='forbidden'?403:409});throw error;}finally{client.release();}
   }
+  registerOwnerReading(app,pool,owner.storeId);
   registerOwnerFacts(app,pool,owner.storeId,write);
   registerOwnerOperations(app,pool,owner.storeId);
   await registerOwnerCatalog(app,pool,owner.storeId,write,catalogGenerator??(config.catalogAi?new GoogleCatalogGenerator(config.catalogAi.apiKey):undefined));
@@ -105,7 +108,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       (SELECT count(*)::int FROM conversations c WHERE c.store_id=s.id AND ${needsReplySql}) AS help
       FROM stores s WHERE s.id=$1`,[owner.storeId]);
     const {total,help,...store}=result.rows[0];
-    return {store,conversationCounts:{total,help}};
+    return {store,conversationCounts:{total,help},attention:await ownerAttentionCounts(pool,owner.storeId)};
   });
   app.get<{Querystring:{language?:string}}>('/api/owner/message-gallery',async(req,reply)=>{
     const language=z.enum(['ta','ta-Latn','en']).safeParse(req.query.language??'ta');
@@ -131,7 +134,8 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
       const store=(await client.query('SELECT id,name,synthetic,operator_paused,operator_revision,inventory_policy FROM stores WHERE id=$1',[owner.storeId])).rows[0];
       const conversationQuery=`SELECT c.id,c.actor,w.profile_name AS customer_name,w.recipient AS customer_phone,c.operator_mode,c.operator_revision,c.reply_language,c.draft,c.version,
-        ${needsReplySql} AS needs_reply,
+        ${needsReplySql} AS needs_reply,${chatUnreadSql} AS unread_count,
+        coalesce((SELECT rd.read_sequence FROM owner_chat_reads rd WHERE rd.conversation_id=c.id),0)::text AS owner_read_sequence,
         CASE WHEN c.pending->>'kind'='review' THEN jsonb_build_object('reviewId',c.pending->>'id','expiresAt',c.pending->>'expiresAt','totalPaise',c.pending->'totalPaise','itemCount',jsonb_array_length(c.draft)) ELSE NULL END AS checkout,
         (SELECT text FROM messages WHERE conversation_id=c.id ORDER BY sequence DESC LIMIT 1) AS last_text,
         (SELECT max(created_at) FROM messages WHERE conversation_id=c.id) AS updated_at,
@@ -154,7 +158,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
         WHERE c.store_id=$1 AND c.pending->>'kind'='review' GROUP BY c.id`,[owner.storeId])).rows;
       for(const conversation of conversations){if(conversation.checkout){const delivery=deliveries.find(d=>d.id===conversation.id);conversation.checkout.state=Date.parse(conversation.checkout.expiresAt)<=Date.now()?'expired':delivery?.issue?'delivery_issue':delivery&&delivery.delivered<delivery.total?'invoice_arriving':'awaiting_customer';}}
       const requestQuery=`SELECT r.id,r.conversation_id,c.actor,w.profile_name AS customer_name,w.recipient AS customer_phone,r.acceptance,r.payment,r.fulfillment,
-        ${ownerSimpleStageSql} AS stage,
+        ${ownerSimpleStageSql} AS stage,${orderAttentionSql} AS attention_key,${orderUnreadSql} AS unread,
         r.lines AS original_lines,r.total_paise AS original_total_paise,coalesce(r.effective_total_paise,r.total_paise) AS total_paise,coalesce(r.effective_lines,r.lines) AS lines,r.created_at,r.estimate_complete,r.excluded_line_ids,r.advance_required,r.effective_revision,r.inventory_state,r.inventory_untracked_line_ids,r.packed_revision,a.state AS advance_state,a.amount_paise AS advance_amount_paise,a.claimed_at AS advance_claimed_at,a.verified_at AS advance_verified_at,a.verified_by AS advance_verified_by FROM order_requests r JOIN conversations c ON c.id=r.conversation_id AND c.store_id=r.store_id LEFT JOIN whatsapp_conversations w ON w.conversation_id=c.id LEFT JOIN order_advances a ON a.request_id=r.id WHERE r.store_id=$1`;
       const orderFilter=` AND ($2::text IS NULL OR $2='all' OR (CASE WHEN $2 IN ('new','ready','completed','cancelled') THEN (${ownerSimpleStageSql}) ELSE (${ownerStageSql}) END)=$2) AND ($3::text='' OR r.id::text ILIKE $4 OR replace(r.id::text,'-','') ILIKE $4 OR r.conversation_id::text ILIKE $4 OR EXISTS(SELECT 1 FROM whatsapp_conversations ow WHERE ow.conversation_id=r.conversation_id AND (ow.profile_name ILIKE $4 OR ('+'||ow.recipient) ILIKE $4)) OR coalesce(r.effective_lines,r.lines)::text ILIKE $4)`;
       const orderValues=[owner.storeId,read.orderStage??null,read.orderSearch,ownerSearchPattern(read.orderSearch)];
@@ -184,7 +188,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       const channel={whatsapp:!wa?'not_connected':wa.send_blocked?'attention_required':wa.last_received_at?'receiving':wa.verified_at||wa.last_webhook_at?'webhook_verified':'awaiting_verification',liveSending:Boolean(wa&&config.whatsapp?.sendEnabled&&!wa.send_blocked),processing:Boolean(config.whatsapp?.processEnabled),lastReceivedAt:wa?.last_webhook_at??null,error:wa?.last_error??null,testOnly:config.whatsapp?.audience!=='public'};
       const messaging=fullDetails&&config.whatsapp&&config.whatsapp.storeId===owner.storeId?{...await messagingCostSummary(client,{storeId:owner.storeId,phoneId:config.whatsapp.phoneId,accountTimezone:config.whatsapp.accountTimezone,rateCard:config.whatsapp.pricingRateCard}),analyticsAvailable:Boolean(config.whatsapp.accountTimezone&&config.whatsapp.accountCurrency&&config.whatsapp.businessPhoneNumber)}:null;
       await client.query('COMMIT');
-      return {detailsIncluded:fullDetails,store,conversations,conversationCounts,inboxPage,requests,requestCounts,orderPage,amendments,quotes,usage,budget,audit,messaging,mode:config.mode,ownerEmail:owner.email,channel,inference:{enabled:!!(wa&&config.whatsapp?.aiEnabled&&config.whatsapp.processEnabled),paidEnabled:!!config.whatsapp?.paidEnabled,rateHealth:rateHealth(geminiTextRate)},limits:{conversations:100,requests:100},generatedAt:new Date().toISOString()};
+      return {attention:await ownerAttentionCounts(client,owner.storeId),detailsIncluded:fullDetails,store,conversations,conversationCounts,inboxPage,requests,requestCounts,orderPage,amendments,quotes,usage,budget,audit,messaging,mode:config.mode,ownerEmail:owner.email,channel,inference:{enabled:!!(wa&&config.whatsapp?.aiEnabled&&config.whatsapp.processEnabled),paidEnabled:!!config.whatsapp?.paidEnabled,rateHealth:rateHealth(geminiTextRate)},limits:{conversations:100,requests:100},generatedAt:new Date().toISOString()};
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
   });
   app.post('/api/owner/pricing/refresh',async(request,reply)=>{
@@ -196,18 +200,27 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     try{const result=await whatsapp.refreshPricingAnalytics(input.data.month);return await write('pricing_analytics_refresh',owner.storeId,async()=>({phoneId:whatsapp.config.phoneId,...result}));}
     catch{return reply.code(502).send({error:'Could not refresh pricing analytics. Check the Messaging account timezone, currency, business phone and analytics permissions. Existing records are retained.'});}
   });
-  app.get<{Params:{id:string};Querystring:{before?:string}}>('/api/owner/conversations/:id',async(request,reply)=>{
+  app.get<{Params:{id:string};Querystring:{before?:string;after?:string;resume?:string}}>('/api/owner/conversations/:id',async(request,reply)=>{
     if(!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Invalid conversation'});
-    const page=z.object({before:z.string().regex(/^[1-9]\d{0,18}$/).refine(value=>/^[1-9]\d{0,18}$/.test(value)&&BigInt(value)<=9223372036854775807n).optional()}).strict().safeParse(request.query);
+    const page=z.object({before:messageSequence.optional(),after:messageSequence.optional(),resume:z.literal('1').optional()}).strict().refine(value=>Object.keys(value).length<=1).safeParse(request.query);
     if(!page.success)return reply.code(400).send({error:'Invalid message page. Return to the latest messages.'});
+    const found=(await pool.query(`SELECT rd.read_sequence::text,rd.anchor_sequence::text,rd.anchor_offset,
+      (SELECT min(m.sequence)::text FROM messages m WHERE m.conversation_id=c.id AND m.direction='inbound' AND m.sequence>coalesce(rd.read_sequence,0)) AS first_unread
+      FROM conversations c LEFT JOIN owner_chat_reads rd ON rd.conversation_id=c.id WHERE c.store_id=$1 AND c.id=$2`,[owner.storeId,request.params.id])).rows[0];
+    if(!found)return reply.code(404).send({error:'Conversation not found'});
+    const reading={read_sequence:found.read_sequence??'0',anchor_sequence:found.anchor_sequence??null,anchor_offset:found.anchor_offset??0,first_unread:found.first_unread};
+    const target=page.data.resume?(reading.anchor_sequence??reading.first_unread):undefined;
+    const forward=!!page.data.after||!!target;
+    const predicate=page.data.after?'m.sequence>$3':target?"m.sequence>=coalesce((SELECT sequence FROM messages WHERE conversation_id=c.id AND sequence<$3 ORDER BY sequence DESC OFFSET 49 LIMIT 1),0)":'($3::bigint IS NULL OR m.sequence<$3)';
     const rows=(await pool.query(`SELECT m.sequence,m.id,m.conversation_id,m.direction,m.text,m.status,m.created_at,m.payload,m.release_fingerprint,o.sender_kind,(w.conversation_id IS NOT NULL) AS whatsapp,
       CASE WHEN m.payload->>'type'='voice' THEN (EXISTS(SELECT 1 FROM voice_media v WHERE v.id::text=m.payload->>'mediaId' AND v.conversation_id=c.id AND v.store_id=c.store_id AND v.actor=c.actor) OR EXISTS(SELECT 1 FROM whatsapp_media a WHERE a.message_id=m.id AND a.message_id::text=m.payload->>'mediaId' AND a.kind='voice' AND a.original_audio IS NOT NULL))
       WHEN m.payload->>'type'='image' THEN EXISTS(SELECT 1 FROM image_media i WHERE i.id::text=m.payload->>'mediaId' AND i.conversation_id=c.id AND i.store_id=c.store_id AND i.actor=c.actor)
       ELSE NULL END AS media_available,wm.state AS media_state,wm.last_error AS media_error
-      FROM messages m JOIN conversations c ON c.id=m.conversation_id LEFT JOIN whatsapp_conversations w ON w.conversation_id=c.id LEFT JOIN whatsapp_outbox o ON o.message_id=m.id LEFT JOIN whatsapp_media wm ON wm.message_id=m.id WHERE c.store_id=$1 AND c.id=$2 AND ($3::bigint IS NULL OR m.sequence<$3) ORDER BY m.sequence DESC LIMIT 201`,[owner.storeId,request.params.id,page.data.before??null])).rows;
-    if(!(await pool.query('SELECT id FROM conversations WHERE store_id=$1 AND id=$2',[owner.storeId,request.params.id])).rowCount)return reply.code(404).send({error:'Conversation not found'});
-    const messages=rows.slice(0,200).reverse();
-    return {messages,limit:200,olderCursor:rows.length>200?String(messages[0].sequence):null};
+      FROM messages m JOIN conversations c ON c.id=m.conversation_id LEFT JOIN whatsapp_conversations w ON w.conversation_id=c.id LEFT JOIN whatsapp_outbox o ON o.message_id=m.id LEFT JOIN whatsapp_media wm ON wm.message_id=m.id WHERE c.store_id=$1 AND c.id=$2 AND ${predicate} ORDER BY m.sequence ${forward?'ASC':'DESC'} LIMIT 201`,[owner.storeId,request.params.id,page.data.after??target??page.data.before??null])).rows;
+    const messages=forward?rows.slice(0,200):rows.slice(0,200).reverse();
+    const range=messages.length?(await pool.query(`SELECT EXISTS(SELECT 1 FROM messages WHERE conversation_id=$1 AND sequence<$2) AS older,EXISTS(SELECT 1 FROM messages WHERE conversation_id=$1 AND sequence>$3) AS newer`,[request.params.id,messages[0].sequence,messages.at(-1).sequence])).rows[0]:{older:false,newer:false};
+    const deliveryUpdates=page.data.after?(await pool.query(`SELECT m.id,m.status,o.sender_kind FROM messages m LEFT JOIN whatsapp_outbox o ON o.message_id=m.id WHERE m.conversation_id=$1 AND m.sequence<=$2 AND m.direction='outbound' ORDER BY m.sequence DESC LIMIT 200`,[request.params.id,page.data.after])).rows:[];
+    return {messages,reading,deliveryUpdates,limit:200,olderCursor:range.older?String(messages[0].sequence):null,newerCursor:range.newer?String(messages.at(-1).sequence):null};
   });
   app.get<{Params:{hash:string}}>('/api/owner/message-images/:hash',async(request,reply)=>{
     const bytes=readVisualImage(request.params.hash);
