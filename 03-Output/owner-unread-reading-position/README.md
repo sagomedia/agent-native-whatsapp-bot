@@ -24,3 +24,9 @@ Screenshots: [Desktop order indicators](evidence/desktop-orders.png), [Mobile ch
 API regression coverage includes owner authorization/origin checks, cross-store and foreign-message guards, stale order snapshots, monotonic read progress, independent scroll anchors, bot replies, concurrent arrivals and complete pagination through 650 messages. Disposable legacy-upgrade fixtures remove the new tables/index before recreating the older schema; production migration remains strictly additive.
 
 Validation on the combined deployed baseline: all 972 integration tests passed, zero failed/skipped/cancelled (178.3 seconds); production typecheck/build and all four Python catalog cleanup checks passed. Deployment evidence is recorded separately after activation. Actual owner phone/device acceptance remains open in issue #77.
+
+## Deployment
+
+Live release `preview-a98eaa334e98` from tested source `d4330dc59f1a2fabfa66345779265b960515cc35`; exact artifact and actual process directory verified, readiness passed, zero service restarts. Migration 49 is installed. Before/after: 342 products, 18 orders, 745 messages, catalog revision 1978, with no changes to those records or environment bytes (0600). Private backup `owner-20261024T184041Z` passed `pg_restore --list`; the previous release remains available. Exact proof: [DEPLOYMENT.json](DEPLOYMENT.json).
+
+Both hosted implementation checks passed: [branch run](https://github.com/sagomedia/agent-native-whatsapp-bot/actions/runs/40121630369), [PR run](https://github.com/sagomedia/agent-native-whatsapp-bot/actions/runs/40121664528). Review: https://github.com/sagomedia/agent-native-whatsapp-bot/pull/78. Actual owner phone/device acceptance remains pending in #77. Historical records initially have no read receipts, so they appear unread until opened.
