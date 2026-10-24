@@ -18,7 +18,11 @@ export async function previewCatalogImport(pool:Pool,p:CatalogPrincipal,input:un
 }
 export async function applyCatalogImportItem(pool:Pool,p:CatalogPrincipal,input:unknown){
  const {batchId,item,photo}=importApplySchema.parse(input);
- const hash=createHash('sha256').update(JSON.stringify([p.storeId,batchId,item.id])).digest('hex');
- const operationId=hash.slice(0,8)+'-'+hash.slice(8,12)+'-4'+hash.slice(13,16)+'-8'+hash.slice(17,20)+'-'+hash.slice(20,32);
+ const operationId=catalogImportOperationId(p.storeId,batchId,item.id);
  return addChatProduct(pool,p,{operationId,details:importDetails(item),photo});
+}
+
+export function catalogImportOperationId(storeId:string,batchId:string,itemId:string){
+ const hash=createHash('sha256').update(JSON.stringify([storeId,batchId,itemId])).digest('hex');
+ return hash.slice(0,8)+'-'+hash.slice(8,12)+'-4'+hash.slice(13,16)+'-8'+hash.slice(17,20)+'-'+hash.slice(20,32);
 }

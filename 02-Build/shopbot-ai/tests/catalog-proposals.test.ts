@@ -58,21 +58,24 @@ test('owner approval checks each fact, publishes atomically and keeps original s
  }finally{await app.close();}
 }));
 
-test('real stdio MCP handshake creates a draft and photo but exposes no publication tool; merchant publishes through the same service',()=>fixture(async(pool,schema)=>{
+test('real stdio MCP handshake validates photo bytes and prepares an existing edit without publication permission',()=>fixture(async(pool,schema)=>{
  const db=new URL(process.env.DATABASE_URL!);db.searchParams.set('options','-c search_path='+schema);
  const transport=new StdioClientTransport({command:process.execPath,args:['--import','tsx','apps/server/src/mcp/stdio.ts'],cwd:process.cwd(),env:{PATH:process.env.PATH!,SHOPBOT_MCP_DATABASE_URL:db.toString(),SHOPBOT_MCP_STORE_ID:fixtureStore,SHOPBOT_MCP_ACTOR:'codex-synthetic-test'},stderr:'pipe'});
  const client=new Client({name:'shopbot-integration-test',version:'1.0.0'});
  try{
-  await client.connect(transport);const tools=(await client.listTools()).tools.map(t=>t.name);assert.deepEqual(tools.sort(),['catalog_import_guide','catalog_import_preview','catalog_get_product','catalog_check_duplicates','workflow_status','catalog_drafts','catalog_edit_draft','catalog_inventory','catalog_propose','catalog_search','catalog_stage_photo','catalog_context','catalog_get_draft','catalog_prepare','catalog_attach_media','catalog_review'].sort());
+  await client.connect(transport);const tools=(await client.listTools()).tools.map(t=>t.name);assert.deepEqual(tools.sort(),['catalog_import_guide','catalog_import_preview','catalog_get_product','catalog_check_duplicates','workflow_status','catalog_media_capabilities','catalog_validate_photo','catalog_inventory','catalog_search','catalog_context','catalog_get_edit','catalog_prepare','catalog_attach_media','catalog_review'].sort());
   const inventory=await client.callTool({name:'catalog_inventory',arguments:{limit:1}});const page=JSON.parse((inventory.content[0] as {text:string}).text);assert.equal(page.products.length,1);assert.ok(page.nextCursor);
   const second=await client.callTool({name:'catalog_inventory',arguments:{limit:1,afterSku:page.nextCursor}});assert.notEqual(JSON.parse((second.content[0] as {text:string}).text).products[0].sku,page.products[0].sku);
-  const p=input(),created=await client.callTool({name:'catalog_propose',arguments:p});assert.equal(created.isError,undefined);const result=JSON.parse((created.content[0] as {text:string}).text);assert.equal(result.id,p.id);
-  const bytes=await readFile('resources/catalog/ksmc-demo/images/H19.jpg');const staged=await client.callTool({name:'catalog_stage_photo',arguments:{proposalId:p.id,version:1,photo:{id:randomUUID(),mimeType:'image/jpeg',data:bytes.toString('base64'),caption:''},matchKind:'exact'}});assert.equal(staged.isError,undefined);const image=JSON.parse((staged.content[0] as {text:string}).text);
-  await assert.rejects(client.callTool({name:'catalog_publish',arguments:{id:p.id}}));
-  const unapproved=await client.callTool({name:'catalog_search',arguments:{query:finalProduct.sku}});assert.equal(JSON.parse((unapproved.content[0] as {text:string}).text).products.length,0);
-  await write(pool,p.id,c=>publishProposal(c,fixtureStore,{id:p.id,version:image.version,product:finalProduct,assetId:image.id}));
-  const search=await client.callTool({name:'catalog_search',arguments:{query:finalProduct.sku}});assert.equal(JSON.parse((search.content[0] as {text:string}).text).products[0].sku,finalProduct.sku);
-  assert.equal((await pool.query('SELECT sha256 FROM catalog_proposal_assets WHERE proposal_id=$1',[p.id])).rows[0].sha256,createHash('sha256').update(bytes).digest('hex'));
+  assert.ok(!tools.includes('catalog_propose'));assert.ok(!tools.includes('catalog_add_product'));
+  const bytes=await readFile('resources/catalog/ksmc-demo/images/H19.jpg');
+  const valid=await client.callTool({name:'catalog_validate_photo',arguments:{photo:{id:randomUUID(),mimeType:'image/jpeg',data:bytes.toString('base64')}}});assert.equal(valid.isError,undefined);assert.equal((valid.structuredContent as any).persisted,false);
+  const blocked=await client.callTool({name:'catalog_prepare',arguments:{operationId:randomUUID(),details:{name:'New product cannot become a draft'}}});assert.ok(blocked.isError);
+  const base=(await pool.query('SELECT sku,version FROM products WHERE store_id=$1 ORDER BY sku LIMIT 1',[fixtureStore])).rows[0];
+  const created=await client.callTool({name:'catalog_prepare',arguments:{operationId:randomUUID(),base,details:{aliases:['seller corrected alias']}}});assert.equal(created.isError,undefined);const edit=created.structuredContent as any;
+  const staged=await client.callTool({name:'catalog_attach_media',arguments:{operationId:randomUUID(),id:edit.id,version:edit.version,photo:{id:randomUUID(),mimeType:'image/jpeg',data:bytes.toString('base64')},matchKind:'exact'}});assert.equal(staged.isError,undefined);
+  await assert.rejects(client.callTool({name:'catalog_commit',arguments:{operationId:randomUUID(),reviewId:randomUUID()}}));
+  assert.equal((await pool.query('SELECT count(*)::int AS n FROM provider_attempts')).rows[0].n,0);
+
  }finally{await client.close();}
 }));
 

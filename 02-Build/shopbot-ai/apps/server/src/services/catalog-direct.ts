@@ -1,7 +1,8 @@
+import {prepareCatalogUpload} from './catalog-upload.js';
 import {createHash} from 'node:crypto';
 import type {Pool,PoolClient} from 'pg';
 import {z} from 'zod';
-import {catalogDraftSchema,createProposal,prepareProposalAsset,addProposalAsset,publishProposal} from './catalog-proposals.js';
+import {catalogDraftSchema,createProposal,addProposalAsset,publishProposal} from './catalog-proposals.js';
 import {ownerProductSchema} from './catalog-products.js';
 import {assertCatalogPermission,chatError,mutate,snapshot,type CatalogPrincipal} from './catalog-chat.js';
 import {imageUploadSchema} from './image-media.js';
@@ -31,7 +32,7 @@ export async function addChatProduct(pool:Pool,p:CatalogPrincipal,input:unknown)
  const a=directProductSchema.parse(input);
  const check=await pool.connect();try{await assertCatalogPermission(check,p,'catalog:publish');}finally{check.release();}
  // Decoding must not hold the store write lock. Commit still rechecks the grant.
- const prepared=await prepareProposalAsset({proposalId:a.operationId,version:1,photo:a.photo,matchKind:'exact'});
+ const prepared=await prepareCatalogUpload({proposalId:a.operationId,version:1,photo:a.photo,matchKind:'exact'});
  const sourceHash=createHash('sha256').update(Buffer.from(a.photo.data,'base64')).digest('hex');
  return mutate(pool,p,'catalog:publish',a.operationId,'add_product',{details:a.details,sourceHash},async c=>{
   const duplicates=await exactProductDuplicates(c,p.storeId,a.details.name,a.details.unit);

@@ -1,3 +1,4 @@
+import {prepareCatalogUpload} from './catalog-upload.js';
 import {catalogEnrichmentInstructions,catalogEnrichmentVersion} from '../../../../packages/contracts/catalog-enrichment.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
@@ -69,7 +70,7 @@ export async function snapshot(c:PoolClient,p:CatalogPrincipal,d:any,assetId?:st
 }
 function next(missing:string[]){return missing.length?{type:'ask_owner',fields:missing,question:missing.includes('sellingUnit')?'Do you sell this per piece, pack, or another selling unit?':missing.includes('priceOrConfirmStatus')?'What is the selling price, or should customers confirm the price with you?':'Please confirm the remaining product details: '+missing.join(', ')}:{type:'review_in_chat',message:'Show the product and chosen photo. Keep corrections, then commit only as requested by the owner.'};}
 export async function catalogContext(pool:Pool,p:CatalogPrincipal){
- const c=await pool.connect();try{await assertCatalogPermission(c,p,'catalog:read');return {shop:(await c.query('SELECT id,name FROM stores WHERE id=$1',[p.storeId])).rows[0],enrichment:{version:catalogEnrichmentVersion,instructions:catalogEnrichmentInstructions},permissions:{read:true,draft:p.canWrite!==false,publish:p.canPublish===true},policy:{directAddition:{tool:'catalog_add_product',required:['photo','name','pricePaise','stock','unit'],draftOnlyWhen:'incomplete, interrupted or owner-deferred',enrichmentRules:'catalog://owner/enrichment'},approvalLocation:'chat',authorization:'delegated_owner_grant',clientConfirmation:'Follow the host client confirmation controls; never claim a model Boolean proves human approval.',media:'Host-generated edits retain an original source. Marketing images cannot be primary.',unknownPrice:'Ask for seller price or explicit price-to-confirm status.',stock:'Unknown stays unknown. Never overwrite a stale inventory version.',serverSideInference:false},taxonomy:(await c.query('SELECT id,parent_id,kind,label FROM catalog_nodes WHERE store_id=$1 ORDER BY kind,label',[p.storeId])).rows};}finally{c.release();}
+ const c=await pool.connect();try{await assertCatalogPermission(c,p,'catalog:read');return {shop:(await c.query('SELECT id,name FROM stores WHERE id=$1',[p.storeId])).rows[0],enrichment:{version:catalogEnrichmentVersion,instructions:catalogEnrichmentInstructions},permissions:{read:true,draft:p.canWrite!==false,publish:p.canPublish===true},policy:{directAddition:{tool:'catalog_add_product',required:['photo','name','pricePaise','stock','unit'],newProductDrafts:false,incompleteAction:'Ask for missing facts in chat; retry catalog_add_product when complete.',existingProductEdits:'catalog_prepare then catalog_get_edit, catalog_review and catalog_commit',enrichmentRules:'catalog://owner/enrichment'},approvalLocation:'chat',authorization:'delegated_owner_grant',clientConfirmation:'Follow the host client confirmation controls; never claim a model Boolean proves human approval.',media:'Host-generated edits retain an original source. Marketing images cannot be primary.',unknownPrice:'Ask for seller price or explicit price-to-confirm status.',stock:'Unknown stays unknown. Never overwrite a stale inventory version.',serverSideInference:false},taxonomy:(await c.query('SELECT id,parent_id,kind,label FROM catalog_nodes WHERE store_id=$1 ORDER BY kind,label',[p.storeId])).rows};}finally{c.release();}
 }
 export async function getChatDraft(pool:Pool,p:CatalogPrincipal,id:string){
  const c=await pool.connect();try{await c.query('BEGIN');await assertCatalogPermission(c,p,'catalog:read');const d=await readDraft(c,p,id);
@@ -84,14 +85,14 @@ export async function prepareChatDraft(pool:Pool,p:CatalogPrincipal,input:unknow
   let result;
   if(a.id){if(a.version===undefined||a.base)throw chatError('invalid_input','Supply the current draft version; an edit target cannot change.',400);const old=await readDraft(c,p,a.id,a.version);result=await updateProposal(c,p.storeId,{id:a.id,version:a.version,details:{...old.details,...a.details}});}
   else{if(a.version!==undefined)throw chatError('invalid_input','A new draft has no draft version.',400);result=await createProposal(c,p.storeId,p.actor,{id:randomUUID(),batchId:a.batchId,clientItemId:a.clientItemId??a.operationId,details:a.details,provenance:{source:'Owner chat via connected agent',issues:[]},...(a.base?{base:a.base}:{})});}
-  return {...result,nextStep:{type:'read_draft',tool:'catalog_get_draft',id:result.id}};
+  return {...result,nextStep:{type:'read_draft',tool:'catalog_get_edit',id:result.id}};
  });
 }
 export async function attachChatMedia(pool:Pool,p:CatalogPrincipal,input:unknown){
  const a=chatMediaSchema.parse(input);
  const c=await pool.connect();try{await assertCatalogPermission(c,p,'catalog:draft');}finally{c.release();}
  // Bound and decode before taking the store write lock. No model call is made.
- const prepared=await prepareProposalAsset({proposalId:a.id,version:a.version,photo:a.photo,matchKind:a.matchKind});
+ const prepared=await prepareCatalogUpload({proposalId:a.id,version:a.version,photo:a.photo,matchKind:a.matchKind});
  const {photo,...action}=a;
  return mutate(pool,p,'catalog:draft',a.operationId,'media',{...action,sourceHash:createHash('sha256').update(Buffer.from(photo.data,'base64')).digest('hex')},async c=>{
   await readDraft(c,p,a.id,a.version);
@@ -113,7 +114,7 @@ export async function reviewChatDraft(pool:Pool,p:CatalogPrincipal,input:unknown
   const d=await readDraft(c,p,a.id,a.version),view=await snapshot(c,p,d,a.assetId,a.withoutPhoto);
   if(view.missingRequired.length)return {id:d.id,version:d.version,missingRequired:view.missingRequired,issues:view.issues,nextStep:next(view.missingRequired)};
   const id=randomUUID();await c.query('INSERT INTO catalog_chat_reviews(id,store_id,proposal_id,proposal_version,actor,input_hash,snapshot) VALUES($1,$2,$3,$4,$5,$6,$7)',[id,p.storeId,d.id,d.version,p.actor,chatHash(view.data),JSON.stringify(view.data)]);
-  return {reviewId:id,id:d.id,version:d.version,before:view.before,product:view.data.product,photo:view.data.asset,withoutPhoto:a.withoutPhoto,sellingBasis:sellingBasisPreview(view.data.product),expiresInSeconds:1800,missingRequired:[],authorization:'agent_action_under_owner_publish_grant',nextStep:p.canPublish?{type:'owner_review_then_commit',tool:'catalog_commit',message:'Show the exact product and selected image in chat; apply corrections before committing the owner’s requested action.'}:{type:'authorize_publish',requiredScope:'catalog:publish',message:'This connection can prepare drafts. Reconnect with catalog:publish for chat publication.'}};
+  return {reviewId:id,id:d.id,version:d.version,before:view.before,product:view.data.product,photo:view.data.asset,withoutPhoto:a.withoutPhoto,sellingBasis:sellingBasisPreview(view.data.product),expiresInSeconds:1800,missingRequired:[],authorization:'agent_action_under_owner_publish_grant',nextStep:p.canPublish?{type:'owner_review_then_commit',tool:'catalog_commit',message:'Show the exact product and selected image in chat; apply corrections before committing the owner’s requested action.'}:{type:'authorize_publish',requiredScope:'catalog:publish',message:'This connection can prepare existing-product edits. Reconnect with catalog:publish to add or publish products in chat.'}};
  });
 }
 export async function commitChatDraft(pool:Pool,p:CatalogPrincipal,input:unknown){

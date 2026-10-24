@@ -115,16 +115,17 @@ test('official MCP client prepares, transfers a real host file, reviews images a
  await server.connect(a);await client.connect(b);
  const call=async(name:string,args:any)=>{const r=await client.callTool({name,arguments:args});assert.equal(r.isError,undefined,JSON.stringify(r));assert.ok(r.structuredContent);return r;};
  try{
-  const tools=(await client.listTools()).tools;assert.equal(tools.length,19);assert.deepEqual(tools.find(t=>t.name==='catalog_attach_media')!._meta?.['openai/fileParams'],['file']);
+  const tools=(await client.listTools()).tools;assert.equal(tools.length,17);assert.deepEqual(tools.find(t=>t.name==='catalog_attach_media')!._meta?.['openai/fileParams'],['file']);
   const prompts=await client.listPrompts();assert.ok(prompts.prompts.some(p=>p.name==='edit_product'));const prompt=await client.getPrompt({name:'add_product'});assert.ok(JSON.stringify(prompt).includes('catalog_commit'));
   const context=(await call('catalog_context',{})).structuredContent as any;assert.equal(context.permissions.publish,true);assert.equal(context.policy.serverSideInference,false);
-  const prepared=(await call('catalog_prepare',{operationId:op(),details:fields})).structuredContent as any;
+  const base=(await pool.query('SELECT sku,version FROM products WHERE store_id=$1 ORDER BY sku LIMIT 1',[fixtureStore])).rows[0];
+  const prepared=(await call('catalog_prepare',{operationId:op(),base,details:fields})).structuredContent as any;
   const staged=(await call('catalog_attach_media',{operationId:op(),id:prepared.id,version:prepared.version,matchKind:'exact',kind:'original',file:{download_url:'https://files.oaiusercontent.com/fixture',file_id:'fixture-file'}})).structuredContent as any;
-  const read=await call('catalog_get_draft',{id:prepared.id});assert.ok(read.content.some((c:any)=>c.type==='image'));
+  const read=await call('catalog_get_edit',{id:prepared.id});assert.ok(read.content.some((c:any)=>c.type==='image'));
   const checked=await call('catalog_review',{operationId:op(),id:prepared.id,version:staged.version,assetId:staged.id});assert.ok(checked.content.some((c:any)=>c.type==='image'));
   const saved=(await call('catalog_commit',{operationId:op(),reviewId:(checked.structuredContent as any).reviewId})).structuredContent as any;assert.ok(saved.sku);
   const edited=(await call('catalog_prepare',{operationId:op(),base:{sku:saved.sku,version:saved.version},details:{aliases:['owner corrected alias']}})).structuredContent as any;
-  const existing=await call('catalog_get_draft',{id:edited.id});assert.ok(existing.content.some((c:any)=>c.type==='image'));
+  const existing=await call('catalog_get_edit',{id:edited.id});assert.ok(existing.content.some((c:any)=>c.type==='image'));
   const kept=await call('catalog_review',{operationId:op(),id:edited.id,version:edited.version});assert.ok(kept.content.some((c:any)=>c.type==='image'));
   assert.equal((await pool.query('SELECT count(*)::int AS n FROM provider_attempts')).rows[0].n,0);
  }finally{await client.close();await server.close();}
@@ -137,7 +138,8 @@ test('public HTTP owner consent grants chat publication explicitly while old dra
   const publisher=await authorized(pool,true),old=await authorized(pool),read=await authorized(pool,false,'catalog:read');
   const yes=await rpc(publisher.token.access_token,'tools/list'),no=await rpc(old.token.access_token,'tools/list');assert.ok(yes.result.tools.some((t:any)=>t.name==='catalog_commit'));assert.ok(!no.result.tools.some((t:any)=>t.name==='catalog_commit'));
   const denied=await rpc(read.token.access_token,'catalog_prepare',{operationId:op(),details:{name:'Should fail'}});assert.ok(denied.error);
-  const p=(await rpc(publisher.token.access_token,'catalog_prepare',{operationId:op(),details:fields})).result.structuredContent;
+  const base=(await pool.query('SELECT sku,version FROM products WHERE store_id=$1 ORDER BY sku LIMIT 1',[fixtureStore])).rows[0];
+  const p=(await rpc(publisher.token.access_token,'catalog_prepare',{operationId:op(),base,details:fields})).result.structuredContent;
   const r=(await rpc(publisher.token.access_token,'catalog_review',{operationId:op(),id:p.id,version:p.version,withoutPhoto:true})).result.structuredContent;
   const final=await rpc(publisher.token.access_token,'catalog_commit',{operationId:op(),reviewId:r.reviewId});assert.ok(final.result.structuredContent.sku);
   const unauthorized=await app.inject({method:'POST',url:'/api/owner/mcp/authorize',headers:{host:owner.hostname,'content-type':'application/json'},payload:{id:op(),csrf:'a'.repeat(43),allow:true,publish:true}});assert.equal(unauthorized.statusCode,403);
@@ -171,4 +173,20 @@ test('the dedicated draft SQL role can review existing photos without gaining pr
   const privilege=(await pool.query("SELECT has_table_privilege($1,'products','UPDATE') AS writable",[role])).rows[0];assert.equal(privilege.writable,false);
   await assert.rejects(commitChatDraft(limited,actor,{operationId:op(),reviewId:r.reviewId}),/required catalog permission/);
  }finally{await limited?.end();await pool.query(`DROP OWNED BY ${role}; DROP ROLE ${role}`);}
+}));
+
+
+test('public HTTP MCP recovers an attachment failure and publishes directly with corrected MIME bytes',()=>fixture(async pool=>{
+ const app=await createApp({mode:'mock',host:'127.0.0.1',port:3049,databaseUrl:process.env.DATABASE_URL!,mediaDir:'/tmp/chat-upload-fixture',owner,remoteMcp:remote},pool,undefined,undefined,async()=>({email:owner.email,subject:'fixture'}));
+ try{
+  const publisher=await authorized(pool,true),operationId=op();
+  const call=async(name:string,args:any)=>{const response=await app.inject({method:'POST',url:'/mcp',headers:{host:'chat-mcp.example.test',authorization:'Bearer '+publisher.token.access_token,'content-type':'application/json',accept:'application/json, text/event-stream','mcp-protocol-version':'2025-11-25'},payload:{jsonrpc:'2.0',id:1,method:'tools/call',params:{name,arguments:args}}});assert.equal(response.statusCode,200,response.body);const body=JSON.parse(response.body.startsWith('event:')?response.body.split('\n').find(s=>s.startsWith('data: '))!.slice(6):response.body);return body.result;};
+  const details={...fields,stock:30},original=await photo();
+  const failed=await call('catalog_add_product',{operationId,details,file:{download_url:'sandbox:/mnt/data/product.jpg',file_id:'local'}});assert.equal(failed.structuredContent.error,'unsupported_file_handoff');
+  const status=await call('workflow_status',{operationId});assert.equal(status.structuredContent.failure.details.operationId,operationId);
+  const saved=await call('catalog_add_product',{operationId,details,photo:{...original,mimeType:'image/webp'}});assert.equal(saved.isError,undefined,JSON.stringify(saved));assert.equal(saved.structuredContent.state,'published');
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM catalog_proposals WHERE state='draft'")).rows[0].n,0);
+  const replay=await call('catalog_add_product',{operationId,details,photo:original});assert.deepEqual(replay.structuredContent,saved.structuredContent);
+  assert.equal((await pool.query('SELECT count(*)::int AS n FROM inventory_movements WHERE sku=$1',[saved.structuredContent.sku])).rows[0].n,1);
+ }finally{await app.close();}
 }));
