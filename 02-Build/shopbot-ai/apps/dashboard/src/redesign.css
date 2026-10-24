@@ -17,3 +17,5 @@
   .redesign .rd-mobile-header{flex-shrink:0}
   .redesign .rd-mobile-nav{position:static;flex-shrink:0}
 }
+
+.redesign .rd-advanced.owner-shell{display:block;min-height:0;background:transparent;--ui-accent:var(--rd-teal);--ui-accent-hover:var(--rd-teal);--ui-selected:var(--rd-tint);--ui-border:var(--rd-line)}

@@ -75,6 +75,6 @@ export async function ownerProposalPage(c:PoolClient,storeId:string,input:z.infe
  if(input.exception)where.push(groups[input.exception]);
  const total=(await c.query(`SELECT count(*)::int AS total FROM catalog_proposals p WHERE ${where.join(' AND ')}`,values)).rows[0].total;
  if(cursor)where.push(`(p.created_at,p.id)>(${bind(cursor.key)}::timestamptz,${bind(cursor.id)}::uuid)`);
- const rows=(await c.query(`SELECT p.id,p.version,p.batch_id,p.client_item_id,p.details->>'name' AS name,p.details->>'sku' AS sku,p.base_sku,p.base_version,p.created_at::text AS cursor_key,${draftConflicts} AS conflict,jsonb_array_length(coalesce(p.provenance->'issues','[]')) AS "issueCount" FROM catalog_proposals p WHERE ${where.join(' AND ')} ORDER BY p.created_at,p.id LIMIT ${bind(input.limit+1)}`,values)).rows;
+ const rows=(await c.query(`SELECT p.id,p.version,p.batch_id,p.client_item_id,p.details->>'name' AS name,p.details->>'sku' AS sku,p.provenance->>'source' AS source,p.actor,p.created_at,p.base_sku,p.base_version,p.created_at::text AS cursor_key,${draftConflicts} AS conflict,jsonb_array_length(coalesce(p.provenance->'issues','[]')) AS "issueCount" FROM catalog_proposals p WHERE ${where.join(' AND ')} ORDER BY p.created_at,p.id LIMIT ${bind(input.limit+1)}`,values)).rows;
  const loaded=rows.slice(0,input.limit),last=loaded.at(-1);return {proposals:loaded.map(({cursor_key,...row})=>row),total,summary,limit:input.limit,nextCursor:rows.length>input.limit&&last?nextCursor(scope,query,0,last.cursor_key,last.id):null};
 }

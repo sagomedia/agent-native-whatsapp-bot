@@ -25,7 +25,7 @@ export async function createProposal(c:PoolClient,storeId:string,actor:string,in
  const r=await c.query(`INSERT INTO catalog_proposals(id,store_id,batch_id,client_item_id,input_hash,details,provenance,actor,base_sku,base_version) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id,version,state`,[p.id,storeId,p.batchId,p.clientItemId,inputHash,JSON.stringify(p.details),JSON.stringify(p.provenance),actor,p.base?.sku??null,p.base?.version??null]);return {...r.rows[0],replayed:false};
 }
 export async function listProposals(c:PoolClient,storeId:string,state='draft',limit=100){
- return (await c.query(`SELECT p.id,p.batch_id,p.client_item_id,p.details,p.provenance,p.base_sku,p.base_version,p.version,p.state,p.published_sku,p.created_at,p.updated_at,coalesce((SELECT jsonb_agg(jsonb_build_object('id',a.id,'sha256',a.sha256,'matchKind',a.match_kind,'width',a.width,'height',a.height) ORDER BY a.created_at,a.id) FROM catalog_proposal_assets a WHERE a.store_id=p.store_id AND a.proposal_id=p.id),'[]'::jsonb) AS assets FROM catalog_proposals p WHERE p.store_id=$1 AND p.state=$2 ORDER BY p.created_at,p.id LIMIT $3`,[storeId,state,Math.max(1,Math.min(200,limit))])).rows;
+ return (await c.query(`SELECT p.id,p.batch_id,p.client_item_id,p.details,p.provenance,p.base_sku,p.base_version,p.version,p.state,p.published_sku,p.created_at,p.updated_at,coalesce((SELECT jsonb_agg(jsonb_build_object('id',a.id,'sha256',a.sha256,'matchKind',a.match_kind,'width',a.width,'height',a.height,'kind',a.asset_kind,'sourceAssetId',a.source_asset_id) ORDER BY a.created_at,a.id) FROM catalog_proposal_assets a WHERE a.store_id=p.store_id AND a.proposal_id=p.id),'[]'::jsonb) AS assets FROM catalog_proposals p WHERE p.store_id=$1 AND p.state=$2 ORDER BY p.created_at,p.id LIMIT $3`,[storeId,state,Math.max(1,Math.min(200,limit))])).rows;
 }
 async function draft(c:PoolClient,storeId:string,id:string,version:number){
  const p=(await c.query("SELECT * FROM catalog_proposals WHERE store_id=$1 AND id=$2 FOR UPDATE",[storeId,id])).rows[0];
@@ -57,8 +57,9 @@ export async function publishProposal(c:PoolClient,storeId:string,input:unknown)
  else if(p.product.version!==0)throw fail('A new draft cannot overwrite an existing product.');
  if(p.assetId&&p.withoutPhoto)throw fail('Choose the exact photo or publish without a photo.',400);
  let asset;
- if(p.assetId){asset=(await c.query('SELECT * FROM catalog_proposal_assets WHERE store_id=$1 AND proposal_id=$2 AND id=$3',[storeId,p.id,p.assetId])).rows[0];if(!asset||asset.match_kind!=='exact')throw fail('Only an exact product photo from this draft can be published.',400);}
- else if(!row.base_sku&&!p.withoutPhoto)throw fail('Choose an exact photo or explicitly publish without a photo.',400);
+ if(p.assetId){asset=(await c.query('SELECT * FROM catalog_proposal_assets WHERE store_id=$1 AND proposal_id=$2 AND id=$3',[storeId,p.id,p.assetId])).rows[0];if(!asset||asset.match_kind!=='exact'||asset.asset_kind==='marketing')throw fail('Only an exact product photo from this draft can be published.',400);}
+ if(asset?.asset_kind==='cleaned'&&!(await c.query("SELECT 1 FROM catalog_proposal_assets WHERE store_id=$1 AND proposal_id=$2 AND id=$3 AND asset_kind='original' AND match_kind='exact'",[storeId,p.id,asset.source_asset_id])).rowCount)throw fail('A cleaned photo requires an exact original source.',400);
+ else if(!p.assetId&&!row.base_sku&&!p.withoutPhoto)throw fail('Choose an exact photo or explicitly publish without a photo.',400);
  const saved=await saveCatalogProduct(c,storeId,p.product);
  if(asset){const id=await saveCatalogPhoto(c,storeId,asset);await c.query('UPDATE products SET image_path=$1 WHERE store_id=$2 AND sku=$3',['/catalog-images/custom/'+id+'.jpg',storeId,saved.sku]);}
  else if(p.withoutPhoto)await c.query('UPDATE products SET image_path=NULL WHERE store_id=$1 AND sku=$2',[storeId,saved.sku]);

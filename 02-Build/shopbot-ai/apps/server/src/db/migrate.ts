@@ -1,3 +1,5 @@
+import {migrateDeveloperDiagnostics} from './developer-diagnostics.js';
+import {migrateCatalogChat} from './catalog-chat.js';
 import type { Pool } from 'pg';
 import type { Config } from '../config.js';
 import { assertMock } from '../config.js';
@@ -533,6 +535,8 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       );
       INSERT INTO schema_migrations(version) VALUES(46);
     `);}
+    await migrateCatalogChat(client);
+    await migrateDeveloperDiagnostics(client);
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

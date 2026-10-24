@@ -1,0 +1,13 @@
+# Verification: direct onboarding and internal diagnostics
+
+- Baseline `274e73b`: 931/931 integration tests passed in an independent PostgreSQL 18 database on localhost port 55447.
+- Combined regression: 950/950 passed, including latest customer carousel/matching, voice, recommendations, ordering, owner UI, previous chat-publication tests and the new direct/diagnostics workflows.
+- Final snapshot/report concurrency hardening: all 8/8 new workflow tests passed after the last change, including identical simultaneous create/report retries and compiled stdio operation under a restricted SQL role. The full suite was run before this final narrowly scoped concurrency change; the affected feature suite was rerun afterward.
+- Final build/typecheck passed. Both catalog-management and developer-diagnostics skills validated. Installer Python syntax passed; no merchant installer was executed.
+- Official MCP client: complete product → real JPEG byte handoff → atomic publication → receipt replay → dashboard API visibility → customer discovery, with no provider attempts. Duplicate hidden/published items, required facts, zero stock/free distinction, rollback, grant revocation and merchant/internal tool separation checked.
+- Internal MCP: collect → page case timeline → validate references → save private report → reload report. Common phone/email identifiers redacted, untrusted instructions remain evidence, incomplete telemetry/coverage explicit, wrong-operator/shop and invented evidence rejected. Internal reports cause no order/product/message writes.
+- Compiled internal stdio works with SELECT-only business-table privileges and no report INSERT permission. Its tools are absent from merchant HTTP MCP.
+- Populated v46 → v48 additive upgrade preserves products, messages and customer guards; repeated setup succeeds. Catalog chat migration 47 and diagnostics 48 preserve the newer source's migration 46. Historical v26 upgrade test also passes.
+- Browser: synthetic 100-draft rehearsal on separate localhost port 3047. Products shows Drafts count; queue opens expanded, shows source/date and missing-fact filters; selecting a draft opens image and editor. Fixed inherited catalog CSS loading and synthetic preview compression; screenshot retained.
+- Actual external ChatGPT generated-file handoff, model enrichment quality comparison and production activation remain unverified. Test downloader returned actual controlled bytes; it was not a live external account file transfer.
+- No shared source, production service/database, merchant catalog, live OAuth grant, customer conversation or external message changed. Delivery/inference were not configured in the disposable environment.

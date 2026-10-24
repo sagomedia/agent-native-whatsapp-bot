@@ -28,7 +28,8 @@
     "catalog:image-variants": "node dist/scripts/backfill-catalog-image-variants.js",
     "catalog:scale-eval": "tsx scripts/evaluate-catalog-scale.ts",
     "catalog:facts": "tsx scripts/import-shop-facts.ts",
-    "demo:evidence": "tsx scripts/demo-evidence.ts"
+    "demo:evidence": "tsx scripts/demo-evidence.ts",
+    "mcp:diagnostics": "tsx apps/server/src/mcp/diagnostics-stdio.ts"
   },
   "dependencies": {
     "@fastify/static": "10.1.5",

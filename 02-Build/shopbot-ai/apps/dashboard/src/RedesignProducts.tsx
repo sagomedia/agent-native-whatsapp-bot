@@ -1,3 +1,4 @@
+import {visiblePoll} from './owner-polling.js';
 import {useEffect,useMemo,useRef,useState,type ChangeEvent,type FormEvent,type MouseEvent} from 'react';
 import {SELLING_UNITS} from '../../../packages/contracts/selling-units.js';
 import {indicativePriceFor} from '../../../packages/contracts/indicative-prices.js';
@@ -28,6 +29,8 @@ const isAbort=(e:unknown)=>e instanceof DOMException&&e.name==='AbortError';
 
 export function RedesignProducts(){
  const {t}=useOwnerLocale();
+ const [draftCount,setDraftCount]=useState<number|null>(null);
+ useEffect(()=>visiblePoll(async signal=>{const response=await fetch('/api/owner/catalog/proposals?limit=1',{cache:'no-store',signal});if(!response.ok)throw new Error('Draft count unavailable');const data=await response.json();if(!signal.aborted)setDraftCount(data.summary.total);},{intervalMs:15000}),[]);
  const [query,setQuery]=useState(''),[filter,setFilter]=useState<'all'|'low'|'out'>('all');
  const [page,setPage]=useState<Page|null>(null),[rows,setRows]=useState<Product[]>([]),[cursor,setCursor]=useState<string|null>(null);
  const [loading,setLoading]=useState(true),[loadingMore,setLoadingMore]=useState(false),[listError,setListError]=useState('');
@@ -73,7 +76,8 @@ export function RedesignProducts(){
  return <section className="rd-products" aria-label={t('Products')}>
  {notice&&screen==='list'?<p className="rd-products-notice" role="status">{notice}<button type="button" onClick={()=>setNotice('')} aria-label="Dismiss message">×</button></p>:null}
  {screen==='list'?<>
-  <div className="rd-products-head"><h1>{t('Products')}</h1><div className="rd-products-head-actions"><button className="rd-products-primary" type="button" onClick={startAdd}>＋ <span>{t('Add product')}</span></button><div className="rd-products-more-wrap"><button className="rd-products-more" type="button" aria-label="More product actions" aria-expanded={moreOpen} onClick={()=>setMoreOpen(v=>!v)}>⋯</button>{moreOpen?<div className="rd-products-menu"><a href="?view=catalog&bulk=1">Import products</a><a href="?view=catalog&bulk=1">Update many products</a><a href="?view=catalog&visibility=draft">Saved drafts</a></div>:null}</div></div></div>
+  <div className="rd-products-head"><h1>{t('Products')}</h1><div className="rd-products-head-actions"><button className="rd-products-primary" type="button" onClick={startAdd}>＋ <span>{t('Add product')}</span></button><div className="rd-products-more-wrap"><button className="rd-products-more" type="button" aria-label="More product actions" aria-expanded={moreOpen} onClick={()=>setMoreOpen(v=>!v)}>⋯</button>{moreOpen?<div className="rd-products-menu"><a href="?view=catalog&bulk=1">Import products</a><a href="?view=catalog&bulk=1">Update many products</a><a href="?view=catalog&drafts=1">Saved drafts</a></div>:null}</div></div></div>
+  <nav className="rd-products-view-tabs" aria-label="Product views"><a href="?view=catalog" aria-current="page">Products</a><a href="?view=catalog&drafts=1">Drafts{draftCount===null?'':' · '+draftCount}</a></nav>
   <label className="rd-products-search"><span aria-hidden="true">⌕</span><input ref={searchRef} value={query} onChange={e=>setQuery(e.target.value)} placeholder={t('Search products')} aria-label={t('Search products')}/>{query?<button type="button" onClick={()=>{setQuery('');searchRef.current?.focus();}} aria-label={t('Clear search')}>×</button>:null}</label>
   <div className="rd-products-filters" role="group" aria-label="Stock filters">{([['all','All'],['low','Low stock'],['out','Out of stock']] as const).map(([key,label])=><button type="button" key={key} className={filter===key?'active':''} aria-pressed={filter===key} onClick={()=>setFilter(key)}>{t(label)}</button>)}</div>
   {listError?<div className="rd-products-error" role="alert">{listError} <button type="button" onClick={()=>setRefreshKey(n=>n+1)}>Try again</button></div>:null}

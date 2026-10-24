@@ -64,7 +64,7 @@ test('OAuth codes bind client, redirect, resource, PKCE and consent; refresh rot
 
 test('HTTP MCP creates replay-safe unpublished drafts, respects read-only scopes and rejects foreign shop or publication arguments',()=>fixture(async(pool,oauth,app)=>{
  const a=await authorize(oauth),t=await oauth.token(a.tokenInput);
- const listed=await rpc(app,t.access_token,'tools/list');assert.equal(listed.statusCode,200,listed.body);assert.equal(result(listed.body).result.tools.length,6);
+ const listed=await rpc(app,t.access_token,'tools/list');assert.equal(listed.statusCode,200,listed.body);assert.equal(result(listed.body).result.tools.length,14);
  const foreign=randomUUID();await pool.query("INSERT INTO stores(id,name,synthetic) VALUES($1,'Other','true')",[foreign]);await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise) VALUES($1,'FOREIGN-SECRET','Other shop secret','piece',1)",[foreign]);
  const inventory=await rpc(app,t.access_token,'tools/call',{name:'catalog_inventory',arguments:{limit:100}});assert.ok(!inventory.body.includes('FOREIGN-SECRET'));
  const p={id:randomUUID(),batchId:'http-test',clientItemId:'row-1',details:{name:'Synthetic remote MCP draft'},provenance:{source:'test fixture',issues:['Unpublished test']}};
@@ -73,7 +73,7 @@ test('HTTP MCP creates replay-safe unpublished drafts, respects read-only scopes
  assert.equal(Number((await pool.query("SELECT count(*) FROM products WHERE name='Synthetic remote MCP draft'")).rows[0].count),0);
  const intrusion=await rpc(app,t.access_token,'tools/call',{name:'catalog_propose',arguments:{...p,storeId:foreign}});assert.ok(result(intrusion.body).error||result(intrusion.body).result?.isError);
  const publish=await rpc(app,t.access_token,'tools/call',{name:'catalog_publish',arguments:{id:p.id}});assert.ok(result(publish.body).error);
- const read=await authorize(oauth,'catalog:read'),readToken=await oauth.token(read.tokenInput),readList=await rpc(app,readToken.access_token,'tools/list');assert.equal(result(readList.body).result.tools.length,3);
+ const read=await authorize(oauth,'catalog:read'),readToken=await oauth.token(read.tokenInput),readList=await rpc(app,readToken.access_token,'tools/list');assert.equal(result(readList.body).result.tools.length,8);
  const denied=await rpc(app,readToken.access_token,'tools/call',{name:'catalog_propose',arguments:p});assert.ok(result(denied.body).error);
  await pool.query("UPDATE mcp_oauth_tokens SET expires_at=now()-interval '1 second' WHERE kind='access'");assert.equal((await rpc(app,t.access_token,'tools/list')).statusCode,401);
 }));
@@ -100,7 +100,7 @@ test('official MCP HTTP client negotiates the deployed SDK protocol and calls ca
  const proxy=createServer((req,res)=>{const upstream=httpRequest({hostname:'127.0.0.1',port:address.port,path:req.url,method:req.method,headers:{...req.headers,host:publicHost}},response=>{res.writeHead(response.statusCode!,response.headers);response.pipe(res);});upstream.on('error',()=>{res.writeHead(502);res.end();});req.pipe(upstream);});
  await new Promise<void>(resolve=>proxy.listen(0,'127.0.0.1',resolve));const proxyAddress=proxy.address();assert.ok(proxyAddress&&typeof proxyAddress!=='string');
  const transport=new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${proxyAddress.port}/mcp`),{requestInit:{headers:{authorization:'Bearer '+t.access_token}}});
- try{await client.connect(transport);const tools=await client.listTools();assert.equal(tools.tools.length,6);const inventory=await client.callTool({name:'catalog_inventory',arguments:{limit:1}});assert.equal(inventory.isError,undefined);assert.equal(JSON.parse((inventory.content[0] as {text:string}).text).products.length,1);}finally{await client.close();await new Promise<void>((resolve,reject)=>proxy.close(e=>e?reject(e):resolve()));}
+ try{await client.connect(transport);const tools=await client.listTools();assert.equal(tools.tools.length,14);const inventory=await client.callTool({name:'catalog_inventory',arguments:{limit:1}});assert.equal(inventory.isError,undefined);assert.equal(JSON.parse((inventory.content[0] as {text:string}).text).products.length,1);}finally{await client.close();await new Promise<void>((resolve,reject)=>proxy.close(e=>e?reject(e):resolve()));}
 }));
 
 test('OAuth accepts extension fields and blank default scopes without weakening resource, PKCE or callback binding',()=>fixture(async(_pool,oauth,app)=>{
@@ -123,7 +123,7 @@ test('2026 MCP discovery preserves method/name headers and legacy initialization
  const meta={'io.modelcontextprotocol/protocolVersion':'2026-07-28','io.modelcontextprotocol/clientInfo':{name:'modern-fixture',version:'1'},'io.modelcontextprotocol/clientCapabilities':{}};
  const discovery=await app.inject({method:'POST',url:'/mcp',headers:{...modernHeaders,'mcp-method':'server/discover'},payload:{jsonrpc:'2.0',id:5,method:'server/discover',params:{_meta:meta}}});assert.equal(discovery.statusCode,200,discovery.body);assert.equal(discovery.json().result._meta['io.modelcontextprotocol/serverInfo'].name,'shopbot-owner-catalog');
  const payload={jsonrpc:'2.0',id:2,method:'tools/list',params:{_meta:meta}};
- const r=await app.inject({method:'POST',url:'/mcp',headers:modernHeaders,payload});assert.equal(r.statusCode,200,r.body);assert.equal(result(r.body).result.tools.length,6);
+ const r=await app.inject({method:'POST',url:'/mcp',headers:modernHeaders,payload});assert.equal(r.statusCode,200,r.body);assert.equal(result(r.body).result.tools.length,14);
  const missing=await app.inject({method:'POST',url:'/mcp',headers:{...headers,'mcp-protocol-version':'2026-07-28'},payload});assert.equal(missing.statusCode,400);assert.equal(missing.json().error.code,-32020);
  const wrong=await app.inject({method:'POST',url:'/mcp',headers:{...modernHeaders,'mcp-method':'tools/call'},payload});assert.equal(wrong.statusCode,400);
  const call=await app.inject({method:'POST',url:'/mcp',headers:{...modernHeaders,'mcp-method':'tools/call','mcp-name':'catalog_inventory'},payload:{jsonrpc:'2.0',id:3,method:'tools/call',params:{_meta:meta,name:'catalog_inventory',arguments:{limit:1}}}});assert.equal(call.statusCode,200,call.body);assert.equal(result(call.body).result.isError,undefined);
@@ -150,7 +150,7 @@ test('reviewed exact third-party callbacks bind registration, consent and token 
   const tokenInput={grant_type:'authorization_code',client_id:params.client_id,code:redirect.searchParams.get('code')!,redirect_uri:callback,code_verifier:v,resource:remote.publicUrl};
   await assert.rejects(oauth.token({...tokenInput,redirect_uri:callback+'/'}),/invalid_grant/);
   const token=await app.inject({method:'POST',url:'/mcp/oauth/token',headers:{host:publicHost,'content-type':'application/x-www-form-urlencoded'},payload:new URLSearchParams(tokenInput).toString()});assert.equal(token.statusCode,200,token.body);
-  const listed=await rpc(app,token.json().access_token,'tools/list');assert.equal(listed.statusCode,200,listed.body);assert.equal(result(listed.body).result.tools.length,6);
+  const listed=await rpc(app,token.json().access_token,'tools/list');assert.equal(listed.statusCode,200,listed.body);assert.equal(result(listed.body).result.tools.length,14);
   const refreshed=await oauth.token({grant_type:'refresh_token',client_id:params.client_id,resource:remote.publicUrl,refresh_token:token.json().refresh_token});assert.ok(await oauth.authenticate('Bearer '+refreshed.access_token));
   const stricter=new CatalogOAuth(_pool,remote,owner);await assert.rejects(stricter.prepare(params),/invalid_request/);
  },config);
