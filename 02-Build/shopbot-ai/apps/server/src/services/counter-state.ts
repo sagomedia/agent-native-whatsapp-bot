@@ -28,7 +28,7 @@ export function counterLine(line:DraftLine) {
 
 export function nextCounterLine(state:ConversationState) {
   const ready=(line:DraftLine)=>{const facts=counterLine(line);return facts.canQuote&&(!state.requireProductConfirmation||facts.ready);};
-  const active=state.editingLineId??(state.pending?.kind==='question'?state.pending.lineId:undefined);
+  const active=state.editingLineId??state.activeItemId??(state.pending?.kind==='question'?state.pending.lineId:undefined);
   return state.draft.find(line=>line.id===active&&!line.shopCheckDeferred&&!ready(line))
     ??state.draft.find(line=>!line.shopCheckDeferred&&!ready(line))
     ??state.draft.find(line=>!ready(line));

@@ -1,3 +1,4 @@
+import {recordConversationAudit} from '../services/catalog-audit.js';
 import {trackItemClarification} from '../services/item-clarification.js';
 import {cartChangeFeedback} from '../services/cart-change-feedback.js';
 import {listViewRequest} from '../services/list-view-intent.js';
@@ -302,7 +303,7 @@ export class ConversationRuntime {
       }
       if(claimed.event.type==='voice'&&interpretation?.transcript)await client.query('UPDATE messages SET text=$1 WHERE id=$2 AND conversation_id=$3',[interpretation.transcript,claimed.id,ctx.conversationId]);
       if(failure)failure=voiceFailureKind==='unreadable'?customerCopy('voiceUnclear',current):voiceFailureKind==='processing'?customerCopy('voiceProcessing',current):customerError(failure,current);
-      const cartBefore=structuredClone(current);let cartMutated=false;
+      const cartBefore=structuredClone(current);let cartMutated=false;const auditToolResults:Array<{tool:string;query:string|null;productSkus:string[];totalCount:number|null}>=[];
       const retainedCartGoal=claimed.memory&&['cart_edit','cart_correction'].includes(claimed.memory.purpose)&&claimed.memory.sourceVersion===current.version&&!current.lastRequestId?claimed.memory:undefined;
       let replyRequest:import('../../../../packages/contracts/index.js').OrderRequest|null|undefined;
       let message=failure??'';let rich:RichReply={...plainReply(message),...(failure?{stage:'error' as const,clarificationReason:failureReason??(claimed.event.type==='voice'?'voice_processing_failed':'processing_failed')}:{})};
@@ -433,7 +434,7 @@ export class ConversationRuntime {
             deterministic={...deterministic,args:{...deterministic.args,operations,expectedVersion:current.version}};
           }
           const invoke=async(call:ToolCall)=>{if(current.visualOrdering&&(call.name==='submit_order_request'||call.name==='confirm_product_choices'&&current.pending?.kind==='products'&&(current.pending.completeReview||claimed.event.type!=='select_product'))){const binding=call.name==='submit_order_request'?call.args.reviewId:call.args.batchId;if(!await reviewDeliveryReady(client,ctx.conversationId,binding,claimed.event.type==='confirm'||claimed.event.type==='confirm_products',claimed.event.type==='confirm'||claimed.event.type==='confirm_products'?claimed.event.id:undefined))throw new ToolError('All review parts must be delivered before approval. Please ask to review again.','review_incomplete');}
-          const outcome=await this.tools.invokeInTransaction(client,{...ctx,...(call.name==='submit_order_request'&&(deterministic?.name==='submit_order_request'||explicitSend&&deterministic?.name==='confirm_product_choices')?{consentReviewId:call.args.reviewId}:{}),...(call.name==='confirm_product_choices'&&deterministic?.name==='confirm_product_choices'?{consentProductBatchId:call.args.batchId}:{}),...(selectedCatalogSku?{selectedCatalogSku,selectedCatalogProduct}:{})},call,claimed.id);if(call.name==='apply_draft_changes')cartMutated=true;return outcome;};
+          const outcome=await this.tools.invokeInTransaction(client,{...ctx,...(call.name==='submit_order_request'&&(deterministic?.name==='submit_order_request'||explicitSend&&deterministic?.name==='confirm_product_choices')?{consentReviewId:call.args.reviewId}:{}),...(call.name==='confirm_product_choices'&&deterministic?.name==='confirm_product_choices'?{consentProductBatchId:call.args.batchId}:{}),...(selectedCatalogSku?{selectedCatalogSku,selectedCatalogProduct}:{})},call,claimed.id);if(auditToolResults.length<20)auditToolResults.push({tool:call.name,query:'query' in call.args?String(call.args.query).slice(0,500):null,productSkus:(outcome.products??[]).slice(0,10).map(p=>p.sku),totalCount:outcome.totalCount??null});if(call.name==='apply_draft_changes')cartMutated=true;return outcome;};
           let result:ToolResult;
           let assistance:CatalogObservation[]|undefined;
           let assistanceLineId:string|undefined;let assistanceBindingId:string|undefined;
@@ -641,6 +642,7 @@ export class ConversationRuntime {
           await this.options.queueReply?.(client,ctx,id,audio);
         }
       }
+      await recordConversationAudit(client,ctx.storeId,ctx.conversationId,claimed.id,cartBefore,finalState,rich,failure,auditToolResults);
       if(Date.now()>=claimed.deadlineAt){
         // Rendering and outbox work also consume the turn budget. Undo their
         // transaction's shopping effects; inference accounting was committed
@@ -652,6 +654,7 @@ export class ConversationRuntime {
         await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,response_to,payload,stage,clarification_reason) VALUES($1,$2,'outbound',$3,$4,$5,$6::jsonb,'error','turn_deadline')",[id,ctx.conversationId,retained.text,this.options.queueReply?'queued':'sent',claimed.id,JSON.stringify(retained)]);
         await client.query('UPDATE messages SET release_fingerprint=$1 WHERE id=$2',[currentReleaseFingerprint(),id]);
         await this.options.queueReply?.(client,ctx,id,retained);
+        await recordConversationAudit(client,ctx.storeId,ctx.conversationId,claimed.id,claimed.state,claimed.state,retained,'turn_deadline');
       }
       await client.query("UPDATE messages SET status='processed',reply_decision='reply',claim_token=NULL,lease_until=NULL WHERE id=$1",[claimed.id]);
     });

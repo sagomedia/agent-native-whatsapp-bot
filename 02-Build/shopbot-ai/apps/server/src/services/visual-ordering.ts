@@ -9,7 +9,7 @@ import type {ConversationState,RichReply,ReplyPart,VisualCard,ProductCheck,Order
 import {say,lineName,unitName,productName,safeQuestion,localName,draftIssueText,requestedAmountText,measurementText,productPriceText,productStockText,referencePhotoLabel} from '../../../../packages/contracts/language.js';
 import {formatMoney,lineTotal} from '../../../../packages/contracts/money.js';
 import {productIdentity} from './product-confirmation.js';
-import {counterLine,productCheckCoversDraft} from './counter-state.js';
+import {counterLine,nextCounterLine,productCheckCoversDraft} from './counter-state.js';
 import {fitText} from './whatsapp-reply.js';
 import {requestStatusText} from './request-status.js';
 import {catalogPack,catalogContent} from './quantity-evidence.js';
@@ -195,8 +195,9 @@ export function visualReply(base:RichReply,state:ConversationState,request?:Orde
  }
 
  if(base.buttons?.length&&base.buttons.every(b=>b.event.type==='edit_item'))return visualEditPicker(state);
- const stalled=state.draft.find(l=>(l.clarification?.unproductiveTurns??0)>=2&&!l.sku&&!l.shopCheckDeferred);
- if(stalled&&state.pending&&!base.readOnly&&base.stage!=='error'&&base.stage!=='status'&&base.clarificationReason!=='intent_clarification'&&!(base.stage==='identify'&&base.cards?.length))return nativeReply({...base,text:say(state,'I’ve kept your request. You can send it to the shop to check, or add a new detail.','உங்கள் கோரிக்கையை வைத்துள்ளேன். சரிபார்க்க கடைக்கு அனுப்பலாம் அல்லது புதிய விவரம் சொல்லலாம்.','Unga request-ai vechchirukken. Check panna kadaikku anuppalaam illa puthu vivaram sollalaam.'),stage:'identify',buttons:[state.allowPartialReview?{label:say(state,'Send request to shop','கடைக்கு கோரிக்கை அனுப்பு','Kadaikku request anuppu'),event:{id:randomUUID(),type:'review_partial',expectedVersion:state.version}}:shop(state),change(state)]},state);
+ const activeLine=nextCounterLine(state);
+ const stalled=activeLine&&(activeLine.clarification?.unproductiveTurns??0)>=2&&!activeLine.sku&&!activeLine.shopCheckDeferred&&!activeLine.candidates?.length?activeLine:undefined;
+ if(stalled&&state.pending&&!base.readOnly&&base.stage!=='error'&&base.stage!=='status'&&base.clarificationReason!=='intent_clarification'&&!(base.stage==='identify'&&base.cards?.length))return nativeReply({...base,text:say(state,'I’ve kept your request. You can send it to the shop to check, or add a new detail.','உங்கள் கோரிக்கையை வைத்துள்ளேன். சரிபார்க்க கடைக்கு அனுப்பலாம் அல்லது புதிய விவரம் சொல்லலாம்.','Unga request-ai vechchirukken. Check panna kadaikku anuppalaam illa puthu vivaram sollalaam.'),stage:'identify',clarificationReason:'stalled_request',buttons:[state.allowPartialReview?{label:say(state,'Send request to shop','கடைக்கு கோரிக்கை அனுப்பு','Kadaikku request anuppu'),event:{id:randomUUID(),type:'review_partial',expectedVersion:state.version}}:shop(state),change(state)]},state);
  if(state.pending?.kind==='products'&&!(base.stage==='identify'&&base.cards?.length))return withContext({...visualProductReview(state,!!base.compactReview,base.text),replyLanguage:state.replyLanguage},base.contextLines);
  if(state.pending?.kind==='review'&&!(base.stage==='identify'&&base.cards?.length)){
   if(!plan.mayOfferSubmission)return nativeReply({...base,text:say(state,'The list needs a fresh check before submission. Review the product, amount and shop price.','அனுப்பும் முன் பட்டியலை மீண்டும் சரிபார்க்க வேண்டும். பொருள், எண்ணிக்கை, கடை விலையைச் சரிபாருங்கள்.','Anuppum mun list-ai marubadi check pannanum. Porul, count, kadai vilai check pannunga.'),kind:'text',stage:'identify',buttons:(base.buttons??[]).filter(b=>b.event.type!=='confirm')},state);

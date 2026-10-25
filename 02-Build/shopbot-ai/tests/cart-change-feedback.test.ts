@@ -20,7 +20,7 @@ test('reports a known count edit in the chosen language',()=>{
 
 test('unknown count stays unknown and a requested physical amount is labeled requested',()=>{
  const unknown=line('a','garden hose',null);
- assert.equal(cartChangeFeedback(cart([]),cart([unknown])),'Added garden hose');
+ assert.equal(cartChangeFeedback(cart([]),cart([unknown])),'Saved request for garden hose; product still needs checking');
  const requested={...unknown,requestedAmount:{value:50,unit:'metre'}};
  assert.equal(cartChangeFeedback(cart([unknown]),cart([requested])),'Changed garden hose (requested 50 metres)');
  const continuous={...requested,amountMode:'continuous' as const};
@@ -34,7 +34,7 @@ test('unknown count stays unknown and a requested physical amount is labeled req
 
 test('requested count is not presented as a verified selling count',()=>{
  const unknown=line('a','paint',null,{requestedQuantity:2,requestedUnit:'can'});
- assert.equal(cartChangeFeedback(cart([]),cart([unknown])),'Added paint (requested 2 cans)');
+ assert.equal(cartChangeFeedback(cart([]),cart([unknown])),'Saved request for paint (requested 2 cans); product still needs checking');
 });
 
 test('no-op, price refresh and issue changes produce no mutation claim',()=>{

@@ -1,0 +1,29 @@
+import {z} from 'zod';
+import type {Pool} from 'pg';
+import type {CatalogPrincipal} from './catalog-chat.js';
+import {chatError} from './catalog-chat.js';
+import {ownerRead} from './owner-mcp.js';
+
+export const aiActivitySchema=z.object({mode:z.enum(['applied','review']).default('applied'),q:z.string().trim().max(200).default(''),sku:z.string().max(64).optional(),cursor:z.string().max(2000).optional(),limit:z.coerce.number().int().min(1).max(100).default(25)}).strict();
+const cursorSchema=z.object({storeId:z.uuid(),mode:z.enum(['applied','review']),q:z.string(),sku:z.string().nullable(),key:z.string(),id:z.string()}).strict();
+const encode=(v:unknown)=>Buffer.from(JSON.stringify(v)).toString('base64url');
+const pattern=(v:string)=>'%'+v.replace(/[\\%_]/g,'\\$&')+'%';
+export async function catalogAiActivity(pool:Pool,p:CatalogPrincipal,input:unknown){const a=aiActivitySchema.parse(input);return ownerRead(pool,p,async c=>{
+ let cursor:z.infer<typeof cursorSchema>|undefined;
+ if(a.cursor){try{cursor=cursorSchema.parse(JSON.parse(Buffer.from(a.cursor,'base64url').toString('utf8')));}catch{throw chatError('invalid_cursor','Reload the first activity page.',400);}if(cursor.storeId!==p.storeId||cursor.mode!==a.mode||cursor.q!==a.q||cursor.sku!==(a.sku??null))throw chatError('invalid_cursor','This activity page belongs to another filter.',400);}
+ const common=[p.storeId,pattern(a.q),a.sku??null];
+ if(a.mode==='review'){
+  if(cursor&&(!Number.isFinite(Date.parse(cursor.key))||!z.uuid().safeParse(cursor.id).success))throw chatError('invalid_cursor','Invalid finding cursor.',400);
+  const where=`f.store_id=$1 AND f.status='needs_review' AND ($3::text IS NULL OR f.sku=$3) AND (coalesce(p.name,'') ILIKE $2 OR coalesce(f.sku,'') ILIKE $2 OR f.wording ILIKE $2 OR f.explanation ILIKE $2)`;
+  const total=(await c.query(`SELECT count(*)::int AS n FROM catalog_audit_findings f LEFT JOIN products p ON p.store_id=f.store_id AND p.sku=f.sku WHERE ${where}`,common)).rows[0].n;
+  const rows=(await c.query(`SELECT f.id,f.audit_id AS "auditId",f.category,f.sku,p.name,p.active,f.wording,f.explanation,f.patch,f.evidence,f.created_at AS "createdAt",f.created_at::text AS "cursorKey",r.title AS "auditTitle" FROM catalog_audit_findings f JOIN catalog_audit_runs r ON r.store_id=f.store_id AND r.id=f.audit_id LEFT JOIN products p ON p.store_id=f.store_id AND p.sku=f.sku WHERE ${where} AND ($4::timestamptz IS NULL OR (f.created_at,f.id)<($4::timestamptz,$5::uuid)) ORDER BY f.created_at DESC,f.id DESC LIMIT $6`,[...common,cursor?.key??null,cursor?.id??null,a.limit+1])).rows;
+  const page=rows.slice(0,a.limit),last=page.at(-1);
+  return {mode:a.mode,total,items:page.map(({cursorKey,...r})=>({...r,live:false,conversationId:r.evidence[0]?.conversationId??null})),nextCursor:rows.length>a.limit?encode({storeId:p.storeId,mode:a.mode,q:a.q,sku:a.sku??null,key:last.cursorKey,id:last.id}):null,instructions:'These are suggestions, not an approval gate. Discuss and apply them in your connected AI chat.'};
+ }
+ if(cursor&&!/^[1-9]\d{0,18}$/.test(cursor.key))throw chatError('invalid_cursor','Invalid activity cursor.',400);
+ const where=`e.store_id=$1 AND ($3::text IS NULL OR e.sku=$3) AND (coalesce(p.name,'') ILIKE $2 OR e.sku ILIKE $2 OR e.application_name ILIKE $2)`;
+ const total=(await c.query(`SELECT count(*)::int AS n FROM catalog_change_events e LEFT JOIN products p ON p.store_id=e.store_id AND p.sku=e.sku WHERE ${where}`,common)).rows[0].n;
+ const rows=(await c.query(`SELECT e.id,e.sequence::text,e.operation_id AS "operationId",e.sku,p.name,p.active,e.action,e.source,e.application_name AS "applicationName",e.audit_id AS "auditId",e.before_values AS "beforeValues",e.after_values AS "afterValues",e.before_version AS "beforeVersion",e.after_version AS "afterVersion",e.historical,e.undone_by AS "undoneBy",e.created_at AS "createdAt",f.explanation AS reason,f.evidence->0->>'conversationId' AS "conversationId" FROM catalog_change_events e LEFT JOIN products p ON p.store_id=e.store_id AND p.sku=e.sku LEFT JOIN LATERAL(SELECT explanation,evidence FROM catalog_audit_findings WHERE store_id=e.store_id AND audit_id=e.audit_id AND sku=e.sku AND applied_operation=e.operation_id ORDER BY id LIMIT 1) f ON true WHERE ${where} AND ($4::bigint IS NULL OR e.sequence<$4) ORDER BY e.sequence DESC LIMIT $5`,[...common,cursor?.key??null,a.limit+1])).rows;
+ const page=rows.slice(0,a.limit),last=page.at(-1);
+ return {mode:a.mode,total,items:page.map(({beforeValues,afterValues,...r})=>({...r,live:!r.undoneBy&&r.active===true,status:r.undoneBy?'undone':r.active===true?'live':r.active===false?'hidden':'product_unavailable',changes:r.historical?null:[...new Set([...Object.keys(beforeValues??{}),...Object.keys(afterValues??{})])].filter(key=>!['store_id','sku'].includes(key)&&JSON.stringify(beforeValues?.[key])!==JSON.stringify(afterValues?.[key])).map(field=>({field,before:beforeValues?.[field]??null,after:afterValues?.[field]??null})),historyNote:r.historical?'Historical receipt establishes the action and product; previous values are unavailable.':null})),nextCursor:rows.length>a.limit?encode({storeId:p.storeId,mode:a.mode,q:a.q,sku:a.sku??null,key:last.sequence,id:last.id}):null};
+ });}

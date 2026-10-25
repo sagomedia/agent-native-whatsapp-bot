@@ -34,8 +34,12 @@ export async function assertCatalogPermission(c:PoolClient,p:CatalogPrincipal,pe
 export async function mutate<T>(pool:Pool,p:CatalogPrincipal,permission:'catalog:draft'|'catalog:publish'|'orders:write',operationId:string,action:string,input:unknown,run:(c:PoolClient)=>Promise<T>):Promise<T>{
  return catalogWrite(pool,p.storeId,p.actor,'mcp_chat_'+action,operationId,async c=>{
   await assertCatalogPermission(c,p,permission);
+  if(action.startsWith('audit_'))await assertCatalogPermission(c,p,'owner:read');
   const hash=chatHash(input),old=(await c.query('SELECT * FROM catalog_chat_operations WHERE store_id=$1 AND id=$2',[p.storeId,operationId])).rows[0];
   if(old){if(old.actor!==p.actor||old.action!==action||old.input_hash!==hash)throw chatError('idempotency_conflict','This operation ID was already used with different content.');return old.result as T;}
+  const connection=p.grantId?(await c.query('SELECT cl.name FROM mcp_oauth_grants g JOIN mcp_oauth_clients cl ON cl.client_id=g.client_id WHERE g.id=$1',[p.grantId])).rows[0]:null;
+  const origin={storeId:p.storeId,operationId,actor:p.actor,grantId:p.grantId??null,applicationName:connection?.name??'Connected AI application',action,source:action.startsWith('audit_')?'audit':'mcp',auditId:action.startsWith('audit_')?(input as {auditId?:string}).auditId??null:null};
+  await c.query("SELECT set_config('shopbot.mcp_origin',$1,true)",[JSON.stringify(origin)]);
   const result=await run(c);
   await c.query('INSERT INTO catalog_chat_operations(store_id,id,actor,action,input_hash,result) VALUES($1,$2,$3,$4,$5,$6)',[p.storeId,operationId,p.actor,action,hash,JSON.stringify(result)]);
   return result;

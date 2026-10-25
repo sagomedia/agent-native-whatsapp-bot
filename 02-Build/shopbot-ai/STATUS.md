@@ -1,3 +1,7 @@
+## 25 October 2026 — shopping recovery and owner-led catalog audits
+
+Implemented item-focused recovery, accurate request acknowledgements, five permission-filtered audit MCP tools, narrow atomic search-term patches with receipts/undo, transactional AI product provenance and Products → AI activity. Additive migration 50 retains existing catalog and commerce data. Build/typecheck, focused tests, desktop/phone browser checks, catalog cleanup and populated backup/restore rehearsal pass; final full regression and VPS activation evidence are tracked in [implementation evidence](../../03-Output/improvement-audit/README.md). Owner ChatGPT/WhatsApp acceptance remains open.
+
 ## 22 October 2026 — minimal redesign active on the VPS
 
 Activated release `preview-ebb2f177e88a` from source `91e8ca3` after 874 passing integration tests, verified packaging, private backup/restore rehearsal and read-only page checks. Schema 43 is active, existing data and environment are retained, and 90-second voice support is preserved. Prepared 295 ordinary prices in the explicitly synthetic demo store with provenance retained. See [deployment proof](../../03-Output/minimal-owner-redesign-20261022/DEPLOYMENT.md). Real-device QR reference visibility remains untested.

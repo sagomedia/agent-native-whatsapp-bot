@@ -1,3 +1,4 @@
+import {registerOwnerAiActivity} from './owner-ai-activity.js';
 import {registerOwnerReading} from './owner-reading.js';
 import {ownerAttentionCounts,orderAttentionSql,orderUnreadSql,chatUnreadSql,messageSequence} from '../services/owner-reading.js';
 import {needsHelpSql} from '../services/owner-mcp.js';
@@ -98,6 +99,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     }catch(error){await client.query('ROLLBACK');if(error instanceof ToolError)Object.assign(error,{statusCode:error.code==='forbidden'?403:409});throw error;}finally{client.release();}
   }
   registerOwnerReading(app,pool,owner.storeId);
+  registerOwnerAiActivity(app,pool,owner.storeId);
   registerOwnerFacts(app,pool,owner.storeId,write);
   registerOwnerOperations(app,pool,owner.storeId);
   await registerOwnerCatalog(app,pool,owner.storeId,write,catalogGenerator??(config.catalogAi?new GoogleCatalogGenerator(config.catalogAi.apiKey):undefined));

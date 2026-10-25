@@ -1,0 +1,145 @@
+{
+  "status": "restore_verified",
+  "databaseVersion": 50,
+  "dumpBytes": 447287,
+  "dumpSha256": "18a56fdbe92aeb9fdad0ed8b5195669dccf45b841fa70ec85e59c5a7256bc792",
+  "tables": {
+    "schema_migrations": {
+      "count": 50,
+      "sha256": "14075f31478ab5cee9e6112fdaa27a90c53c1875cc336f223fd44cde71ed160b"
+    },
+    "stores": {
+      "count": 1,
+      "sha256": "d806948606aef28efb046369dd5dc71eef21ae938201649e735c94a5f8fcf097"
+    },
+    "products": {
+      "count": 6,
+      "sha256": "b5b98c016e9732da47d55cc2d9cf18a555c77e04a51f1733916a1aa0ecfaa0aa"
+    },
+    "conversations": {
+      "count": 1,
+      "sha256": "3e24c0ed9afaa6dca7348dfd91aa41549e9866addc6d22f94d5dca74e2a3a014"
+    },
+    "messages": {
+      "count": 2,
+      "sha256": "9c05a2816e958568725eb1e6f7d834d0c288601791c59f1ac46b3964dcbf3508"
+    },
+    "provider_attempts": {
+      "count": 1,
+      "sha256": "211a7297c8d1ca63d099a1ef356970c94da919c1cd5e341431755986f872cd00"
+    },
+    "inference_budgets": {
+      "count": 1,
+      "sha256": "8503e799b24ffcb58c9f42a12e6c262975ff5a09b61108126796ad651933152d"
+    },
+    "order_requests": {
+      "count": 1,
+      "sha256": "26c19a796b043de4a7fc25df39e75b940ac52aca7afbce75547efd24666c159a"
+    },
+    "order_quotes": {
+      "count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "order_amendments": {
+      "count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "order_advances": {
+      "count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "payment_quotes": {
+      "count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "payment_attempts": {
+      "count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "payment_events": {
+      "count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "inventory_movements": {
+      "count": 1,
+      "sha256": "31c5d9db23f2b91c762c4755f7ede8f8f436d5dea402b8a4a2397a76ce5601ac"
+    },
+    "inventory_reservations": {
+      "count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "whatsapp_outbox": {
+      "count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "catalog_nodes": {
+      "count": 2,
+      "sha256": "fd0cd5fe713b9c620599c7eb16f550005f75b81fbfe7e87651fc99c15b55e3e5"
+    },
+    "catalog_proposals": {
+      "count": 2,
+      "sha256": "461c91d6ee161eacb0026bf9d7a03327a412c0984c69e8e3bfbd53c74e8cd7a6"
+    },
+    "catalog_proposal_assets": {
+      "count": 1,
+      "sha256": "d071817a5903e5057043e9ce0873609ea45ff255bb04bcdd466dcf25663eebcc"
+    },
+    "catalog_photos": {
+      "count": 1,
+      "sha256": "a765dec66d9470276ec82a79c8fec28d290cf67d004eccdf814f19690c46c464"
+    },
+    "catalog_intake_batches": {
+      "count": 1,
+      "sha256": "3a5c486066fced81e2e50e7362b89371834493e3453ce54359f19af45d48de3b"
+    },
+    "catalog_intake_items": {
+      "count": 1,
+      "sha256": "4e8c641f06be76067313a7e2fd4ea7a80f7815347713346cdfbe71264da458c7"
+    },
+    "owner_audit": {
+      "count": 10,
+      "sha256": "0d9d0d3c4b2e58012c4fb8ec95e86e53a06a7a8b09495d929318698a5df42454"
+    },
+    "runtime_releases": {
+      "count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "catalog_chat_operations": {
+      "count": 2,
+      "sha256": "1fc8dc5c3fa702ead93680025de6d84896b1abbf2c9be4869447169409646e39"
+    },
+    "catalog_audit_runs": {
+      "count": 1,
+      "sha256": "9fd423a88f0dd9a35388be660e495bf7952bb52649eea633d96984d0042a2178"
+    },
+    "catalog_audit_findings": {
+      "count": 2,
+      "sha256": "4e2aa26535cd63d473e147c96ab713eacec384afd96ff0057f631b8a930b65fb"
+    },
+    "catalog_audit_reviews": {
+      "count": 1,
+      "sha256": "77d6e45da7f69d84e94251ecb0c4293473883a18faba94bf6ab66e62856c660a"
+    },
+    "catalog_change_events": {
+      "count": 1,
+      "sha256": "b58d27f8240e5b579313943b062024f1bc16d4abe2efe190a06d35aa1b57c007"
+    },
+    "conversation_audit_events": {
+      "count": 1,
+      "sha256": "33b30baf267faa8b90fecb24bd0f10e2fc9ad5c268bb0dfcec9a604d5254a9e0"
+    }
+  },
+  "checks": [
+    "custom pg_dump and actual pg_restore",
+    "idempotent migrations after restore",
+    "original and normalized photos preserved",
+    "published photo hashes and reuse preserved",
+    "bulk source hash, row/proposal link and resume state preserved",
+    "stock movement ledger preserved",
+    "unknown inference hold preserved",
+    "owner product version and request preserved",
+    "previous pickup SQL remains compatible",
+    "audit findings, review membership, term receipts, connected activity and turn traces preserved"
+  ],
+  "limitation": "Local disposable database rehearsal; production backup restoration and previous executable rollback must also be checked on the target host. Empty payment/outbox tables establish schema preservation only, not populated live payment/delivery recovery."
+}

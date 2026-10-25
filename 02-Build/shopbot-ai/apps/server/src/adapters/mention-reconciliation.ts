@@ -186,6 +186,12 @@ export function existingMention(item:Item,state:ConversationState):{line?:DraftL
  const lines=state.draft.filter(l=>compatibleLine(item,l));
  if(lines.length>1)return {clarify:say(state,`Which existing item should change: ${lines.map(l=>`${state.draft.indexOf(l)+1}. ${lineName(l,state)}`).join('; ')}?`,`எந்தப் பொருளை மாற்றணும்: ${lines.map(l=>`${state.draft.indexOf(l)+1}. ${lineName(l,state)}`).join('; ')}?`,`Entha porulai maathanum: ${lines.map(l=>`${state.draft.indexOf(l)+1}. ${lineName(l,state)}`).join('; ')}?`)};
  if(lines.length===1&&item.query&&ambiguousIdentity(item.query)&&!refersToCurrentItem(item,state,lines[0]))return {clarify:say(state,`Do you mean your existing ${lineName(lines[0],state)}, or a different ${item.query}?`,`ஏற்கனவே உள்ள ${lineName(lines[0],state)}-ஐ சொல்கிறீர்களா, வேறு ${item.query} வேண்டுமா?`,`Irukkura ${lineName(lines[0],state)}-a solreengala, vera ${item.query} venuma?`)};
+ if(!lines.length&&item.query&&correctionMention.test(item.sourceText)&&!additionalMention.test(item.sourceText)){
+  const id=state.editingLineId??(state.pending?.kind==='question'?state.pending.lineId:state.pending?.kind==='products'&&state.pending.groups.length===1?state.pending.groups[0].lineId:undefined);
+  const focused=state.draft.find(line=>line.id===id);
+  if(focused)return {line:focused};
+  if(state.draft.length>1)return {clarify:say(state,'Which existing item are you correcting?','ஏற்கனவே உள்ள எந்தப் பொருளைத் திருத்தணும்?','Irukkura entha porulai thiruththanum?')};
+ }
  if(!lines.length&&item.query){
   // A correction may change the type entirely. It can replace one clearly
   // referenced pipe line, but a new BSA/pump pipe without correction remains

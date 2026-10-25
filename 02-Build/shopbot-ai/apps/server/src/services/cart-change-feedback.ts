@@ -42,6 +42,7 @@ function detail(before:DraftLine,after:DraftLine,state:CartSnapshot):string|unde
 function fragment(change:Change,state:CartSnapshot,maxNameLength=70):string {
  const name=fitText(lineName(change.line,state).replace(/\s+/g,' ').trim(),maxNameLength);
  if(change.kind==='removed')return say(state,`Removed ${name}`,`${name} நீக்கப்பட்டது`,`${name} remove panniyachu`);
+ if(change.kind==='added'&&!change.line.sku&&change.line.resolution!=='matched')return say(state,`Saved request for ${name}${change.detail?` (${change.detail})`:''}; product still needs checking`,`${name} கோரிக்கை வைத்துள்ளேன்; பொருளைச் சரிபார்க்க வேண்டும்`,`${name} request vechchirukken; porulai check pannanum`);
  if(change.kind==='added')return say(state,`Added ${name}${change.detail?` (${change.detail})`:''}`,`${name} சேர்க்கப்பட்டது${change.detail?` (${change.detail})`:''}`,`${name} serththaachu${change.detail?` (${change.detail})`:''}`);
  return say(state,`Changed ${name}${change.detail?` (${change.detail})`:''}`,`${name} மாற்றப்பட்டது${change.detail?` (${change.detail})`:''}`,`${name} maaththiyaachu${change.detail?` (${change.detail})`:''}`);
 }

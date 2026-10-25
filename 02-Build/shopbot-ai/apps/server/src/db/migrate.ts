@@ -1,3 +1,4 @@
+import {migrateCatalogAudit} from './catalog-audit.js';
 import {migrateDeveloperDiagnostics} from './developer-diagnostics.js';
 import {migrateCatalogChat} from './catalog-chat.js';
 import type { Pool } from 'pg';
@@ -551,6 +552,7 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       CREATE INDEX messages_owner_unread ON messages(conversation_id,sequence) WHERE direction='inbound';
       INSERT INTO schema_migrations(version) VALUES(49);
     `);}
+    await migrateCatalogAudit(client);
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

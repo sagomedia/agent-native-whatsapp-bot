@@ -1,4 +1,4 @@
-# Owner MCP workflows (1.6)
+# Owner MCP workflows (1.8)
 
 The merchant can inspect the same retained orders, customer inbox, catalog and operational evidence used by the dashboard. The connected AI application supplies the language summary; the MCP makes no paid model call. Complete product additions continue directly into inventory. No new-product draft step is introduced.
 
@@ -8,7 +8,7 @@ Existing catalog grants keep exactly their permissions. `owner_capabilities` is 
 
 Catalog publication remains its separate opt-in. Trusted stdio has `SHOPBOT_MCP_ALLOW_OWNER_READ=false` and `SHOPBOT_MCP_ALLOW_ORDER_WRITE=false` defaults. Enabling flags also requires a separately authorized database role. The dedicated catalog draft role stays restricted; its installer does not widen access. Never accept shop/actor/grant identity in tool input.
 
-Default tool counts: catalog read **12**, catalog edit **15**, catalog publication **20**. Owner read adds **13**, and owner order updates add **7**. A connection with every supported permission has **40** tools. Tools are filtered at discovery and grants are checked again at invocation. Refresh cached tools after deployment; reconnect to choose new permissions.
+Default tool counts: catalog read **12**, catalog edit **15**, catalog publication **20**. Owner read adds **13**, and owner order updates add **7**. Owner audit read adds **2** tools, audit saving adds **1** with catalog edit, and audit apply/undo add **2** with catalog publication. A connection with every supported permission has **45** tools. Tools are filtered at discovery and grants are checked again at invocation. Refresh cached tools after deployment; reconnect to choose new permissions.
 
 ## Tools and why they exist
 
@@ -61,3 +61,14 @@ The internal diagnostics MCP remains separate with its own operator credentials 
 No schema migration is required. Existing audit and operation ledgers hold write receipts. Tests cover explicit consent, old-grant isolation, refresh/revocation/expiry, foreign-shop IDs, local-day/DST bounds, pending work and pagination, effective order details, bounded transcripts and injection-as-data, truthful summary coverage, stock retries, restore validation, all order actions, HTTP and real stdio.
 
 Keep source isolated from the other chat. Before deploying compare the latest live release/source hashes, apply only these changes, preserve private configuration and use the verified native upgrade with backup/rollback. This implementation does not fix the separately observed `unsupported_file_handoff`; that still needs the actual ChatGPT reference format. Do not claim a server photo-decoder test proves host attachment handoff.
+
+
+## Owner-led catalog improvement audit
+
+Ask the connected AI application to audit conversations. `catalog_audit` defaults to the previous seven complete Asia/Kolkata calendar days, supports explicit intervals up to 31 days, and returns every retained conversation/message through a frozen cutoff. Page `nextCursor` with the same scope; do not treat suspicious cases as the whole sample. Read actual products through catalog search and get-product tools. Available, fetched and agent-reported reviewed counts have distinct meanings; truncated text and absent historical execution traces remain explicit.
+
+`catalog_audit_save` stores cited findings and reviewed message IDs, including uncertain requests without a SKU. Save `conversationId` for a single-conversation audit and `scanProgress` with the returned next cursor, highwater and fetched-through count. `catalog_audit_get` resumes this scope/progress across connected owner chats. Findings distinguish alias/keyword gaps, retrieval/flow defects, possible transcription problems, missing products, expected restrictions and insufficient evidence. Other categories remain recommendations.
+
+Discuss uncertain mappings in chat. The owner's instruction can authorize an individual finding or a clearly described batch. `catalog_audit_apply` publishes only additive/removal alias and keyword patches, with current product versions, in atomic batches of at most 25 products. Product variants remain separate. Conflicting terms and before/after previews are returned when saving. Reuse operation IDs after interrupted responses and recover receipts with `workflow_status`. `catalog_audit_undo` restores only recorded terms and refuses later product-version conflicts. Both live operations require owner read plus catalog publication; saving requires owner read plus catalog edit. No additional dashboard approval or server-side model calls are introduced. Host tool confirmations remain host controlled.
+
+Products → **AI activity** opens **Applied** first and records ordinary connected AI catalog changes as well as accepted audits. **Needs review** shows saved suggestions, including unidentified requests. Evidence links open owner conversations. Existing additions/edits are already effective; this view records provenance and history. Historical activity is backfilled only from supported persisted receipts; unavailable before/after values remain unknown. Future committed turns retain bounded item/search/stage/failure facts without raw provider responses or hidden reasoning.

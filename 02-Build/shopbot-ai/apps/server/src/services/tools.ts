@@ -36,7 +36,7 @@ export const toolDefinitions = [
 function canonical(value: any): any { return Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value; }
 export function digest(value: unknown) { return createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex'); }
 export async function loadState(client: PoolClient, ctx: ActorContext): Promise<ConversationState> {
-  const { rows } = await client.query('SELECT c.partial_reviews,c.visual_ordering,c.product_review,c.reply_language_explicit,c.reply_language,c.version,c.draft,c.pending,c.fulfillment,c.last_request_id,c.editing_line_id,c.handoff_requested,p.require_product_confirmation,cp.store_type FROM conversations c LEFT JOIN store_policies p ON p.store_id=c.store_id LEFT JOIN catalog_profiles cp ON cp.store_id=c.store_id WHERE c.id=$1 AND c.store_id=$2 AND c.actor=$3', [ctx.conversationId,ctx.storeId,ctx.actor]);
+  const { rows } = await client.query('SELECT c.active_item_id,c.partial_reviews,c.visual_ordering,c.product_review,c.reply_language_explicit,c.reply_language,c.version,c.draft,c.pending,c.fulfillment,c.last_request_id,c.editing_line_id,c.handoff_requested,p.require_product_confirmation,cp.store_type FROM conversations c LEFT JOIN store_policies p ON p.store_id=c.store_id LEFT JOIN catalog_profiles cp ON cp.store_id=c.store_id WHERE c.id=$1 AND c.store_id=$2 AND c.actor=$3', [ctx.conversationId,ctx.storeId,ctx.actor]);
   if (!rows[0]) throw new ToolError('Conversation unavailable', 'forbidden');
   const c = rows[0];
   if(c.visual_ordering)for(const line of c.draft as DraftLine[]){
@@ -53,10 +53,10 @@ export async function loadState(client: PoolClient, ctx: ActorContext): Promise<
     }
   }
 
-  return {allowPartialReview:c.partial_reviews,visualOrdering:c.visual_ordering,productReview:c.product_review, languageExplicit:c.reply_language_explicit,replyLanguage:c.reply_language,version:c.version,draft:c.draft,pending:c.pending,fulfillment:c.fulfillment,lastRequestId:c.last_request_id,editingLineId:c.editing_line_id,handoffRequested:c.handoff_requested,...(c.store_type?{catalogDiscovery:true as const}:{}),...(c.require_product_confirmation||c.visual_ordering?{requireProductConfirmation:true as const}:{}) };
+  return {activeItemId:c.active_item_id,allowPartialReview:c.partial_reviews,visualOrdering:c.visual_ordering,productReview:c.product_review, languageExplicit:c.reply_language_explicit,replyLanguage:c.reply_language,version:c.version,draft:c.draft,pending:c.pending,fulfillment:c.fulfillment,lastRequestId:c.last_request_id,editingLineId:c.editing_line_id,handoffRequested:c.handoff_requested,...(c.store_type?{catalogDiscovery:true as const}:{}),...(c.require_product_confirmation||c.visual_ordering?{requireProductConfirmation:true as const}:{}) };
 }
 async function saveState(client: PoolClient, ctx: ActorContext, state: ConversationState) {
-  await client.query('UPDATE conversations SET draft=$1::jsonb,version=$2,pending=$3::jsonb,fulfillment=$4,last_request_id=$5,product_review=$9::jsonb WHERE id=$6 AND store_id=$7 AND actor=$8', [JSON.stringify(state.draft),state.version,JSON.stringify(state.pending),state.fulfillment,state.lastRequestId,ctx.conversationId,ctx.storeId,ctx.actor,JSON.stringify(state.productReview??null)]);
+  await client.query('UPDATE conversations SET draft=$1::jsonb,version=$2,pending=$3::jsonb,fulfillment=$4,last_request_id=$5,product_review=$9::jsonb,active_item_id=$10 WHERE id=$6 AND store_id=$7 AND actor=$8', [JSON.stringify(state.draft),state.version,JSON.stringify(state.pending),state.fulfillment,state.lastRequestId,ctx.conversationId,ctx.storeId,ctx.actor,JSON.stringify(state.productReview??null),state.activeItemId??null]);
 }
 function validateQuantity(product: Product, quantity: number | null) {
   if (quantity === null) return;
@@ -265,6 +265,7 @@ export class RetailTools {
     if(call.name==='apply_draft_changes') {
       if(state.lastRequestId) throw new ToolError('This conversation has a submitted request. Ask the shop for an amendment; the submitted snapshot cannot be edited.');
       if(call.args.expectedVersion!==state.version) throw new ToolError('The draft changed. Review it and try the action again.','stale_version');
+      const previousLines=structuredClone(state.draft);
       for(const op of call.args.operations) {
         if(op.kind==='set_fulfillment') { state.fulfillment=op.method; continue; }
         if(op.kind==='add_item') {
@@ -332,6 +333,12 @@ export class RetailTools {
       const limit=state.visualOrdering?(this.options.maxDraftLines??50):state.requireProductConfirmation?20:10;
       if(state.draft.length>limit) throw new ToolError(`Maximum ${limit} distinct lines. Split the request; no partial list was applied.`);
       if(state.visualOrdering){const questionLineId=state.pending?.kind==='question'?state.pending.lineId:undefined;const answeringCount=!!questionLineId&&call.args.operations.every(op=>(op.kind==='resolve_line'&&!op.query&&op.lineId===questionLineId)||(op.kind==='set_quantity'&&op.reference===questionLineId));if(!answeringCount)state.productReview=null;}
+      if(state.visualOrdering){
+        const explicit=call.args.operations.flatMap(op=>'lineId' in op?[op.lineId]:'reference' in op?state.draft.filter(line=>line.id===op.reference||line.sku===op.reference).map(line=>line.id):[]);
+        const added=state.draft.find(line=>!previousLines.some(old=>old.id===line.id));
+        const changed=state.draft.find(line=>previousLines.some(old=>old.id===line.id&&digest(old)!==digest(line)));
+        state.activeItemId=explicit.find(id=>state.draft.some(line=>line.id===id))??added?.id??changed?.id??(state.draft.some(line=>line.id===state.activeItemId)?state.activeItemId:null);
+      }
       state.version++; state.pending=null;
       await saveState(client,ctx,state);
       return {state,message:`Draft updated.\n${renderDraft(state)}`};

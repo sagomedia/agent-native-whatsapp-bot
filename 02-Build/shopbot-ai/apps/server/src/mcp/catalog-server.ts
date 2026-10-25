@@ -1,3 +1,4 @@
+import {registerCatalogAuditTools,catalogAuditWorkflow} from './catalog-audit-tools.js';
 import {registerOwnerTools,ownerWorkflow} from './owner-tools.js';
 import {catalogUploadSchema,catalogPhotoPreflightSchema,catalogPhotoRecovery,catalogUploadCapabilities,resolveCatalogUpload,validateCatalogUpload} from '../services/catalog-upload.js';
 import {catalogImportOperationId,catalogImportGuide,previewCatalogImport,applyCatalogImportItem,importApplySchema} from '../services/catalog-import.js';
@@ -15,8 +16,9 @@ import {catalogInstructions,catalogPrompt,catalogEnrichment,catalogUploadInstruc
 
 type Scope=CatalogPrincipal&{reviewUrl?:string};
 export function catalogMcpServer(pool:Pool,scope:Scope,deps:{download?:typeof downloadCatalogPhoto}={}){
- const server=new McpServer({name:'shopbot-owner-catalog',version:'1.7.0'},{instructions:catalogInstructions+'\n'+catalogUploadInstructions+(scope.canReadOwner?'\n'+ownerWorkflow:'')});
+ const server=new McpServer({name:'shopbot-owner-catalog',version:'1.8.0'},{instructions:catalogInstructions+'\n'+catalogUploadInstructions+(scope.canReadOwner?'\n'+ownerWorkflow+'\n'+catalogAuditWorkflow:'')});
  registerOwnerTools(server,pool,scope);
+ registerCatalogAuditTools(server,pool,scope);
  const result=(value:unknown)=>({structuredContent:value as Record<string,unknown>,content:[{type:'text' as const,text:JSON.stringify(value)}]});
  const annotations={readOnlyHint:false,destructiveHint:false,idempotentHint:true,openWorldHint:false};
  const safe=async(run:()=>Promise<unknown>,attempt?:{operationId:string;action:string})=>{try{return result(await run());}catch(e){
