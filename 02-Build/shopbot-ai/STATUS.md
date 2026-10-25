@@ -1,6 +1,6 @@
 ## 25 October 2026 — shopping recovery and owner-led catalog audits
 
-Implemented item-focused recovery, accurate request acknowledgements, five permission-filtered audit MCP tools, narrow atomic search-term patches with receipts/undo, transactional AI product provenance and Products → AI activity. Additive migration 50 retains existing catalog and commerce data. Build/typecheck, focused tests, desktop/phone browser checks, catalog cleanup and populated backup/restore rehearsal pass; final full regression and VPS activation evidence are tracked in [implementation evidence](../../03-Output/improvement-audit/README.md). Owner ChatGPT/WhatsApp acceptance remains open.
+Implemented item-focused recovery, accurate request acknowledgements, five permission-filtered audit MCP tools, narrow atomic search-term patches with receipts/undo, transactional AI product provenance and Products → AI activity. Additive migration 50 retains existing catalog and commerce data. Build/typecheck, focused tests, desktop/phone browser checks, catalog cleanup and populated backup/restore rehearsal pass; all 997 integration tests pass. VPS activation evidence is tracked in [implementation evidence](../../03-Output/improvement-audit/README.md). Owner ChatGPT/WhatsApp acceptance remains open.
 
 ## 22 October 2026 — minimal redesign active on the VPS
 

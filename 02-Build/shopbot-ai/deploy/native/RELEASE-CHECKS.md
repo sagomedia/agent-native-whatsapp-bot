@@ -32,7 +32,7 @@ The local Codex CLI accepted this configuration shape. The user's real Codex con
 
 ## Backup and pilot evidence
 
-`npm run release:restore-rehearsal -- /tmp/evidence.json` requires `DATABASE_URL` pointing to a disposable local PostgreSQL instance and `SHOPBOT_RESTORE_CONTAINER` naming its explicitly disposable ShopBot Docker container. It creates two temporary databases, restores an actual custom-format dump, reruns migrations and compares retained data hashes. It does not touch merchant databases. This complements the populated v26→v31 migration test; it does not replace a production restoration and executable rollback rehearsal.
+`npm run release:restore-rehearsal -- /tmp/evidence.json` requires `DATABASE_URL` pointing to a disposable local PostgreSQL instance and `SHOPBOT_RESTORE_CONTAINER` naming its explicitly disposable ShopBot Docker container. Alternatively set `SHOPBOT_RESTORE_PG_BIN` to local PostgreSQL binaries with the loopback test database credentials; this also creates only uniquely named disposable test databases. It creates two temporary databases, restores an actual custom-format dump, reruns migrations and compares retained data hashes. It does not touch merchant databases. This complements the populated v26→v31 migration test; it does not replace a production restoration and executable rollback rehearsal.
 
 After deployment, use fresh conversations on the authorized pilot number. Cover the five-item order, pump/cutter, missing paint count, read-only price interruption, keep/clear, owner acceptance/ready/collection, noisy voice, handwritten and printed lists, and correction recovery. Real speakers, source photos, Tamil terminology and merchant facts need human review. Mocks and TTS cannot establish that accuracy.
 

@@ -1,0 +1,45 @@
+{
+  "integration": {
+    "tests": 997,
+    "passed": 997,
+    "failed": 0,
+    "skipped": 0,
+    "database": "isolated UTF-8 PostgreSQL 18",
+    "providers": "mocked"
+  },
+  "focusedAudit": {
+    "tests": 19,
+    "passed": 19
+  },
+  "catalogCleanup": {
+    "tests": 4,
+    "passed": 4
+  },
+  "productionBuild": "passed",
+  "browser": {
+    "widths": [
+      1440,
+      390,
+      320
+    ],
+    "checks": [
+      "Applied initial view",
+      "before/after values",
+      "deduplicated history pagination",
+      "unmatched review entries",
+      "conversation evidence links",
+      "no extra approval gate",
+      "exact SKU editor",
+      "read error recovery",
+      "stale request suppression",
+      "card bounds after resize",
+      "no merchant writes or browser errors"
+    ]
+  },
+  "restore": "RESTORE.json",
+  "release": "Pending activation; see DEPLOYMENT.json when present.",
+  "limitations": [
+    "No hosted CI publication: automatic approval review rejected external GitHub issue publication.",
+    "Owner ChatGPT and actual WhatsApp device acceptance remain open."
+  ]
+}
