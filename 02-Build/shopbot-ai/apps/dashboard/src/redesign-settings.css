@@ -21,3 +21,11 @@
 .redesign .rd-settings{width:100%;border:0;border-radius:0;background:transparent}
 .redesign .rd-settings-preview-card>header{margin:0}
 .redesign .rd-settings-shop-form button:hover:not(:disabled){background:#005860}
+.redesign .rd-settings-chatgpt{cursor:default;flex-wrap:wrap}
+.redesign .rd-settings-chatgpt:hover{background:transparent}
+.redesign .rd-settings-chatgpt .rd-settings-row-copy{flex:1 1 220px}
+.redesign .rd-settings-connect-button{border:0;border-radius:7px;background:var(--rd-teal);color:white;min-height:44px;max-width:100%;padding:10px 18px;font:inherit;font-weight:700;cursor:pointer}
+.redesign .rd-settings-connect-button:hover:not(:disabled){background:#005860}
+.redesign .rd-settings-connect-button:disabled{opacity:.5;cursor:wait}
+.redesign .rd-settings input:focus-visible,.redesign .rd-settings a:focus-visible{outline:3px solid var(--rd-teal);outline-offset:2px}
+@media(max-width:700px){.redesign .rd-settings-chatgpt .rd-settings-connect-button{width:100%}}

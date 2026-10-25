@@ -18,6 +18,7 @@ type Panel='shop'|'language'|'preview'|'connection'|'manage'|'usage'|'help'|'tec
 type Entry={id:string;label:string;group:string;note:string;reply:RichReply};
 type Props={snapshot:Snapshot;busy?:boolean;onAct?:(path:string,body:unknown,success:string)=>Promise<void>};
 const previewTypes=[{id:'welcome',label:'Greeting'},{id:'compare',label:'Products'},{id:'compact-cart',label:'Cart'},{id:'ready',label:'Pickup'}] as const;
+const inventoryMcpUrl='https://demo.sagoautomation.tech/mcp';
 const title:Record<Exclude<Panel,null>,string>={shop:'Shop details',language:'Language',preview:'Preview replies',connection:'WhatsApp connection',manage:'Manage connection',usage:'Usage and billing',help:'Help',technical:'Technical details'};
 function Icon({kind}:{kind:string}){const path:Record<string,string>={shop:'M3 10h18M5 10V21h14V10M4 10l2-7h12l2 7M9 21v-7h6v7',language:'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20M2 12h20M12 2c-3 3-4 6-4 10s1 7 4 10M12 2c3 3 4 6 4 10s-1 7-4 10',replies:'M3 4h18v13H9l-6 4z',preview:'M5 3h11l4 4v14H5zM16 3v5h4M8 12h9M8 16h7',connection:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M7 8c1 6 4 9 9 9',manage:'M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2',usage:'M4 20v-5h4v5M10 20V9h4v11M16 20V4h4v16',help:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20M9 9a3 3 0 0 1 6 0c0 2-3 2-3 5M12 18h.01',technical:'m8 8-4 4 4 4m8-8 4 4-4 4m-3-13-2 18'};return <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={path[kind]??path.shop}/></svg>}
 function money(micro:string|undefined){const n=Number(micro??0)/1_000_000;return Number.isFinite(n)?`$${n.toFixed(2)}`:'—'}
@@ -26,6 +27,19 @@ function Row({icon,label,description,trailing,onClick}:{icon:string;label:string
 export function RedesignSettings({snapshot,busy=false,onAct}:Props){
   const {locale,setLocale,t}=useOwnerLocale();
   const [panel,setPanel]=useState<Panel>(null);
+  const [chatgptCopy,setChatgptCopy]=useState<'idle'|'copying'|'failed'>('idle');
+  async function openChatgpt(){
+    if(chatgptCopy==='copying')return;
+    setChatgptCopy('copying');
+    try{
+      await navigator.clipboard.writeText(inventoryMcpUrl);
+    }catch{
+      setChatgptCopy('failed');
+      return;
+    }
+    setChatgptCopy('idle');
+    window.location.assign('https://chatgpt.com/');
+  }
   const [previewLanguage,setPreviewLanguage]=useState('en');
   const [previewKind,setPreviewKind]=useState<string>('compare');
   const [entries,setEntries]=useState<Entry[]>([]);
@@ -49,6 +63,13 @@ export function RedesignSettings({snapshot,busy=false,onAct}:Props){
         <Row icon="language" label="Language" trailing={locale==='ta'?'தமிழ்':'English'} onClick={()=>setPanel('language')}/>
         <div className="rd-settings-row rd-settings-switch-row"><span className="rd-settings-row-icon"><Icon kind="replies"/></span><span className="rd-settings-row-copy"><strong>Automatic replies</strong><small>{paused?'Paused for all chats':'Let the bot answer customers'}</small></span><button type="button" role="switch" aria-label="Automatic replies" aria-checked={!paused} className="rd-settings-switch" disabled={busy||!onAct} onClick={toggle}><span/></button></div>
         <Row icon="preview" label="Preview replies" description="See how your replies look to customers" onClick={()=>setPanel('preview')}/>
+        <h2>ChatGPT</h2>
+        <div className="rd-settings-row rd-settings-chatgpt">
+          <span className="rd-settings-row-icon"><Icon kind="manage"/></span>
+          <div className="rd-settings-row-copy"><strong>{t('Use your inventory in ChatGPT')}</strong><small id="chatgpt-connect-help">{t('Copies your inventory connection link, then opens ChatGPT. Paste the link when adding your connection.')}</small></div>
+          <button type="button" className="rd-settings-connect-button" aria-describedby="chatgpt-connect-help" aria-busy={chatgptCopy==='copying'} disabled={chatgptCopy==='copying'} onClick={()=>{void openChatgpt();}}>{t(chatgptCopy==='copying'?'Copying link…':'Copy link & open ChatGPT')}</button>
+        </div>
+        {chatgptCopy==='failed'&&<div className="rd-settings-detail"><p role="alert">{t('Automatic copying was blocked. Copy the link below, then open ChatGPT.')}</p><label className="rd-settings-field">{t('Inventory connection link')}<input readOnly value={inventoryMcpUrl} onFocus={event=>event.currentTarget.select()}/></label><a href="https://chatgpt.com/">{t('Open ChatGPT')}</a></div>}
         <h2>WhatsApp</h2>
         <Row icon="connection" label="WhatsApp connection" description={connected?'Connection is active':snapshot.channel.error?'Connection needs attention':'Connection is not active'} onClick={()=>setPanel('connection')}/>
         <Row icon="manage" label="Manage connection" description="Connection details" onClick={()=>setPanel('manage')}/>
