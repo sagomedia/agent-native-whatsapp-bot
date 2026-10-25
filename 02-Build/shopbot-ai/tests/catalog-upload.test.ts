@@ -14,7 +14,7 @@ const id=()=>randomUUID();
 const principal={storeId:fixtureStore,actor:'upload-test-owner',canWrite:true,canPublish:true};
 const details={name:'Upload regression product',unit:'piece',pricePaise:5000,stock:30};
 class Transport{peer?:Transport;onmessage?:(m:any)=>void;onclose?:()=>void;onerror?:(e:Error)=>void;async start(){}async send(m:any){queueMicrotask(()=>this.peer?.onmessage?.(m));}async close(){this.onclose?.();}}
-async function connect(pool:pg.Pool,actor:string,run:(c:Client)=>Promise<void>){const server=catalogMcpServer(pool,{...principal,actor}),client=new Client({name:'upload-fixture',version:'1'}),a=new Transport(),b=new Transport();a.peer=b;b.peer=a;await server.connect(a);await client.connect(b);try{await run(client);}finally{await client.close();await server.close();}}
+async function connect(pool:pg.Pool,actor:string,run:(c:Client)=>Promise<void>,deps:Parameters<typeof catalogMcpServer>[2]={}){const server=catalogMcpServer(pool,{...principal,actor},deps),client=new Client({name:'upload-fixture',version:'1'}),a=new Transport(),b=new Transport();a.peer=b;b.peer=a;await server.connect(a);await client.connect(b);try{await run(client);}finally{await client.close();await server.close();}}
 async function fixture(run:(pool:pg.Pool)=>Promise<void>){assert.ok(process.env.DATABASE_URL);const admin=new pg.Pool({connectionString:process.env.DATABASE_URL}),schema='upload_'+id().replaceAll('-','');await admin.query('CREATE SCHEMA '+schema);const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:'-c search_path='+schema});try{await setupDatabase(pool,'mock');await run(pool);}finally{await pool.end();await admin.query('DROP SCHEMA '+schema+' CASCADE');await admin.end();}}
 async function photo(){return {id:id(),mimeType:'image/jpeg' as const,data:(await readFile('resources/catalog/ksmc-demo/images/H19.jpg')).toString('base64')};}
 
@@ -36,13 +36,44 @@ test('paths, arbitrary URLs, placeholder bytes and ambiguous transfers fail clea
  await assert.rejects(validateCatalogUpload({photo:{id:id(),mimeType:'image/jpeg',data:Buffer.from([255,216,255,0]).toString('base64')}}),(e:any)=>e.code==='invalid_photo_bytes'&&/could not be read|no readable dimensions/.test(e.message));
 });
 
+test('preflight distinguishes no attachment from verified bytes and does not infer a client mode',async()=>{
+ const missing=await validateCatalogUpload({});assert.equal(missing.valid,false);assert.equal(missing.persisted,false);assert.equal(missing.photoTransfer.status,'not_received');assert.equal(missing.photoTransfer.clientMode,'unknown');
+ const source=await photo();let downloads=0;
+ const checked=await validateCatalogUpload({file:{download_url:'https://files.oaiusercontent.com/fixture',file_id:'real-host-reference'}},async()=>{downloads++;return {mimeType:'image/jpeg',data:source.data};});
+ assert.equal(downloads,1);assert.equal(checked.valid,true);assert.equal(checked.persisted,false);assert.equal(checked.photoTransfer.status,'verified');assert.equal(checked.photoTransfer.clientMode,'unknown');
+ assert.equal(checked.bytes,Buffer.from(source.data,'base64').length);
+});
+
+test('MCP preflight reports refresh, resizing and server recovery without diagnosing a host mode',()=>fixture(async pool=>{
+ for(const [code,nextStep] of [['file_download_failed','refresh_attachment'],['photo_decoder_unavailable','contact_platform']] as const){
+  await connect(pool,principal.actor,async client=>{
+   const result=await client.callTool({name:'catalog_validate_photo',arguments:{file:{download_url:'https://files.oaiusercontent.com/fixture',file_id:'fixture'}}});
+   assert.ok(result.isError);const r=result.structuredContent as any;assert.equal(r.error,code);assert.equal(r.photoTransfer.clientMode,'unknown');assert.equal(r.photoTransfer.nextStep,nextStep);assert.doesNotMatch(r.photoTransfer.message,/try Work mode/);
+  },{download:async()=>{throw Object.assign(new Error('Fixture transfer failure'),{code,statusCode:503});}});
+ }
+ await connect(pool,principal.actor,async client=>{
+  const p=await photo(),bytes=Buffer.alloc(2097153);Buffer.from(p.data,'base64').copy(bytes);
+  const result=await client.callTool({name:'catalog_validate_photo',arguments:{photo:{...p,data:bytes.toString('base64')}}});
+  assert.ok(result.isError);const r=result.structuredContent as any;assert.equal(r.error,'photo_too_large');assert.equal(r.photoTransfer.nextStep,'resize_photo');assert.equal(r.photoTransfer.clientMode,'unknown');
+ });
+ assert.equal((await pool.query('SELECT count(*)::int AS n FROM catalog_proposals')).rows[0].n,0);
+ assert.equal((await pool.query('SELECT count(*)::int AS n FROM provider_attempts')).rows[0].n,0);
+}));
+
 test('MCP upload failure is recoverable with same operation ID, no draft, retained original and one inventory insertion',()=>fixture(async pool=>{
  const p=await photo(),operationId=id();
  await connect(pool,principal.actor,async client=>{
   const tools=(await client.listTools()).tools;for(const name of ['catalog_propose','catalog_drafts','catalog_edit_draft','catalog_stage_photo'])assert.ok(!tools.some(t=>t.name===name));
   const fileTool=tools.find(t=>t.name==='catalog_add_product')!;assert.deepEqual(fileTool._meta?.['openai/fileParams'],['file']);
+  const capabilities=(await client.callTool({name:'catalog_media_capabilities',arguments:{}})).structuredContent as any;
+  assert.equal(capabilities.clientMode,'unknown');assert.equal(capabilities.photoTransfer,'unverified');
+  const absent=(await client.callTool({name:'catalog_validate_photo',arguments:{}})).structuredContent as any;
+  assert.equal(absent.valid,false);assert.equal(absent.photoTransfer.status,'not_received');
+  const preflight=(await client.callTool({name:'catalog_validate_photo',arguments:{photo:p}})).structuredContent as any;
+  assert.equal(preflight.valid,true);assert.equal(preflight.photoTransfer.status,'verified');assert.equal(preflight.persisted,false);
+  assert.equal((await pool.query('SELECT count(*)::int AS n FROM catalog_proposals')).rows[0].n,0);
   const caps=await client.callTool({name:'catalog_media_capabilities',arguments:{}});assert.equal((caps.structuredContent as any).localPathsSupported,false);
-  const bad=await client.callTool({name:'catalog_add_product',arguments:{operationId,details,file:{download_url:'sandbox:/mnt/data/product.webp',file_id:'local'}}});assert.ok(bad.isError);const failure=bad.structuredContent as any;assert.equal(failure.error,'unsupported_file_handoff');assert.equal(failure.stage,'photo_upload');assert.ok(failure.referenceId);assert.match(failure.message,/Base64/);
+  const bad=await client.callTool({name:'catalog_add_product',arguments:{operationId,details,file:{download_url:'sandbox:/mnt/data/product.webp',file_id:'local'}}});assert.ok(bad.isError);const failure=bad.structuredContent as any;assert.equal(failure.error,'unsupported_file_handoff');assert.equal(failure.stage,'photo_upload');assert.ok(failure.referenceId);assert.match(failure.message,/Base64/);assert.equal(failure.photoTransfer.clientMode,'unknown');assert.equal(failure.photoTransfer.nextStep,'provide_real_file_or_try_work');assert.match(failure.photoTransfer.message,/try Work mode/);
   assert.equal((await pool.query('SELECT count(*)::int AS n FROM catalog_proposals')).rows[0].n,0);
   const status=await client.callTool({name:'workflow_status',arguments:{operationId}});assert.equal((status.structuredContent as any).operation,null);assert.equal((status.structuredContent as any).failure.details.referenceId,failure.referenceId);
   await connect(pool,'different-owner-agent',async other=>{const hidden=await other.callTool({name:'workflow_status',arguments:{operationId}});assert.equal((hidden.structuredContent as any).failure,null);});

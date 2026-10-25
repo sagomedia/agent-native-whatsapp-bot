@@ -9,7 +9,7 @@ import {createApp} from '../apps/server/src/http/app.js';
 import {fixtureStore} from '../profiles/hardware.js';
 import {CatalogOAuth} from '../apps/server/src/mcp/oauth.js';
 import {catalogMcpServer} from '../apps/server/src/mcp/catalog-server.js';
-import {catalogContext,prepareChatDraft,getChatDraft,attachChatMedia,reviewChatDraft,commitChatDraft,type CatalogPrincipal} from '../apps/server/src/services/catalog-chat.js';
+import {catalogContext,prepareChatDraft,getChatDraft,attachChatMedia,reviewChatDraft,commitChatDraft,chatHash,type CatalogPrincipal} from '../apps/server/src/services/catalog-chat.js';
 import {catalogFileUrl,publicFileAddress} from '../apps/server/src/services/catalog-file-handoff.js';
 import {migrateCatalogChat} from '../apps/server/src/db/catalog-chat.js';
 import {adjustStock} from '../apps/server/src/services/inventory.js';
@@ -27,6 +27,10 @@ async function fixture(run:(pool:pg.Pool)=>Promise<void>){
 }
 async function draft(pool:pg.Pool){let d=await prepareChatDraft(pool,principal,{operationId:op(),details:fields}) as any;const media=await attachChatMedia(pool,principal,{operationId:op(),id:d.id,version:d.version,kind:'original',matchKind:'exact',photo:await photo()}) as any;return {...d,version:media.version,assetId:media.id};}
 async function review(pool:pg.Pool,d:any){return reviewChatDraft(pool,principal,{operationId:op(),id:d.id,version:d.version,assetId:d.assetId}) as Promise<any>;}
+async function publishedPhotoProduct(pool:pg.Pool){
+ const d=await draft(pool),r=await review(pool,d),saved=await commitChatDraft(pool,principal,{operationId:op(),reviewId:r.reviewId}) as any;
+ return (await pool.query('SELECT * FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,saved.sku])).rows[0];
+}
 async function authorized(pool:pg.Pool,publish=false,scope='catalog:read catalog:draft'){
  const oauth=new CatalogOAuth(pool,remote,owner),client=await oauth.register({client_name:'Synthetic owner-chat agent',redirect_uris:['https://claude.ai/oauth/callback']}),v=randomBytes(32).toString('base64url');
  const request=await oauth.prepare({client_id:client.client_id,redirect_uri:client.redirect_uris[0],response_type:'code',code_challenge:createHash('sha256').update(v).digest('base64url'),code_challenge_method:'S256',resource:remote.publicUrl,state:op(),scope});
@@ -140,10 +144,67 @@ test('public HTTP owner consent grants chat publication explicitly while old dra
   const denied=await rpc(read.token.access_token,'catalog_prepare',{operationId:op(),details:{name:'Should fail'}});assert.ok(denied.error);
   const base=(await pool.query('SELECT sku,version FROM products WHERE store_id=$1 ORDER BY sku LIMIT 1',[fixtureStore])).rows[0];
   const p=(await rpc(publisher.token.access_token,'catalog_prepare',{operationId:op(),base,details:fields})).result.structuredContent;
-  const r=(await rpc(publisher.token.access_token,'catalog_review',{operationId:op(),id:p.id,version:p.version,withoutPhoto:true})).result.structuredContent;
+  const r=(await rpc(publisher.token.access_token,'catalog_review',{operationId:op(),id:p.id,version:p.version})).result.structuredContent;
   const final=await rpc(publisher.token.access_token,'catalog_commit',{operationId:op(),reviewId:r.reviewId});assert.ok(final.result.structuredContent.sku);
   const unauthorized=await app.inject({method:'POST',url:'/api/owner/mcp/authorize',headers:{host:owner.hostname,'content-type':'application/json'},payload:{id:op(),csrf:'a'.repeat(43),allow:true,publish:true}});assert.equal(unauthorized.statusCode,403);
  }finally{await app.close();}
+}));
+
+test('alias-only edits preserve saved photos and reject both new and previously issued removal reviews',()=>fixture(async pool=>{
+ const before=await publishedPhotoProduct(pool);
+ assert.ok(before.image_path);
+ const aliases=[...before.aliases,'ரச மட்டம்','ரசமட்டம்','rasa mattam','rasamattam'];
+ const edit=await prepareChatDraft(pool,principal,{operationId:op(),base:{sku:before.sku,version:before.version},details:{aliases}}) as any;
+ await assert.rejects(reviewChatDraft(pool,principal,{operationId:op(),id:edit.id,version:edit.version,withoutPhoto:true}),(e:any)=>e.code==='photo_removal_not_supported');
+ const checked=await review(pool,edit);assert.equal(checked.photoAction,'preserve');assert.equal(checked.photo,null);
+ // Reproduce a pre-upgrade review that explicitly requested image omission.
+ const historical=(await pool.query('SELECT snapshot FROM catalog_chat_reviews WHERE id=$1',[checked.reviewId])).rows[0].snapshot;
+ historical.withoutPhoto=true;
+ await pool.query('UPDATE catalog_chat_reviews SET snapshot=$1,input_hash=$2 WHERE id=$3',[JSON.stringify(historical),chatHash(historical),checked.reviewId]);
+ await assert.rejects(commitChatDraft(pool,principal,{operationId:op(),reviewId:checked.reviewId}),(e:any)=>e.code==='photo_removal_not_supported');
+ assert.equal((await pool.query('SELECT image_path FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,before.sku])).rows[0].image_path,before.image_path);
+ const fresh=await review(pool,edit),action={operationId:op(),reviewId:fresh.reviewId};
+ const saved=await commitChatDraft(pool,principal,action) as any;assert.equal(saved.photoAction,'preserved');assert.deepEqual(await commitChatDraft(pool,principal,action),saved);
+ const after=(await pool.query('SELECT * FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,before.sku])).rows[0];
+ assert.deepEqual(after.aliases,aliases);
+ for(const key of ['image_path','name','price_paise','stock','unit','inventory_version'])assert.deepEqual(after[key],before[key],key);
+ assert.equal((await pool.query('SELECT count(*)::int AS n FROM catalog_proposal_assets WHERE proposal_id=$1',[edit.id])).rows[0].n,0);
+}));
+
+test('a product already missing a photo can receive metadata edits without an upload or omission flag',()=>fixture(async pool=>{
+ const before=await publishedPhotoProduct(pool);
+ const base=(await pool.query('UPDATE products SET image_path=NULL WHERE store_id=$1 AND sku=$2 RETURNING sku,version',[fixtureStore,before.sku])).rows[0];
+ const edit=await prepareChatDraft(pool,principal,{operationId:op(),base,details:{aliases:['seller correction']}}) as any;
+ const checked=await review(pool,edit);assert.deepEqual(checked.missingRequired,[]);assert.equal(checked.photoAction,'remain_without_photo');
+ const saved=await commitChatDraft(pool,principal,{operationId:op(),reviewId:checked.reviewId}) as any;assert.equal(saved.photoAction,'remained_without_photo');
+ assert.equal((await pool.query('SELECT image_path FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,base.sku])).rows[0].image_path,null);
+}));
+
+test('requested photo replacement succeeds, while a concurrent photo change invalidates an older metadata review',()=>fixture(async pool=>{
+ const base=await publishedPhotoProduct(pool);
+ const edit=await prepareChatDraft(pool,principal,{operationId:op(),base:{sku:base.sku,version:base.version},details:{aliases:['requested replacement']}}) as any;
+ const source=await photo('H20');
+ const attached=await attachChatMedia(pool,principal,{operationId:op(),id:edit.id,version:edit.version,kind:'original',matchKind:'exact',photo:source}) as any;
+ const checked=await review(pool,{...edit,version:attached.version,assetId:attached.id});assert.equal(checked.photoAction,'replace');
+ const saved=await commitChatDraft(pool,principal,{operationId:op(),reviewId:checked.reviewId}) as any;assert.equal(saved.photoAction,'replaced');
+ const current=(await pool.query('SELECT sku,version,image_path,aliases FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,base.sku])).rows[0];assert.notEqual(current.image_path,base.image_path);
+ assert.deepEqual((await pool.query('SELECT original FROM catalog_proposal_assets WHERE id=$1',[attached.id])).rows[0].original,Buffer.from(source.data,'base64'));
+ const metadata=await prepareChatDraft(pool,principal,{operationId:op(),base:{sku:current.sku,version:current.version},details:{aliases:['stale change']}}) as any;
+ const stale=await review(pool,metadata);
+ await pool.query("UPDATE products SET image_path='/demo-images/H19.jpg' WHERE store_id=$1 AND sku=$2",[fixtureStore,base.sku]);
+ await assert.rejects(commitChatDraft(pool,principal,{operationId:op(),reviewId:stale.reviewId}),(e:any)=>e.code==='stale_review');
+ const after=(await pool.query('SELECT aliases,image_path FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,base.sku])).rows[0];assert.deepEqual(after.aliases,current.aliases);assert.equal(after.image_path,'/demo-images/H19.jpg');
+}));
+
+test('metadata publication rolls back if a storage-side update unexpectedly clears the saved photo',()=>fixture(async pool=>{
+ const original=await publishedPhotoProduct(pool);
+ const before=(await pool.query('SELECT sku,version,image_path,aliases FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,original.sku])).rows[0];assert.ok(before.image_path);
+ const edit=await prepareChatDraft(pool,principal,{operationId:op(),base:{sku:before.sku,version:before.version},details:{aliases:['must roll back']}}) as any;
+ const checked=await review(pool,edit);
+ await pool.query("CREATE FUNCTION fixture_clear_photo() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN NEW.image_path:=NULL; RETURN NEW; END $$; CREATE TRIGGER fixture_photo_loss BEFORE UPDATE ON products FOR EACH ROW EXECUTE FUNCTION fixture_clear_photo();");
+ await assert.rejects(commitChatDraft(pool,principal,{operationId:op(),reviewId:checked.reviewId}),(e:any)=>e.code==='photo_preservation_failed');
+ const after=(await pool.query('SELECT sku,version,image_path,aliases FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,before.sku])).rows[0];assert.deepEqual(after,before);
+ assert.equal((await pool.query('SELECT state FROM catalog_proposals WHERE id=$1',[edit.id])).rows[0].state,'draft');
 }));
 
 test('migration upgrades schema 46 without losing catalog records and rejects a conflicting version',()=>fixture(async pool=>{
