@@ -37,9 +37,8 @@
     ]
   },
   "restore": "RESTORE.json",
-  "release": "Pending activation; see DEPLOYMENT.json when present.",
+  "release": "preview-92455e2561bb; see DEPLOYMENT.json",
   "limitations": [
-    "No hosted CI publication: automatic approval review rejected external GitHub issue publication.",
     "Owner ChatGPT and actual WhatsApp device acceptance remain open."
   ]
 }

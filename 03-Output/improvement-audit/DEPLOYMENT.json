@@ -1,0 +1,61 @@
+{
+  "release": "preview-92455e2561bb",
+  "source": "bd86e1d206937765f28d20fe35a78d4ad429024c",
+  "artifact": "d31ab5e06bd74a55ed6db27f2bcbccf5f75f65a5fc93db6ff3a0f4c8d5ef1ee1",
+  "previousRelease": "preview-160e429b6fa6",
+  "schemaBefore": 49,
+  "schemaAfter": 50,
+  "contentVerified": "content_verified",
+  "ready": true,
+  "automaticRestarts": 0,
+  "preserved": {
+    "products": {
+      "count": 342
+    },
+    "order_requests": {
+      "count": 21
+    },
+    "messages": {
+      "count": 856
+    },
+    "catalog_proposals": {
+      "count": 325
+    },
+    "catalog_photos": {
+      "count": 301
+    },
+    "mcp_oauth_grants": {
+      "count": 18
+    },
+    "productHash": "1f65791e188dc15fab42a493433801dd",
+    "catalogRevision": 1987,
+    "envSha256": "d189e9318a405347a58f7dc4ab166920eee3f0f0a3b371bebd634c397c9aa939"
+  },
+  "mcp": {
+    "toolCount": 45,
+    "auditTools": [
+      "catalog_audit",
+      "catalog_audit_apply",
+      "catalog_audit_get",
+      "catalog_audit_save",
+      "catalog_audit_undo"
+    ],
+    "savedAuditRead": true
+  },
+  "historicalActivity": {
+    "total": 52,
+    "firstPage": 25,
+    "historical": 25
+  },
+  "newAuditRecords": {
+    "catalog_audit_runs": 0,
+    "catalog_audit_findings": 0,
+    "conversation_audit_events": 0
+  },
+  "backup": "Existing native upgrade created a private database/configuration backup and validated its archive listing.",
+  "limitations": [
+    "Host MCP discovery cache must be refreshed.",
+    "Owner-led ChatGPT audit and actual WhatsApp device acceptance remain open.",
+    "No speculative aliases or live synthetic customer messages were created."
+  ]
+}

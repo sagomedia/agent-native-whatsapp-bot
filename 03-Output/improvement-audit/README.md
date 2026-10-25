@@ -27,3 +27,7 @@ Refresh the connected MCP tool discovery. With owner access plus catalog editing
 Suggested first request: “Audit yesterday's conversations for product matching failures. Review all pages, investigate actual catalog candidates, separate flow defects from missing terms, and show me uncertain mappings before proposing aliases. Save the audit and progress.” Discuss findings, then authorize named suggestions or a clearly described batch. Check Applied/Needs review in Products. Undo an accepted term change only if its product version remains unchanged.
 
 On WhatsApp: retain an unresolved old item, ask for a screwdriver, select a current pictured product, answer any missing count, review the bill and separately send it. Test a colloquial correction and an explicit additional item. Confirm measured lengths and stale buttons still require appropriate evidence.
+
+## Deployment
+
+Release `preview-92455e2561bb` from verified source `bd86e1d` is active and ready, with zero restarts. Schema 50, all five audit MCP tools and saved-audit reads are verified. The full product hash, catalog revision, environment hash and all prior product/order/message/proposal/photo/grant counts are unchanged. Fifty-two supported historical actions appear in Applied, with unknown prior values explicit. See [deployment evidence](DEPLOYMENT.json). Source publication is tracked in [issue #79](https://github.com/sagomedia/agent-native-whatsapp-bot/issues/79).
