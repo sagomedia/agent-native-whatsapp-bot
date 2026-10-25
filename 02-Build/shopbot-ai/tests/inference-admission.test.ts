@@ -57,7 +57,8 @@ test('configured unified 16K output limits stay bounded and each adapter admits 
  assert.equal(prepared.admission.requestHash,admitRequest(captured!).requestHash);assert.equal(prepared.admission.maxOutputTokens,16384);
  assert.equal(prepared.admission.reservationBasis,'model_context_limit');assert.equal(provider.billing.inputTokenLimit,1048576);
  const env=readNativeSettings({ALLOW_PAID_INFERENCE:'true',AI_BUDGET_USD:'1',GEMINI_API_KEY:'offline-only',AI_MODEL:geminiTextRate.model,GEMINI_UNIFIED_UNDERSTANDING_ENABLED:'true'});
- assert.equal(env!.maxOutputTokens,16384);assert.equal(rateHealth(new GoogleInterpreter(env!).billing).status,'fresh');
+ // Output-limit configuration is independent of the day this test runs.
+ assert.equal(env!.maxOutputTokens,16384);assert.equal(rateHealth(new GoogleInterpreter(env!).billing,Date.parse(geminiTextRate.verifiedOn+'T00:00:00Z')).status,'fresh');
  const generator=new GoogleCatalogGenerator('offline-only',{generateContent:async()=>{throw new Error('must not call');}});
  assert.throws(()=>generator.prepareInput({description:'x'.repeat(65536),nodes:[]}),/including instructions and schema/);
  assert.equal(catalogGenerationRate.inputTokenLimit,geminiTextRate.inputTokenLimit);
