@@ -40,6 +40,23 @@ test('an excluded count or identity is not mislabeled as only an unknown price',
  const card=visualBill(s).parts![0].cards[0];assert.equal(card.kind,'bill');if(card.kind!=='bill')return;
  assert.match(card.lines.join('\n'),/எண்ணிக்கை/);assert.match(card.lines.join('\n'),/பொருள் தேர்வு/);
  assert.doesNotMatch(card.lines.join('\n'),/3.*விலை/);
+ assert.equal(card.billRows![1].total,'எண்ணிக்கை தேவை');
+ const bill=visualBill(s);assert.match(bill.parts![0].text,/1 எண்ணிக்கை சொல்லணும்/);
+ assert.match(bill.accessibleText!,/எண்ணிக்கை தேவை/);
+ const rendered=renderWhatsAppReply({...bill,parts:[{...bill.parts![0],cards:[{...card,imageUrl:'/catalog-images/messages/'+'a'.repeat(64)+'.png'}]}]},randomUUID(),'shop.example.test');
+ assert.match(JSON.stringify(rendered.payload),/எண்ணிக்கை சொல்லணும்/);
+});
+
+test('product choices do not display the model’s quantity question',()=>{
+ const a={...product,sku:'WHITE-A',name:'White paint A',unit:'can'},b={...a,sku:'WHITE-B',name:'White paint B'};
+ const item:DraftLine={id:randomUUID(),name:'white paint',query:'white paint',quantity:null,resolution:'needs_choice',candidates:[a,b]};
+ const s=state([item]);s.pending={kind:'products',id:randomUUID(),version:s.version,expiresAt:new Date(Date.now()+60000).toISOString(),remaining:1,groups:[{lineId:item.id,products:[a,b]}]};
+ for(const question of ['ஒயிட் கலர் பெயிண்ட் எத்தனை பாக்கெட் அல்லது கேன் வேணும்?','How many cans do you need?','Eththanai can venum?']){
+  const result=visualProductReview(s,false,question);assert.equal(result.clarificationReason,'product_or_specification');
+  assert.doesNotMatch(result.parts![0].text,/எத்தனை|how many|eththanai/i);
+  assert.match(result.parts![0].text,/எது வேணும்/);
+  const cards=result.parts![0].cards;assert.equal(cards.length,2);assert.ok(cards.every(c=>c.kind==='product'&&c.buttons?.some(b=>b.event.type==='select_product')));
+ }
 });
 
 test('pipe category clarification asks one question with three versioned choices',()=>{

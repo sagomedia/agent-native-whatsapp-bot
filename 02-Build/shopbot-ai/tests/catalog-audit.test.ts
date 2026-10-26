@@ -94,7 +94,7 @@ test('apply patches only search metadata, preserves merchant facts and records o
  for(const field of ['stock','reserved_stock','inventory_version','image_path','price_paise','unit','merchant_verification','selling_unit_verified','selling_policy','active'])assert.deepEqual(after[field],before[field],field);
  assert.ok(after.aliases.includes('local elbow name'));assert.match(after.search_text,/local elbow name/);assert.equal(after.version,before.version+1);
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM catalog_change_events')).rows[0].n,1);
- const activity:any=await catalogAiActivity(pool,p,{});assert.equal(activity.items[0].status,'live');assert.equal(activity.items[0].changes.length,1);assert.equal(activity.items[0].changes[0].field,'aliases');
+ const activity:any=await catalogAiActivity(pool,p,{});assert.equal(activity.items[0].status,'live');assert.equal(activity.items[0].changes.length,1);assert.equal(activity.items[0].changes[0].field,'aliases');assert.equal(activity.items[0].hasPhoto,true);assert.equal(activity.items[0].productVersion,after.version);assert.equal('image_path' in activity.items[0],false);
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM whatsapp_outbox')).rows[0].n,0);assert.equal((await pool.query('SELECT count(*)::int AS n FROM provider_attempts')).rows[0].n,0);
  await assert.rejects(applyCatalogAudit(pool,{...p,canPublish:false},{...s.apply,operationId:id()}),/catalog permission/);
 }));
@@ -127,7 +127,7 @@ test('ordinary connected stock and visibility changes record provenance, failed 
 test('AI activity includes unmatched findings and honest historic actions, with scoped stable pagination',()=>fixture(async pool=>{
  const messageId=await message(pool,'unknown thing'),auditId=id();
  await saveCatalogAudit(pool,p,{operationId:id(),auditId,title:'Unidentified request',range:range(),findings:[{id:id(),category:'insufficient_evidence',wording:'unknown thing',explanation:'Ask the owner which product this could mean.',evidence:[{conversationId:fixtureConversation,messageIds:[messageId]}]}]});
- const pending:any=await catalogAiActivity(pool,p,{mode:'review'});assert.equal(pending.items[0].sku,null);assert.equal(pending.items[0].live,false);assert.equal(pending.items[0].conversationId,fixtureConversation);
+ const pending:any=await catalogAiActivity(pool,p,{mode:'review'});assert.equal(pending.items[0].sku,null);assert.equal(pending.items[0].live,false);assert.equal(pending.items[0].conversationId,fixtureConversation);assert.equal(pending.items[0].hasPhoto,false);assert.equal(pending.items[0].productVersion,null);
  for(let i=0;i<4;i++)await mutate(pool,p,'catalog:publish',id(),'commit',{},async c=>{await c.query('UPDATE products SET keywords=$3 WHERE store_id=$1 AND sku=$2',[fixtureStore,sku,JSON.stringify(['change '+i])]);return {sku};});
  let cursor:string|undefined;const seen:string[]=[];do{const page:any=await catalogAiActivity(pool,p,{limit:1,cursor});seen.push(...page.items.map((i:any)=>i.id));cursor=page.nextCursor??undefined;}while(cursor);assert.equal(new Set(seen).size,4);
  const page:any=await catalogAiActivity(pool,p,{limit:1});await assert.rejects(catalogAiActivity(pool,p,{cursor:page.nextCursor,q:'other filter'}),/another filter/);
@@ -164,6 +164,18 @@ test('adding another product focuses its real candidates while preserving a stal
  const preview=await tools.invoke(ctx,{name:'preview_order',args:{expectedVersion:added.state!.version}},id());
  assert.equal(preview.state!.pending?.kind,'products');assert.ok((preview.state!.pending as any).groups.some((g:any)=>g.lineId===added.state!.activeItemId));
  const visual=visualReply({version:1,kind:'text',text:preview.message,presentation:'text',outboundMessages:1},preview.state!);assert.ok(!visual.text.includes('kept your request'));
+}));
+
+test('a stalled request can move to its partial estimate without repeating the same prompt or submitting',()=>fixture(async pool=>{
+ const line={id:id(),name:'unlisted screwdriver',query:'unlisted screwdriver',quantity:1,resolution:'unavailable',clarification:{signature:'fixture',unproductiveTurns:2}};
+ await pool.query('UPDATE conversations SET visual_ordering=true,partial_reviews=true,draft=$2::jsonb WHERE id=$1',[fixtureConversation,JSON.stringify([line])]);
+ const ctx={storeId:fixtureStore,conversationId:fixtureConversation,actor:'local-simulator',role:'customer' as const};
+ const preview=await new RetailTools(pool).invoke(ctx,{name:'preview_order',args:{expectedVersion:0,allowPartial:true}},id());
+ assert.equal(preview.state!.pending?.kind,'review');
+ const response=visualReply({version:1,kind:'text',text:preview.message,presentation:'text',outboundMessages:1},preview.state!);
+ assert.equal(response.stage,'bill');assert.notEqual(response.clarificationReason,'stalled_request');
+ assert.ok(response.parts?.flatMap(p=>p.cards.flatMap(c=>c.buttons??[])).some(b=>b.event.type==='confirm'));
+ assert.equal((await pool.query('SELECT count(*)::int AS n FROM order_requests WHERE conversation_id=$1',[fixtureConversation])).rows[0].n,0);
 }));
 
 test('term collisions are disclosed, duplicate additions are no-ops and wrong dimensions are rejected',()=>fixture(async pool=>{

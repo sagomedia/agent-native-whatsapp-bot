@@ -88,6 +88,17 @@ test('stalled requests promote shop review only when supported, without hiding e
  assert.equal(catalogQuestion('Which brand do you need?',state,[{brand:'3M'} as any,{brand:'Other'} as any]),'Which brand do you need?');
 });
 
+test('reviewing a stalled item reaches its partial estimate and never submits automatically',()=>{
+ const line={id:randomUUID(),name:'screwdriver',query:'screwdriver',quantity:1,resolution:'unavailable' as const,clarification:{signature:'fixture',unproductiveTurns:2}};
+ const version=3,reviewId=randomUUID();
+ const state:ConversationState={version,draft:[line],pending:{kind:'review',id:reviewId,version,hash:'fixture',expiresAt:new Date(Date.now()+60000).toISOString(),lines:[line],fulfillment:'pickup',totalPaise:0,excludedLineIds:[line.id]},lastRequestId:null,fulfillment:'pickup',visualOrdering:true,allowPartialReview:true,replyLanguage:'en'};
+ const result=visualReply({version:1,kind:'text',text:'Review this request',presentation:'text',outboundMessages:1},state);
+ assert.equal(result.stage,'bill');assert.doesNotMatch(result.text,/kept your request/i);
+ const actions=result.parts!.flatMap(p=>p.cards.flatMap(c=>c.buttons??[]));
+ assert.ok(actions.some(b=>b.event.type==='confirm'&&b.event.reviewId===reviewId));
+ assert.equal(state.lastRequestId,null);assert.equal(state.pending?.kind,'review');
+});
+
 test('colour constraints use product names when absent but reject conflicting structured colour evidence',()=>fixture(async(pool,ctx)=>{
  await pool.query("UPDATE products SET specifications=specifications-'colour' WHERE store_id=$1 AND sku='PAINT1'",[ctx.storeId]);
  await pool.query("UPDATE products SET name=name||' White',specifications=specifications||'{\"colour\":\"red\"}' WHERE store_id=$1 AND sku='PAINT4'",[ctx.storeId]);

@@ -16,7 +16,7 @@ import {catalogInstructions,catalogPrompt,catalogEnrichment,catalogUploadInstruc
 
 type Scope=CatalogPrincipal&{reviewUrl?:string};
 export function catalogMcpServer(pool:Pool,scope:Scope,deps:{download?:typeof downloadCatalogPhoto}={}){
- const server=new McpServer({name:'shopbot-owner-catalog',version:'1.8.0'},{instructions:catalogInstructions+'\n'+catalogUploadInstructions+(scope.canReadOwner?'\n'+ownerWorkflow+'\n'+catalogAuditWorkflow:'')});
+ const server=new McpServer({name:'shopbot-owner-catalog',version:'1.9.0'},{instructions:catalogInstructions+'\n'+catalogUploadInstructions+(scope.canReadOwner?'\n'+ownerWorkflow+'\n'+catalogAuditWorkflow:'')});
  registerOwnerTools(server,pool,scope);
  registerCatalogAuditTools(server,pool,scope);
  const result=(value:unknown)=>({structuredContent:value as Record<string,unknown>,content:[{type:'text' as const,text:JSON.stringify(value)}]});

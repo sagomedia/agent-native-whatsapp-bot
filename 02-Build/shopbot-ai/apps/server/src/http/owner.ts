@@ -145,11 +145,13 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     const selectedConversation=ownerSnapshotQuery.safeParse(request.query);
     if(!selectedConversation.success)return reply.code(400).send({error:'Invalid owner read query'});
     const read=selectedConversation.data,fullDetails=read.details==='1';
+    const includeInbox=read.scope==='all'||read.scope==='inbox',includeOrders=read.scope==='all'||read.scope==='orders';
     const client=await pool.connect();
     try{
       await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
       const store=(await client.query('SELECT id,name,synthetic,operator_paused,operator_revision,inventory_policy FROM stores WHERE id=$1',[owner.storeId])).rows[0];
-      const conversationQuery=`SELECT c.id,c.actor,w.profile_name AS customer_name,w.recipient AS customer_phone,c.operator_mode,c.operator_revision,c.reply_language,c.draft,c.version,
+      const {conversations,inboxPage,conversationCounts}=includeInbox?await(async()=>{
+      const conversationQuery=`SELECT c.id,c.actor,w.profile_name AS customer_name,w.recipient AS customer_phone,c.operator_mode,c.operator_revision,${read.scope==='inbox'?'':'c.reply_language,c.draft,c.version,'}
         ${needsReplySql} AS needs_reply,${chatUnreadSql} AS unread_count,
         coalesce((SELECT rd.read_sequence FROM owner_chat_reads rd WHERE rd.conversation_id=c.id),0)::text AS owner_read_sequence,
         CASE WHEN c.pending->>'kind'='review' THEN jsonb_build_object('reviewId',c.pending->>'id','expiresAt',c.pending->>'expiresAt','totalPaise',c.pending->'totalPaise','itemCount',jsonb_array_length(c.draft)) ELSE NULL END AS checkout,
@@ -168,11 +170,15 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       // the recent inbox. Keep all recent rows and append its guarded metadata.
       const selectedId=selectedConversation.data.conversation;
       if(selectedId&&!conversations.some(c=>c.id===selectedId))conversations.push(...(await client.query(conversationQuery+' AND c.id=$2',[owner.storeId,selectedId])).rows);
-      const deliveries=(await client.query(`SELECT c.id,count(m.id)::int AS total,count(*) FILTER(WHERE o.state IN ('delivered','read'))::int AS delivered,bool_or(o.state IN ('failed','unknown','blocked','cancelled')) AS issue
+      const deliveries=read.scope==='all'?(await client.query(`SELECT c.id,count(m.id)::int AS total,count(*) FILTER(WHERE o.state IN ('delivered','read'))::int AS delivered,bool_or(o.state IN ('failed','unknown','blocked','cancelled')) AS issue
         FROM conversations c JOIN LATERAL (SELECT m.reply_group_id FROM messages m JOIN whatsapp_actions a ON a.message_id=m.id WHERE m.conversation_id=c.id AND a.binding_id::text=c.pending->>'id' AND a.event->>'type'='confirm' ORDER BY m.sequence DESC LIMIT 1) g ON true
         JOIN messages m ON m.reply_group_id=g.reply_group_id LEFT JOIN whatsapp_outbox o ON o.message_id=m.id
-        WHERE c.store_id=$1 AND c.pending->>'kind'='review' GROUP BY c.id`,[owner.storeId])).rows;
+        WHERE c.store_id=$1 AND c.pending->>'kind'='review' GROUP BY c.id`,[owner.storeId])).rows:[];
       for(const conversation of conversations){if(conversation.checkout){const delivery=deliveries.find(d=>d.id===conversation.id);conversation.checkout.state=Date.parse(conversation.checkout.expiresAt)<=Date.now()?'expired':delivery?.issue?'delivery_issue':delivery&&delivery.delivered<delivery.total?'invoice_arriving':'awaiting_customer';}}
+      const conversationCounts=(await client.query(`SELECT count(*)::int AS total,count(*) FILTER(WHERE ${needsReplySql})::int AS help,count(*) FILTER(WHERE c.pending->>'kind'='review')::int AS checkouts FROM conversations c WHERE c.store_id=$1`,[owner.storeId])).rows[0];
+      return {conversations,inboxPage,conversationCounts};
+      })():{conversations:[],inboxPage:{number:1,size:25,total:0,ids:[],hasNext:false},conversationCounts:{total:0,help:0,checkouts:0}};
+      const {requests,requestCounts,orderPage,amendments,quotes}=includeOrders?await(async()=>{
       const requestQuery=`SELECT r.id,r.conversation_id,c.actor,w.profile_name AS customer_name,w.recipient AS customer_phone,r.acceptance,r.payment,r.fulfillment,
         ${ownerSimpleStageSql} AS stage,${orderAttentionSql} AS attention_key,${orderUnreadSql} AS unread,
         r.lines AS original_lines,r.total_paise AS original_total_paise,coalesce(r.effective_total_paise,r.total_paise) AS total_paise,coalesce(r.effective_lines,r.lines) AS lines,r.created_at,r.estimate_complete,r.excluded_line_ids,r.advance_required,r.effective_revision,r.inventory_state,r.inventory_untracked_line_ids,r.packed_revision,a.state AS advance_state,a.amount_paise AS advance_amount_paise,a.claimed_at AS advance_claimed_at,a.verified_at AS advance_verified_at,a.verified_by AS advance_verified_by FROM order_requests r JOIN conversations c ON c.id=r.conversation_id AND c.store_id=r.store_id LEFT JOIN whatsapp_conversations w ON w.conversation_id=c.id LEFT JOIN order_advances a ON a.request_id=r.id WHERE r.store_id=$1`;
@@ -193,18 +199,20 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
         count(*) FILTER(WHERE r.acceptance IN ('awaiting_approval','accepted') AND r.fulfillment NOT IN ('ready_for_pickup','collected','cancelled'))::int AS new,
         count(*) FILTER(WHERE r.acceptance='accepted' AND r.fulfillment='ready_for_pickup')::int AS ready_for_pickup,
         count(*) FILTER(WHERE r.fulfillment='collected')::int AS completed FROM order_requests r WHERE r.store_id=$1`,[owner.storeId])).rows[0];
-      const conversationCounts=(await client.query(`SELECT count(*)::int AS total,count(*) FILTER(WHERE ${needsReplySql})::int AS help,count(*) FILTER(WHERE c.pending->>'kind'='review')::int AS checkouts FROM conversations c WHERE c.store_id=$1`,[owner.storeId])).rows[0];
+
       const requestIds=requests.map(r=>r.id);
       const amendments=(await client.query("SELECT id,request_id,conversation_id,kind,summary,proposed_lines,state,expected_revision,known_subtotal_paise,estimate_complete,created_at FROM order_amendments WHERE store_id=$1 AND request_id=ANY($2::uuid[]) AND state IN ('owner_pending','proposed') ORDER BY created_at",[owner.storeId,requestIds])).rows;
       const quotes=(await client.query("SELECT id,request_id,state,expected_revision,total_paise,lines,created_at FROM order_quotes WHERE store_id=$1 AND request_id=ANY($2::uuid[]) AND state='offered' ORDER BY created_at",[owner.storeId,requestIds])).rows;
+      return {requests,requestCounts,orderPage,amendments,quotes};
+      })():{requests:[],requestCounts:{active:0,history:0,review:0,customer:0,ready:0,new:0,ready_for_pickup:0,completed:0},orderPage:{number:1,size:25,total:0,ids:[],hasNext:false},amendments:[],quotes:[]};
       const usage=fullDetails?(await client.query(`SELECT count(*)::int AS attempts,count(*) FILTER(WHERE state='failed')::int AS failures,count(*) FILTER(WHERE state='unknown')::int AS unknown,coalesce(sum(estimated_cost_microusd),0)::text AS estimated_microusd FROM (SELECT state,estimated_cost_microusd FROM provider_attempts WHERE store_id=$1 UNION ALL SELECT state,estimated_cost_microusd FROM catalog_suggestions WHERE store_id=$1) attempts`,[owner.storeId])).rows[0]:null;
       const budget=(await client.query('SELECT limit_microusd,committed_microusd,held_microusd,blocked FROM inference_budgets WHERE store_id=$1',[owner.storeId])).rows[0]??null;
-      const audit=fullDetails?(await client.query('SELECT action,target_id,details,created_at FROM owner_audit WHERE store_id=$1 ORDER BY sequence DESC LIMIT 20',[owner.storeId])).rows:[];
+      const audit=fullDetails&&read.scope==='all'?(await client.query('SELECT action,target_id,details,created_at FROM owner_audit WHERE store_id=$1 ORDER BY sequence DESC LIMIT 20',[owner.storeId])).rows:[];
       const wa=config.whatsapp?(await client.query('SELECT verified_at,last_webhook_at,last_received_at,send_blocked,last_error FROM whatsapp_channels WHERE phone_id=$1 AND store_id=$2',[config.whatsapp.phoneId,owner.storeId])).rows[0]:undefined;
       const channel={whatsapp:!wa?'not_connected':wa.send_blocked?'attention_required':wa.last_received_at?'receiving':wa.verified_at||wa.last_webhook_at?'webhook_verified':'awaiting_verification',liveSending:Boolean(wa&&config.whatsapp?.sendEnabled&&!wa.send_blocked),processing:Boolean(config.whatsapp?.processEnabled),lastReceivedAt:wa?.last_webhook_at??null,error:wa?.last_error??null,testOnly:config.whatsapp?.audience!=='public'};
       const messaging=fullDetails&&config.whatsapp&&config.whatsapp.storeId===owner.storeId?{...await messagingCostSummary(client,{storeId:owner.storeId,phoneId:config.whatsapp.phoneId,accountTimezone:config.whatsapp.accountTimezone,rateCard:config.whatsapp.pricingRateCard}),analyticsAvailable:Boolean(config.whatsapp.accountTimezone&&config.whatsapp.accountCurrency&&config.whatsapp.businessPhoneNumber)}:null;
       await client.query('COMMIT');
-      return {authMode:demoLogin?'demo_password':'cloudflare',attention:await ownerAttentionCounts(client,owner.storeId),detailsIncluded:fullDetails,store,conversations,conversationCounts,inboxPage,requests,requestCounts,orderPage,amendments,quotes,usage,budget,audit,messaging,mode:config.mode,ownerEmail:owner.email,channel,inference:{enabled:!!(wa&&config.whatsapp?.aiEnabled&&config.whatsapp.processEnabled),paidEnabled:!!config.whatsapp?.paidEnabled,rateHealth:rateHealth(geminiTextRate)},limits:{conversations:100,requests:100},generatedAt:new Date().toISOString()};
+      return {authMode:demoLogin?'demo_password':'cloudflare',attention:read.scope==='all'||read.scope==='settings'?await ownerAttentionCounts(client,owner.storeId):undefined,detailsIncluded:fullDetails,store,conversations,conversationCounts,inboxPage,requests,requestCounts,orderPage,amendments,quotes,usage,budget,audit,messaging,mode:config.mode,ownerEmail:owner.email,channel,inference:{enabled:!!(wa&&config.whatsapp?.aiEnabled&&config.whatsapp.processEnabled),paidEnabled:!!config.whatsapp?.paidEnabled,rateHealth:rateHealth(geminiTextRate)},limits:{conversations:100,requests:100},generatedAt:new Date().toISOString()};
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
   });
   app.post('/api/owner/pricing/refresh',async(request,reply)=>{

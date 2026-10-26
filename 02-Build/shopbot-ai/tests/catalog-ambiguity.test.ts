@@ -37,6 +37,25 @@ test('unspecified water and pumping pipes retain quantity without inventing a PV
     assert.ok(found.products.length>0,query);
     assert.ok(found.products.every(p=>p.familyId===familyId),query);
    }
+   for(const query of ['pipe solvent','pipe cement','pipe adhesive','pipe glue','பைப் சால்வென்ட்'])assert.equal(needsPipeType(query),false,query);
+   // A generic solvent may mean paint thinner or PVC cement. A model's
+   // guessed family must not turn this into an automatic product match.
+   for(const query of ['solvent','சால்வென்ட்']){
+    const found=await discoverProducts(client,ctx,query,{keywords:[query],familyId:'pvc-pipes'});
+    assert.deepEqual(found.products,[],query);
+    assert.equal(found.matchStatus,'needs_detail',query);
+    assert.ok(found.diagnostics?.uncertainty.includes('solvent_use_required'),query);
+    const guessed=await discoverProducts(client,ctx,query,{keywords:[query],selectedSkus:['H07']});
+    assert.deepEqual(guessed.products,[],`${query} with an AI-suggested SKU`);
+    assert.equal(guessed.matchStatus,'needs_detail');
+   }
+   // A request for an adhesive used on pipe is not a request for the pipe itself.
+   // Its actual catalog search should remain eligible, without guessing a pipe type.
+   for(const query of ['pipe solvent','pipe cement','pipe glue']){
+    const found=await discoverProducts(client,ctx,query);
+    assert.ok(found.products.some(p=>p.sku==='H07'),query);
+    assert.ok(!found.diagnostics?.uncertainty.includes('pipe_type_required'),query);
+   }
   }finally{client.release();}
   const tools=new RetailTools(pool);
   let result=await tools.invoke(ctx,{name:'apply_draft_changes',args:{expectedVersion:0,operations:[{kind:'add_item',query:'1 inch water pumping pipe',quantity:2,productMeasures:[{value:1,unit:'inch'}],search:{keywords:['water pipe','PVC pipe'],familyId:'pvc-pipes'}}]}},randomUUID());
@@ -57,5 +76,27 @@ test('unspecified water and pumping pipes retain quantity without inventing a PV
   assert.match(visible.text,/1 inch/);
   assert.ok(!JSON.stringify(visible).includes('H13'));
   assert.equal((await pool.query('SELECT count(*)::int AS count FROM order_requests WHERE conversation_id=$1',[conversationId])).rows[0].count,0);
+ }finally{await pool.end();await admin.query(`DROP SCHEMA "${schema}" CASCADE`);await admin.end();}
+});
+
+test('generic solvent asks its use before product approval and preserves the request',async()=>{
+ const schema='solvent_clarification_'+randomUUID().replaceAll('-','');
+ const admin=new pg.Pool({connectionString:process.env.DATABASE_URL});
+ await admin.query(`CREATE SCHEMA "${schema}"`);
+ const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:`-c search_path=${schema}`});
+ try{
+  await setupDatabase(pool,'mock');await setupImageDemo(pool);
+  const ctx={storeId:demoCatalogStore,conversationId:randomUUID(),actor:'solvent-flow',role:'customer' as const};
+  await pool.query('INSERT INTO conversations(id,store_id,actor,visual_ordering) VALUES($1,$2,$3,true)',[ctx.conversationId,ctx.storeId,ctx.actor]);
+  const tools=new RetailTools(pool);
+  let result=await tools.invoke(ctx,{name:'apply_draft_changes',args:{expectedVersion:0,operations:[{kind:'add_item',query:'solvent',quantity:1}]}},randomUUID());
+  assert.equal(result.state?.draft[0].sku,undefined);
+  result=await tools.invoke(ctx,{name:'preview_order',args:{expectedVersion:result.state!.version}},randomUUID());
+  assert.equal(result.state?.pending?.kind,'question');
+  assert.match(result.message,/joining PVC pipes or for thinning paint/);
+  assert.equal(result.state?.draft[0].quantity,1);
+  const visible=visualReply({version:1,kind:'text',text:result.message,presentation:'text',outboundMessages:1},result.state!);
+  assert.match(visible.text,/joining PVC pipes or for thinning paint/);
+  assert.equal((await pool.query('SELECT count(*)::int AS count FROM order_requests WHERE conversation_id=$1',[ctx.conversationId])).rows[0].count,0);
  }finally{await pool.end();await admin.query(`DROP SCHEMA "${schema}" CASCADE`);await admin.end();}
 });

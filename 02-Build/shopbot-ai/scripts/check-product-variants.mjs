@@ -22,7 +22,7 @@ await page.route('**/api/owner/**',async route=>{
  return route.fulfill({json:{store:{name:'Variant test shop'},conversationCounts:{help:0},requests:[],amendments:[]}});
 });
 try{
- await page.goto('http://127.0.0.1:3054/owner?view=catalog');console.log('Opened catalog');
+ await page.goto((process.env.OWNER_PREVIEW_ORIGIN??'http://127.0.0.1:3054')+'/owner?view=catalog');console.log('Opened catalog');
  await page.getByLabel('Search products',{exact:true}).fill('pink paint 500 ml');
  await page.getByRole('button',{name:'Update stock for '+base.name,exact:true}).click();
  const dialog=page.getByRole('dialog');await dialog.getByLabel('Stock action').selectOption('restock');await dialog.getByLabel('Quantity received').fill('20');await dialog.getByText(/23 available to sell after saving/).waitFor();await dialog.getByRole('button',{name:'Save stock',exact:true}).click();await page.getByRole('status').filter({hasText:'Stock updated.'}).waitFor();assert.equal(products[0].stockOnHand,25);assert.equal(products[0].stock,23);console.log('PASS direct variant search and restock adds 20, preserving reservations');

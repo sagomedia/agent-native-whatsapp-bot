@@ -55,7 +55,7 @@ export function useOwnerChatReading(id:string,opened:boolean,messages:Message[],
    if(nearBottom.current)node.scrollTop=node.scrollHeight;
    else if(position.current){const anchor=node.querySelector<HTMLElement>(`[data-message-sequence="${position.current.anchor}"]`);if(anchor)node.scrollTop+=anchor.getBoundingClientRect().top-node.getBoundingClientRect().top-position.current.offset;}
    record();
-  });resize.observe(content);return()=>resize.disconnect();
+  });resize.observe(content);resize.observe(node);return()=>resize.disconnect();
  },[id,loading,record]);
  useEffect(()=>{
   const visibility=()=>{if(document.hidden)void save();else record();};
