@@ -35,7 +35,7 @@ export function ProductAiActivity({query,onOpen}:{query:string;onOpen:(sku:strin
  }
  return <section className="rd-ai-activity" aria-label={t('AI activity')}>
   <div className="rd-ai-view-switch" role="group" aria-label={locale==='ta'?'AI மாற்றங்கள்':'AI activity views'}><button type="button" aria-pressed={mode==='applied'} onClick={()=>setMode('applied')}>{locale==='ta'?'மாற்றங்கள்':t('Applied')}</button><button type="button" aria-pressed={mode==='review'} onClick={()=>setMode('review')}>{locale==='ta'?'பரிந்துரைகள்':t('Needs review')}</button><button type="button" aria-label={locale==='ta'?'புதுப்பி':'Refresh'} title={locale==='ta'?'புதுப்பி':'Refresh'} onClick={()=>setRetry(n=>n+1)}>↻</button></div>
-  <p className="rd-ai-explainer">{mode==='applied'?t('Changes saved through your connected AI applications.'):t('Discuss these suggestions in your AI chat. Accepted changes go live from that chat.')}</p>
+  <p className="rd-ai-explainer">{mode==='applied'?(locale==='ta'?'AI உங்கள் பொருட்களில் செய்த மாற்றங்கள்.':'What AI changed in your products.'):(locale==='ta'?'இந்தப் பரிந்துரைகளை உங்கள் AI உரையாடலில் சரிபாருங்கள்.':'Discuss these suggestions in your AI chat.')}</p>
   {error?<p className="rd-products-error" role="alert">{locale==='ta'?'மாற்றங்களை ஏற்ற முடியவில்லை.':'Could not load activity.'} <button type="button" onClick={()=>setRetry(n=>n+1)}>{t('Try again')}</button></p>:null}
   {loading?<p role="status">{t('Loading…')}</p>:items.length?<ol className="rd-ai-event-list">{items.map(item=>{
    const photo=item.hasPhoto&&item.sku?'/api/owner/products/'+encodeURIComponent(item.sku)+'/image?v='+item.productVersion:'';
@@ -57,7 +57,7 @@ export function ProductAiActivity({query,onOpen}:{query:string;onOpen:(sku:strin
       </details>:null}
       <div className="rd-ai-event-links">{item.sku&&item.name&&item.status!=='product_unavailable'?<button type="button" onClick={()=>onOpen(item.sku!)}>{t('Open product')}</button>:null}{item.conversationId?<OwnerLink values={{view:'conversations',conversation:item.conversationId}}>{t('Conversation evidence')}</OwnerLink>:null}</div>
      </div></div>
-   </li>})}</ol>:<p className="rd-products-empty">{mode==='applied'?t('No AI changes match this search.'):t('No suggestions need review.')}</p>}
+   </li>})}</ol>:!error?<p className="rd-products-empty">{mode==='applied'?t('No AI changes match this search.'):t('No suggestions need review.')}</p>:null}
   {!loading?<div className="rd-products-footer"><span>{items.length} / {total}</span>{cursor?<button type="button" onClick={()=>void loadMore()} disabled={more}>{more?t('Loading…'):t('Load more')}</button>:null}</div>:null}
  </section>;
 }
