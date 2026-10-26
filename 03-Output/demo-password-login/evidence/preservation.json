@@ -1,0 +1,27 @@
+{
+  "before": {
+    "schemaVersion": 50,
+    "products": 342,
+    "productDigest": "617f31ec4eb8d1e54b350c518c21edbd",
+    "photos": 301,
+    "photoDigest": "dea345e1003f7c6cf352846751baa01a",
+    "conversations": 8,
+    "messages": 876,
+    "orders": 22,
+    "grants": 21,
+    "grantDigest": "ecd5016d23e6f5eb761aa96b74cba1aa"
+  },
+  "after": {
+    "schemaVersion": 51,
+    "products": 342,
+    "productDigest": "617f31ec4eb8d1e54b350c518c21edbd",
+    "photos": 301,
+    "photoDigest": "dea345e1003f7c6cf352846751baa01a",
+    "conversations": 8,
+    "messages": 876,
+    "orders": 22,
+    "grants": 21,
+    "grantDigest": "ecd5016d23e6f5eb761aa96b74cba1aa"
+  },
+  "preserved": true
+}

@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "authMode": "demo_password",
+  "checks": [
+    "owner page redirects to password",
+    "password page available",
+    "unauthenticated APIs denied",
+    "wrong password denied",
+    "correct password opens configured existing shop",
+    "logout revokes session",
+    "MCP remains OAuth protected",
+    "MCP discovery available",
+    "public host does not expose owner"
+  ]
+}
