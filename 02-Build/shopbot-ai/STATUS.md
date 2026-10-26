@@ -1,3 +1,7 @@
+## 26 October 2026 — rupee usage and advisory price reviews
+
+Removed the calendar-expiry AI admission stop while retaining malformed-rate checks, existing monetary budgets, token admission and unknown reservations. Both owner dashboards show rupee estimates with an editable browser-local conversion rate and Google spending link. See [change evidence](../../03-Output/rupee-usage-20261026/README.md). All 1,002 regressions, build/typecheck, four catalog checks and phone/desktop conversion checks pass. VPS activation pending.
+
 ## 26 October 2026 — mobile product photo optimization
 
 Owner Add/Edit product, advanced editor and batch import accept supported photos up to 10 MiB and optimize before upload. Actual-byte format checks tolerate Android MIME omissions; source pixel guards, rotation, white transparency background, older browser fallback and clear unsupported-format guidance are included. Catalog masters are server-bounded to 500 KiB/1280 px, previews to 16/40/120 KiB. Ordinary adds persist no uploaded original. Existing image/history records and customer media limits remain intact. All 1001 integration tests, production build, four catalog checks and real phone-width upload/save/reopen, failure/retry/fallback/import checks pass. Storage bounds and researched limits: [evidence](../../03-Output/mobile-product-photos/README.md), issue #81. Exact Redmi file/device acceptance remains open.
