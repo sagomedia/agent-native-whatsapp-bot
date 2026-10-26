@@ -1,0 +1,50 @@
+{
+  "status": "passed",
+  "results": [
+    {
+      "width": 390,
+      "height": 844,
+      "checks": [
+        "no horizontal overflow",
+        "wrong password feedback",
+        "show password",
+        "sign in to existing fixture dashboard",
+        "secure HttpOnly cookie",
+        "reload retains session",
+        "sign out revokes session",
+        "protected return redirects to login"
+      ],
+      "pageErrors": []
+    },
+    {
+      "width": 1280,
+      "height": 900,
+      "checks": [
+        "no horizontal overflow",
+        "wrong password feedback",
+        "show password",
+        "sign in to existing fixture dashboard",
+        "secure HttpOnly cookie",
+        "reload retains session",
+        "sign out revokes session",
+        "protected return redirects to login"
+      ],
+      "pageErrors": []
+    },
+    {
+      "width": 320,
+      "height": 740,
+      "checks": [
+        "no horizontal overflow",
+        "wrong password feedback",
+        "show password",
+        "sign in to existing fixture dashboard",
+        "secure HttpOnly cookie",
+        "reload retains session",
+        "sign out revokes session",
+        "protected return redirects to login"
+      ],
+      "pageErrors": []
+    }
+  ]
+}

@@ -36,3 +36,12 @@ test('owner API preserves caller cancellation and clears its deadline after succ
  const second=new AbortController(),cancelled=redesignApi('summary',undefined,second.signal),rejection=assert.rejects(cancelled,{name:'AbortError'});
  second.abort();await rejection;
 });
+
+test('expired demo sessions return to the password screen with the current owner view',async t=>{
+ const original=Object.getOwnPropertyDescriptor(globalThis,'window'),locations:string[]=[];
+ Object.defineProperty(globalThis,'window',{configurable:true,value:{location:{pathname:'/owner',search:'?view=catalog',assign:(url:string)=>locations.push(url)}}});
+ t.after(()=>{if(original)Object.defineProperty(globalThis,'window',original);else Reflect.deleteProperty(globalThis,'window');});
+ t.mock.method(globalThis,'fetch',async()=>Response.json({error:'Owner sign-in required',signInUrl:'/login'},{status:403}));
+ await assert.rejects(redesignApi('summary'),/sign-in may have expired/);
+ assert.equal(locations.length,1);const target=new URL(locations[0],'https://owner.example.test');assert.equal(target.pathname,'/login');assert.equal(target.searchParams.get('next'),'/owner?view=catalog');
+});

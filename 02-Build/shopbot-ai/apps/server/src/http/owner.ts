@@ -1,4 +1,5 @@
 import {registerOwnerAiActivity} from './owner-ai-activity.js';
+import {ownerDemoLogin} from './owner-demo-login.js';
 import {registerOwnerReading} from './owner-reading.js';
 import {ownerAttentionCounts,orderAttentionSql,orderUnreadSql,chatUnreadSql,messageSequence} from '../services/owner-reading.js';
 import {needsHelpSql} from '../services/owner-mcp.js';
@@ -60,6 +61,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
   const needsReplySql=needsHelpSql;
   verify??=createAccessVerifier(owner);
   if(!(await pool.query('SELECT id FROM stores WHERE id=$1',[owner.storeId])).rowCount)throw new Error('Owner store must already exist');
+  const demoLogin=owner.demoLogin?ownerDemoLogin(app,pool,owner,owner.demoLogin):undefined;
   app.addHook('onRequest',async(request,reply)=>{
     if(mcpPublicPath(config.remoteMcp,request.headers.host,request.url.split('?')[0]))return;
     const host=request.headers.host?.toLowerCase();
@@ -71,15 +73,23 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     if(config.whatsapp&&host===config.whatsapp.hostname&&request.url.split('?')[0]===(config.whatsapp.path??'/webhooks/whatsapp')&&['GET','POST'].includes(request.method))return;
     if(!local&&!publicOwner)return reply.code(404).send({error:'Not found'});
     const path=request.url.split('?')[0];
-    if(publicOwner&&!['/','/owner'].includes(path)&&!path.startsWith('/api/owner/')&&!path.startsWith('/assets/'))return reply.code(404).send({error:'Not found'});
+    if(publicOwner&&!['/','/owner'].includes(path)&&!path.startsWith('/api/owner/')&&!path.startsWith('/assets/')&&!(demoLogin&&['/login','/login.js','/login.css'].includes(path)))return reply.code(404).send({error:'Not found'});
     if(publicOwner||path.startsWith('/api/owner/')){
       reply.header('Cache-Control','private, no-store');
       reply.header('Referrer-Policy','same-origin');
       reply.header('X-Content-Type-Options','nosniff');
       reply.header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
-      const token=request.headers['cf-access-jwt-assertion'];
-      try{if(typeof token!=='string')throw new Error();await verify!(token);}
-      catch{return reply.code(403).send({error:'Owner sign-in required'});}
+      if(demoLogin){
+        if(publicOwner&&demoLogin.publicPath(path,request.method))return;
+        if(!await demoLogin.authenticated(request)){
+          if(publicOwner&&['GET','HEAD'].includes(request.method)&&['/','/owner','/api/owner/mcp/authorize'].includes(path))return reply.redirect(demoLogin.loginUrl(request.url));
+          return reply.code(403).send({error:'Owner sign-in required',signInUrl:'/login'});
+        }
+      }else{
+        const token=request.headers['cf-access-jwt-assertion'];
+        try{if(typeof token!=='string')throw new Error();await verify!(token);}
+        catch{return reply.code(403).send({error:'Owner sign-in required'});}
+      }
       if(!['GET','HEAD'].includes(request.method)&&(request.headers.origin!=='https://'+owner.hostname||request.headers['x-shopbot-owner']!=='1'||!request.headers['content-type']?.startsWith('application/json')))return reply.code(403).send({error:'Invalid owner request origin'});
     }
   });
@@ -114,7 +124,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       (SELECT count(*)::int FROM conversations c WHERE c.store_id=s.id AND ${needsReplySql}) AS help
       FROM stores s WHERE s.id=$1`,[owner.storeId]);
     const {total,help,...store}=result.rows[0];
-    return {store,conversationCounts:{total,help},attention:await ownerAttentionCounts(pool,owner.storeId)};
+    return {authMode:demoLogin?'demo_password':'cloudflare',store,conversationCounts:{total,help},attention:await ownerAttentionCounts(pool,owner.storeId)};
   });
   app.get<{Querystring:{language?:string}}>('/api/owner/message-gallery',async(req,reply)=>{
     const language=z.enum(['ta','ta-Latn','en']).safeParse(req.query.language??'ta');
@@ -194,7 +204,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       const channel={whatsapp:!wa?'not_connected':wa.send_blocked?'attention_required':wa.last_received_at?'receiving':wa.verified_at||wa.last_webhook_at?'webhook_verified':'awaiting_verification',liveSending:Boolean(wa&&config.whatsapp?.sendEnabled&&!wa.send_blocked),processing:Boolean(config.whatsapp?.processEnabled),lastReceivedAt:wa?.last_webhook_at??null,error:wa?.last_error??null,testOnly:config.whatsapp?.audience!=='public'};
       const messaging=fullDetails&&config.whatsapp&&config.whatsapp.storeId===owner.storeId?{...await messagingCostSummary(client,{storeId:owner.storeId,phoneId:config.whatsapp.phoneId,accountTimezone:config.whatsapp.accountTimezone,rateCard:config.whatsapp.pricingRateCard}),analyticsAvailable:Boolean(config.whatsapp.accountTimezone&&config.whatsapp.accountCurrency&&config.whatsapp.businessPhoneNumber)}:null;
       await client.query('COMMIT');
-      return {attention:await ownerAttentionCounts(client,owner.storeId),detailsIncluded:fullDetails,store,conversations,conversationCounts,inboxPage,requests,requestCounts,orderPage,amendments,quotes,usage,budget,audit,messaging,mode:config.mode,ownerEmail:owner.email,channel,inference:{enabled:!!(wa&&config.whatsapp?.aiEnabled&&config.whatsapp.processEnabled),paidEnabled:!!config.whatsapp?.paidEnabled,rateHealth:rateHealth(geminiTextRate)},limits:{conversations:100,requests:100},generatedAt:new Date().toISOString()};
+      return {authMode:demoLogin?'demo_password':'cloudflare',attention:await ownerAttentionCounts(client,owner.storeId),detailsIncluded:fullDetails,store,conversations,conversationCounts,inboxPage,requests,requestCounts,orderPage,amendments,quotes,usage,budget,audit,messaging,mode:config.mode,ownerEmail:owner.email,channel,inference:{enabled:!!(wa&&config.whatsapp?.aiEnabled&&config.whatsapp.processEnabled),paidEnabled:!!config.whatsapp?.paidEnabled,rateHealth:rateHealth(geminiTextRate)},limits:{conversations:100,requests:100},generatedAt:new Date().toISOString()};
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
   });
   app.post('/api/owner/pricing/refresh',async(request,reply)=>{

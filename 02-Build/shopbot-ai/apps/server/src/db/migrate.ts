@@ -1,4 +1,5 @@
 import {migrateCatalogAudit} from './catalog-audit.js';
+import {migrateOwnerDemoLogin} from './owner-demo-login.js';
 import {migrateDeveloperDiagnostics} from './developer-diagnostics.js';
 import {migrateCatalogChat} from './catalog-chat.js';
 import type { Pool } from 'pg';
@@ -553,6 +554,7 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       INSERT INTO schema_migrations(version) VALUES(49);
     `);}
     await migrateCatalogAudit(client);
+    await migrateOwnerDemoLogin(client);
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

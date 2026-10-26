@@ -20,3 +20,5 @@
 .redesign .rd-unread-count{background:#be3030;color:white;min-width:20px;text-align:center;border-radius:12px;padding:2px 6px;font-size:12px;line-height:16px}
 
 .redesign .rd-advanced.owner-shell{display:block;min-height:0;background:transparent;--ui-accent:var(--rd-teal);--ui-accent-hover:var(--rd-teal);--ui-selected:var(--rd-tint);--ui-border:var(--rd-line)}
+
+.redesign .rd-demo-signout{border:1px solid var(--rd-line);border-radius:6px;padding:9px 12px;background:white;color:var(--rd-muted);font-size:14px;cursor:pointer}.redesign .rd-sidebar-bottom>.rd-demo-signout{margin:8px 12px}.redesign .rd-mobile-header>.rd-demo-signout{margin-left:auto;margin-right:16px}
