@@ -168,3 +168,5 @@
 @media(prefers-reduced-motion:no-preference){
  .redesign[data-compact] :is(a,button){transition:background-color .12s ease,color .12s ease}
 }
+.redesign[data-compact] .rd-settings-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.redesign[data-compact] .rd-settings-title-row .rd-demo-signout{min-height:44px;white-space:nowrap;margin:0 0 14px}

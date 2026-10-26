@@ -1,6 +1,7 @@
 import {readWhatsAppConfig,type WhatsAppConfig} from './services/whatsapp-config.js';
 import {remoteMcpConfig,type RemoteMcpConfig} from './mcp/oauth.js';
-export type OwnerConfig = { hostname:string; issuer:string; audience:string; email:string; storeId:string };
+import {demoPasswordPattern,type DemoLoginConfig} from './http/owner-demo-login.js';
+export type OwnerConfig = { hostname:string; issuer:string; audience:string; email:string; storeId:string;demoLogin?:DemoLoginConfig };
 export type Config = { mode: 'mock' | 'live'; databaseUrl: string; port: number; host: string; mediaDir: string; whatsAppPlanningPaise?:number; owner?:OwnerConfig;whatsapp?:WhatsAppConfig;catalogAi?:{apiKey:string};remoteMcp?:RemoteMcpConfig };
 export function readConfig(env = process.env): Config {
   const mode = env.APP_MODE ?? 'mock';
@@ -17,6 +18,13 @@ export function readConfig(env = process.env): Config {
     const [hostname,issuer,audience,email,storeId]=ownerValues as string[];
     if(!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(hostname)||!/^https:\/\/[a-z0-9-]+\.cloudflareaccess\.com$/.test(issuer)||!/^\S+@\S+\.\S+$/.test(email)||!/^\w[\w-]{15,255}$/.test(audience)||!/^([a-f0-9]{8}-)([a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(storeId))throw new Error('Invalid owner access configuration');
     owner={hostname,issuer,audience,email:email.toLowerCase(),storeId};
+  }
+  const loginMode=env.OWNER_LOGIN_MODE??'cloudflare';
+  if(!['cloudflare','demo_password'].includes(loginMode))throw new Error('Invalid OWNER_LOGIN_MODE');
+  if(loginMode==='demo_password'){
+    const sessionHours=Number(env.OWNER_DEMO_SESSION_HOURS??24),passwordHash=env.OWNER_DEMO_PASSWORD_HASH??'';
+    if(!owner||!demoPasswordPattern.test(passwordHash)||!Number.isInteger(sessionHours)||sessionHours<1||sessionHours>168)throw new Error('Demo login requires a valid password hash, owner configuration and 1–168 session hours.');
+    owner.demoLogin={passwordHash,sessionHours};
   }
   const whatsapp=readWhatsAppConfig(env);
   if(whatsapp&&(whatsapp.hostname===owner?.hostname||owner&&whatsapp.storeId!==owner.storeId))throw new Error('WhatsApp needs a separate hostname and the configured owner store');

@@ -41,12 +41,14 @@ test('multimodal bytes and every output ceiling are checked before reservation',
  assert.equal(admitRequest({...request(),config:{maxOutputTokens:16384}}).maxOutputTokens,16384);
 });
 
-test('rate health warns seven days before expiry, stops without grace, and rejects malformed/future evidence',()=>{
+test('rate review dates stay advisory after expiry while malformed prices remain blocked',()=>{
  assert.equal(rateHealth(geminiTextRate,Date.parse('2026-10-15')).status,'fresh');
  assert.equal(rateHealth(geminiTextRate,Date.parse('2026-10-25')).status,'expiring');
  assert.equal(rateHealth(geminiTextRate,Date.parse('2026-10-31T23:59:59.999Z')).status,'expiring');
  assert.equal(rateHealth(geminiTextRate,Date.parse('2026-11-01')).status,'expired');
- assert.throws(()=>validateRateCard(geminiTextRate,Date.parse('2026-11-01')),/expired/);
+ assert.doesNotThrow(()=>validateRateCard(geminiTextRate,Date.parse('2026-11-01')));
+ assert.doesNotThrow(()=>validateRateCard(geminiTextRate,Date.parse('2028-01-01')));
+ assert.throws(()=>validateRateCard({...geminiTextRate,inputMicrousdPerMillion:NaN},Date.parse('2028-01-01')),/invalid/);
  for(const change of [{verifiedOn:'2026-10-16'},{verifiedOn:'2026-02-30'},{source:'https://example.test/unreviewed'},{validUntil:'2027-12-31'},{inputMicrousdPerMillion:NaN},{maxOutputTokens:16385}])assert.equal(rateHealth({...geminiTextRate,...change},Date.parse('2026-10-15')).status,'invalid');
 });
 
@@ -97,7 +99,7 @@ test('reclaiming an expired message preserves its original deadline and starts n
  assert.equal((await pool.query('SELECT * FROM order_requests')).rowCount,0);
 }));
 
-test('expired rate evidence allows deterministic service startup and retains unknown paid holds',t=>fixture(async(pool,inbox)=>{
+test('old rate evidence allows paid admission without changing existing unknown holds',t=>fixture(async(pool,inbox)=>{
  await initializeBudget(pool,inbox.context,5000000);
  const id=randomUUID();await inbox.ingest({id,type:'text',text:'unsettled earlier call'});
  const provider=new GoogleInterpreter(settings,{generateContent:async()=>{throw new Error('no provider calls');}});
@@ -106,7 +108,7 @@ test('expired rate evidence allows deterministic service startup and retains unk
  t.mock.method(Date,'now',()=>Date.parse('2026-11-01T00:00:00Z'));
  const afterExpiry=new GoogleInterpreter(settings,{generateContent:async()=>{throw new Error('no provider calls');}});
  const runtime=new ConversationRuntime(pool,afterExpiry,{allowPaidInference:true});
- assert.throws(()=>afterExpiry.prepareInput({text:'new paid request',state}),/expired/);
+ assert.doesNotThrow(()=>afterExpiry.prepareInput({text:'new paid request',state}));
  await pool.query("UPDATE messages SET status='processed' WHERE id=$1",[id]);
  await inbox.ingest({id:randomUUID(),type:'text',text:'hello'});await runtime.processNext(inbox.context);
  assert.ok((await inbox.snapshot()).messages.some(m=>m.direction==='outbound'));
@@ -152,6 +154,7 @@ test('additive v26 to current upgrade preserves prior requests, statuses, rate s
  await pool.query("INSERT INTO order_requests(id,store_id,conversation_id,actor,review_id,lines,total_paise) VALUES($1,$2,$3,$4,$5,'[]',1234)",[randomUUID(),fixtureStore,fixtureConversation,simulatorContext.actor,randomUUID()]);
  await pool.query("INSERT INTO whatsapp_statuses(phone_id,provider_id,recipient,state,provider_timestamp) VALUES('12345','old-delivery','919000000001','delivered',1)");
  // Reconstruct populated v26 in this disposable schema; production is untouched.
+ await pool.query('DROP TABLE owner_demo_sessions,owner_demo_login_limits');
  await pool.query('DROP TRIGGER products_connected_activity ON products; DROP FUNCTION record_connected_catalog_change(); DROP TABLE conversation_audit_events,catalog_change_events,catalog_audit_reviews,catalog_audit_findings,catalog_audit_runs; ALTER TABLE conversations DROP COLUMN active_item_id');
  await pool.query('DROP TABLE owner_order_reads,owner_chat_reads; DROP INDEX messages_owner_unread');
  await pool.query('DROP TABLE whatsapp_customer_guards');
@@ -170,7 +173,7 @@ test('additive v26 to current upgrade preserves prior requests, statuses, rate s
   const after=(await pool.query('SELECT * FROM '+table)).rows.map(row=>{delete row.input_admission;delete row.inference_deadline_at;delete row.pricing;delete row.observation;delete row.release_fingerprint;for(const key of ['reply_decision','estimate_complete','excluded_line_ids','advance_required','effective_revision','effective_lines','effective_total_paise','packed_revision','inventory_state','inventory_untracked_line_ids'])delete row[key];return row;});assert.deepEqual(after,before[n],table);
  }
  assert.equal((await pool.query("SELECT inventory_state FROM order_requests")).rows[0].inventory_state,'legacy');assert.equal((await pool.query('SELECT * FROM inventory_movements')).rowCount,0);
- assert.equal((await pool.query('SELECT max(version) AS version FROM schema_migrations')).rows[0].version,50);assert.equal((await pool.query('SELECT * FROM owner_order_reviews')).rowCount,0);
+ assert.equal((await pool.query('SELECT max(version) AS version FROM schema_migrations')).rows[0].version,51);assert.equal((await pool.query('SELECT * FROM owner_order_reviews')).rowCount,0);
  assert.equal((await pool.query('SELECT version FROM schema_migrations WHERE version=40')).rowCount,1);assert.equal((await pool.query('SELECT * FROM order_quote_drafts')).rowCount,0);
  assert.equal((await pool.query('SELECT version FROM schema_migrations WHERE version=27')).rowCount,1);
  assert.equal((await pool.query('SELECT * FROM whatsapp_delivery_costs')).rowCount,0);assert.equal((await pool.query('SELECT version FROM schema_migrations WHERE version BETWEEN 27 AND 31')).rowCount,5);
