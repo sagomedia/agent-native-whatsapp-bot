@@ -14,6 +14,7 @@ export const compactTamil:Record<string,string>={
  'Needs reply':'பதில் தேவை','Needs your reply':'உங்கள் பதில் தேவை','Filter chats':'உரையாடல் வடிகட்டி','Stock filters':'இருப்பு வடிகட்டி',
  'Order list':'ஆர்டர் பட்டியல்','Order stages':'ஆர்டர் நிலைகள்','Order progress':'ஆர்டர் முன்னேற்றம்','Product list':'பொருள் பட்டியல்','Chat list':'உரையாடல் பட்டியல்',
  'Selected chat':'தேர்ந்தெடுத்த உரையாடல்','Selected order':'தேர்ந்தெடுத்த ஆர்டர்','More product actions':'மேலும் செயல்கள்','More details':'கூடுதல் விவரங்கள்',
+ 'Product name':'பொருளின் பெயர்','Price (paise)':'விலை','Shelf stock':'கடை இருப்பு','Stock held for orders':'ஆர்டருக்காக ஒதுக்கிய இருப்பு','Visible in shop':'கடையில் காண்பித்தல்','Verified details':'சரிபார்த்த விவரங்கள்','Selling details':'விற்பனை விவரங்கள்',
  'Add':'சேர்','Import products':'பொருட்களை இறக்குமதி செய்','Bulk tools':'மொத்த மாற்றங்கள்','Drafts':'வரைவுகள்','AI activity':'AI செயல்பாடுகள்',
  'Add photo':'படம் சேர்','Change photo':'படத்தை மாற்று','Product photo':'பொருள் படம்','Close photo':'படத்தை மூடு','Zoom in':'பெரிதாக்கு','Zoom out':'சிறிதாக்கு',
  'This photo could not be loaded.':'இந்தப் படத்தை ஏற்ற முடியவில்லை.','Customer photo':'வாடிக்கையாளர் படம்','Close dialog':'சாளரத்தை மூடு','Dismiss message':'செய்தியை நீக்கு',
