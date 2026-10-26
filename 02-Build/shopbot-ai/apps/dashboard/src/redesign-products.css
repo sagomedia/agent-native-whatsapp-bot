@@ -26,3 +26,5 @@
 @media(min-width:1100px){.redesign .rd-products-variants-layout .rd-variant-fields{grid-template-columns:1.2fr 1fr 1.25fr .8fr 1fr 1fr;align-items:end}.redesign .rd-products-variants-layout .rd-variant-fields input,.redesign .rd-products-variants-layout .rd-variant-fields select{padding:12px 10px}.redesign .rd-products-variants-layout .rd-variant-row{gap:10px}.redesign .rd-products-variants-layout .rd-variant-fields label{font-size:13px}}
 
 .rd-products-view-tabs{display:flex;gap:1rem;margin:1rem 0}.rd-products-view-tabs a{color:inherit;padding:.5rem .25rem;text-decoration:none}.rd-products-view-tabs a[aria-current="page"]{font-weight:700;border-bottom:2px solid currentColor}
+/* Keep upload guidance below the image so it cannot overlap the photo button. */
+.redesign .rd-products-photo-wrap{flex-direction:column;gap:8px}.redesign .rd-products-photo-wrap>p{margin:0}

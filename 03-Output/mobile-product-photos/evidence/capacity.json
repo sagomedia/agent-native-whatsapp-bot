@@ -1,0 +1,20 @@
+{
+  "diskBytes": 31461457920,
+  "usedBytes": 19588026368,
+  "availableBytes": 10467581952,
+  "databaseBytes": 283997875,
+  "existingCatalogPhotos": 301,
+  "existingCatalogPhotoBytes": 19949608,
+  "existingPreviewBytes": 9010376,
+  "existingProposalOriginalAndImageBytes": 74410170,
+  "products": 3000,
+  "masterMaxBytes": 512000,
+  "previewMaxBytes": [
+    16384,
+    40960,
+    122880
+  ],
+  "primaryImageWorstCaseBytes": 2076672000,
+  "withTwoRetainedOptimizedReviewCopiesWorstCaseBytes": 5148672000,
+  "note": "No live image or history rows were changed. Bounds assume one active photo per product; additional/replaced/history assets and backups are extra. Historical/MCP source contracts remain separate."
+}

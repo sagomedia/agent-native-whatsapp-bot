@@ -139,3 +139,16 @@ test('twenty variants reuse one stored photo and one batch retry cannot duplicat
  assert.equal(Number((await pool.query('SELECT count(*) FROM products WHERE store_id=$1 AND product_group_id=$2',[fixtureStore,id])).rows[0].count),20);
  const totals=(await pool.query('SELECT sum(stock) AS stock,count(DISTINCT image_path) AS photos FROM products WHERE store_id=$1 AND product_group_id=$2',[fixtureStore,id])).rows[0];assert.equal(Number(totals.stock),210);assert.equal(Number(totals.photos),1);
 }));
+
+test('product photo storage keeps only a bounded JPEG and previews; a rejected replacement preserves the saved photo',()=>fixture(async(pool,app)=>{
+ const image=await readFile('resources/catalog/ksmc-demo/images/H19.jpg');
+ const payload={createId:randomUUID(),name:'Compression storage fixture',pricePaise:10000,unit:'piece',photo:{id:randomUUID(),mimeType:'image/jpeg',data:image.toString('base64'),caption:''}};
+ const result=await post(app,payload);assert.equal(result.statusCode,200,result.body);const product=result.json();
+ const saved=(await pool.query('SELECT f.image,f.width,f.height FROM products p JOIN catalog_photos f ON p.image_path=\'/catalog-images/custom/\'||f.id::text||\'.jpg\' AND p.store_id=f.store_id WHERE p.store_id=$1 AND p.sku=$2',[fixtureStore,product.sku])).rows[0];
+ assert.ok(saved.image.length<=500*1024);assert.ok(saved.width<=1280&&saved.height<=1280);
+ const previews=(await pool.query('SELECT max_side,octet_length(image) AS bytes FROM catalog_image_variants WHERE store_id=$1 AND source_hash=encode(sha256($2::bytea),\'hex\')',[fixtureStore,saved.image])).rows;
+ assert.equal(previews.length,3);for(const v of previews)assert.ok(v.bytes<=({128:16384,256:40960,640:122880} as Record<number,number>)[v.max_side]);
+ const before=(await pool.query('SELECT image_path,version FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,product.sku])).rows[0];
+ const invalid=await post(app,{sku:product.sku,version:before.version,name:payload.name,pricePaise:10000,unit:'piece',photo:{...payload.photo,id:randomUUID(),data:Buffer.from('invalid picture').toString('base64')}});assert.equal(invalid.statusCode,400);
+ assert.deepEqual((await pool.query('SELECT image_path,version FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,product.sku])).rows[0],before);
+}));

@@ -1,0 +1,1 @@
+Import accepted missing/mislabelled MIME, displayed blob preview under owner CSP, compressed bytes and saved real synthetic inventory.

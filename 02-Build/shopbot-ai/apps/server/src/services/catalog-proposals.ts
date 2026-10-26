@@ -2,7 +2,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import type {Pool,PoolClient} from 'pg';
 import {z} from 'zod';
 import {ownerProductSchema,saveCatalogProduct} from './catalog-products.js';
-import {imageUploadSchema,normalizeImage,type ImageMedia} from './image-media.js';
+import {imageUploadSchema,normalizeCatalogImage,type ImageMedia} from './image-media.js';
 import {saveCatalogPhoto} from './catalog-photos.js';
 import {imageHash,prepareCatalogImageVariants,saveCatalogImageVariants} from './catalog-image-variants.js';
 
@@ -39,7 +39,7 @@ export async function updateProposal(c:PoolClient,storeId:string,input:unknown){
 }
 // Decode before taking the store lock. Original bytes and their hash survive
 // normalization, publication and rejection for owner inspection and recovery.
-export async function prepareProposalAsset(input:unknown,options:{processingTimeoutMs?:number}={}){const p=proposalAssetSchema.parse(input),media=await normalizeImage(p.photo,options);media.variants=await prepareCatalogImageVariants(media.image,options.processingTimeoutMs);return {input:p,media};}
+export async function prepareProposalAsset(input:unknown,options:{processingTimeoutMs?:number}={}){const p=proposalAssetSchema.parse(input),media=await normalizeCatalogImage(p.photo,options);media.variants=await prepareCatalogImageVariants(media.image,options.processingTimeoutMs);return {input:p,media};}
 export async function addProposalAsset(c:PoolClient,storeId:string,p:z.infer<typeof proposalAssetSchema>,media:ImageMedia){
  await draft(c,storeId,p.proposalId,p.version);const bytes=Buffer.from(p.photo.data,'base64'),sha=createHash('sha256').update(bytes).digest('hex');
  const prior=(await c.query('SELECT id,match_kind FROM catalog_proposal_assets WHERE store_id=$1 AND proposal_id=$2 AND sha256=$3',[storeId,p.proposalId,sha])).rows[0];

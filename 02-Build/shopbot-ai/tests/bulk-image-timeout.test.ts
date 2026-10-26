@@ -1,3 +1,4 @@
+import {execFileSync} from 'node:child_process';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {access,chmod,mkdtemp,readFile,rm,writeFile} from 'node:fs/promises';
@@ -15,7 +16,9 @@ async function withFakeDecoders<T>(delayMs:number,run:(raster:Buffer,markerPath:
   const bin=join(root,'bin'),markerPath=join(root,'completed'),spawnMarkerPath=join(root,'spawned'),outputPath=join(root,'valid-output.jpg');
   await (await import('node:fs/promises')).mkdir(bin);
   const raster=await readFile(rasterPath);
-  await writeFile(outputPath,raster);
+  // The fake decoder tests timing, but its output must honor the new preview/storage caps.
+  const bounded=execFileSync('ffmpeg',['-v','error','-i','pipe:0','-vf','scale=96:-1','-frames:v','1','-threads','1','-q:v','8','-f','image2pipe','-vcodec','mjpeg','pipe:1'],{input:raster});
+  await writeFile(outputPath,bounded);
   const ffprobe=[
     `#!${process.execPath}`,
     `require('node:fs').writeFileSync(${JSON.stringify(spawnMarkerPath)},'spawned');`,

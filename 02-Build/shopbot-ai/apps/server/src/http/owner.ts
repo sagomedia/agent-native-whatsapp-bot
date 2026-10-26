@@ -76,7 +76,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       reply.header('Cache-Control','private, no-store');
       reply.header('Referrer-Policy','same-origin');
       reply.header('X-Content-Type-Options','nosniff');
-      reply.header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+      reply.header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
       const token=request.headers['cf-access-jwt-assertion'];
       try{if(typeof token!=='string')throw new Error();await verify!(token);}
       catch{return reply.code(403).send({error:'Owner sign-in required'});}

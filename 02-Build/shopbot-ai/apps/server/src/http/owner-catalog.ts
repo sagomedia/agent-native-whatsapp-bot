@@ -4,7 +4,7 @@ import type {Pool,PoolClient} from 'pg';
 import {randomUUID} from 'node:crypto';
 import {loadSuggestionPhoto,saveCatalogPhoto} from '../services/catalog-photos.js';
 import {z} from 'zod';
-import {imageUploadSchema,normalizeImage} from '../services/image-media.js';
+import {imageUploadSchema,normalizeCatalogImage} from '../services/image-media.js';
 import {catalogDraftDetailsSchema,generateCatalogDraft,type CatalogGenerator} from '../services/catalog-assistant.js';
 import {discoverProducts,getCatalogMap} from '../services/catalog-discovery.js';
 import {productPageSchema,proposalPageSchema,ownerProductPage,ownerProposalPage,selectedOwnerProduct,selectedOwnerProposal} from './owner-catalog-pages.js';
@@ -73,7 +73,7 @@ export async function registerOwnerCatalog(app:FastifyInstance,pool:Pool,storeId
   if(!parsed.success||!parsed.data.description&&!parsed.data.details?.name&&!parsed.data.existingProduct&&!parsed.data.photo)return reply.code(400).send({error:'Add a name, short description or exact product photo.'});
   // Resolve only a product belonging to this authenticated shop; never fetch a client URL.
   const stored=parsed.data.existingProduct?await loadSuggestionPhoto(pool,storeId,parsed.data.existingProduct.sku,parsed.data.existingProduct.version,!parsed.data.photo):undefined;
-  const image=parsed.data.photo?await normalizeImage(parsed.data.photo):stored;
+  const image=parsed.data.photo?await normalizeCatalogImage(parsed.data.photo):stored;
   if(!image&&!parsed.data.description&&!parsed.data.details?.name)return reply.code(400).send({error:'Add a product name or photo before auto-filling.'});
   const nodes=(await pool.query('SELECT id,parent_id,kind,label FROM catalog_nodes WHERE store_id=$1 ORDER BY kind,id',[storeId])).rows;
   return generateCatalogDraft(pool,storeId,parsed.data.id,{description:parsed.data.description,details:parsed.data.details,image,nodes},generator);
@@ -96,7 +96,7 @@ export async function registerOwnerCatalog(app:FastifyInstance,pool:Pool,storeId
   const version=Number(req.headers['x-product-version']);if(!Number.isInteger(version)||version<1)return reply.code(400).send({error:'Reload the product before adding a photo.'});
   // Validate access before decoding; normalized photos are versioned immutable public assets.
   if(!(await pool.query('SELECT 1 FROM products WHERE store_id=$1 AND sku=$2 AND version=$3',[storeId,req.params.sku,version])).rowCount)return reply.code(409).send({error:'Product changed. Reload before adding a photo.'});
-  const media=await normalizeImage(parsed.data);
+  const media=await normalizeCatalogImage(parsed.data);
   media.variants=await prepareCatalogImageVariants(media.image);
   return write('catalog_photo',storeId,async c=>{
    const assetId=await saveCatalogPhoto(c,storeId,media);

@@ -6,6 +6,7 @@ import type {FastifyReply,FastifyRequest} from 'fastify';
 import type {Pool,PoolClient} from 'pg';
 
 export const catalogImageSizes=[128,256,640] as const;
+export const catalogVariantByteLimits={128:16*1024,256:40*1024,640:120*1024} as const;
 export type CatalogImageSize=typeof catalogImageSizes[number];
 export type CatalogImageVariant={size:CatalogImageSize;image:Buffer;contentHash:string};
 export const imageHash=(bytes:Buffer)=>createHash('sha256').update(bytes).digest('hex');
@@ -21,8 +22,8 @@ export async function prepareCatalogImageVariants(bytes:Buffer,processingTimeout
  if(!bytes.length||bytes.length>2097152)throw Error('Keep catalog images under 2 MB.');
  const variants:CatalogImageVariant[]=[];
  for(const size of catalogImageSizes){
-  const image=await new Promise<Buffer>((done,reject)=>{
-   const child=spawn('ffmpeg',['-hide_banner','-loglevel','error','-threads','1','-protocol_whitelist','pipe','-i','pipe:0','-frames:v','1','-vf',`scale='min(${size},iw)':'min(${size},ih)':force_original_aspect_ratio=decrease`,'-map_metadata','-1','-q:v','5','-f','image2pipe','-vcodec','mjpeg','pipe:1'],{stdio:['pipe','pipe','ignore']});
+  const encode=(quality:number)=>new Promise<Buffer>((done,reject)=>{
+   const child=spawn('ffmpeg',['-hide_banner','-loglevel','error','-threads','1','-protocol_whitelist','pipe','-i','pipe:0','-frames:v','1','-vf',`scale='min(${size},iw)':'min(${size},ih)':force_original_aspect_ratio=decrease`,'-map_metadata','-1','-q:v',String(quality),'-f','image2pipe','-vcodec','mjpeg','pipe:1'],{stdio:['pipe','pipe','ignore']});
    const chunks:Buffer[]=[];let length=0,finished=false;
    const finish=(error?:Error)=>{if(finished)return;finished=true;clearTimeout(timer);error?reject(error):done(Buffer.concat(chunks));};
    const timer=setTimeout(()=>{child.kill('SIGKILL');finish(new Error('Catalog image preview took too long to prepare.'));},processingTimeoutMs);
@@ -30,6 +31,9 @@ export async function prepareCatalogImageVariants(bytes:Buffer,processingTimeout
    child.stdout.on('data',(chunk:Buffer)=>{length+=chunk.length;if(length>2097152){child.kill('SIGKILL');finish(new Error('Catalog image preview exceeded its byte limit.'));}else chunks.push(chunk);});
    child.on('close',code=>finish(code===0?undefined:new Error('Catalog image preview could not be prepared.')));child.stdin.end(bytes);
   });
+  let image=await encode(5);
+  for(const quality of [8,12,18,25,31]){if(image.length<=catalogVariantByteLimits[size])break;image=await encode(quality);}
+  if(image.length>catalogVariantByteLimits[size])throw Error('Catalog preview could not meet its storage limit.');
   if(image[0]!==255||image[1]!==216)throw Error('Catalog preview is not a JPEG.');
   variants.push({size,image,contentHash:imageHash(image)});
  }

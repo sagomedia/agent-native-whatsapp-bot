@@ -1,0 +1,102 @@
+{
+  "rows": [
+    {
+      "file": "H01.jpg",
+      "originalBytes": 86961,
+      "masterBytes": 24753,
+      "previewBytes": 11651,
+      "width": 1280,
+      "height": 853
+    },
+    {
+      "file": "H02.jpg",
+      "originalBytes": 135912,
+      "masterBytes": 37425,
+      "previewBytes": 17413,
+      "width": 1280,
+      "height": 853
+    },
+    {
+      "file": "H03.jpg",
+      "originalBytes": 75813,
+      "masterBytes": 22599,
+      "previewBytes": 11544,
+      "width": 1280,
+      "height": 853
+    },
+    {
+      "file": "H04.jpg",
+      "originalBytes": 78585,
+      "masterBytes": 22429,
+      "previewBytes": 10587,
+      "width": 1280,
+      "height": 853
+    },
+    {
+      "file": "H05.jpg",
+      "originalBytes": 85263,
+      "masterBytes": 22313,
+      "previewBytes": 11491,
+      "width": 1280,
+      "height": 853
+    },
+    {
+      "file": "H06.jpg",
+      "originalBytes": 83615,
+      "masterBytes": 23525,
+      "previewBytes": 12143,
+      "width": 1280,
+      "height": 853
+    },
+    {
+      "file": "H07.jpg",
+      "originalBytes": 193943,
+      "masterBytes": 78652,
+      "previewBytes": 39651,
+      "width": 1280,
+      "height": 1280
+    },
+    {
+      "file": "H08.jpg",
+      "originalBytes": 160839,
+      "masterBytes": 49506,
+      "previewBytes": 21746,
+      "width": 1280,
+      "height": 853
+    },
+    {
+      "file": "H09.jpg",
+      "originalBytes": 84801,
+      "masterBytes": 25974,
+      "previewBytes": 13382,
+      "width": 1280,
+      "height": 1280
+    },
+    {
+      "file": "H10.jpg",
+      "originalBytes": 166591,
+      "masterBytes": 46657,
+      "previewBytes": 19201,
+      "width": 1280,
+      "height": 853
+    },
+    {
+      "file": "H11.jpg",
+      "originalBytes": 141882,
+      "masterBytes": 39185,
+      "previewBytes": 20458,
+      "width": 1280,
+      "height": 853
+    },
+    {
+      "file": "H12.jpg",
+      "originalBytes": 198536,
+      "masterBytes": 56997,
+      "previewBytes": 22689,
+      "width": 1280,
+      "height": 853
+    }
+  ],
+  "averageMasterBytes": 37501,
+  "averageWithPreviewsBytes": 55164
+}

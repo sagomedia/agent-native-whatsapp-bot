@@ -1,0 +1,18 @@
+{
+  "integration": {
+    "tests": 1001,
+    "pass": 1001,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "durationMs": 189908.800026
+  },
+  "build": true,
+  "pythonCatalogTests": 4,
+  "browserHelperCases": 12,
+  "phoneForm": true,
+  "phoneFallback": true,
+  "batchImport": true,
+  "whatsappMessagesSent": 0,
+  "paidInferenceCalls": 0
+}

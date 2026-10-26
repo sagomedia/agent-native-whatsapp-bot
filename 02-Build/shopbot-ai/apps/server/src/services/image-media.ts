@@ -19,10 +19,10 @@ function run(binary:string,args:string[],bytes:Buffer,maxOutput:number,processin
  child.on('close',code=>finish(code===0?undefined:new ToolError('That image could not be read. Use a clear JPG, PNG or WebP photo.')));child.stdin.end(bytes);
 });}
 // Only uploaded raster bytes are accepted. No client filename/path/URL is opened.
-export async function normalizeImage(input:z.infer<typeof imageUploadSchema>,options:{maxSide?:1280|2048;processingTimeoutMs?:number}={}):Promise<ImageMedia>{
+export async function normalizeImage(input:z.infer<typeof imageUploadSchema>,options:{maxSide?:1280|2048;processingTimeoutMs?:number;catalog?:boolean}={}):Promise<ImageMedia>{
  const processingTimeoutMs=options.processingTimeoutMs??DEFAULT_PROCESSING_TIMEOUT_MS;
  if(!Number.isInteger(processingTimeoutMs)||processingTimeoutMs<MIN_PROCESSING_TIMEOUT_MS||processingTimeoutMs>MAX_PROCESSING_TIMEOUT_MS)throw new ToolError('Image processing timeout must be an integer from 1000 to 60000 milliseconds.');
- const maxSide=options.maxSide??(process.env.GEMINI_HANDWRITTEN_LISTS_ENABLED==='true'?2048:1280);
+ const maxSide=options.catalog?1280:options.maxSide??(process.env.GEMINI_HANDWRITTEN_LISTS_ENABLED==='true'?2048:1280);
  const bytes=Buffer.from(input.data,'base64');if(bytes.length>MAX_BYTES)throw new ToolError('Keep photos under 2 MB.');
  const detected=bytes[0]===255&&bytes[1]===216&&bytes[2]===255?'image/jpeg':bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))?'image/png':bytes.toString('ascii',0,4)==='RIFF'&&bytes.toString('ascii',8,12)==='WEBP'?'image/webp':null;
  if(detected!==input.mimeType)throw new ToolError('The file is not a supported JPG, PNG or WebP image.');
@@ -31,10 +31,22 @@ export async function normalizeImage(input:z.infer<typeof imageUploadSchema>,opt
  if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1)throw new ToolError('That image could not be read: no readable dimensions. Use a complete JPG, PNG or WebP file.','invalid_photo_bytes');
  if(width>8192||height>8192||width*height>16000000)throw new ToolError('Use a photo up to 16 megapixels and 8192 pixels per side.','photo_too_large');
  // A single bounded frame, without EXIF/location metadata or animation.
- const image=await run('ffmpeg',['-hide_banner','-loglevel','error','-threads','1','-protocol_whitelist','pipe','-i','pipe:0','-frames:v','1','-vf',`scale='min(${maxSide},iw)':'min(${maxSide},ih)':force_original_aspect_ratio=decrease`,'-map_metadata','-1','-q:v','3','-f','image2pipe','-vcodec','mjpeg','pipe:1'],bytes,MAX_BYTES,processingTimeoutMs);
+ let image=await run('ffmpeg',['-hide_banner','-loglevel','error','-threads','1','-protocol_whitelist','pipe','-i','pipe:0','-frames:v','1','-vf',`scale='min(${maxSide},iw)':'min(${maxSide},ih)':force_original_aspect_ratio=decrease`,'-map_metadata','-1','-q:v',options.catalog?'5':'3','-f','image2pipe','-vcodec','mjpeg','pipe:1'],bytes,MAX_BYTES,processingTimeoutMs);
+ if(options.catalog&&image.length>500*1024){
+  for(const [side,quality] of [[1280,8],[1280,12],[960,12],[640,12]]){
+   image=await run('ffmpeg',['-hide_banner','-loglevel','error','-threads','1','-protocol_whitelist','pipe','-i','pipe:0','-frames:v','1','-vf',`scale='min(${side},iw)':'min(${side},ih)':force_original_aspect_ratio=decrease`,'-map_metadata','-1','-q:v',String(quality),'-f','image2pipe','-vcodec','mjpeg','pipe:1'],bytes,MAX_BYTES,processingTimeoutMs);
+   if(image.length<=500*1024)break;
+  }
+  if(image.length>500*1024)throw new ToolError('The product photo could not be optimized below 500 KB. Choose a smaller image.','photo_too_large');
+ }
+
  if(!image.length||image[0]!==255||image[1]!==216)throw new ToolError('That image could not be decoded.');
  const normalized=JSON.parse((await run('ffprobe',['-v','error','-protocol_whitelist','pipe','-select_streams','v:0','-show_entries','stream=width,height','-of','json','-i','pipe:0'],image,8192,processingTimeoutMs)).toString()).streams[0];
  return {image,width:normalized.width,height:normalized.height,sourceHash:createHash('sha256').update(input.mimeType).update(bytes).digest('hex')};
+}
+/** Catalog endpoints report processing failures as actionable client errors. */
+export async function normalizeCatalogImage(input:z.infer<typeof imageUploadSchema>,options:{processingTimeoutMs?:number}={}){
+ try{return await normalizeImage(input,{...options,catalog:true});}catch(error){if(error instanceof ToolError)Object.assign(error,{statusCode:400});throw error;}
 }
 export async function loadImage(pool:Pool,ctx:ActorContext,id:string){return withConversation(pool,ctx,async client=>{
  const row=(await client.query('SELECT image,width,height,source_version FROM image_media WHERE id=$1 AND store_id=$2 AND conversation_id=$3 AND actor=$4',[id,ctx.storeId,ctx.conversationId,ctx.actor])).rows[0];if(!row)throw new ToolError('That image is not accessible to this conversation.','forbidden');

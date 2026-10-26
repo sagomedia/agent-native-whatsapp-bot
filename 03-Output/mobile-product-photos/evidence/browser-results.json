@@ -1,0 +1,82 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "name": "48MP camera photo",
+      "inputBytes": 284355,
+      "bytes": 8548,
+      "width": 1280,
+      "height": 960,
+      "ms": 452
+    },
+    {
+      "name": "9MB PNG, empty Android MIME",
+      "inputBytes": 10322307,
+      "bytes": 459019,
+      "width": 1280,
+      "height": 960,
+      "ms": 165
+    },
+    {
+      "name": "wrong Android MIME, correct JPEG bytes",
+      "inputBytes": 1305,
+      "bytes": 1463,
+      "width": 320,
+      "height": 240,
+      "ms": 4
+    },
+    {
+      "name": "transparent PNG",
+      "inputBytes": 588,
+      "bytes": 831,
+      "width": 100,
+      "height": 100,
+      "ms": 2
+    },
+    {
+      "name": "EXIF portrait rotation",
+      "inputBytes": 1341,
+      "bytes": 1358,
+      "width": 240,
+      "height": 320,
+      "ms": 3
+    },
+    {
+      "name": "over 10MB",
+      "rejected": true,
+      "message": "Choose a photo up to 10 MB. Use normal camera mode instead of RAW or full resolution."
+    },
+    {
+      "name": "HEIF guidance",
+      "rejected": true,
+      "message": "This photo format cannot be optimized here. Export it as JPG, or set the camera to JPG/Most compatible, then choose it again."
+    },
+    {
+      "name": "fake JPG",
+      "rejected": true,
+      "message": "Choose an actual JPG, PNG or WebP photo. Renaming another file does not convert it."
+    },
+    {
+      "name": "empty file",
+      "rejected": true,
+      "message": "This photo is empty. Choose the original image again."
+    },
+    {
+      "name": "corrupt raster",
+      "rejected": true,
+      "message": "This photo could not be opened. Download the original to your phone, or export it as JPG and retry."
+    },
+    {
+      "name": "pixel guard before decode",
+      "rejected": true
+    },
+    {
+      "name": "older browser fallback",
+      "inputBytes": 1305,
+      "bytes": 1463,
+      "width": 320,
+      "height": 240,
+      "ms": 17
+    }
+  ]
+}

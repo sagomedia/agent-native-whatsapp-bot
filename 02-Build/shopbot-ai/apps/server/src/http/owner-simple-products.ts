@@ -8,7 +8,7 @@ import {sellingBasisIssues} from '../../../../packages/contracts/selling-basis.j
 import {saveCatalogProduct} from '../services/catalog-products.js';
 import {saveCatalogPhoto} from '../services/catalog-photos.js';
 import {prepareCatalogImageVariants} from '../services/catalog-image-variants.js';
-import {imageUploadSchema,normalizeImage} from '../services/image-media.js';
+import {imageUploadSchema,normalizeCatalogImage} from '../services/image-media.js';
 
 type Write=(action:string,target:string,run:(client:PoolClient)=>Promise<unknown>)=>Promise<unknown>;
 const invalid=(message:string,statusCode=400)=>Object.assign(new Error(message),{statusCode});
@@ -59,7 +59,7 @@ export function registerOwnerSimpleProducts(app:FastifyInstance,_pool:Pool,store
   if(editing&&Object.hasOwn(p,'stock')&&!p.inventoryVersion)return reply.code(400).send({error:'Reload the stock count before changing it.'});
   // Decoding and resizing happen before the transaction. Only normalized bytes
   // reach the public catalog; arbitrary URLs or filenames are never fetched.
-  const media=p.photo?await normalizeImage(p.photo):undefined;
+  const media=p.photo?await normalizeCatalogImage(p.photo):undefined;
   if(media)media.variants=await prepareCatalogImageVariants(media.image);
   const sku=p.sku??'SHOP-'+p.createId!.replaceAll('-','').slice(0,16).toUpperCase();
   return write('catalog_product_simple',storeId,c=>saveSimpleProduct(c,storeId,p,media));
@@ -69,7 +69,7 @@ export function registerOwnerSimpleProducts(app:FastifyInstance,_pool:Pool,store
   if(!parsed.success)return reply.code(400).send({error:'Check the product name and each variant’s size, price, stock and selling unit. Use distinct variant names.'});
   const p=parsed.data,inputHash=createHash('sha256').update(JSON.stringify(p)).digest('hex');
   if(!p.photo&&!p.sourceProduct)return reply.code(400).send({error:'Add a shared photo or choose an existing product photo.'});
-  const media=p.photo?await normalizeImage(p.photo):undefined;
+  const media=p.photo?await normalizeCatalogImage(p.photo):undefined;
   if(media)media.variants=await prepareCatalogImageVariants(media.image);
   return write('catalog_product_variants',p.id,async c=>{
    const previous=(await c.query('SELECT input_hash,result FROM product_variant_batches WHERE store_id=$1 AND id=$2',[storeId,p.id])).rows[0];
@@ -115,7 +115,7 @@ export function registerOwnerSimpleProducts(app:FastifyInstance,_pool:Pool,store
  });
 }
 
-async function saveSimpleProduct(c:PoolClient,storeId:string,p:z.infer<typeof simpleProductSchema>,media:Awaited<ReturnType<typeof normalizeImage>>|undefined,sharedImage?:string){
+async function saveSimpleProduct(c:PoolClient,storeId:string,p:z.infer<typeof simpleProductSchema>,media:Awaited<ReturnType<typeof normalizeCatalogImage>>|undefined,sharedImage?:string){
  const editing=!!p.sku,sku=p.sku??'SHOP-'+p.createId!.replaceAll('-','').slice(0,16).toUpperCase();
    const prior=(await c.query('SELECT * FROM products WHERE store_id=$1 AND sku=$2 FOR UPDATE',[storeId,sku])).rows[0];
    if(editing&&(!prior||prior.version!==p.version))throw invalid('This product changed. Reload before saving.',409);
