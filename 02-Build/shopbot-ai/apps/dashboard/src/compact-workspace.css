@@ -1,0 +1,170 @@
+/* Shared density, typography and gestures. The same controls serve both locales. */
+.redesign[data-compact]{font-size:15px;line-height:1.5}
+.redesign[data-compact] .rd-shop-name{margin:0 12px 26px;font-size:16px;color:var(--rd-text)}
+.redesign[data-compact] :is(h1,h2,h3,strong,button,label){letter-spacing:normal}
+.redesign[data-compact] .rd-page-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;margin-bottom:8px}
+.redesign[data-compact] .rd-page-heading h1,.redesign[data-compact] .rd-products-head h1{font-size:25px;line-height:1.4;margin:0;min-width:0}
+.redesign[data-compact] .rd-page-settings{display:grid;place-items:center;flex:none;width:44px;height:44px;color:var(--rd-text);text-decoration:none}
+.redesign[data-compact] [data-horizontal-scroll]{display:flex;flex-wrap:nowrap;gap:14px;overflow-x:auto;overflow-y:hidden;max-width:100%;min-width:0;overscroll-behavior-x:contain;scrollbar-width:none;touch-action:pan-x pinch-zoom}
+.redesign[data-compact] [data-horizontal-scroll]::-webkit-scrollbar{display:none}
+.redesign[data-compact] [data-horizontal-scroll]>button{flex:0 0 auto;white-space:nowrap;word-break:normal;overflow-wrap:normal;min-height:44px;padding:9px 2px;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;color:var(--rd-muted);font-size:14px;line-height:1.5}
+.redesign[data-compact] [data-horizontal-scroll]>button:is([aria-pressed=true],.active,.is-active){color:var(--rd-teal);background:transparent;border-color:var(--rd-teal);font-weight:650}
+.redesign[data-compact] [data-horizontal-scroll]>button span{white-space:nowrap}
+.redesign[data-compact] :is(.rd-orders-list-head,.rd-chats-list-head,.rd-products-tools){padding:16px 22px 0;background:white;border-bottom:1px solid var(--rd-line);flex-shrink:0}
+.redesign[data-compact] :is(.rd-orders-search,.rd-chats-search,.rd-products-search){height:44px;min-height:44px;margin:0;border:1px solid var(--rd-line);border-radius:6px;background:var(--rd-soft);padding:0 12px;gap:10px}
+.redesign[data-compact] :is(.rd-orders-search,.rd-chats-search,.rd-products-search) input{font-size:16px;height:100%;border:0;background:transparent;padding:0;min-width:0}
+.redesign[data-compact] :is(.rd-orders-tabs,.rd-chats-filters,.rd-products-filters){margin:5px 0 0;padding:0}
+.redesign[data-compact] :is(.rd-orders-tabs,.rd-chats-filters) span{font-size:11px;min-width:17px;height:auto;background:var(--rd-tint);color:var(--rd-teal)}
+.redesign[data-compact] .rd-orders-list{display:flex;flex-direction:column;overflow:hidden}
+.redesign[data-compact] .rd-orders-list-head{position:static}
+.redesign[data-compact] .rd-orders-rows{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain}
+.redesign[data-compact] :is(.rd-orders-list-row,.rd-chats-row){padding:14px 20px;gap:12px;min-height:76px}
+.redesign[data-compact] :is(.rd-orders-avatar,.rd-chats-avatar){width:30px;height:30px;font-size:13px;background:var(--rd-tint);color:var(--rd-teal)}
+.redesign[data-compact] :is(.rd-orders-list-copy strong,.rd-chats-row-top strong){font-size:15px;line-height:1.5}
+.redesign[data-compact] .rd-orders-list-copy{gap:2px}
+.redesign[data-compact] .rd-orders-stage{max-width:130px;white-space:normal;text-align:center;line-height:1.5}
+.redesign[data-compact] .rd-chats-thread{background:white}
+.redesign[data-compact] .rd-chats-thread-head{min-height:60px;gap:10px;padding:8px 16px}
+.redesign[data-compact] .rd-chats-thread-person h2{line-height:1.5;font-size:18px}
+.redesign[data-compact] .rd-chats-messages{padding:16px}
+.redesign[data-compact] .rd-chats-bubble{border-radius:6px;background:var(--rd-soft);box-shadow:none}
+.redesign[data-compact] .rd-chats-bubble.is-outbound{background:var(--rd-tint)}
+.redesign[data-compact] .rd-chats-back{min-width:44px;min-height:44px;padding:0;font-size:24px}
+.redesign[data-compact] .rd-chats-control{padding:6px 16px}
+.redesign[data-compact] .rd-chats-control button{min-height:44px;border:0;border-radius:0;background:transparent}
+.redesign[data-compact] .rd-chats-bottom{padding:8px 12px;min-height:64px}
+.redesign[data-compact] .rd-chats-compose{border-radius:6px;padding:4px 4px 4px 12px}
+.redesign[data-compact] .rd-chats-compose textarea{font-size:16px;line-height:1.5}
+.redesign[data-compact] .rd-chats-send{width:44px;height:44px;border-radius:6px}
+.redesign[data-compact] .rd-chats-order-link{padding:0 16px 8px}
+.redesign[data-compact] .rd-chats-order-link a{display:inline-flex;align-items:center;min-height:36px}
+.redesign[data-compact] .rd-message-photo{display:block;border:0;padding:0;background:transparent;max-width:100%}
+.redesign[data-compact] .rd-main:has(.rd-products-browse){padding:0;overflow:hidden}
+.redesign[data-compact] .rd-products-browse{height:100%;min-height:0;display:flex;flex-direction:column;padding:0;margin:0;max-width:none;width:100%}
+.redesign[data-compact] .rd-products-tools{display:block}
+.redesign[data-compact] .rd-products-content{overflow:auto;overscroll-behavior:contain;min-height:0;flex:1;padding:0 22px}
+.redesign[data-compact] .rd-products-head{align-items:center;min-height:48px;gap:8px;margin-bottom:8px}
+.redesign[data-compact] .rd-products-head-actions{gap:4px;flex:none}
+.redesign[data-compact] .rd-products-head .rd-products-primary{min-height:44px;padding:0 10px;white-space:nowrap}
+.redesign[data-compact] .rd-products-more{min-width:44px;min-height:44px;border:0;background:transparent}
+.redesign[data-compact] .rd-products-menu{z-index:8;min-width:200px;max-width:calc(100vw - 32px)}
+.redesign[data-compact] .rd-products-menu :is(a,button){display:block;width:100%;min-height:44px;padding:10px 14px;text-align:start;border:0;background:white;font:inherit;color:var(--rd-text);text-decoration:none}
+.redesign[data-compact] .rd-products-row{min-height:76px;padding:12px 0}
+.redesign[data-compact] .rd-products-main{display:flex;align-items:center;gap:10px;min-width:0}
+.redesign[data-compact] .rd-products-identity{flex:1;min-width:0;min-height:44px;gap:0}
+.redesign[data-compact] .rd-products-identity-copy strong{font-size:15px;white-space:normal;line-height:1.5;overflow-wrap:break-word}
+.redesign[data-compact] .rd-products-identity-copy small{font-size:13px;line-height:1.5}
+.redesign[data-compact] .rd-products-attention{font-size:12px!important}
+.redesign[data-compact] .rd-products-image{width:40px;height:40px;border-radius:2px;background:var(--rd-soft);font-size:18px}
+.redesign[data-compact] .rd-products-stock{font-size:14px;min-height:44px;font-weight:500;white-space:normal;line-height:1.5}
+.redesign[data-compact] .rd-photo-trigger{display:grid;place-items:center;border:0;border-radius:2px;background:transparent;padding:2px;min-width:44px;min-height:44px;flex:none;cursor:zoom-in}
+.redesign[data-compact] .rd-orders-item-identity{display:flex;align-items:center;gap:10px;min-width:0}
+.redesign[data-compact] .rd-orders-item-identity .rd-orders-identity{flex:1}
+.redesign[data-compact] .rd-orders-thumb{width:44px;height:44px;border-radius:2px;background:var(--rd-soft)}
+.redesign[data-compact] .rd-orders-item{grid-template-columns:minmax(0,1fr) 64px 110px 90px;gap:12px}
+.redesign[data-compact] .rd-orders-quoted-price{padding-left:54px;font-size:12px}
+.redesign[data-compact] .rd-orders-line-total{display:grid;gap:6px;font-size:12px;color:var(--rd-muted);text-align:right}
+.redesign[data-compact] .rd-orders-line-total strong{font-size:15px;color:var(--rd-text)}
+.redesign[data-compact] .rd-orders-detail-head h2{font-size:22px;line-height:1.5}
+.redesign[data-compact] .rd-orders-progress{overflow-x:auto;white-space:nowrap;flex-wrap:nowrap;scrollbar-width:none}
+.redesign[data-compact] .rd-orders-progress>span{flex:none}
+.redesign[data-compact] .rd-orders-footer{position:sticky;bottom:0;z-index:2;border-top:1px solid var(--rd-line);padding:12px 0 4px}
+.redesign[data-compact] .rd-orders-footer>p{margin:4px 0 10px}
+.redesign[data-compact] .rd-orders-total{font-size:20px}
+.redesign[data-compact] .rd-orders-secondary{gap:12px;margin-top:4px;flex-wrap:wrap}
+.redesign[data-compact] .rd-orders-secondary button{min-height:44px;font-size:13px}
+.redesign[data-compact] .rd-settings{max-width:960px;padding:0 0 40px}
+.redesign[data-compact] .rd-settings h1{font-size:25px;line-height:1.5;margin:0 0 14px}
+.redesign[data-compact] .rd-settings-shop{gap:10px;padding:0 0 12px}
+.redesign[data-compact] .rd-settings-shop .rd-settings-avatar{display:none}
+.redesign[data-compact] .rd-settings-shop strong{font-size:16px}
+.redesign[data-compact] .rd-settings-row{min-height:56px;padding:10px 0;gap:10px}
+.redesign[data-compact] .rd-settings-row-icon{width:24px}
+.redesign[data-compact] .rd-settings-row-icon svg{width:18px;height:18px}
+.redesign[data-compact] .rd-settings-row-copy strong{font-size:15px;line-height:1.5}
+.redesign[data-compact] .rd-settings-row-copy small{font-size:13px;line-height:1.5}
+.redesign[data-compact] .rd-settings-switch{position:relative;width:48px;height:44px;min-height:44px;flex:none;padding:0;background:transparent!important}
+.redesign[data-compact] .rd-settings-switch::before{content:'';position:absolute;left:4px;top:10px;width:40px;height:24px;border-radius:12px;background:#a7b4bc}
+.redesign[data-compact] .rd-settings-switch[aria-checked=true]::before{background:var(--rd-teal)}
+.redesign[data-compact] .rd-settings-switch span{position:absolute;left:7px;top:13px;width:18px;height:18px;transform:none}
+.redesign[data-compact] .rd-settings-switch[aria-checked=true] span{transform:translateX(16px)}
+.redesign[data-compact] .rd-settings-connect-button{font-size:14px;white-space:normal;line-height:1.5}
+.redesign[data-compact] .rd-settings :is(button,input,select){max-width:100%}
+.rd-photo-viewer{position:fixed;inset:0;width:100vw;max-width:none;height:100dvh;max-height:none;margin:0;padding:0;border:0;border-radius:0;background:#fff;color:#131c2c;overflow:hidden;font:15px/1.5 Arial,ShopTamil,sans-serif}
+.rd-photo-viewer[open]{display:flex;flex-direction:column}
+.rd-photo-viewer::backdrop{background:#fff}
+.rd-photo-viewer header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:max(8px,env(safe-area-inset-top)) 12px 8px;border-bottom:1px solid #e3e8eb;flex:none}
+.rd-photo-viewer header strong{font-size:15px;min-width:0;overflow-wrap:anywhere}
+.rd-photo-viewer header div{display:flex;align-items:center;flex:none;gap:4px}
+.rd-photo-viewer button{min-height:44px;min-width:44px;font:inherit;color:#006c73;border:0;background:transparent;padding:8px}
+.rd-photo-viewer button:focus-visible{outline:3px solid #5aafb4;outline-offset:-3px}
+.rd-photo-viewer header button:last-child{font-size:28px}
+.rd-photo-surface{flex:1;min-height:0;overflow:auto;display:grid;place-items:center;touch-action:pan-x pan-y pinch-zoom;padding:12px 12px max(12px,env(safe-area-inset-bottom))}
+.rd-photo-surface img{display:block;max-width:100%;max-height:100%;object-fit:contain;min-height:0}
+.rd-photo-surface.is-zoomed{display:block}
+.rd-photo-surface.is-zoomed img{width:200%;max-width:none;max-height:none;height:auto}
+@media(max-width:1100px) and (min-width:761px){
+ .redesign[data-compact] .rd-orders-item{grid-template-columns:1fr 1fr 1fr}
+ .redesign[data-compact] .rd-orders-item-identity{grid-column:1/-1}
+}
+@media(max-width:760px){
+ .redesign[data-compact]{height:var(--rd-viewport-height,100dvh)}
+ .redesign[data-compact] .rd-main{padding:14px 16px}
+ .redesign[data-compact] .rd-main-workspace{padding:0}
+ .redesign[data-compact] .rd-page-heading h1,.redesign[data-compact] .rd-products-head h1,.redesign[data-compact] .rd-settings h1{font-size:22px}
+ .redesign[data-compact] :is(.rd-orders-list-head,.rd-chats-list-head,.rd-products-tools){padding:4px 16px 0}
+ .redesign[data-compact] .rd-products-content{padding:0 16px}
+ .redesign[data-compact] .rd-products-row{grid-template-columns:minmax(0,1fr) minmax(64px,auto);gap:8px}
+ .redesign[data-compact] .rd-products-stock{max-width:100px;padding:4px 0 4px 6px}
+ .redesign[data-compact] :is(.rd-orders-list-row,.rd-chats-row){padding:12px 16px;gap:10px}
+ .redesign[data-compact] .rd-orders-list-row{display:grid;grid-template-columns:30px minmax(0,1fr) 12px}
+ .redesign[data-compact] .rd-orders-list-row>.rd-orders-stage{grid-column:2;grid-row:2;justify-self:start;padding:0;background:transparent;text-align:left;font-size:12px;max-width:none}
+ .redesign[data-compact] .rd-orders-list-row>span:last-child{grid-column:3;grid-row:1/3}
+ .redesign[data-compact] .rd-orders-list-copy strong{overflow-wrap:anywhere}
+ .redesign[data-compact] .rd-mobile-nav{min-height:56px;padding:3px 8px max(3px,env(safe-area-inset-bottom));gap:0}
+ .redesign[data-compact] .rd-mobile-nav a{font-size:12px;gap:1px;padding:4px;min-height:48px;min-width:0}
+ .redesign[data-compact] .rd-mobile-nav .owner-icon{width:19px;height:19px}
+ .redesign[data-compact] .rd-mobile-nav .rd-nav-label{white-space:nowrap;font-size:12px;line-height:1.5}
+ .redesign[data-compact][data-chrome=down] :is([data-scroll-tools],.rd-mobile-nav){display:none}
+ .redesign[data-compact][data-chrome=up] :is(.rd-page-heading,[data-page-heading]){display:none}
+ .redesign[data-compact][data-chrome=up] [data-scroll-tools]{padding-top:8px}
+ .redesign[data-compact]:has(.rd-orders-selected,.rd-chats-detail-open,[data-workspace-detail=true]) .rd-mobile-nav,
+ .redesign[data-compact][data-keyboard=true] .rd-mobile-nav{display:none}
+ .redesign[data-compact] .rd-orders-detail{padding:12px 16px 0}
+ .redesign[data-compact] .rd-orders-back{font-size:14px;min-height:44px;padding:4px 0;margin:0 0 4px}
+ .redesign[data-compact] .rd-orders-detail-head{padding-bottom:12px;gap:8px}
+ .redesign[data-compact] .rd-orders-head-actions{padding-top:4px}
+ .redesign[data-compact] .rd-orders-head-actions button{min-height:44px;white-space:normal;font-size:13px}
+ .redesign[data-compact] .rd-orders-item{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:14px 0}
+ .redesign[data-compact] .rd-orders-item-identity{grid-column:1/-1;grid-row:1}
+ .redesign[data-compact] .rd-orders-identity strong{font-size:15px;line-height:1.5}
+ .redesign[data-compact] .rd-orders-identity small{font-size:12px}
+ .redesign[data-compact] .rd-orders-warning{font-size:12px}
+ .redesign[data-compact] .rd-orders-field{font-size:12px;gap:4px}
+ .redesign[data-compact] .rd-orders-field input{font-size:16px;min-height:44px}
+ .redesign[data-compact] .rd-orders-quoted-price{grid-row:2;padding:0;margin:0}
+ .redesign[data-compact] .rd-orders-field,.redesign[data-compact] .rd-orders-line-total{grid-row:3}
+ .redesign[data-compact] .rd-orders-line-total{align-self:center}
+ .redesign[data-compact] .rd-orders-payment{flex-wrap:wrap;gap:8px;padding:12px 0}
+ .redesign[data-compact] .rd-orders-payment>div{min-width:150px}
+ .redesign[data-compact] .rd-orders-payment button{min-height:44px;max-width:none;font-size:13px}
+ .redesign[data-compact] .rd-orders-footer{padding-bottom:max(8px,env(safe-area-inset-bottom))}
+ .redesign[data-compact] .rd-orders-footer>p{display:none}
+ .redesign[data-compact] .rd-orders-primary{min-height:44px;padding:10px;margin-top:6px;white-space:normal}
+ .redesign[data-compact] .rd-products-edit-layout{display:block}
+ .redesign[data-compact] .rd-products-edit h1{font-size:22px;line-height:1.5;margin-bottom:16px}
+ .redesign[data-compact] .rd-products-form input:not([type=checkbox]),.redesign[data-compact] .rd-products-form select{font-size:16px;min-height:44px}
+ .redesign[data-compact] .rd-products-form-actions{padding-bottom:max(8px,env(safe-area-inset-bottom));z-index:2;flex-wrap:wrap}
+ .redesign[data-compact] .rd-products-form-actions>button{min-height:44px;font-size:14px;white-space:normal;line-height:1.5}
+ .redesign[data-compact] .rd-products-stock-dialog{max-height:90dvh;overflow:auto;border-radius:6px 6px 0 0;padding:20px 16px}
+ .redesign[data-compact] .rd-settings{padding:0 0 28px}
+ .redesign[data-compact] .rd-settings-shop>button{border:0;padding:6px;white-space:nowrap;font-size:13px}
+ .redesign[data-compact] .rd-settings-row{padding:10px 0;gap:10px}
+ .redesign[data-compact] .rd-settings-row-copy strong{font-size:15px;line-height:1.5}
+ .redesign[data-compact] .rd-settings-row-copy small{font-size:12px;line-height:1.5}
+ .redesign[data-compact] .rd-settings-back{min-height:44px}
+ :lang(ta) .redesign[data-compact] :is(h1,h2,h3,button,input,select,strong),.redesign[data-compact]:lang(ta) :is(h1,h2,h3,button,input,select,strong){line-height:1.6;letter-spacing:0}
+}
+@media(prefers-reduced-motion:no-preference){
+ .redesign[data-compact] :is(a,button){transition:background-color .12s ease,color .12s ease}
+}

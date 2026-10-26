@@ -1,5 +1,7 @@
 import {createContext,useContext,useEffect,useState,type ReactNode} from 'react';
 
+import {compactTamil} from './owner-compact-tamil.js';
+
 export type OwnerLocale='en'|'ta';
 const tamil:Record<string,string>={
  'Use your inventory in ChatGPT':'ChatGPT-இல் உங்கள் பொருள் இருப்பைப் பயன்படுத்துங்கள்',
@@ -104,6 +106,7 @@ Object.assign(tamil,{
  'Check the messages your customers see.':'வாடிக்கையாளர்கள் பார்க்கும் செய்திகளைச் சரிபாருங்கள்.'
 });
 Object.assign(tamil,{'Loading orders…':'ஆர்டர்கள் ஏற்றப்படுகின்றன…','Loading order…':'ஆர்டர் ஏற்றப்படுகிறது…','Loading conversations…':'உரையாடல்கள் ஏற்றப்படுகின்றன…','Loading conversation…':'உரையாடல் ஏற்றப்படுகிறது…'});
+Object.assign(tamil,compactTamil);
 const storageKey='shopbot.owner.language';
 const LocaleContext=createContext({locale:'en' as OwnerLocale,t:(text:string)=>text,setLocale:(_locale:OwnerLocale)=>{}});
 export function OwnerLocaleProvider({children}:{children:ReactNode}){

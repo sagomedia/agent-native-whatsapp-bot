@@ -1,0 +1,15 @@
+{
+  "implementation": "compact mobile owner workspace",
+  "baseline": "38bab5e",
+  "branch": "codex/compact-mobile-ux-20261026",
+  "build": "passed",
+  "integration": {"passed": 1001, "failed": 0, "skipped": 0},
+  "cleanup": {"passed": 4},
+  "readingAndPollingAfterResizeChange": {"passed": 10},
+  "mobileBrowser": {"passed": 18, "widths": [320, 360, 390, 430], "locales": ["en", "ta"], "uncaughtErrors": 0},
+  "realApiBrowser": {"passed": 29, "successfulWrites": 10, "uncaughtErrors": 0, "syntheticDatabase": true},
+  "existingBrowserRegressions": {"variants": "passed", "manualReplies": "passed", "longChatScrolling": "passed"},
+  "physicalPhoneAcceptance": "pending",
+  "productionChanged": false,
+  "externalPublication": "pending owner approval after automatic review rejected issue creation"
+}
