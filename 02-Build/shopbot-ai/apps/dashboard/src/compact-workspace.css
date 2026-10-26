@@ -170,3 +170,5 @@
 }
 .redesign[data-compact] .rd-settings-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .redesign[data-compact] .rd-settings-title-row .rd-demo-signout{min-height:44px;white-space:nowrap;margin:0 0 14px}
+
+@media(max-width:360px){.redesign[data-compact] .rd-products-head .rd-products-primary{width:44px;padding:0}.redesign[data-compact] .rd-products-head .rd-products-primary span{display:none}}
