@@ -1,0 +1,67 @@
+{
+  "release": "preview-2a58e8b0d292",
+  "previousRelease": "preview-92455e2561bb",
+  "source": "52c52c7935a0a563a0d8b35c12ab11010304dd52",
+  "artifact": "76ca8d328f7c3cf60785778edb064928bc8c3950ed2f457ab44caf96bf965886",
+  "startedAt": "2026-10-26T09:09:13.030508+00:00",
+  "before": {
+    "schema": 50,
+    "products": 342,
+    "orders": 22,
+    "messages": 876,
+    "photos": 301,
+    "photoBytes": 19949608,
+    "proposals": 325,
+    "proposalAssets": 298,
+    "grants": 21,
+    "productHash": "6f798af0e9b3c739c28ae07c6ba4569b",
+    "catalogRevision": 1994
+  },
+  "environmentSha256": "d189e9318a405347a58f7dc4ab166920eee3f0f0a3b371bebd634c397c9aa939",
+  "after": {
+    "schema": 50,
+    "products": 342,
+    "orders": 22,
+    "messages": 876,
+    "photos": 301,
+    "photoBytes": 19949608,
+    "proposals": 325,
+    "proposalAssets": 298,
+    "grants": 21,
+    "productHash": "6f798af0e9b3c739c28ae07c6ba4569b",
+    "catalogRevision": 1994
+  },
+  "backup": "/var/backups/shopbot-migration/owner-20261026T090918Z",
+  "backupBytes": 424356149,
+  "backupFormat": "custom_uncompressed",
+  "backupRestoreListVerified": true,
+  "environmentUnchanged": true,
+  "processDirectoryVerified": true,
+  "automaticRestarts": 0,
+  "readiness": {
+    "status": "ready",
+    "mode": "mock"
+  },
+  "compiledImageProbe": {
+    "passed": true,
+    "masterBytes": 40091,
+    "previewBytes": [
+      {
+        "size": 128,
+        "bytes": 1767
+      },
+      {
+        "size": 256,
+        "bytes": 4342
+      },
+      {
+        "size": 640,
+        "bytes": 14929
+      }
+    ],
+    "databaseWrites": 0,
+    "messagesSent": 0
+  },
+  "artifactVerified": true,
+  "completedAt": "2026-10-26T09:14:07.515087+00:00"
+}

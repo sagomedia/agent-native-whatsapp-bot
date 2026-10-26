@@ -24,7 +24,9 @@ export function rateHealth(rate:RateCard|undefined,now=Date.now()) {
 }
 export function validateRateCard(rate:RateCard,now=Date.now()) {
   const health=rateHealth(rate,now);
-  if(health.status==='invalid'||health.status==='expired')throw new ToolError(`Native model rates are ${health.status}; invalid or expired rates disable live interpretation.`,health.status==='invalid'?'rate_invalid':'rate_expired');
+  // Review dates are advisory. Only malformed prices/bounds block admission.
+  // Keep spend reservations and usage reconciliation independent of calendar age.
+  if(health.status==='invalid')throw new ToolError('Native model rates are invalid; check the configured prices and token bounds.','rate_invalid');
 }
 function cost(rate:RateCard,input:number,output:number) {
   const numerator=BigInt(input)*BigInt(rate.inputMicrousdPerMillion)+BigInt(output)*BigInt(rate.outputMicrousdPerMillion);

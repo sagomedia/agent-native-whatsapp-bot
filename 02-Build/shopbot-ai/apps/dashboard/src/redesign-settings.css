@@ -29,3 +29,7 @@
 .redesign .rd-settings-connect-button:disabled{opacity:.5;cursor:wait}
 .redesign .rd-settings input:focus-visible,.redesign .rd-settings a:focus-visible{outline:3px solid var(--rd-teal);outline-offset:2px}
 @media(max-width:700px){.redesign .rd-settings-chatgpt .rd-settings-connect-button{width:100%}}
+
+.redesign .rd-settings-costs .rd-settings-facts>div{flex-wrap:wrap;gap:8px 20px}
+.redesign .rd-settings-costs .rd-settings-facts>div>span{flex:1 1 170px;min-width:0}
+.redesign .rd-settings-costs .rd-settings-facts strong{white-space:nowrap;flex-shrink:0}

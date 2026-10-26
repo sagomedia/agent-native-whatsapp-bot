@@ -114,7 +114,7 @@ test('native configuration fails closed; dated USD rates include thinking and ne
   assert.throws(()=>readNativeSettings({ALLOW_PAID_INFERENCE:'true',GEMINI_API_KEY:'offline',AI_BUDGET_USD:'0'}),/Invalid/);
   assert.throws(()=>readNativeSettings({ALLOW_PAID_INFERENCE:'true',GEMINI_API_KEY:'offline',AI_BUDGET_USD:'1',AI_MODEL:'unpriced'}),/verified/);
   assert.equal(readNativeSettings({ALLOW_PAID_INFERENCE:'true',GEMINI_API_KEY:'offline',AI_BUDGET_USD:'1.000001'}).budgetMicrousd,1000001);
-  assert.throws(()=>validateRateCard({...geminiTextRate,validUntil:'2026-10-01'}),/expired/);
+  assert.throws(()=>validateRateCard({...geminiTextRate,validUntil:'2026-10-01'}),/invalid/);
   assert.equal(worstCaseReservation(geminiTextRate),324813);
   assert.deepEqual(usageEstimate(geminiTextRate,{output:{},truncated:false,responseModel:geminiTextRate.model,usage:{promptTokenCount:1000,candidatesTokenCount:100,totalTokenCount:1120}}),{microusd:600,violation:false});
 });

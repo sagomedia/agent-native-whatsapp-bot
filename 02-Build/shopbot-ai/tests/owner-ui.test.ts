@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {activeRequest,requestLabel,replyWindowOpen,matchesProduct,inventoryMatches,stockLabel,type OwnerProduct} from '../apps/dashboard/src/owner-model.js';
+import {activeRequest,requestLabel,replyWindowOpen,matchesProduct,inventoryMatches,stockLabel,rupeeEstimate,rupeeRate,type OwnerProduct} from '../apps/dashboard/src/owner-model.js';
 const product:OwnerProduct={sku:'PIPE-1',name:'1 inch PVC pipe',localNames:{ta:'பிவிசி குழாய்','ta-Latn':'pvc kulai'},brand:'Blueguard',unit:'piece',pricePaise:18000,stock:null,version:1,aliases:['white pipe'],quantityStep:1,active:true,origin:'owner',inventoryUpdatedAt:null};
 test('inventory can find English, Tamil and customer spellings without confusing unknown stock with zero',()=>{
  for(const query of ['குழாய்','kulai','blueguard','whit pipe','PIPE-1'])assert.equal(matchesProduct(product,query),true,query);
@@ -33,4 +33,17 @@ test('merchant fact checks survive unrelated edits and invalidate their actual d
  assert.deepEqual(verificationAfterEdit(checked,'unit'),{...checked,sellingUnit:false,price:false,stock:false});
  assert.deepEqual(verificationAfterEdit(checked,'photo'),{...checked,photo:false});
  assert.ok(Object.values(verificationAfterEdit(checked,'name')).every(value=>value===false));
+});
+
+test('rupee display converts dollars without relabelling them, retains tiny amounts and validates the editable rate',()=>{
+ assert.equal(rupeeEstimate('1000000','USD',95),'₹95.00');
+ assert.equal(rupeeEstimate('4500000','USD',95),'₹427.50');
+ assert.equal(rupeeEstimate('345000','INR',95,true),'₹0.345000');
+ assert.equal(rupeeEstimate('1000000','USD',90),'₹90.00');
+ assert.equal(rupeeEstimate('1','USD',95),'<₹0.01');
+ assert.equal(rupeeEstimate('1','USD',95,true),'₹0.000095');
+ assert.equal(rupeeEstimate('0','USD',95),'₹0.00');
+ assert.equal(rupeeEstimate('9007199254740993','INR',95,true),'₹9,00,71,99,254.740993');
+ for(const value of [null,'','-1','NaN',0,Infinity,'95.12345'])assert.equal(rupeeRate(value),null);
+ for(const [amount,currency] of [[null,'INR'],['-1','USD'],['1','EUR']] as const)assert.equal(rupeeEstimate(amount,currency),'Amount unavailable');
 });

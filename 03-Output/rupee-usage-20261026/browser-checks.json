@@ -1,0 +1,24 @@
+[
+  {
+    "width": 390,
+    "defaultConversion": true,
+    "usdConverted": true,
+    "inrPreserved": true,
+    "noDollarAmounts": true,
+    "editedRatePersists": true,
+    "reservationsSeparate": true,
+    "noHorizontalOverflow": true,
+    "consoleErrors": []
+  },
+  {
+    "width": 1440,
+    "defaultConversion": true,
+    "usdConverted": true,
+    "inrPreserved": true,
+    "noDollarAmounts": true,
+    "editedRatePersists": true,
+    "reservationsSeparate": true,
+    "noHorizontalOverflow": true,
+    "consoleErrors": []
+  }
+]

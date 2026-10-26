@@ -53,9 +53,25 @@ export function replyWindowOpen(lastInbound: string | null | undefined, now = Da
 export const when = (value: string) => new Intl.DateTimeFormat('en-IN', {dateStyle: 'medium', timeStyle: 'short'}).format(new Date(value));
 export const day = (value: string) => new Intl.DateTimeFormat('en-IN', {dateStyle: 'medium'}).format(new Date(value));
 export const clockTime = (value: string) => new Intl.DateTimeFormat('en-IN', {timeStyle: 'short'}).format(new Date(value));
-export const usd = (micros: string | number, exact = false) => new Intl.NumberFormat('en-US', {
-  style: 'currency', currency: 'USD', minimumFractionDigits: exact ? 6 : 2, maximumFractionDigits: exact ? 6 : 2
-}).format(Number(micros) / 1000000);
+// Display estimates only; provider accounting and spending guards stay unchanged.
+export const DEFAULT_RUPEES_PER_USD = 95;
+export const RUPEE_RATE_STORAGE_KEY = 'shopbot.owner.rupee-rate.v1';
+export function rupeeRate(value: unknown): number | null {
+  if (typeof value !== 'string' && typeof value !== 'number') return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 && n <= 10000 && Math.abs(n * 10000 - Math.round(n * 10000)) < 0.00001 ? n : null;
+}
+export function rupeeEstimate(micros: string | number | null, currency: string | null, rate = DEFAULT_RUPEES_PER_USD, exact = false) {
+  if (micros === null || !/^[0-9]+$/.test(String(micros)) || !['USD', 'INR'].includes(currency ?? '') || rupeeRate(rate) === null || typeof micros === 'number' && !Number.isSafeInteger(micros)) return 'Amount unavailable';
+  const raw = BigInt(micros);
+  const converted = currency === 'INR' ? raw : (raw * BigInt(Math.round(rate * 10000)) + 5000n) / 10000n;
+  if (!exact && converted > 0n && converted < 10000n) return '<₹0.01';
+  const digits = exact ? 6 : 2, scale = exact ? 1n : 10000n;
+  const rounded = (converted + scale / 2n) / scale;
+  const units = exact ? 1000000n : 100n, whole = rounded / units;
+  const fraction = (rounded % units).toString().padStart(digits, '0');
+  return new Intl.NumberFormat('en-IN', {style: 'currency', currency: 'INR', minimumFractionDigits: digits, maximumFractionDigits: digits}).formatToParts(whole).map(part => part.type === 'fraction' ? fraction : part.value).join('');
+}
 export function microCurrency(micros:string|null,currency:string|null) {
   if(micros===null||currency===null||!/^\d+$/.test(micros)||!/^[A-Z]{3}$/.test(currency))return 'Amount unavailable';
   const amount=BigInt(micros),whole=amount/1000000n,fraction=(amount%1000000n).toString().padStart(6,'0');
