@@ -94,7 +94,7 @@ test('apply patches only search metadata, preserves merchant facts and records o
  for(const field of ['stock','reserved_stock','inventory_version','image_path','price_paise','unit','merchant_verification','selling_unit_verified','selling_policy','active'])assert.deepEqual(after[field],before[field],field);
  assert.ok(after.aliases.includes('local elbow name'));assert.match(after.search_text,/local elbow name/);assert.equal(after.version,before.version+1);
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM catalog_change_events')).rows[0].n,1);
- const activity:any=await catalogAiActivity(pool,p,{});assert.equal(activity.items[0].status,'live');assert.equal(activity.items[0].changes.length,1);assert.equal(activity.items[0].changes[0].field,'aliases');
+ const activity:any=await catalogAiActivity(pool,p,{});assert.equal(activity.items[0].status,'live');assert.equal(activity.items[0].changes.length,1);assert.equal(activity.items[0].changes[0].field,'aliases');assert.equal(activity.items[0].hasPhoto,true);assert.equal(activity.items[0].productVersion,after.version);assert.equal('image_path' in activity.items[0],false);
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM whatsapp_outbox')).rows[0].n,0);assert.equal((await pool.query('SELECT count(*)::int AS n FROM provider_attempts')).rows[0].n,0);
  await assert.rejects(applyCatalogAudit(pool,{...p,canPublish:false},{...s.apply,operationId:id()}),/catalog permission/);
 }));
@@ -127,7 +127,7 @@ test('ordinary connected stock and visibility changes record provenance, failed 
 test('AI activity includes unmatched findings and honest historic actions, with scoped stable pagination',()=>fixture(async pool=>{
  const messageId=await message(pool,'unknown thing'),auditId=id();
  await saveCatalogAudit(pool,p,{operationId:id(),auditId,title:'Unidentified request',range:range(),findings:[{id:id(),category:'insufficient_evidence',wording:'unknown thing',explanation:'Ask the owner which product this could mean.',evidence:[{conversationId:fixtureConversation,messageIds:[messageId]}]}]});
- const pending:any=await catalogAiActivity(pool,p,{mode:'review'});assert.equal(pending.items[0].sku,null);assert.equal(pending.items[0].live,false);assert.equal(pending.items[0].conversationId,fixtureConversation);
+ const pending:any=await catalogAiActivity(pool,p,{mode:'review'});assert.equal(pending.items[0].sku,null);assert.equal(pending.items[0].live,false);assert.equal(pending.items[0].conversationId,fixtureConversation);assert.equal(pending.items[0].hasPhoto,false);assert.equal(pending.items[0].productVersion,null);
  for(let i=0;i<4;i++)await mutate(pool,p,'catalog:publish',id(),'commit',{},async c=>{await c.query('UPDATE products SET keywords=$3 WHERE store_id=$1 AND sku=$2',[fixtureStore,sku,JSON.stringify(['change '+i])]);return {sku};});
  let cursor:string|undefined;const seen:string[]=[];do{const page:any=await catalogAiActivity(pool,p,{limit:1,cursor});seen.push(...page.items.map((i:any)=>i.id));cursor=page.nextCursor??undefined;}while(cursor);assert.equal(new Set(seen).size,4);
  const page:any=await catalogAiActivity(pool,p,{limit:1});await assert.rejects(catalogAiActivity(pool,p,{cursor:page.nextCursor,q:'other filter'}),/another filter/);
