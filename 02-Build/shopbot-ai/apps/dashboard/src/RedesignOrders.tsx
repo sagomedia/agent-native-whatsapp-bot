@@ -1,8 +1,9 @@
+import {cachedOwnerRead} from './owner-read-cache.js';
 import {useEffect,useRef,useState} from 'react';
 import type {DraftLine} from '../../../packages/contracts/index.js';
 import {formatMoney} from '../../../packages/contracts/money.js';
 import {initialQuoteLines} from '../../../packages/contracts/owner-quote.js';
-import {SELLING_UNITS} from '../../../packages/contracts/selling-units.js';
+import {SELLING_UNITS} from '../../../packages/contracts/selling-unit-values.js';
 import {navigateOwner,useOwnerUrl,photoVariant} from './owner-ui.js';
 import {OwnerIcon} from './OwnerIcon.js';
 import {visiblePoll} from './owner-polling.js';
@@ -51,11 +52,12 @@ function Thumb({line}:{line:EditLine}){return line.sku&&line.photo?<img alt="" s
 export function RedesignOrders(){
  const {t}=useOwnerLocale(),openPhoto=useOwnerPhoto();
  const params=useOwnerUrl(),rawStage=params.get('orderStage')??'new',stage=stages.some(s=>s[0]===rawStage)?rawStage:'new',page=Math.max(1,Number(params.get('orderPage'))||1),search=params.get('orderSearch')??'',selectedId=params.get('order');
- const [snapshot,setSnapshot]=useState<Snapshot>(),[error,setError]=useState(''),[notice,setNotice]=useState(''),[deliveryNotice,setDeliveryNotice]=useState(''),[busy,setBusy]=useState(false),[editor,setEditor]=useState<Editor>(),[refresh,setRefresh]=useState(0),[query,setQuery]=useState(search),[picker,setPicker]=useState<string>(),[bill,setBill]=useState(false),[cancelTarget,setCancelTarget]=useState<{id:string;revision:number}|null>(null);
+ const initialRead=new URLSearchParams({details:'0',scope:'orders',orderStage:stage,orderSearch:search,orderPage:String(page)});if(selectedId)initialRead.set('order',selectedId);
+ const [snapshot,setSnapshot]=useState<Snapshot|undefined>(()=>cachedOwnerRead<Snapshot>('snapshot?'+initialRead)),[error,setError]=useState(''),[notice,setNotice]=useState(''),[deliveryNotice,setDeliveryNotice]=useState(''),[busy,setBusy]=useState(false),[editor,setEditor]=useState<Editor>(),[refresh,setRefresh]=useState(0),[query,setQuery]=useState(search),[picker,setPicker]=useState<string>(),[bill,setBill]=useState(false),[cancelTarget,setCancelTarget]=useState<{id:string;revision:number}|null>(null);
  const retry=useRef<{key:string;id:string}|undefined>(undefined),dialog=useRef<HTMLDialogElement>(null),returnFocus=useRef<HTMLElement|null>(null);
  useEffect(()=>setQuery(search),[search]);
  useEffect(()=>{const timer=setTimeout(()=>{if(query!==search)navigateOwner({orderSearch:query||null,orderPage:null,order:null},true);},250);return()=>clearTimeout(timer);},[query,search]);
- useEffect(()=>visiblePoll(async signal=>{try{const read=new URLSearchParams({details:'0',orderStage:stage,orderSearch:search,orderPage:String(page)});if(selectedId)read.set('order',selectedId);const data=await redesignApi<Snapshot>('snapshot?'+read,undefined,signal);if(!signal.aborted){setSnapshot(data);setError('');}}catch(e){if(!signal.aborted)setError((e as Error).message);throw e;}},{intervalMs:5000}),[stage,search,page,selectedId,refresh]);
+ useEffect(()=>visiblePoll(async signal=>{try{const read=new URLSearchParams({details:'0',scope:'orders',orderStage:stage,orderSearch:search,orderPage:String(page)});if(selectedId)read.set('order',selectedId);const data=await redesignApi<Snapshot>('snapshot?'+read,undefined,signal);if(!signal.aborted){setSnapshot(data);setError('');}}catch(e){if(!signal.aborted)setError((e as Error).message);throw e;}},{intervalMs:5000}),[stage,search,page,selectedId,refresh]);
  const listed=snapshot?.requests.filter(r=>snapshot.orderPage.ids.includes(r.id))??[],order=snapshot?.requests.find(r=>r.id===selectedId)??(!selectedId?listed[0]:undefined),amendment=snapshot?.amendments.find(a=>a.request_id===order?.id),source=order?sourceKey(order,amendment):'';
  useEffect(()=>{if(!order)return;setEditor(old=>old?.orderId===order.id&&old.dirty?old:makeEditor(order,amendment));},[order?.id,source]);
  const seen=useRef(new Set<string>());

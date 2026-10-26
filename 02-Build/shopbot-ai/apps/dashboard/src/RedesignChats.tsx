@@ -1,3 +1,4 @@
+import {cachedOwnerRead} from './owner-read-cache.js';
 import {useOwnerChatReading,type ChatReading} from './owner-chat-reading.js';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {RichReply} from '../../../packages/contracts/index.js';
@@ -58,7 +59,8 @@ export function RedesignChats(){
   const serverQuery=params.get('inboxSearch')??'';
   const [query,setQuery]=useState(serverQuery);
   const [filter,setFilter]=useState<'all'|'needs'>('all');
-  const [inbox,setInbox]=useState<Inbox|null>(null);
+  const initialInboxRead=new URLSearchParams({details:'0',scope:'inbox',inboxPage:String(inboxPage),inboxSearch:serverQuery,inboxHelp:'0'});if(urlConversation)initialInboxRead.set('conversation',urlConversation);
+  const [inbox,setInbox]=useState<Inbox|null>(()=>cachedOwnerRead<Inbox>('snapshot?'+initialInboxRead)??null);
   const [inboxError,setInboxError]=useState('');
   const [messages,setMessages]=useState<Message[]>([]);
   const [confirmedReplies,setConfirmedReplies]=useState<Message[]>([]);
@@ -93,7 +95,7 @@ export function RedesignChats(){
 
   useEffect(()=>visiblePoll(async signal=>{
     try{
-      const read=new URLSearchParams({details:'0',inboxPage:String(inboxPage),inboxSearch:serverQuery,inboxHelp:filter==='needs'?'1':'0'});
+      const read=new URLSearchParams({details:'0',scope:'inbox',inboxPage:String(inboxPage),inboxSearch:serverQuery,inboxHelp:filter==='needs'?'1':'0'});
       if(urlConversation)read.set('conversation',urlConversation);
       const next=await redesignApi<Inbox>('snapshot?'+read,undefined,signal);
       if(signal.aborted)return;
@@ -126,7 +128,8 @@ export function RedesignChats(){
   useEffect(()=>{
     olderRequest.current?.abort();olderRequest.current=null;
     olderCursorRef.current=null;hasOlderPages.current=false;prependAnchor.current=null;
-    setMessages([]);setHistoryLoading(!!selectedId);setOlderLoading(false);setHistoryError('');setOlderCursor(null);setNotice('');setActionError('');
+    const retained=selectedId?cachedOwnerRead<History>(`conversations/${encodeURIComponent(selectedId)}?resume=1`):undefined;
+    setMessages(retained?.messages??[]);setHistoryLoading(!!selectedId&&!retained);setOlderLoading(false);setHistoryError('');setOlderCursor(null);setNotice('');setActionError('');
     initialHistory.current=true;latestSequence.current='';newerCursor.current=null;setReading(null);lastMessageId.current='';setUnseen(false);
     return ()=>{olderRequest.current?.abort();};
   },[selectedId]);
@@ -260,7 +263,7 @@ export function RedesignChats(){
           <div data-chat-content>
           {historyLoading?<p className="rd-chats-history-empty">{t("Loading messages…")}</p>:sortedMessages.length===0?<p className="rd-chats-history-empty">{t("No messages yet.")}</p>:<>
             <div className="rd-chats-history-actions">{olderCursor?<button type="button" disabled={olderLoading} onClick={()=>void loadOlder()}>{olderLoading?t("Loading older messages…"):t("Earlier messages")}</button>:null}</div>
-            {sortedMessages.map((m,index)=><div key={m.id} className="rd-chats-message-group" data-message-sequence={m.sequence}>{index===0||day(sortedMessages[index-1].created_at)!==day(m.created_at)?<div className="rd-chats-date"><span>{day(m.created_at)}</span></div>:null}{reader.boundary===m.sequence&&<div className="rd-chats-unread-divider" role="separator" aria-label={t("New messages")}><span>{t("New messages")}</span></div>}<article className={`rd-chats-bubble ${m.direction==='outbound'?'is-outbound':''}`}><p>{m.text}</p>{m.payload?.type==='image'&&m.payload.mediaId&&m.media_available&&<button type="button" className="rd-message-photo" aria-label={t("View photo")} onClick={()=>openPhoto({src:`/api/owner/conversations/${encodeURIComponent(selectedId)}/media/image/${encodeURIComponent(m.payload!.mediaId!)}`,name:t("Customer photo")})}><img src={`/api/owner/conversations/${encodeURIComponent(selectedId)}/media/image/${encodeURIComponent(m.payload.mediaId)}`} alt={t("Customer photo")} loading="lazy"/></button>}{m.payload?.type==='voice'&&m.payload.mediaId&&m.media_available&&<audio controls preload="none" src={`/api/owner/conversations/${encodeURIComponent(selectedId)}/media/voice/${encodeURIComponent(m.payload.mediaId)}`}/> }{m.media_available===false&&m.payload?.type&&<small className="rd-chats-media-note">{m.media_state==='pending'||m.media_state==='fetching'?t("Attachment is loading."):t("Attachment is unavailable.")}</small>}{m.direction==='outbound'&&m.payload?.version===1&&m.payload.parts&&<VisualReplyView reply={m.payload as RichReply} productImage={sku=>`/api/owner/products/${encodeURIComponent(sku)}/image`} messageImage={url=>`/api/owner/message-images/${encodeURIComponent(url.split('/').at(-1)??'')}`}/>}<small className="rd-chats-message-meta">{clockTime(m.created_at)}{m.direction==='outbound'?` · ${m.sender_kind==='owner'?'You':'Bot'} · ${delivery(m.status,m.whatsapp)}`:''}</small></article></div>)}
+            {sortedMessages.map((m,index)=><div key={m.id} className="rd-chats-message-group" data-message-sequence={m.sequence}>{index===0||day(sortedMessages[index-1].created_at)!==day(m.created_at)?<div className="rd-chats-date"><span>{day(m.created_at)}</span></div>:null}{reader.boundary===m.sequence&&<div className="rd-chats-unread-divider" role="separator" aria-label={t("New messages")}><span>{t("New messages")}</span></div>}<article className={`rd-chats-bubble ${m.direction==='outbound'?'is-outbound':''}`}><p>{m.text}</p>{m.payload?.type==='image'&&m.payload.mediaId&&m.media_available&&<button type="button" className="rd-message-photo" aria-label={t("View photo")} onClick={()=>openPhoto({src:`/api/owner/conversations/${encodeURIComponent(selectedId)}/media/image/${encodeURIComponent(m.payload!.mediaId!)}`,name:t("Customer photo")})}><img src={`/api/owner/conversations/${encodeURIComponent(selectedId)}/media/image/${encodeURIComponent(m.payload.mediaId)}`} alt={t("Customer photo")} loading="lazy"/></button>}{m.payload?.type==='voice'&&m.payload.mediaId&&m.media_available&&<audio controls preload="none" src={`/api/owner/conversations/${encodeURIComponent(selectedId)}/media/voice/${encodeURIComponent(m.payload.mediaId)}`}/> }{m.media_available===false&&m.payload?.type&&<small className="rd-chats-media-note">{m.media_state==='pending'||m.media_state==='fetching'?t("Attachment is loading."):t("Attachment is unavailable.")}</small>}{m.direction==='outbound'&&m.payload?.version===1&&m.payload.parts&&<VisualReplyView reply={m.payload as RichReply} productImage={sku=>`/api/owner/products/${encodeURIComponent(sku)}/image?size=640`} messageImage={url=>`/api/owner/message-images/${encodeURIComponent(url.split('/').at(-1)??'')}`}/>}<small className="rd-chats-message-meta">{clockTime(m.created_at)}{m.direction==='outbound'?` · ${m.sender_kind==='owner'?'You':'Bot'} · ${delivery(m.status,m.whatsapp)}`:''}</small></article></div>)}
           </>}
           </div>
           {(awayFromLatest||newerCursor.current)&&<button type="button" className="rd-chats-new" disabled={jumping} onClick={()=>void jumpLatest()}>{jumping?t("Loading…"):unseen?t("New messages ↓"):t("Latest messages ↓")}</button>}

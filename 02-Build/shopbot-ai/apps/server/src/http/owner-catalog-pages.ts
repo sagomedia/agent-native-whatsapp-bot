@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {productColumns,productFromRow} from '../services/catalog.js';
 
 const pageFields={q:z.string().trim().max(200).default(''),limit:z.coerce.number().int().min(1).max(100).default(25),cursor:z.string().max(4000).optional()};
-export const productPageSchema=z.object({...pageFields,visibility:z.enum(['','visible','draft']).default(''),stock:z.enum(['','out','unknown','low','attention']).default(''),family:z.string().max(80).default(''),brand:z.string().max(120).default(''),exception:z.enum(['','missing_photo','pending_price','pending_review','review_conflicts']).default(''),sort:z.enum(['name','sku','updated']).default('name')}).strict();
+export const productPageSchema=z.object({...pageFields,visibility:z.enum(['','visible','draft']).default(''),stock:z.enum(['','out','unknown','low','attention']).default(''),family:z.string().max(80).default(''),brand:z.string().max(120).default(''),exception:z.enum(['','missing_photo','pending_price','pending_review','review_conflicts']).default(''),sort:z.enum(['name','sku','updated']).default('name'),metadata:z.enum(['full','compact']).default('full')}).strict();
 export const proposalPageSchema=z.object({...pageFields,batch:z.string().max(100).default(''),exception:z.enum(['','conflicts','issues','missing_photo','pending_price','unknown_stock']).default('')}).strict();
 const invalid=(message:string,statusCode=400)=>Object.assign(new Error(message),{statusCode});
 const signature=(input:Record<string,unknown>)=>createHash('sha256').update(JSON.stringify({...input,cursor:undefined})).digest('hex');
@@ -23,7 +23,7 @@ export async function selectedOwnerProduct(c:PoolClient,storeId:string,sku:strin
 }
 export async function ownerProductPage(c:PoolClient,storeId:string,input:z.infer<typeof productPageSchema>){
  const revision=(await c.query('SELECT catalog_revision FROM stores WHERE id=$1',[storeId])).rows[0].catalog_revision;
- const scope=storeId+':products',query=signature(input),cursor=readCursor(input.cursor,scope,query,revision);
+ const scope=storeId+':products',query=signature({...input,metadata:undefined}),cursor=readCursor(input.cursor,scope,query,revision);
  if(cursor&&input.sort==='updated'&&!Number.isFinite(Date.parse(cursor.key)))throw invalid('Invalid catalog date cursor.');
  const values:unknown[]=[storeId],where=['store_id=$1'];const bind=(value:unknown)=>{values.push(value);return '$'+values.length;};
  // Literal substring matching works for Tamil names and SKUs without treating % or _ as wildcards.
@@ -56,7 +56,7 @@ export async function ownerProductPage(c:PoolClient,storeId:string,input:z.infer
  const rows=(await c.query(`SELECT ${productColumns},active,catalog_origin,inventory_updated_at,merchant_verification,(${key})::text AS cursor_key FROM products WHERE ${where.join(' AND ')} ORDER BY ${key} ${direction},sku ASC LIMIT ${bind(input.limit+1)}`,values)).rows;
  const more=rows.length>input.limit,loaded=rows.slice(0,input.limit),last=loaded.at(-1);
  // Brands are separate metadata, never inferred from the loaded page.
- const brands=(await c.query("SELECT DISTINCT brand FROM products WHERE store_id=$1 AND brand IS NOT NULL AND brand<>'' ORDER BY brand LIMIT 1000",[storeId])).rows.map(r=>r.brand);
+ const brands=input.metadata==='compact'?[]:(await c.query("SELECT DISTINCT brand FROM products WHERE store_id=$1 AND brand IS NOT NULL AND brand<>'' ORDER BY brand LIMIT 1000",[storeId])).rows.map(r=>r.brand);
  return {revision,products:loaded.map(ownerRow),total:summary.total,totalStore,summary,brands,limit:input.limit,nextCursor:more&&last?nextCursor(scope,query,revision,last.cursor_key,last.sku):null};
 }
 const proposalAssets=`coalesce((SELECT jsonb_agg(jsonb_build_object('id',a.id,'matchKind',a.match_kind,'width',a.width,'height',a.height) ORDER BY a.created_at,a.id) FROM catalog_proposal_assets a WHERE a.store_id=p.store_id AND a.proposal_id=p.id),'[]'::jsonb) AS assets`;

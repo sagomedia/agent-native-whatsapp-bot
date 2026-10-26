@@ -1,7 +1,7 @@
 import './theme.css';
-import {NativeChat} from './NativeChat.js';
+const NativeChat=lazy(()=>import('./NativeChat.js').then(m=>({default:m.NativeChat})));
 import {RedesignDashboard} from './RedesignDashboard.js';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Snapshot, SimulatorEvent, DraftLine } from '../../../packages/contracts/index.js';
 import { formatMoney, lineTotal } from '../../../packages/contracts/money.js';
@@ -69,4 +69,4 @@ function App() {
     </div>
   </main>;
 }
-createRoot(document.getElementById('root')!).render(window.location.pathname==='/owner'?<RedesignDashboard/>:nativeTest?<NativeChat/>:<App/>);
+createRoot(document.getElementById('root')!).render(window.location.pathname==='/owner'?<RedesignDashboard/>:nativeTest?<Suspense fallback={<p role="status">Loading…</p>}><NativeChat/></Suspense>:<App/>);
