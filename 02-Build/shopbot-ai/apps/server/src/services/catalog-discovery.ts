@@ -51,6 +51,10 @@ function matchesPackMeasures(query:string,product:Product){
 // flexible watering hose, and a pump delivery/suction pipe. Keep the request
 // unresolved until the customer supplies a product type or an exact catalog
 // identity. A stated diameter is useful evidence but does not identify type.
+export function needsSolventUse(query:string):boolean {
+ const words=tokens(naturalCatalogQuery(query));
+ return words.length===1&&['solvent','சால்வென்ட்'].includes(words[0]);
+}
 export function needsPipeType(query:string):boolean {
  const words=tokens(query);
  const pipe=words.some(w=>w==='pipe'||w==='பைப்'||w==='பைப்புகள்');
@@ -58,7 +62,7 @@ export function needsPipeType(query:string):boolean {
  const pump=words.some(w=>['pump','pumping','motor','suction','delivery','மோட்டார்','பம்ப்'].includes(w));
  if(pump&&(pipe||hose))return true;
  if(!pipe)return false;
- if(words.some(w=>['pvc','cpvc','upvc','பிவிசி','rigid','hose','ஹோஸ்','ஓஸ்','garden','watering','irrigation','irrigating','fitting','fittings','cutter','clamp','connector','elbow','coupler','கட்டர்','கட்டரு','பசை','க்ளாம்ப்'].includes(w)))return false;
+ if(words.some(w=>['pvc','cpvc','upvc','பிவிசி','rigid','hose','ஹோஸ்','ஓஸ்','garden','watering','irrigation','irrigating','fitting','fittings','cutter','clamp','connector','elbow','coupler','solvent','cement','adhesive','glue','paste','சால்வென்ட்','கட்டர்','கட்டரு','பசை','க்ளாம்ப்'].includes(w)))return false;
  return true;
 }
 function sameObjectHead(a:string,b:string):boolean {
@@ -186,6 +190,7 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
  if(genericPaint&&(!requestedFamilies.length||requestedFamilies.every(id=>nodes.find(n=>n.id===id)?.label.toLowerCase()==='paints'))){
   requestedFamilies=nodes.filter(n=>n.kind==='family'&&(/\bpaints?\b/.test(n.label.toLowerCase())||n.aliases.some((a:string)=>/^(?:interior|exterior|wall|enamel) paint$/.test(a)))&&!/primer|putty|scraper|brush|roller|thinner|polish|stencil/i.test(n.label)).map(n=>n.id);
  }
+ if(needsSolventUse(query)&&!namedCatalogProduct)return emptyDiscovery(query,plan,'solvent_use_required');
  if(needsPipeType(query)&&!namedCatalogProduct)return emptyDiscovery(query,plan,'pipe_type_required');
  const root=candidate&&matchesPackMeasures(query,candidate)&&(!plan.selectedSkus||plan.selectedSkus.includes(candidate.sku))&&(!plan.familyId||candidate.familyId===plan.familyId)&&(!plan.familyIds||plan.familyIds.includes(candidate.familyId??''))&&(!plan.departmentId||nodes.some(n=>n.id===candidate.familyId&&n.parent_id===plan.departmentId))&&(!plan.brand||normalize(candidate.brand??'')===normalize(plan.brand))&&Object.entries(plan.specifications??{}).every(([key,value])=>specMatches(candidate,key,value))?candidate:undefined;
  if(requestedFamilies.length&&(plan.familyId&&!requestedFamilies.includes(plan.familyId)||plan.familyIds&&!plan.familyIds.some(id=>requestedFamilies.includes(id))))return emptyDiscovery(query,plan,'no_supported_match');
@@ -321,7 +326,7 @@ export async function discoverProducts(client:PoolClient,ctx:ActorContext,custom
  if(!plan.keywords.length)plan.keywords=[query.slice(0,120)];
  const result=await discoverExactProducts(client,ctx,query,plan);
  result.query=customerQuery;
- result.matchStatus=result.products.length?(result.products.length===1&&!result.noExactMatch?'exact':'ambiguous'):result.diagnostics?.uncertainty.includes('pipe_type_required')?'needs_detail':'not_found';
+ result.matchStatus=result.products.length?(result.products.length===1&&!result.noExactMatch?'exact':'ambiguous'):result.diagnostics?.uncertainty.some(reason=>['pipe_type_required','solvent_use_required'].includes(reason))?'needs_detail':'not_found';
  if(result.products.length||!plan.allowAlternatives||plan.selectedSkus||result.matchStatus==='needs_detail')return result;
  // Relax only explicit customer-selectable attributes, never product type,
  // rating, material, diameter, or a conflicting physical measurement unit.

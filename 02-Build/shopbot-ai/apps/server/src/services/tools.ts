@@ -15,7 +15,7 @@ import { formatMoney, lineTotal } from '../../../../packages/contracts/money.js'
 import { matches, searchProducts,exactProductMatch,normalize,sameUnit,normalizeUnit,productColumns,productFromRow } from './catalog.js';
 import { authorize, ToolError, withConversation, type ActorContext } from './context.js';
 import {catalogEnabled} from './catalog.js';
-import {getCatalogMap,discoverProducts,needsPipeType} from './catalog-discovery.js';
+import {getCatalogMap,discoverProducts,needsPipeType,needsSolventUse} from './catalog-discovery.js';
 import {productIdentity,productConfirmed,preserveConfirmation,markProductConfirmed,makeProductCheck} from './product-verification.js';
 import {nextCounterLine,productCheckCoversDraft} from './counter-state.js';
 
@@ -397,27 +397,26 @@ export class RetailTools {
         return {state,message:estimateText(state,state.draft,!!this.options.advance)};
       }
 
-      // A missing pipe type cannot be settled by approving the current PVC
-      // photos. Ask for that type before showing any product-review batch.
+      // Ask for a missing product type or solvent use before the review batch.
       const active=state.visualOrdering?nextCounterLine(state):undefined;
-      const pipeTypeLine=state.visualOrdering
-        ?active&&!active.sku&&active.productIntent?.kind!=='ambiguous'&&needsPipeType(active.query??active.name)?active:undefined
-        :state.draft.find(l=>!l.sku&&l.productIntent?.kind!=='ambiguous'&&needsPipeType(l.query??l.name));
-      const missingCount=state.visualOrdering&&!pipeTypeLine&&!state.draft.some(l=>!l.sku&&!l.shopCheckDeferred&&l.candidates?.length||l.productIntent?.kind==='ambiguous')
+      const detailLine=state.visualOrdering
+        ?active&&!active.sku&&active.productIntent?.kind!=='ambiguous'&&(needsPipeType(active.query??active.name)||needsSolventUse(active.query??active.name))?active:undefined
+        :state.draft.find(l=>!l.sku&&l.productIntent?.kind!=='ambiguous'&&(needsPipeType(l.query??l.name)||needsSolventUse(l.query??l.name)));
+      const missingCount=state.visualOrdering&&!detailLine&&!state.draft.some(l=>!l.sku&&!l.shopCheckDeferred&&l.candidates?.length||l.productIntent?.kind==='ambiguous')
         ?state.draft.find(l=>l.sku&&(!state.requireProductConfirmation||productConfirmed(l))&&!l.shopCheckDeferred&&l.resolution==='needs_quantity'&&l.quantity===null&&l.requestedQuantity===undefined&&!l.requestedAmount):undefined;
       if(missingCount){
         state.pending={kind:'question',id:randomUUID(),lineId:missingCount.id,version:state.version};await saveState(client,ctx,state);
         return {state,message:say(state,`How many ${missingCount.unit??'packs'} of ${lineName(missingCount,state)}?`,`${lineName(missingCount,state)} — எத்தனை ${unitName(missingCount.unit??'unit',state)} வேணும்?`,`${lineName(missingCount,state)} — eththanai ${missingCount.unit??'packs'} venum?`)};
       }
-      if(state.requireProductConfirmation&&!pipeTypeLine) {
+      if(state.requireProductConfirmation&&!detailLine) {
         const check=makeProductCheck(state,!!this.options.sequentialItems);
         if(check){state.pending=check;await saveState(client,ctx,state);return {state,message:'Check the products before adding them to your list.'};}
       }
-      const unresolved=pipeTypeLine??(state.visualOrdering?active:undefined)??state.draft.find(l=>l.resolution!=='matched'&&!l.shopCheckDeferred)??state.draft.find(l=>l.resolution!=='matched');
+      const unresolved=detailLine??(state.visualOrdering?active:undefined)??state.draft.find(l=>l.resolution!=='matched'&&!l.shopCheckDeferred)??state.draft.find(l=>l.resolution!=='matched');
       if(unresolved) {
         state.pending={kind:'question',id:randomUUID(),lineId:unresolved.id,version:state.version};
         await saveState(client,ctx,state);
-        const question=!unresolved.sku&&needsPipeType(unresolved.query??unresolved.name)?`Which kind of pipe do you mean for “${unresolved.query??unresolved.name}”? Tell me its material or use (for example rigid PVC versus a flexible water pump hose), diameter and length if known. I have kept your requested quantity; the shop must check availability.`:unresolved.resolution==='needs_quantity'?`How many ${unresolved.unit??'units'} of ${unresolved.name}?`:unresolved.resolution==='needs_choice'?`Choose the exact product for “${unresolved.query}”:\n${(unresolved.candidates??[]).map((p,i)=>`${i+1}. ${p.name} — ${formatMoney(p.pricePaise)}`).join('\n')}`:`“${unresolved.name}” is unavailable or unmatched. Give another specification or remove this line.`;
+        const question=!unresolved.sku&&needsSolventUse(unresolved.query??unresolved.name)?say(state,'Is the solvent for joining PVC pipes or for thinning paint?','சால்வென்ட் PVC பைப் ஒட்டுவதற்கா, பெயிண்ட் கலப்பதற்கா?','Solvent PVC pipe ottavatha, paint kalappatharka?'):!unresolved.sku&&needsPipeType(unresolved.query??unresolved.name)?`Which kind of pipe do you mean for “${unresolved.query??unresolved.name}”? Tell me its material or use (for example rigid PVC versus a flexible water pump hose), diameter and length if known. I have kept your requested quantity; the shop must check availability.`:unresolved.resolution==='needs_quantity'?`How many ${unresolved.unit??'units'} of ${unresolved.name}?`:unresolved.resolution==='needs_choice'?`Choose the exact product for “${unresolved.query}”:\n${(unresolved.candidates??[]).map((p,i)=>`${i+1}. ${p.name} — ${formatMoney(p.pricePaise)}`).join('\n')}`:`“${unresolved.name}” is unavailable or unmatched. Give another specification or remove this line.`;
         return {state,message:`${renderDraft(state)}\n\n${question} Other lines are retained. No request submitted.`};
       }
       const totalPaise=state.draft.reduce((sum,l)=>sum+lineTotal(l.pricePaise!,l.quantity!),0);

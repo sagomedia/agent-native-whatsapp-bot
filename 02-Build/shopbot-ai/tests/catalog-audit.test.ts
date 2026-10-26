@@ -166,6 +166,18 @@ test('adding another product focuses its real candidates while preserving a stal
  const visual=visualReply({version:1,kind:'text',text:preview.message,presentation:'text',outboundMessages:1},preview.state!);assert.ok(!visual.text.includes('kept your request'));
 }));
 
+test('a stalled request can move to its partial estimate without repeating the same prompt or submitting',()=>fixture(async pool=>{
+ const line={id:id(),name:'unlisted screwdriver',query:'unlisted screwdriver',quantity:1,resolution:'unavailable',clarification:{signature:'fixture',unproductiveTurns:2}};
+ await pool.query('UPDATE conversations SET visual_ordering=true,partial_reviews=true,draft=$2::jsonb WHERE id=$1',[fixtureConversation,JSON.stringify([line])]);
+ const ctx={storeId:fixtureStore,conversationId:fixtureConversation,actor:'local-simulator',role:'customer' as const};
+ const preview=await new RetailTools(pool).invoke(ctx,{name:'preview_order',args:{expectedVersion:0,allowPartial:true}},id());
+ assert.equal(preview.state!.pending?.kind,'review');
+ const response=visualReply({version:1,kind:'text',text:preview.message,presentation:'text',outboundMessages:1},preview.state!);
+ assert.equal(response.stage,'bill');assert.notEqual(response.clarificationReason,'stalled_request');
+ assert.ok(response.parts?.flatMap(p=>p.cards.flatMap(c=>c.buttons??[])).some(b=>b.event.type==='confirm'));
+ assert.equal((await pool.query('SELECT count(*)::int AS n FROM order_requests WHERE conversation_id=$1',[fixtureConversation])).rows[0].n,0);
+}));
+
 test('term collisions are disclosed, duplicate additions are no-ops and wrong dimensions are rejected',()=>fixture(async pool=>{
  await pool.query('UPDATE products SET aliases=$3 WHERE store_id=$1 AND sku=$2',[fixtureStore,'PVC-ELBOW-075',JSON.stringify(['local elbow name'])]);
  const s=await suggestion(pool);assert.equal(s.saved.findings[0].otherProductsUsingTerms[0].sku,'PVC-ELBOW-075');
