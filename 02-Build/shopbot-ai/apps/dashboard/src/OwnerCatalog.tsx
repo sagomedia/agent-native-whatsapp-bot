@@ -9,7 +9,7 @@ import {copyEditorPhoto,prepareProductClone,persistEditorDraft} from './owner-ed
 import {verificationAfterEdit,unchecked,type Verification} from './owner-verification.js';
 import {OwnerProposals,type CatalogProposal} from './OwnerProposals.js';
 import {sellingBasisIssues,sellingBasisPreview} from '../../../packages/contracts/selling-basis.js';
-import {SELLING_UNITS} from '../../../packages/contracts/selling-units.js';
+import {SELLING_UNITS} from '../../../packages/contracts/selling-unit-values.js';
 import {memo,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {Product} from '../../../packages/contracts/index.js';
 import {latestCatalogRead} from './owner-catalog-loading.js';
