@@ -200,6 +200,25 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
  const namedPumpAlias=!!candidate&&pumpName.test(query)&&[candidate.name,...candidate.aliases].some(name=>pumpName.test(name));
  const namedCatalogProduct=!!candidate&&(normalize(candidate.sku)===normalize(query)||normalize(candidate.name)===normalize(query)||namedPumpAlias);
  let requestedFamilies=namedCatalogProduct?[]:namedFamilies(query,nodes,plan);
+ // A verified product alias can live in a merchant's general-purpose family.
+ // Adding a physical size must not make that item disappear behind an
+ // inferred taxonomy family. Keep all explicit filters and measurement checks.
+ const identityWithoutMeasures=withoutPackMeasures(objectPhrase);
+ let measuredAliasFamilies:string[]=[];
+ let measuredAliasSkus:string[]=[];
+ if(catalogMeasurements(objectPhrase).length&&identityWithoutMeasures){
+  const aliasFamilies=(await client.query(`SELECT DISTINCT family_id FROM products WHERE store_id=$1 AND active=true AND family_id IS NOT NULL AND (lower(name)=lower($2) OR EXISTS(SELECT 1 FROM jsonb_array_elements_text(aliases) a WHERE lower(a)=lower($2)))`,[ctx.storeId,identityWithoutMeasures])).rows.map(row=>row.family_id as string);
+  measuredAliasFamilies=aliasFamilies.filter(id=>!requestedFamilies.includes(id));
+  if(measuredAliasFamilies.length){
+   const words=tokens(identityWithoutMeasures);
+   const peers=(await client.query('SELECT sku,name,aliases,local_names FROM products WHERE store_id=$1 AND active=true AND family_id=ANY($2::text[])',[ctx.storeId,measuredAliasFamilies])).rows;
+   measuredAliasSkus=peers.filter(p=>[p.name,...p.aliases,...Object.values(p.local_names??{})].some(name=>{
+    const ending=tokens(withoutPackMeasures(String(name))).slice(-words.length);
+    return ending.length===words.length&&words.every((word,i)=>i===words.length-1?sameObjectHead(word,ending[i]):word===ending[i]);
+   })).map(p=>p.sku);
+  }
+  if(aliasFamilies.length)requestedFamilies=unique([...requestedFamilies,...aliasFamilies]);
+ }
  const genericPaint=/\bpaints?\b/.test(query)&&! /\b(?:primer|putty|scraper|brush|roller|thinner|polish|stencil)\b/.test(query);
  if(genericPaint&&(!requestedFamilies.length||requestedFamilies.every(id=>nodes.find(n=>n.id===id)?.label.toLowerCase()==='paints'))){
   requestedFamilies=nodes.filter(n=>n.kind==='family'&&(/\bpaints?\b/.test(n.label.toLowerCase())||n.aliases.some((a:string)=>/^(?:interior|exterior|wall|enamel) paint$/.test(a)))&&!/primer|putty|scraper|brush|roller|thinner|polish|stencil/i.test(n.label)).map(n=>n.id);
@@ -222,6 +241,9 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
  const hints=unique([root?.name??query,...effective.keywords].flatMap(h=>[h,withoutPackMeasures(h)])).slice(0,12),parameters:unknown[]=[ctx.storeId];
  const add=(v:unknown)=>{parameters.push(v);return '$'+parameters.length;};
  const constraints=['p.store_id=$1','p.active=true'];
+ // A general-purpose family is only an escape for actual named peers.
+ // Scope the SQL counts too: a 12-inch blade must not include a 12-inch pipe.
+ if(measuredAliasFamilies.length)constraints.push(`(NOT (p.family_id=ANY(${add(measuredAliasFamilies)}::text[])) OR p.sku=ANY(${add(measuredAliasSkus)}::text[]))`);
  // The recommendation stage's explicit selection is a display boundary. An
  // empty selection is preserved above; the ranker cannot refill rejected cards.
  if(effective.selectedSkus)constraints.push('p.sku=ANY('+add(effective.selectedSkus)+'::text[])');

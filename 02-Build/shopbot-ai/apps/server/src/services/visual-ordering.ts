@@ -110,8 +110,9 @@ export function visualProductReview(state:ConversationState,compact=false,clarif
   });
   return reply('identify',[part(cards,question)],'product_meaning');
  }
- const ambiguous=check.groups.find(g=>g.products.length>1||!state.draft.find(l=>l.id===g.lineId)?.sku),missing=state.draft.filter(l=>!l.sku&&!l.candidates?.length||l.resolution==='unavailable');
+ const ambiguous=check.groups.find(g=>g.products.length>0&&(g.products.length>1||!state.draft.find(l=>l.id===g.lineId)?.sku)),missing=state.draft.filter(l=>!l.sku&&!l.candidates?.length||l.resolution==='unavailable');
  const identified=productCheckCoversDraft(state,check);
+ const noListings=state.draft.length>0&&state.draft.every(line=>!line.sku&&!line.candidates?.length);
  const confirmShown=identified||!!state.allowPartialReview&&check.groups.length>0&&check.groups.every(g=>g.products.length===1&&state.draft.find(l=>l.id===g.lineId)?.sku===g.products[0].sku);
  const needsCount=state.draft.some(line=>line.sku&&line.quantity===null&&!line.shopCheckDeferred);
  const approve:Button={label:needsCount?say(state,'Items correct','பொருட்கள் சரி','Porutkal sari'):say(state,'Correct, show bill','சரி, Bill காட்டு','Sari, bill kaattu'),event:{id:randomUUID(),type:'confirm_products',batchId:check.id}};
@@ -137,7 +138,7 @@ export function visualProductReview(state:ConversationState,compact=false,clarif
  const total=[estimateTotalText(state),estimatePendingSummary(state)].filter(Boolean).join('\n');
  const estimateButton:Button={label:say(state,'Show estimate','Bill காட்டு','Bill kaattu'),event:{id:randomUUID(),type:'review_partial',expectedVersion:state.version}};
  const primary=confirmShown?approve:state.allowPartialReview?estimateButton:undefined;
- const title=say(state,`${state.draft.length} items`,`${state.draft.length} items`,`${state.draft.length} items`);
+ const title=noListings?say(state,'No matching catalog listing yet. Your requested items are kept for the shop to check.','கேட்ட பொருளுக்கு பொருத்தமான பதிவு கிடைக்கவில்லை. கடை சரிபார்க்க உங்கள் பட்டியலை வைத்திருக்கிறேன்.','Ketta porulukku poruthamaana listing kidaikkala. Kadai check panna unga list-ai vaithirukken.'):say(state,`${state.draft.length} items`,`${state.draft.length} பொருட்கள்`,`${state.draft.length} porutkal`);
  const focused=compact?cards.filter(c=>c.kind==='product'&&state.draft.some(l=>l.id===c.lineId&&l.requestedAmount&&['needs_unit','unavailable'].includes(l.resolution))):[];
  if(compact&&!focused.length){
   const controls=[...(primary?[primary]:[]),change(state),action(state,'view_products',say(state,'See photos','Photo காட்டு','Photo kaattu'))];
@@ -151,7 +152,9 @@ export function visualProductReview(state:ConversationState,compact=false,clarif
  for(let offset=0;offset<reviewCards.length;offset+=10){
   const final=offset+10>=reviewCards.length;
   const group=reviewCards.slice(offset,offset+10).map(card=>({...card,buttons:final&&primary?[primary,...(card.buttons??[change(state)]).slice(0,1)]:card.buttons?.slice(0,2)??[change(state)]}));
-  parts.push(part(group,offset===0?(catalogQuestion(clarifyQuestion,state,check.groups.flatMap(g=>g.products))??(compact?guidance:title)):say(state,'More items → Check these too.','மீதமுள்ள items-யும் பாருங்க →','Meethamulla items-aiyum paarunga →')));
+  const question=catalogQuestion(clarifyQuestion,state,check.groups.flatMap(g=>g.products));
+  const firstText=noListings?[title,question].filter(Boolean).join('\n'):question??(compact?guidance:title);
+  parts.push(part(group,offset===0?firstText:say(state,'More items → Check these too.','மீதமுள்ள items-யும் பாருங்க →','Meethamulla items-aiyum paarunga →')));
  }
  return reply(missing.length?'shop_check':'products',parts,missing.length?missing.find(l=>l.catalogIssue)?.catalogIssue??'catalog_missing':undefined);
 }

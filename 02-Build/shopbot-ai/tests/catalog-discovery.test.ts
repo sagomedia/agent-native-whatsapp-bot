@@ -61,6 +61,8 @@ test('an exact alias in an owner family survives its returned plan and remains v
  await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases,specifications,image_path,selling_unit_verified) VALUES($1,'LEVEL-12','Aluminium Spirit Level 12in','piece',45000,10,'owner-other','[\"spirit level\",\"ரசமட்டம்\"]','{\"length\":\"12 inch (300mm)\",\"vials\":\"3 vials\"}','/fixture/level.jpg',true)",[store]);
  const client=await pool.connect();try{
   const first=await discoverProducts(client,inbox.context,'spirit level');assert.deepEqual(first.products.map(p=>p.sku),['LEVEL-12']);
+  const sized=await discoverProducts(client,inbox.context,'spirit level 12 inch');assert.deepEqual(sized.products.map(p=>p.sku),['LEVEL-12']);assert.equal(sized.products[0].imageUrl,'/fixture/level.jpg');
+  assert.equal((await discoverProducts(client,inbox.context,'spirit level 24 inch')).products.length,0);
   for(const query of ['spirit level','ரசமட்டம்']){
    const again=await discoverProducts(client,inbox.context,query,first.plan);assert.deepEqual(again.products.map(p=>p.sku),['LEVEL-12']);assert.equal(again.products[0].imageUrl,'/fixture/level.jpg');
   }
@@ -83,4 +85,16 @@ test('an exact alias in an owner family survives its returned plan and remains v
   s=await event(inbox,runtime,submit!);assert.equal(s.requests.length,1,'repeated delivery must not duplicate the order');
 
  }finally{client.release();}
+}));
+
+test('measured alias recovery in a general family cannot show or count unrelated same-size products',()=>fixture(async(pool,inbox)=>{
+ const store=inbox.context.storeId;
+ await pool.query("INSERT INTO catalog_nodes(store_id,id,parent_id,kind,label,aliases) VALUES($1,'owner-other','tools','family','Other products','[]')",[store]);
+ await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases,specifications,image_path) VALUES($1,'BLADE-12','Hand saw blade 12 inch','piece',10000,10,'owner-other','[\"blade\"]','{\"size\":\"12 inch\"}','/fixture/blade.jpg'),($1,'PIPE-12','PVC pipe 12 inch','piece',20000,10,'owner-other','[]','{\"size\":\"12 inch\"}','/fixture/pipe.jpg')",[store]);
+ const c=await pool.connect();try{
+  await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases,specifications) VALUES($1,'SHARPENER-12','Blade sharpener 12 inch','piece',10000,10,'owner-other','[]','{\"size\":\"12 inch\"}')",[store]);
+  const r=await discoverProducts(c,inbox.context,'blade 12 inch');
+  assert.deepEqual(new Set(r.products.map(p=>p.sku)),new Set(['BLADE-12','H16']));assert.equal(r.totalCount,2);
+  assert.ok(!r.products.some(p=>p.sku==='PIPE-12'));
+ }finally{c.release();}
 }));

@@ -9,9 +9,13 @@ export function differenceLabel(result:DiscoveryResult|undefined,sku:string,stat
 
 /** Ask for an attribute only when the visible catalog choices differ on it. */
 export function catalogQuestion(question:string|undefined,state:ConversationState,products:Product[]):string|undefined {
- const safe=safeQuestion(question,state);if(!safe||!products.length)return safe;
+ const safe=safeQuestion(question,state);if(!safe)return;
  const brand=/\bbrand\b|பிராண்ட்/iu.test(safe),colour=/\bcolou?r\b|நிறம்/iu.test(safe);
  const known=brand?products.map(p=>p.brand):colour?products.map(p=>p.specifications?.colour??p.specifications?.color):undefined;
+ // An empty result cannot support a brand/colour choice. Keep questions
+ // about incomplete attributes on actual candidates (including compound
+ // brand-and-size questions), rather than hiding useful clarification.
+ if(known&&!products.length)return;
  if(known?.every(Boolean)&&new Set(known.map(v=>v!.toLowerCase())).size===1)return;
  return safe;
 }
