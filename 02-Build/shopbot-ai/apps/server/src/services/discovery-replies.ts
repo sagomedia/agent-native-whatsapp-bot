@@ -1,10 +1,13 @@
+import {catalogGroupReply} from './catalog-group-replies.js';
 import {differenceLabel,catalogQuestion} from './catalog-differences.js';
 import {discoveryFacetChoices} from './discovery-facet-actions.js';
 import {say,facetLabel,localName,safeQuestion,unitName} from '../../../../packages/contracts/language.js';
 import {randomUUID} from 'node:crypto';
 import type {ConversationState,DiscoveryResult,RichReply,SimulatorEvent} from '../../../../packages/contracts/index.js';
 export function discoveryPresentation(result:DiscoveryResult,state:ConversationState,memoryId?:string,lineId?:string,question?:string,selection?:{quantity?:number;unit?:string}):RichReply {
- result={...result,products:result.products.slice(0,4)};
+ const grouped=catalogGroupReply(result,state,{memoryId,lineId,batchId:state.pending?.id});
+ if(grouped)return grouped;
+ result={...result,products:result.products.slice(0,10)};
  const facet=result.facets[0];
  const line=lineId?state.draft.find(l=>l.id===lineId):undefined;
  const measures=line?.productMeasures??[];

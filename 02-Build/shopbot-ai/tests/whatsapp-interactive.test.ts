@@ -100,6 +100,11 @@ test('category → photo → quantity → review → confirm runs without infere
  const category=(await pool.query(`SELECT a.*,o.provider_id FROM whatsapp_actions a JOIN whatsapp_outbox o ON o.message_id=a.message_id WHERE a.event->>'query'='plumbing'`)).rows[0];
  assert.ok(category,'Expected real plumbing department menu');await turn(channel,tap(category));
  assert.equal(sent.at(-1).interactive.type,'carousel');
+ // Broad departments first show visual catalog groups; each tap stays local.
+ for(let n=0;n<4&&!await action(pool,'choose_product');n++){
+  const narrow=(await pool.query(`SELECT a.*,o.provider_id FROM whatsapp_actions a JOIN whatsapp_outbox o ON o.message_id=a.message_id WHERE o.provider_id=$1 AND a.event->>'type'='refine_discovery' AND a.event->>'value'<>'__more__' ORDER BY a.id LIMIT 1`,['wamid.out.'+sent.length])).rows[0];
+  assert.ok(narrow,'Expected an actionable visual category or brand');await turn(channel,carouselTap(narrow));
+ }
  const choose=await action(pool,'choose_product');assert.ok(choose);await turn(channel,carouselTap(choose));
  let state=(await pool.query('SELECT draft,pending FROM conversations WHERE id=$1',[choose.conversation_id])).rows[0];
  assert.equal(state.draft[0].quantity,null);assert.equal(state.pending.kind,'question');

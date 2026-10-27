@@ -71,7 +71,7 @@ test('unspecified water and pumping pipes retain quantity without inventing a PV
   const visible=visualReply({version:1,kind:'text',text:result.message,presentation:'text',outboundMessages:1},result.state!);
   assert.equal(visible.stage,'identify');
   assert.match(visible.text,/Which kind of pipe/);
-  assert.equal(visible.parts,undefined);
+  assert.ok(visible.parts?.[0].cards.length);
   assert.equal(result.state!.draft[0].quantity,2,'the known count stays in the cart without repeating it in a category question');
   assert.match(visible.text,/1 inch/);
   assert.ok(!JSON.stringify(visible).includes('H13'));
@@ -96,7 +96,9 @@ test('generic solvent asks its use before product approval and preserves the req
   assert.match(result.message,/joining PVC pipes or for thinning paint/);
   assert.equal(result.state?.draft[0].quantity,1);
   const visible=visualReply({version:1,kind:'text',text:result.message,presentation:'text',outboundMessages:1},result.state!);
-  assert.match(visible.text,/joining PVC pipes or for thinning paint/);
+  assert.equal(visible.clarificationReason,'catalog_group');
+  assert.ok(visible.parts?.[0].cards.length);
+  assert.ok(visible.parts?.[0].cards.every(card=>card.kind==='instruction'));
   assert.equal((await pool.query('SELECT count(*)::int AS count FROM order_requests WHERE conversation_id=$1',[ctx.conversationId])).rows[0].count,0);
  }finally{await pool.end();await admin.query(`DROP SCHEMA "${schema}" CASCADE`);await admin.end();}
 });

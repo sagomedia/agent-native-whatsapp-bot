@@ -79,7 +79,8 @@ export function visualSvg(card:Exclude<VisualCard,{kind:'product'}>):string {
  if(card.billRows)return invoiceSvg(card);
  if(card.reviewGuide){
   let y=54,content='';
-  for(const line of wrapPixels(card.storeName??'Shop',560,26)){content+=text(line,40,y,26,'#506358');y+=34;}
+  for(const line of wrapPixels(card.storeName??'Shop',card.reference?480:560,26)){content+=text(line,40,y,26,'#506358');y+=34;}
+  if(card.reference){content+='<rect x="532" y="20" width="88" height="44" rx="8" fill="#16665b"/>'+shapedText(card.reference,576,51,24,'#fff','end');}
   y+=28;content+=text(card.title,40,y,42);y+=56;
   for(const [i,paragraph] of card.lines.entries()){
    for(const line of wrapPixels(paragraph,560,i===0?36:28)){content+=text(line,40,y,i===0?36:28,i===0?'#172b22':'#506358');y+=i===0?48:38;}

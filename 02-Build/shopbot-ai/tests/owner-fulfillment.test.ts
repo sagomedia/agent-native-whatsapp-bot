@@ -40,7 +40,15 @@ test('customer photo choice and bound submission continue through owner approval
   await turn(channel,tap(await action(pool,{type:'shopping_action',action:'browse'})));
   await turn(channel,tap(await action(pool,{type:'browse',query:'plumbing'})));
   assert.equal(sent.at(-1).interactive.type,'carousel');
-  const choice=await action(pool,{type:'choose_product'});
+  let choice:any;
+  for(let n=0;n<=4;n++){
+   const current=(await pool.query(`SELECT a.*,o.provider_id FROM whatsapp_actions a JOIN whatsapp_outbox o ON o.message_id=a.message_id WHERE o.provider_id=$1 AND a.event->>'type' IN ('choose_product','refine_discovery') AND a.event->>'value' IS DISTINCT FROM '__more__' ORDER BY CASE WHEN a.event->>'type'='choose_product' THEN 0 ELSE 1 END,a.id LIMIT 1`,['wamid.owner-flow.'+sent.length])).rows[0];
+   assert.ok(current,'Expected a product or actionable category from the current message');
+   if(current.event.type==='choose_product'){choice=current;break;}
+   assert.ok(n<4,'Expected a product within four refinements');
+   await turn(channel,{type:'button',context:{id:current.provider_id},button:{payload:current.id,text:'Show products'}});
+  }
+  assert.ok(choice,'Expected a product choice');
   await turn(channel,{type:'button',context:{id:choice.provider_id},button:{payload:choice.id,text:'Choose this'}});
   const conversationId=choice.conversation_id;
   const state=async()=>(await pool.query('SELECT * FROM conversations WHERE id=$1',[conversationId])).rows[0];

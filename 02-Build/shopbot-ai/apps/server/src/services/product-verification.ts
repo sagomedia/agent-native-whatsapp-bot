@@ -15,7 +15,7 @@ export function makeProductCheck(state:ConversationState,sequential=false):Produ
     // Exact matches can be approved together after variant choices. A line
     // already awaiting a quantity above must still keep its focused question.
     const uncertain=active&&!active.shopCheckDeferred&&(active.productIntent?.kind==='ambiguous'||!active.sku&&active.candidates?.length)?active:state.draft.find(line=>!line.shopCheckDeferred&&(line.productIntent?.kind==='ambiguous'||!line.sku&&line.candidates?.length));
-    const groups=state.draft.flatMap(line=>{const products=line.sku?line.candidates?.filter(p=>p.sku===line.sku)??[]:line.id===uncertain?.id?line.candidates?.slice(0,4)??[]:[];return products.length||line.productIntent?.kind==='ambiguous'?[{lineId:line.id,products,discovery:line.discovery}]:[];});
+    const groups=state.draft.flatMap(line=>{const products=line.sku?line.candidates?.filter(p=>p.sku===line.sku)??[]:line.id===uncertain?.id?line.candidates?.slice(0,10)??[]:[];return products.length||line.productIntent?.kind==='ambiguous'?[{lineId:line.id,products,discovery:line.discovery}]:[];});
     const check:ProductCheck={kind:'products',id:randomUUID(),version:state.version,expiresAt:new Date(Date.now()+15*60*1000).toISOString(),groups,remaining:state.draft.filter(l=>!l.sku).length,listHash:hash};
     if(productCheckCoversDraft(state,check)&&canQuoteDraft(state))check.completeReview=true;
     return check;
@@ -26,7 +26,7 @@ export function makeProductCheck(state:ConversationState,sequential=false):Produ
   const waiting=scope.filter(l=>!productConfirmed(l)&&!!l.candidates?.length);
   const groups:ProductCheck['groups']=[];let count=0;
   for(const line of waiting) {
-    const products=(line.sku?line.candidates!.filter(p=>p.sku===line.sku):state.catalogDiscovery?line.candidates!.slice(0,sequential?4:6):line.candidates!).slice(0,10);
+    const products=(line.sku?line.candidates!.filter(p=>p.sku===line.sku):state.catalogDiscovery?line.candidates!.slice(0,10):line.candidates!).slice(0,10);
     if(!products.length)continue;
     if(groups.length===3||count+products.length>10)break;
     groups.push({lineId:line.id,products,...(line.discovery?{discovery:line.discovery}:{})});count+=products.length;

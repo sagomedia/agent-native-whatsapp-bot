@@ -63,10 +63,10 @@ test('pipe category clarification asks one question with three versioned choices
  const l:DraftLine={id:randomUUID(),name:'pipe',query:'pipe',quantity:2,resolution:'unavailable'},s=state([l]);
  const questionId=randomUUID();s.pending={kind:'question',id:questionId,lineId:l.id,version:s.version};
  const reply=visualReply({version:1,kind:'text',text:'A lengthy internal explanation about two pipes',presentation:'text',outboundMessages:1,contextLines:['Other items have these issues']},s);
- assert.equal(reply.text,'எந்த வகை பைப் வேணும்?');assert.equal(reply.parts,undefined);
- assert.equal(reply.buttons!.length,3);
- for(const button of reply.buttons!){assert.equal(button.event.type,'choose_pipe_type');if(button.event.type==='choose_pipe_type'){assert.equal(button.event.lineId,l.id);assert.equal(button.event.expectedVersion,s.version);assert.equal(button.event.questionId,questionId);}}
- assert.deepEqual(reply.buttons!.map(b=>b.event.type==='choose_pipe_type'?b.event.pipeType:undefined),['pvc','hose','pump']);
+ assert.equal(reply.text,'எந்த வகை பைப் வேணும்?');assert.equal(reply.parts?.[0].cards.length,3);
+ const choices=reply.parts![0].cards.flatMap(card=>card.buttons??[]);assert.equal(choices.length,3);
+ for(const button of choices){assert.equal(button.event.type,'choose_pipe_type');if(button.event.type==='choose_pipe_type'){assert.equal(button.event.lineId,l.id);assert.equal(button.event.expectedVersion,s.version);assert.equal(button.event.questionId,questionId);}}
+ assert.deepEqual(choices.map(b=>b.event.type==='choose_pipe_type'?b.event.pipeType:undefined),['pvc','hose','pump']);
 });
 
 test('indicative invoice amounts stay approximate and cannot satisfy final shop quote checks',()=>{

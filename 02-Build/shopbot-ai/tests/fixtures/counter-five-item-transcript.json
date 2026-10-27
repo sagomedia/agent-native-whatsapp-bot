@@ -2,7 +2,32 @@
   {
     "stage": "identify",
     "text": "1 inch pipe — Which type of pipe do you need?",
-    "cards": [],
+    "cards": [
+      {
+        "kind": "instruction",
+        "caption": "Rigid PVC",
+        "title": "Rigid PVC",
+        "lines": [
+          "1 inch pipe — Which type of pipe do you need?"
+        ]
+      },
+      {
+        "kind": "instruction",
+        "caption": "Flexible hose",
+        "title": "Flexible hose",
+        "lines": [
+          "1 inch pipe — Which type of pipe do you need?"
+        ]
+      },
+      {
+        "kind": "instruction",
+        "caption": "Pump pipe",
+        "title": "Pump pipe",
+        "lines": [
+          "1 inch pipe — Which type of pipe do you need?"
+        ]
+      }
+    ],
     "actions": [
       {
         "label": "Rigid PVC",
@@ -23,17 +48,17 @@
   },
   {
     "stage": "identify",
-    "text": "Changed 1 inch PVC pipe\nWhich 1 inch PVC pipe do you need?",
+    "text": "Changed 1 inch PVC pipe\nItem 1/5 — check one item at a time.\nWhich 1 inch PVC pipe do you need?",
     "cards": [
       {
         "kind": "product",
-        "caption": "1 inch PVC Heavy Pipe Local\n₹245.00 / 1 piece",
+        "caption": "1 inch PVC Heavy Pipe Local\n₹245.00 / 1 piece\nRequested: 1 piece",
         "sku": "H01",
         "name": "1 inch PVC Heavy Pipe Local"
       },
       {
         "kind": "product",
-        "caption": "1 inch PVC Pipe Blueguard ISI\n₹380.00 / 1 piece",
+        "caption": "1 inch PVC Pipe Blueguard ISI\n₹380.00 / 1 piece\nRequested: 1 piece",
         "sku": "H02",
         "name": "1 inch PVC Pipe Blueguard ISI"
       }
@@ -59,7 +84,32 @@
   {
     "stage": "identify",
     "text": "0.75 inch pipe — Which type of pipe do you need?",
-    "cards": [],
+    "cards": [
+      {
+        "kind": "instruction",
+        "caption": "Rigid PVC",
+        "title": "Rigid PVC",
+        "lines": [
+          "0.75 inch pipe — Which type of pipe do you need?"
+        ]
+      },
+      {
+        "kind": "instruction",
+        "caption": "Flexible hose",
+        "title": "Flexible hose",
+        "lines": [
+          "0.75 inch pipe — Which type of pipe do you need?"
+        ]
+      },
+      {
+        "kind": "instruction",
+        "caption": "Pump pipe",
+        "title": "Pump pipe",
+        "lines": [
+          "0.75 inch pipe — Which type of pipe do you need?"
+        ]
+      }
+    ],
     "actions": [
       {
         "label": "Rigid PVC",
@@ -87,7 +137,12 @@
         "caption": "Swipe to check → Then tap Show bill.",
         "title": "5 items",
         "lines": [
-          "Check every item",
+          "Check one item at a time",
+          "1. 1 inch PVC Heavy Pipe Local",
+          "2. 0.75 inch PVC Pipe Local",
+          "3. Wall scraper 4 inch",
+          "4. Ratchet PVC Pipe Cutter 42 mm",
+          "5. White paint 10 litre",
           "Estimated total: ₹2,040.00"
         ]
       },

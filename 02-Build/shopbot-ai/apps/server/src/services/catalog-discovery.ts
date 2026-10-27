@@ -158,6 +158,20 @@ function choosePhotos(products:Product[],rank:Map<string,ReturnType<typeof keywo
 function emptyDiscovery(query:string,plan:DiscoveryPlan,reason:string):DiscoveryResult {
  return {query,plan,products:[],rankings:[],totalCount:0,retrievedCount:0,facets:[],noExactMatch:true,diagnostics:{canonicalQuery:normalize(query),appliedConstraints:{familyIds:plan.familyId?[plan.familyId]:plan.familyIds??[],brand:plan.brand,specifications:plan.specifications??{},measurements:catalogMeasurements(namedObjectPhrase(query))},sqlMatchCount:0,scannedCount:0,rejectedCount:0,candidateLimited:false,identity:'none',uncertainty:[reason]}};
 }
+// Bare solvent is a use question, not permission to choose paint thinner.
+// Group actual shop families; the photograph is only a category example.
+async function solventGroups(client:PoolClient,ctx:ActorContext,query:string,plan:DiscoveryPlan,nodes:{id:string;kind:string;label:string;local_names?:Record<string,string>;aliases:string[]}[]):Promise<DiscoveryResult>{
+ const eligible=nodes.filter(n=>n.kind==='family'&&/solvent|thinner|சால்வென்ட்|தின்னர்/i.test([n.id,n.label,...n.aliases].join(' ')));
+ const result=emptyDiscovery(query,plan,'solvent_use_required');
+ if(!eligible.length)return result;
+ const rows=(await client.query(`SELECT * FROM (SELECT ${productColumns}, count(*) OVER(PARTITION BY family_id)::int AS matching_count,row_number() OVER(PARTITION BY family_id ORDER BY (image_path IS NULL),sku) AS sample FROM products WHERE store_id=$1 AND active=true AND family_id=ANY($2::text[])) ranked WHERE sample=1 ORDER BY family_id`,[ctx.storeId,eligible.map(n=>n.id)])).rows;
+ const offset=plan.facetPage?.key==='family'?plan.facetPage.offset:0;
+ const groups=rows.map(row=>{const node=eligible.find(n=>n.id===row.family_id)!;return {key:'family',value:node.id,label:node.label,localNames:node.local_names,query:node.label,count:Number(row.matching_count),product:productForContext(row,ctx)};});
+ const page=groups.slice(offset,offset+9);
+ result.groups=page;result.totalCount=groups.reduce((sum,g)=>sum+g.count,0);
+ result.facets=[{key:'family',label:'product type',totalValues:groups.length,...(offset+page.length<groups.length?{nextOffset:offset+page.length}:{}),values:page.map(({value,label,localNames,count})=>({value,label,localNames,count}))}];
+ return result;
+}
 // Scores are deterministic ordering weights, never calibrated probabilities.
 // Every product fact is read from the current, scoped SQL catalog.
 async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:string,input?:DiscoveryPlan):Promise<DiscoveryResult> {
@@ -190,7 +204,7 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
  if(genericPaint&&(!requestedFamilies.length||requestedFamilies.every(id=>nodes.find(n=>n.id===id)?.label.toLowerCase()==='paints'))){
   requestedFamilies=nodes.filter(n=>n.kind==='family'&&(/\bpaints?\b/.test(n.label.toLowerCase())||n.aliases.some((a:string)=>/^(?:interior|exterior|wall|enamel) paint$/.test(a)))&&!/primer|putty|scraper|brush|roller|thinner|polish|stencil/i.test(n.label)).map(n=>n.id);
  }
- if(needsSolventUse(query)&&!namedCatalogProduct)return emptyDiscovery(query,plan,'solvent_use_required');
+ if(needsSolventUse(query)&&!namedCatalogProduct)return solventGroups(client,ctx,query,plan,nodes);
  if(needsPipeType(query)&&!namedCatalogProduct)return emptyDiscovery(query,plan,'pipe_type_required');
  const root=candidate&&matchesPackMeasures(query,candidate)&&(!plan.selectedSkus||plan.selectedSkus.includes(candidate.sku))&&(!plan.familyId||candidate.familyId===plan.familyId)&&(!plan.familyIds||plan.familyIds.includes(candidate.familyId??''))&&(!plan.departmentId||nodes.some(n=>n.id===candidate.familyId&&n.parent_id===plan.departmentId))&&(!plan.brand||normalize(candidate.brand??'')===normalize(plan.brand))&&Object.entries(plan.specifications??{}).every(([key,value])=>specMatches(candidate,key,value))?candidate:undefined;
  if(requestedFamilies.length&&(plan.familyId&&!requestedFamilies.includes(plan.familyId)||plan.familyIds&&!plan.familyIds.some(id=>requestedFamilies.includes(id))))return emptyDiscovery(query,plan,'no_supported_match');
@@ -359,8 +373,12 @@ export async function discoverProducts(client:PoolClient,ctx:ActorContext,custom
  return {...result,matchStatus:'alternatives',products:alternatives.map(a=>a.product),rankings:alternatives.map(a=>({sku:a.product.sku,score:0,match:'related',reason:'Different requested attributes; explicit selection required',differences:a.differences})),facets:[],retrievedCount:alternatives.length,totalCount:alternatives.length,noExactMatch:true};
 }
 export function refinementPlan(result:DiscoveryResult,key:string,value:string):DiscoveryPlan {
- const facet=result.facets[0];
+ const facet=result.facets.find(f=>f.key===key);
  if(facet?.key===key&&value===discoveryMoreValue&&facet.nextOffset!==undefined)return {...result.plan,facetPage:{key,offset:facet.nextOffset,...(result.plan.facetPage?.search?{search:result.plan.facetPage.search}:{})}};
- if(!result.facets[0]||result.facets[0].key!==key||!result.facets[0].values.some(v=>v.value===value))throw new ToolError('That filter was not offered in the current product question.','stale_question');
+ if(!facet||!facet.values.some(v=>v.value===value))throw new ToolError('That filter was not offered in the current product question.','stale_question');
  return {...result.plan,facetPage:undefined,...(key==='family'?{familyId:value,familyIds:undefined}:key==='brand'?{brand:value}:{specifications:{...result.plan.specifications,[key.slice(5)]:value}})};
+}
+
+export function refinementQuery(result:DiscoveryResult,key:string,value:string):string {
+ return result.groups?.find(group=>group.key===key&&group.value===value)?.query??result.query;
 }
