@@ -207,6 +207,9 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
  if(needsSolventUse(query)&&!namedCatalogProduct)return solventGroups(client,ctx,query,plan,nodes);
  if(needsPipeType(query)&&!namedCatalogProduct)return emptyDiscovery(query,plan,'pipe_type_required');
  const root=candidate&&matchesPackMeasures(query,candidate)&&(!plan.selectedSkus||plan.selectedSkus.includes(candidate.sku))&&(!plan.familyId||candidate.familyId===plan.familyId)&&(!plan.familyIds||plan.familyIds.includes(candidate.familyId??''))&&(!plan.departmentId||nodes.some(n=>n.id===candidate.familyId&&n.parent_id===plan.departmentId))&&(!plan.brand||normalize(candidate.brand??'')===normalize(plan.brand))&&Object.entries(plan.specifications??{}).every(([key,value])=>specMatches(candidate,key,value))?candidate:undefined;
+ // A validated unique catalog identity outranks an inferred taxonomy label.
+ // Its returned plan must remain valid when the same search is refreshed.
+ if(root)requestedFamilies=[];
  if(requestedFamilies.length&&(plan.familyId&&!requestedFamilies.includes(plan.familyId)||plan.familyIds&&!plan.familyIds.some(id=>requestedFamilies.includes(id))))return emptyDiscovery(query,plan,'no_supported_match');
  if(!requestedFamilies.length&&!root&&unsupportedNamedObject(query,nodes)){
   const head=tokens(withoutPackMeasures(objectPhrase)).filter(t=>!/^\d/.test(t)&&!['inch','inches','mm','cm','piece','pieces','box','boxes'].includes(t)).at(-1)!;

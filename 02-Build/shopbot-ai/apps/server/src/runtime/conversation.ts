@@ -549,7 +549,18 @@ export class ConversationRuntime {
         await client.query('ROLLBACK TO SAVEPOINT turn_actions');cartMutated=false;
         message=customerError(error instanceof Error?error.message:'Action failed. Your draft is retained.',current,error instanceof ToolError?error.code:undefined);rich={...plainReply(message),stage:'error',clarificationReason:error instanceof ToolError?error.code:'action_failed'};
         if(current.visualOrdering&&current.lastRequestId&&error instanceof ToolError&&error.code==='stale_question'&&claimed.memory?.purpose==='list_choice')rich=await refreshOrderListChoice(client,ctx,current,claimed.memory);
-        if(current.visualOrdering&&error instanceof ToolError&&['stale_confirmation','review_incomplete'].includes(error.code)){const kept=await loadState(client,ctx);if(kept.draft.length&&!kept.lastRequestId){const renewed=await this.tools.invokeInTransaction(client,ctx,{name:'preview_order',args:{expectedVersion:kept.version}},claimed.id+':fresh-review');rich=presentReply(renewed,renewed.state!);}}
+        if(current.visualOrdering&&error instanceof ToolError&&['stale_confirmation','review_incomplete'].includes(error.code)){
+          const kept=await loadState(client,ctx);
+          if(kept.draft.length&&!kept.lastRequestId){
+            const wasPartial=kept.allowPartialReview&&kept.pending?.kind==='review'&&Array.isArray(kept.pending.excludedLineIds);
+            const renewed=await this.tools.invokeInTransaction(client,ctx,{name:'preview_order',args:{expectedVersion:kept.version,...(wasPartial?{allowPartial:true}:{})}},claimed.id+':fresh-review');
+            rich=presentReply(renewed,renewed.state!);
+            const notice=error.code==='review_incomplete'
+              ?say(kept,'The full review was not delivered. Nothing was sent to the shop. Please check the new review and confirm again.','முழு சரிபார்ப்பும் வரவில்லை. கடைக்கு எதுவும் அனுப்பப்படவில்லை. புதிய சரிபார்ப்பைப் பார்த்து மீண்டும் உறுதி செய்யுங்கள்.','Muzhu review varala. Kadaikku ethum anuppala. Puthu review paarthu marubadi confirm pannunga.')
+              :say(kept,'The review needs updating. Nothing was sent to the shop. Please check the new review and confirm again.','சரிபார்ப்பைப் புதுப்பிக்க வேண்டும். கடைக்கு எதுவும் அனுப்பப்படவில்லை. புதிய சரிபார்ப்பைப் பார்த்து மீண்டும் உறுதி செய்யுங்கள்.','Review update pannanum. Kadaikku ethum anuppala. Puthu review paarthu marubadi confirm pannunga.');
+            rich.contextLines=[notice,...rich.contextLines??[]];
+          }
+        }
       }
       const finalState=await loadState(client,ctx);
       if(!failure&&finalState.version!==current.version&&finalState.editingLineId&&claimed.event.type!=='edit_item'){

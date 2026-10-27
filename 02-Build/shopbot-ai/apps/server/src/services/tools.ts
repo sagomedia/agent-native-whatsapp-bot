@@ -376,7 +376,9 @@ export class RetailTools {
         const [product]=await searchProducts(client,ctx,line.sku);
         if(!product) { if(line.resolution!=='unavailable'||line.candidates?.length||line.productConfirmation) {line.resolution='unavailable';line.candidates=[];delete line.productConfirmation;refreshed=true;} continue; }
         const current=preserveConfirmation(line,resolvedLine(product,line.requestedQuantity??line.quantity,line.query??line.name,line.id,line.requestedUnit,line));
-        if(state.catalogDiscovery&&!productConfirmed(line,product)){const discovery=await discoverProducts(client,ctx,line.query??line.name,line.discovery?.plan);current.candidates=discovery.products;current.discovery=discovery;}
+        if(state.catalogDiscovery&&!productConfirmed(line,product)){const discovery=await discoverProducts(client,ctx,line.query??line.name,line.discovery?.plan);current.candidates=discovery.products;current.discovery=discovery;
+          // A failed refresh must not leave a hidden, unconfirmed SKU marked matched.
+          if(!discovery.products.some(p=>p.sku===product.sku)){delete current.sku;delete current.pricePaise;delete current.productVersion;delete current.unit;current.name=line.query??line.name;current.resolution=discovery.products.length?'needs_choice':'unavailable';}}
         // Shelf counts are advisory: stale or zero records must not erase a customer's requested item.
         if(line.shopCheckDeferred&&current.resolution!=='matched')current.shopCheckDeferred=true;
         if(digest(current)!==digest(line)) {state.draft[state.draft.findIndex(l=>l.id===line.id)]=current;refreshed=true;}
@@ -384,7 +386,7 @@ export class RetailTools {
       if(refreshed) state.version++;
       if(call.args.allowPartial){
         if(!state.allowPartialReview)throw new ToolError('Partial order review is not enabled for this conversation.');
-        const unconfirmed=!!state.requireProductConfirmation&&state.draft.some(line=>counterLine(line).product&&!productConfirmed(line));
+        const unconfirmed=!!state.requireProductConfirmation&&state.draft.some(line=>!!line.sku&&!productConfirmed(line));
         if(unconfirmed){
           const check=makeProductCheck(state,!!this.options.sequentialItems);
           if(check){state.pending=check;await saveState(client,ctx,state);return {state,message:'Check the product photos before reviewing the estimate.'};}

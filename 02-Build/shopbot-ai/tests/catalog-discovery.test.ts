@@ -54,3 +54,33 @@ test('an absent brush is never a bush or unrelated pipe fitting; publishing a br
   for(const query of ['brush','paint brush'])assert.deepEqual((await discoverProducts(c,inbox.context,query)).products.map(p=>p.sku),['NEW-BRUSH']);
  }finally{c.release();}
 }));
+
+test('an exact alias in an owner family survives its returned plan and remains visible during checkout refresh',()=>fixture(async(pool,inbox)=>{
+ const store=inbox.context.storeId;
+ await pool.query("INSERT INTO catalog_nodes(store_id,id,parent_id,kind,label,aliases) VALUES($1,'levels','tools','family','Spirit levels','[\"spirit level\"]'),($1,'owner-other','tools','family','Other products','[]')",[store]);
+ await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases,specifications,image_path,selling_unit_verified) VALUES($1,'LEVEL-12','Aluminium Spirit Level 12in','piece',45000,10,'owner-other','[\"spirit level\",\"ரசமட்டம்\"]','{\"length\":\"12 inch (300mm)\",\"vials\":\"3 vials\"}','/fixture/level.jpg',true)",[store]);
+ const client=await pool.connect();try{
+  const first=await discoverProducts(client,inbox.context,'spirit level');assert.deepEqual(first.products.map(p=>p.sku),['LEVEL-12']);
+  for(const query of ['spirit level','ரசமட்டம்']){
+   const again=await discoverProducts(client,inbox.context,query,first.plan);assert.deepEqual(again.products.map(p=>p.sku),['LEVEL-12']);assert.equal(again.products[0].imageUrl,'/fixture/level.jpg');
+  }
+  assert.equal((await discoverProducts(client,inbox.context,'spirit level',{...first.plan,familyId:'levels'})).products.length,0,'an explicit conflicting family is still enforced');
+  assert.equal((await discoverProducts(client,inbox.context,'spirit level',{...first.plan,specifications:{length:'24 inch'}})).products.length,0,'a conflicting dimension is still enforced');
+  await pool.query('UPDATE conversations SET visual_ordering=true,partial_reviews=true WHERE id=$1',[inbox.context.conversationId]);
+  await pool.query('INSERT INTO store_policies(store_id,require_product_confirmation) VALUES($1,true) ON CONFLICT(store_id) DO UPDATE SET require_product_confirmation=true',[store]);
+  const stale={id:randomUUID(),sku:'LEVEL-12',name:'Aluminium Spirit Level 12in',query:'spirit level',quantity:1,resolution:'matched',unit:'piece',pricePaise:45000,productVersion:first.products[0].version,candidates:[],discovery:{...first,products:[],rankings:[],totalCount:0}};
+  await pool.query('UPDATE conversations SET draft=$2::jsonb WHERE id=$1',[inbox.context.conversationId,JSON.stringify([stale,{id:randomUUID(),name:'stainless steel tap',query:'stainless steel tap',quantity:null,resolution:'unavailable',candidates:[]}])]);
+  const runtime=new ConversationRuntime(pool,never,{visualOrdering:true});let s=await event(inbox,runtime,{id:randomUUID(),type:'review_partial',expectedVersion:0});
+  assert.equal(s.requests.length,0);assert.equal(s.conversation.pending?.kind,'products');
+  const cards=last(s).parts!.flatMap(p=>p.cards);assert.ok(cards.some(c=>c.kind==='product'&&c.product.sku==='LEVEL-12'&&c.product.imageUrl==='/fixture/level.jpg'),'known spirit level is shown for explicit photo confirmation');
+  assert.equal(s.conversation.draft[0].quantity,1);assert.ok(!s.conversation.draft[0].productConfirmation);
+  const actions=(snapshot:Snapshot)=>last(snapshot).parts!.flatMap(p=>p.cards.flatMap(c=>c.buttons??[])).map(b=>b.event);
+  const checked=actions(s).find(a=>a.type==='confirm_products');assert.ok(checked);s=await event(inbox,runtime,checked!);
+  assert.equal(s.conversation.pending?.kind,'review');assert.equal(s.requests.length,0);
+  const submit=actions(s).find(a=>a.type==='confirm');assert.ok(submit);s=await event(inbox,runtime,submit!);
+  assert.equal(s.requests.length,1);assert.equal(s.requests[0].lines.length,2);assert.equal(s.requests[0].lines[0].sku,'LEVEL-12');assert.equal(s.requests[0].lines[1].quantity,null);
+  assert.equal(s.conversation.pending,null);assert.ok(s.conversation.lastRequestId);assert.notEqual(last(s).stage,'review');
+  s=await event(inbox,runtime,submit!);assert.equal(s.requests.length,1,'repeated delivery must not duplicate the order');
+
+ }finally{client.release();}
+}));
