@@ -9,7 +9,7 @@ import {interpretationSchema,type Interpretation,type Operation} from '../../../
 import {UNDERSTANDING_VERSION} from '../../../../packages/contracts/model-policy.js';
 import type {InterpretationInput} from './interpreter.js';
 import {removalMention,positiveRemoval,mutationNegated} from '../../../../packages/contracts/intent-language.js';
-import {cartEditCandidates} from '../services/cart-edit-targets.js';
+import {cartEditCandidates,materialOnlyCorrection,materialReplacementQuery,materialEditFocus} from '../services/cart-edit-targets.js';
 import {sharedRemovalEvidence} from '../services/cart-removal-evidence.js';
 import {additionalMention,consolidateMentions,existingMention,compatibleLine,namedEditLines} from './mention-reconciliation.js';
 import {explicitPurchaseCount,convertAmount} from '../services/quantity-evidence.js';
@@ -180,13 +180,15 @@ export function understandingToInterpretation(value:unknown,input:Interpretation
   const selection=input.cartTargetSelections?.find(choice=>choice.kind==='edit'&&choice.index===editIndex);
   const selected=!!selection;
   if(selected)e.targetLineId=selection.lineId;
+  const material=materialOnlyCorrection(e),materialFocus=materialEditFocus(e,input.state);
+  if(!selected&&materialFocus)e.targetLineId=materialFocus.id;
   if(!input.state.draft.some(l=>l.id===e.targetLineId)||!sourceIncludes(source,e.sourceText))throw new Error('Edit target or evidence is not current');
   if(mutationNegated(e.sourceText,source))throw new Error('The current message negates this cart mutation');
   const target=input.state.draft.find(l=>l.id===e.targetLineId)!;
   const removalSource=sharedRemovals.get(editIndex)??e.sourceText;
   if(['remove_item','decrement_quantity'].includes(e.kind)&&!positiveRemoval(removalSource,source))throw new Error('Removal needs explicit current intent with positive current-message evidence');
   const named=cartEditCandidates(e,input.state);
-  const focused=(input.state.editingLineId===target.id||input.state.pending?.kind==='question'&&input.state.pending.lineId===target.id)&&(!named.length||named.some(line=>line.id===target.id));
+  const focused=(materialFocus?.id===target.id||input.state.editingLineId===target.id||input.state.pending?.kind==='question'&&input.state.pending.lineId===target.id)&&(!named.length||named.some(line=>line.id===target.id));
   const explicitGroup=/\b(?:each|both|all)\b|ஒவ்வொரு|இரண்டுக்கும்|எல்லா/iu.test(e.sourceText);
   if(!selected&&!focused&&!(named.length===1&&named[0].id===target.id)&&!(explicitGroup&&named.some(line=>line.id===target.id))){
    heldIds.add(target.id);deferredCartTargets.push({kind:'edit',index:editIndex,candidateLineIds:(named.length?named:input.state.draft).map(line=>line.id)});
@@ -214,7 +216,7 @@ export function understandingToInterpretation(value:unknown,input:Interpretation
    if(quantity<0)throw new Error('Cannot remove more than the current quantity');
    operations.push(quantity===0?{kind:'remove_item',reference:target.id,supportingPhrase:e.sourceText}:{kind:'set_quantity',reference:target.id,quantity,supportingPhrase:e.sourceText});
   }
-  else if(e.kind==='replace'){if(!e.query)throw new Error('Replacement query missing');operations.push({kind:'resolve_line',lineId:e.targetLineId,query:e.query,supportingPhrase:e.sourceText,...(e.amount&&convertAmount(e.amount,e.amount.unit)!==null?{requestedAmount:e.amount,amountMode:e.mode}:{})});}
+  else if(e.kind==='replace'){if(material)e.query=materialReplacementQuery(target.query??target.name,material);if(!e.query)throw new Error('Replacement query missing');operations.push({kind:'resolve_line',lineId:e.targetLineId,query:e.query,supportingPhrase:e.sourceText,...(e.amount&&convertAmount(e.amount,e.amount.unit)!==null?{requestedAmount:e.amount,amountMode:e.mode}:{})});}
   else if(e.kind==='remove_item'){if(!removalMention.test(removalSource))throw new Error('Removal needs explicit current intent');operations.push({kind:'remove_item',reference:e.targetLineId,supportingPhrase:removalSource});}
   else if(e.kind==='set_quantity'||e.kind==='increment_quantity'){if(e.quantity===undefined)throw new Error('Edit amount missing');operations.push(e.kind==='set_quantity'?{kind:'set_quantity',reference:e.targetLineId,quantity:e.quantity,supportingPhrase:e.sourceText}:{kind:'increment_quantity',reference:e.targetLineId,delta:e.quantity,supportingPhrase:e.sourceText});}
   else {if(!e.amount)throw new Error('Measured edit missing');operations.push(e.kind==='set_amount'?{kind:'set_amount',reference:e.targetLineId,amount:e.amount,mode:e.mode,supportingPhrase:e.sourceText}:{kind:'increment_amount',reference:e.targetLineId,delta:e.amount,supportingPhrase:e.sourceText});}

@@ -20,7 +20,7 @@ import {visualReply,visualListView,visualCartMutation,returningReply,cartProgres
 import {productIdentity} from '../services/product-confirmation.js';
 import {materializeVisualReply} from '../services/visual-images.js';
 import {protectQuantityEvidence,explicitPurchaseCount} from '../services/quantity-evidence.js';
-import {namedEditLines} from '../adapters/mention-reconciliation.js';
+import {namedEditLines,editObjectWords} from '../adapters/mention-reconciliation.js';
 import {additionalMention} from '../../../../packages/contracts/intent-language.js';
 import {phrasingLanguage} from '../../../../packages/contracts/language.js';
 import {normalizeAmountEdits} from '../services/amount-edits.js';
@@ -867,6 +867,9 @@ export class ConversationRuntime {
       if(memory?.purpose!=='cart_edit'||memory.sourceVersion!==claim.state.version||!goal)throw new ToolError('Use the latest item question.','stale_question');
       const target=goal.targets[0],named=namedEditLines(answer.sourceText,claim.state);
       const positional=/\b(?:first|second|third|last|[1-9]|10)(?:st|nd|rd|th)?\s+(?:item|line|row|entry|product)\b|கடைசி|லாஸ்ட்/iu.test(answer.sourceText);
+      // A clearly named follow-up may correct the earlier candidate set.
+      // Button callbacks remain restricted to their displayed, versioned IDs.
+      if(named.length===1&&editObjectWords(answer.sourceText).length&&!positional&&!target.candidateLineIds.includes(named[0].id))target.candidateLineIds=[...target.candidateLineIds,named[0].id];
       const matches=(named.length?named:positional?[]:namedEditLines(answer.query,claim.state)).filter(line=>target.candidateLineIds.includes(line.id));
       const selected=matches.length===1&&(!answer.targetLineId||answer.targetLineId===matches[0].id)?matches[0]:undefined;
       identified={...resumeCartTarget(claim,selected?{kind:target.kind,index:target.index,lineId:selected.id}:undefined),...(voice?{transcript}:{})};
