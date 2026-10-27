@@ -102,7 +102,7 @@ test('voice can be a first message and repeated unreadable speech hands over wit
 
 test('owner can reply to a newly admitted customer and resume without replaying held spam',()=>fixture(async pool=>{
  const channel=new WhatsAppChannel(pool,config);await channel.setup();
- for(let i=0;i<3;i++)await channel.receive(incoming('hello-'+i,'hi'));
+ for(let i=0;i<3;i++)await channel.receive(incoming('repeat-for-owner-'+i,'asdf qwer'));
  const c=(await pool.query('SELECT id,operator_revision FROM conversations WHERE id IN (SELECT conversation_id FROM whatsapp_conversations)')).rows[0];
  const owner={hostname:'owner.example.test',issuer:'https://owner.cloudflareaccess.com',audience:'offline-audience',email:'owner@example.test',storeId:fixtureStore};
  const app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,port:3017,host:'127.0.0.1',mediaDir:'/tmp/guard-test-media',owner,whatsapp:config},pool,undefined,undefined,async()=>({email:owner.email,subject:'offline-owner'}),channel);
@@ -168,4 +168,17 @@ test('repeated silent recordings preserve original bytes without repeated failur
  assert.equal(calls.value,0);assert.equal((await pool.query('SELECT count(*) FROM whatsapp_media WHERE original_audio IS NOT NULL')).rows[0].count,'3');
  assert.equal((await pool.query('SELECT reason FROM whatsapp_customer_guards')).rows[0].reason,'repeated_attachment');
  assert.equal((await pool.query("SELECT count(*) FROM whatsapp_outbox WHERE state='queued'")).rows[0].count,'1');
+}));
+
+
+test('returning greetings remain responsive across worker restarts without paid inference or owner handoff',()=>fixture(async pool=>{
+ const calls={value:0},p=provider({operations:[],next:'continue'},calls),enabled={...config,aiEnabled:true,paidEnabled:true,budgetMicrousd:5000000};let channel=new WhatsAppChannel(pool,enabled,offlineFetch,p);await channel.setup();
+ for(let i=0;i<4;i++){
+  if(i===2){channel=new WhatsAppChannel(pool,enabled,offlineFetch,p);await channel.setup();}
+  await channel.receive(incoming('returning-hi-'+i,'hi'));await runTurn(channel,pool);
+ }
+ const c=(await pool.query('SELECT operator_mode,handoff_requested FROM conversations WHERE id IN (SELECT conversation_id FROM whatsapp_conversations)')).rows[0];
+ assert.equal(c.operator_mode,'assistant');assert.equal(c.handoff_requested,false);assert.equal(calls.value,0);
+ assert.equal((await pool.query("SELECT count(*)::int AS n FROM messages WHERE direction='inbound' AND reply_decision IN ('duplicate_suppressed','held_for_owner')")).rows[0].n,0);
+ assert.equal((await pool.query("SELECT count(*)::int AS n FROM messages WHERE direction='outbound'")).rows[0].n,4);
 }));

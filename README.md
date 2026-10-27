@@ -1,5 +1,7 @@
 # Agent-native WhatsApp bot
 
+For moving devices or continuing with another coding agent, read [DEVICE-SETUP.md](DEVICE-SETUP.md) and [AGENT-HANDOFF.md](AGENT-HANDOFF.md). These record the newer recovered-source checkpoints; deployment statements below include historical milestones.
+
 Private repository: [sagomedia/agent-native-whatsapp-bot](https://github.com/sagomedia/agent-native-whatsapp-bot).
 
 Status: the source includes the retail runtime, catalog hierarchy, multimodal input, WhatsApp channel and protected owner dashboard. The customer ordering release adds unknown-item estimates, owner quotes, a manually verified ₹10 UPI advance and post-order amendments. See the [deployment handoff](03-Output/customer-ordering-finish/RELEASE-REPORT.md) for the recorded deployed checkpoint and remaining owner acceptance. A subsequent [voice-processing repair](03-Output/customer-ordering-finish/AUDIO-INCIDENT.md) is also included in this branch; its verification and deployment status are separate from that earlier handoff. Started 2 October 2026.

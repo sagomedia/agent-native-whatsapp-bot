@@ -30,6 +30,10 @@ export async function admitCustomerMessage(client:PoolClient,ctx:ActorContext,in
   // than silently replaying the messages that caused the handover.
   const reset=old.operator_revision!==control.operator_revision||old.idle;
   const key=input.text===undefined?null:admissionKey(input.text,input.version,input.binding);
+  // A returning customer's greeting is a normal deterministic turn, even
+  // when repeated after silence. Burst limits still apply to all messages.
+  const social=input.text===undefined?undefined:socialIntent(input.text.normalize('NFKC').toLowerCase().trim());
+  const harmlessSocial=social==='greeting'||social==='thanks';
   const repeat=key&&key===old.last_key&&!reset?old.repeat_count+1:1;
   const count=reset||old.expired?1:old.window_count+1;
   await client.query(`UPDATE whatsapp_customer_guards SET operator_revision=$2,
@@ -41,13 +45,13 @@ export async function admitCustomerMessage(client:PoolClient,ctx:ActorContext,in
     media_repeat_count=CASE WHEN $7 THEN 0 ELSE media_repeat_count END WHERE conversation_id=$1`,
     [ctx.conversationId,control.operator_revision,reset||old.expired,count,key,repeat,reset]);
   if(control.operator_mode==='owner')return 'owner';
-  if(count>=admissionLimits.burstMessages||repeat>=admissionLimits.repeats){
+  if(count>=admissionLimits.burstMessages||repeat>=admissionLimits.repeats&&!harmlessSocial){
     await handoffCustomer(client,ctx,count>=admissionLimits.burstMessages?'message_burst':'repeated_message');
     return 'owner';
   }
   // A second identical turn is saved but not sent back through the model. A
   // new quantity for a different product has a different bound state key.
-  if(key&&repeat>1)return 'quiet';
+  if(key&&repeat>1&&!harmlessSocial)return 'quiet';
   return 'allow';
 }
 
