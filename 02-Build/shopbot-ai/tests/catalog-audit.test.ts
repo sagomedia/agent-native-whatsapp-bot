@@ -5,7 +5,7 @@ import pg from 'pg';
 import {Client} from '@modelcontextprotocol/client';
 import {setupDatabase} from '../apps/server/src/db/migrate.js';
 import {fixtureStore,fixtureConversation} from '../profiles/hardware.js';
-import {catalogAudit,saveCatalogAudit,getCatalogAudit,applyCatalogAudit,undoCatalogAudit,recordConversationAudit} from '../apps/server/src/services/catalog-audit.js';
+import {catalogAudit,saveCatalogAudit,getCatalogAudit,previewCatalogAuditBatch,applyCatalogAudit,undoCatalogAudit,recordConversationAudit} from '../apps/server/src/services/catalog-audit.js';
 import {catalogAiActivity} from '../apps/server/src/services/catalog-ai-activity.js';
 import {mutate} from '../apps/server/src/services/catalog-chat.js';
 import {ownerStockAction,ownerProductVisibility} from '../apps/server/src/services/owner-mcp-actions.js';
@@ -144,6 +144,7 @@ test('MCP exposes actual audit permissions and invokes the full read/save/apply/
   const evidence=await call('catalog_audit',{range:range()});assert.ok(evidence.messages.some((m:any)=>m.id===messageId));
   await call('catalog_audit_save',{operationId:id(),auditId,title:'MCP audit',range:range(),findings:[{id:findingId,sku,category:'alias_gap',wording:'local elbow name',explanation:'Owner reviewed this exact item.',patch:{aliases:{add:['local elbow name']}},evidence:[{conversationId:fixtureConversation,messageIds:[messageId]}]}]});
   assert.equal((await call('catalog_audit_get',{auditId})).findings.length,1);
+  assert.deepEqual((await call('catalog_audit_batch_preview',{auditId,findingIds:[findingId]})).readyFindingIds,[findingId]);
   const applied=await call('catalog_audit_apply',{operationId:id(),auditId,findingIds:[findingId]});await call('catalog_audit_undo',{operationId:id(),auditId,eventIds:applied.events.map((e:any)=>e.id)});
  });
 }));
@@ -187,14 +188,13 @@ test('term collisions are disclosed, duplicate additions are no-ops and wrong di
  await assert.rejects(suggestion(pool,{term:'20 mm elbow'}),/dimension inconsistent/);
 }));
 
-test('a 26-product apply is rejected without partial publication',()=>fixture(async pool=>{
+test('a 201-product apply is rejected without partial publication',()=>fixture(async pool=>{
  const auditId=id(),period=range(),messageId=await message(pool,'shared owner term'),findings=[];
- for(let n=0;n<26;n++){const key='BATCH-'+n;await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise) VALUES($1,$2,$3,'piece',100)",[fixtureStore,key,'Fixture '+n]);findings.push({id:id(),category:'alias_gap',sku:key,wording:'shared owner term',explanation:'Owner identified this exact listed variant.',patch:{aliases:{add:['shared owner term']}},evidence:[{conversationId:fixtureConversation,messageIds:[messageId]}]});}
- await saveCatalogAudit(pool,p,{operationId:id(),auditId,title:'Batch limits',range:period,findings:findings.slice(0,25)});
- await saveCatalogAudit(pool,p,{operationId:id(),auditId,expectedVersion:1,title:'Batch limits',range:period,findings:findings.slice(25)});
- await assert.rejects(applyCatalogAudit(pool,p,{operationId:id(),auditId,findingIds:findings.map(f=>f.id)}),/at most 25 products/);
+ for(let n=0;n<201;n++){const key='BATCH-'+n;await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise) VALUES($1,$2,$3,'piece',100)",[fixtureStore,key,'Fixture '+n]);findings.push({id:id(),category:'alias_gap',sku:key,wording:'shared owner term',explanation:'Owner identified this exact listed variant.',patch:{aliases:{add:['shared owner term']}},evidence:[{conversationId:fixtureConversation,messageIds:[messageId]}]});}
+ let version=0;for(let n=0;n<findings.length;n+=25){const saved:any=await saveCatalogAudit(pool,p,{operationId:id(),auditId,expectedVersion:version,title:'Batch limits',range:period,findings:findings.slice(n,n+25)});version=saved.version;}
+ await assert.rejects(applyCatalogAudit(pool,p,{operationId:id(),auditId,findingIds:findings.map(f=>f.id)}),/at most 200 products/);
  assert.equal((await pool.query("SELECT count(*)::int AS n FROM products WHERE sku LIKE 'BATCH-%' AND aliases<>'[]'::jsonb")).rows[0].n,0);
- const batch:any=await applyCatalogAudit(pool,p,{operationId:id(),auditId,findingIds:findings.slice(0,25).map(f=>f.id)});assert.equal(batch.changes.length,25);assert.equal(batch.events.length,25);
+ const batch:any=await applyCatalogAudit(pool,p,{operationId:id(),auditId,findingIds:findings.slice(0,200).map(f=>f.id)});assert.equal(batch.changes.length,200);assert.equal(batch.events.length,200);
 }));
 
 test('findings can be dismissed or resumed across connected owner chats without modifying products',()=>fixture(async pool=>{
@@ -241,4 +241,28 @@ test('saved scan progress resumes the exact conversation cutoff and previous cal
 test('needs-review pagination preserves microseconds for findings created together',()=>fixture(async pool=>{
  const messageId=await message(pool),auditId=id();await saveCatalogAudit(pool,p,{operationId:id(),auditId,title:'Same timestamp review queue',range:range(),findings:Array.from({length:5},(_,i)=>({id:id(),category:'insufficient_evidence',wording:'item '+i,explanation:'Unresolved matching needs owner context.',evidence:[{conversationId:fixtureConversation,messageIds:[messageId]}]}))});
  let cursor:string|undefined;const ids:string[]=[];do{const page:any=await catalogAiActivity(pool,p,{mode:'review',limit:2,cursor});ids.push(...page.items.map((r:any)=>r.id));cursor=page.nextCursor??undefined;}while(cursor);assert.equal(ids.length,5);assert.equal(new Set(ids).size,5);
+}));
+
+test('bulk review groups 35 products, reports stale items, applies the ready selection atomically and retries safely',()=>fixture(async pool=>{
+ const auditId=id(),messageId=await message(pool,'local fixture name'),period=range();
+ await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,image_path,aliases,keywords) SELECT $1,'BULK-'||n,'Fixture product '||n,'piece',10000,5,'/fixture/photo.jpg','[]'::jsonb,'[]'::jsonb FROM generate_series(1,35) n",[fixtureStore]);
+ const findings=Array.from({length:35},(_,i)=>({id:id(),category:'alias_gap',sku:'BULK-'+(i+1),wording:'local fixture name',explanation:'Reviewed fixture product.',patch:{aliases:{add:['local fixture name']}},evidence:[{conversationId:fixtureConversation,messageIds:[messageId]}]}));
+ const first:any=await saveCatalogAudit(pool,p,{operationId:id(),auditId,title:'Bulk audit',range:period,findings:findings.slice(0,25)});
+ await saveCatalogAudit(pool,p,{operationId:id(),auditId,expectedVersion:first.version,title:'Bulk audit',range:period,findings:findings.slice(25)});
+ const ids=findings.map(f=>f.id),initial:any=await previewCatalogAuditBatch(pool,p,{auditId,findingIds:ids});assert.equal(initial.productCount,35);assert.equal(initial.readyFindingIds.length,35);assert.equal(initial.canApplyAll,true);
+ await pool.query("UPDATE products SET version=version+1 WHERE store_id=$1 AND sku='BULK-1'",[fixtureStore]);
+ const checked:any=await previewCatalogAuditBatch(pool,p,{auditId,findingIds:ids});assert.equal(checked.readyFindingIds.length,34);assert.deepEqual(checked.blocked[0].issues,['product_changed']);
+ await assert.rejects(applyCatalogAudit(pool,p,{operationId:id(),auditId,findingIds:ids}),/entire batch is unchanged/);
+ assert.equal((await pool.query("SELECT count(*)::int n FROM products WHERE store_id=$1 AND sku LIKE 'BULK-%' AND aliases @> '[\"local fixture name\"]'",[fixtureStore])).rows[0].n,0);
+ const request={operationId:id(),auditId,findingIds:checked.readyFindingIds};const applied:any=await applyCatalogAudit(pool,p,request);assert.equal(applied.changes.length,34);assert.deepEqual(await applyCatalogAudit(pool,p,request),applied);
+ const unchanged=await pool.query("SELECT count(*)::int n FROM products WHERE store_id=$1 AND sku LIKE 'BULK-%' AND (stock<>5 OR price_paise<>10000 OR image_path<>'/fixture/photo.jpg')",[fixtureStore]);assert.equal(unchanged.rows[0].n,0);
+ assert.equal((await pool.query('SELECT count(*)::int n FROM whatsapp_outbox')).rows[0].n,0);
+}));
+
+test('bulk preview identifies contradictory additions and removals on one product before any write',()=>fixture(async pool=>{
+ const first=await suggestion(pool),second=id();
+ await saveCatalogAudit(pool,p,{operationId:id(),auditId:first.auditId,expectedVersion:1,title:'Conflict review',range:first.period,findings:[{id:second,category:'alias_gap',sku,wording:'local elbow name',explanation:'A conflicting correction requires reconciliation.',patch:{aliases:{remove:['local elbow name']}},evidence:[{conversationId:fixtureConversation,messageIds:[first.messageId]}]}]});
+ const findingIds=[first.findingId,second],result:any=await previewCatalogAuditBatch(pool,p,{auditId:first.auditId,findingIds});assert.equal(result.canApplyAll,false);assert.equal(result.readyFindingIds.length,0);assert.deepEqual(result.blocked[0].issues,['conflicting_terms']);
+ await assert.rejects(applyCatalogAudit(pool,p,{operationId:id(),auditId:first.auditId,findingIds}),/disagree about a term/);
+ assert.ok(!(await pool.query('SELECT aliases FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,sku])).rows[0].aliases.includes('local elbow name'));
 }));
