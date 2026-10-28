@@ -1,3 +1,4 @@
+import {ProductReviewCards} from './ProductReviewCards.js';
 import {useEffect,useRef,useState} from 'react';
 import {redesignApi} from './redesign-api.js';
 import {OwnerLink} from './owner-ui.js';
@@ -19,9 +20,10 @@ function ActivityPhoto({src,name}:{src:string;name:string}){
 
 export function ProductAiActivity({query,onOpen}:{query:string;onOpen:(sku:string)=>void}){
  const {t,locale}=useOwnerLocale();
- const [mode,setMode]=useState<'applied'|'review'>('applied'),[items,setItems]=useState<ActivityItem[]>([]),[total,setTotal]=useState(0),[cursor,setCursor]=useState<string|null>(null),[loading,setLoading]=useState(true),[more,setMore]=useState(false),[error,setError]=useState(''),[retry,setRetry]=useState(0);
+ const [mode,setMode]=useState<'applied'|'review'>('review'),[items,setItems]=useState<ActivityItem[]>([]),[total,setTotal]=useState(0),[cursor,setCursor]=useState<string|null>(null),[loading,setLoading]=useState(true),[more,setMore]=useState(false),[error,setError]=useState(''),[retry,setRetry]=useState(0);
  const moreRequest=useRef<AbortController|null>(null),scope=useRef('');const key=JSON.stringify([query,mode,retry]);scope.current=key;
  useEffect(()=>{
+  if(mode==='review')return;
   moreRequest.current?.abort();setMore(false);setLoading(true);setError('');setItems([]);setCursor(null);setTotal(0);
   const controller=new AbortController(),timer=window.setTimeout(async()=>{
    try{const page=await redesignApi<Page>('catalog/ai-activity?'+new URLSearchParams({mode,q:query,limit:'25'}),undefined,controller.signal);if(controller.signal.aborted)return;setItems(page.items);setTotal(page.total);setCursor(page.nextCursor);}
@@ -35,22 +37,22 @@ export function ProductAiActivity({query,onOpen}:{query:string;onOpen:(sku:strin
  }
  return <section className="rd-ai-activity" aria-label={t('AI activity')}>
   <div className="rd-ai-view-switch" role="group" aria-label={locale==='ta'?'AI மாற்றங்கள்':'AI activity views'}><button type="button" aria-pressed={mode==='applied'} onClick={()=>setMode('applied')}>{locale==='ta'?'மாற்றங்கள்':t('Applied')}</button><button type="button" aria-pressed={mode==='review'} onClick={()=>setMode('review')}>{locale==='ta'?'பரிந்துரைகள்':t('Needs review')}</button><button type="button" aria-label={locale==='ta'?'புதுப்பி':'Refresh'} title={locale==='ta'?'புதுப்பி':'Refresh'} onClick={()=>setRetry(n=>n+1)}>↻</button></div>
+  {mode==='review'?<ProductReviewCards key={retry} query={query}/>:<>
   <p className="rd-ai-explainer">{mode==='applied'?(locale==='ta'?'AI உங்கள் பொருட்களில் செய்த மாற்றங்கள்.':'What AI changed in your products.'):(locale==='ta'?'இந்தப் பரிந்துரைகளை உங்கள் AI உரையாடலில் சரிபாருங்கள்.':'Discuss these suggestions in your AI chat.')}</p>
   {error?<p className="rd-products-error" role="alert">{locale==='ta'?'மாற்றங்களை ஏற்ற முடியவில்லை.':'Could not load activity.'} <button type="button" onClick={()=>setRetry(n=>n+1)}>{t('Try again')}</button></p>:null}
   {loading?<p role="status">{t('Loading…')}</p>:items.length?<ol className="rd-ai-event-list">{items.map(item=>{
    const photo=item.hasPhoto&&item.sku?'/api/owner/products/'+encodeURIComponent(item.sku)+'/image?v='+item.productVersion:'';
    const name=item.name??item.sku??t('Product not identified');
-   const status=mode==='review'?t('Suggestion'):item.status==='live'?t('Live in inventory'):item.status==='undone'?t('Undone'):item.status==='hidden'?t('Saved · hidden'):(locale==='ta'?'பொருள் கிடைக்கவில்லை':'Product unavailable');
-   const lines=activitySummary(item,locale,mode==='review');
+   const status=item.status==='live'?t('Live in inventory'):item.status==='undone'?t('Undone'):item.status==='hidden'?t('Saved · hidden'):(locale==='ta'?'பொருள் கிடைக்கவில்லை':'Product unavailable');
+   const lines=activitySummary(item,locale,false);
    return <li className="rd-ai-event" key={item.id}>
     <div className="rd-ai-event-main"><ActivityPhoto key={photo} src={photo} name={name}/>
-     <div className="rd-ai-content"><div className="rd-ai-event-heading"><strong>{name}</strong><span className={'rd-ai-state '+(mode==='review'?'is-review':item.status==='live'?'is-live':'')}>{status}</span></div>
+     <div className="rd-ai-content"><div className="rd-ai-event-heading"><strong>{name}</strong><span className={'rd-ai-state '+(item.status==='live'?'is-live':'')}>{status}</span></div>
       <div className="rd-ai-message"><span className="rd-ai-message-label">{locale==='ta'?'AI சொல்வது':'AI update'}</span>{lines.map((line,i)=><p key={i}>{line}</p>)}</div>
       <p className="rd-ai-event-meta">{mode==='applied'?`${item.applicationName??(locale==='ta'?'இணைக்கப்பட்ட AI':'Connected AI')} · `:''}<time dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString(locale==='ta'?'ta-IN':'en-IN',{dateStyle:'medium',timeStyle:'short'})}</time></p>
       {photo?<p className="rd-ai-photo-note">{locale==='ta'?'தற்போதைய படம்':'Current photo'}</p>:null}
-      {(item.wording||(mode==='review'&&item.patch)||item.changes?.length||item.historyNote||item.reason||item.explanation)?<details className="rd-ai-details"><summary>{locale==='ta'?'முழு விவரங்களைப் பார்':'See full details'}</summary>
+      {(item.wording||item.changes?.length||item.historyNote||item.reason||item.explanation)?<details className="rd-ai-details"><summary>{locale==='ta'?'முழு விவரங்களைப் பார்':'See full details'}</summary>
        {item.wording?<p className="rd-ai-wording">{t('Customer wording')}: <q>{item.wording}</q></p>:null}
-       {mode==='review'&&item.patch?<div className="rd-ai-proposed">{(['aliases','keywords'] as const).map(field=>{const patch=item.patch![field];return patch.add.length||patch.remove.length?<div key={field}><strong>{t(fieldName(field))}</strong>{patch.add.length?<p>＋ {patch.add.join(', ')}</p>:null}{patch.remove.length?<p>− {patch.remove.join(', ')}</p>:null}</div>:null;})}</div>:null}
        {item.changes?.length?<dl className="rd-ai-diff">{item.changes.map(change=><div key={change.field}><dt>{t(fieldName(change.field))}</dt><dd><span>{t('Before')}: {valueText(change.before,locale,change.field)}</span><span>{t('After')}: {valueText(change.after,locale,change.field)}</span></dd></div>)}</dl>:null}
        {item.historyNote?<p className="rd-ai-history-note">{t('Historical action recorded. Previous values are unavailable.')}</p>:null}
        {item.reason||item.explanation?<div className="rd-ai-original"><strong>{locale==='ta'?'அசல் குறிப்பு':'Original note'}</strong><p>{item.reason??item.explanation}</p></div>:null}
@@ -59,5 +61,5 @@ export function ProductAiActivity({query,onOpen}:{query:string;onOpen:(sku:strin
      </div></div>
    </li>})}</ol>:!error?<p className="rd-products-empty">{mode==='applied'?t('No AI changes match this search.'):t('No suggestions need review.')}</p>:null}
   {!loading?<div className="rd-products-footer"><span>{items.length} / {total}</span>{cursor?<button type="button" onClick={()=>void loadMore()} disabled={more}>{more?t('Loading…'):t('Load more')}</button>:null}</div>:null}
- </section>;
+ </>}</section>;
 }

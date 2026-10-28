@@ -1,3 +1,6 @@
+import {spawnSync} from 'node:child_process';
+import {pcmWav} from '../apps/server/src/services/voice-media.js';
+import {decideCatalogReview,readCatalogReviewFeedback,readCatalogReviewAudio,resolveCatalogReviewFeedback} from '../apps/server/src/services/catalog-review.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -81,7 +84,7 @@ test('saved findings validate evidence, current products, revisions and independ
  await assert.rejects(saveCatalogAudit(pool,p,{...request,operationId:id()}),/Reload the audit/);
  await assert.rejects(saveCatalogAudit(pool,p,{operationId:id(),auditId:id(),title:'Invalid evidence audit',range:s.period,reviewedMessageIds:[id()]}),/Cite retained messages/);
  await assert.rejects(suggestion(pool,{term:'invented name',messageId:s.messageId}),/actual customer wording/);
- await assert.rejects(suggestion(pool,{category:'flow_bug'}),/Only alias and keyword/);
+ await assert.rejects(suggestion(pool,{category:'flow_bug'}),/Only name, alias and keyword/);
  await assert.rejects(saveCatalogAudit(pool,{...p,canWrite:false},{...request,operationId:id()}),/catalog permission/);
  await assert.rejects(saveCatalogAudit(pool,{...p,canReadOwner:false},{...request,operationId:id()}),/owner permission/);
 }));
@@ -217,7 +220,7 @@ test('OAuth clients supply recorded application identity and revocation/expiry b
 test('migration backfills only supported live product receipts and repeat setup preserves data',()=>fixture(async pool=>{
  const operation=id();await pool.query("INSERT INTO catalog_chat_operations(store_id,id,actor,action,input_hash,result) VALUES($1,$2,'historical-owner','commit','fixture',$3)",[fixtureStore,operation,JSON.stringify({sku})]);
  const before=(await pool.query('SELECT row_to_json(p) AS data FROM products p WHERE store_id=$1 AND sku=$2',[fixtureStore,sku])).rows[0].data;
- await pool.query('DROP TRIGGER products_connected_activity ON products; DROP FUNCTION record_connected_catalog_change(); DROP TABLE conversation_audit_events,catalog_change_events,catalog_audit_reviews,catalog_audit_findings,catalog_audit_runs; ALTER TABLE conversations DROP COLUMN active_item_id; DELETE FROM schema_migrations WHERE version=50');
+ await pool.query('DROP TABLE catalog_review_feedback; ALTER TABLE catalog_audit_findings DROP COLUMN explanation_ta; DELETE FROM schema_migrations WHERE version=52; DROP TRIGGER products_connected_activity ON products; DROP FUNCTION record_connected_catalog_change(); DROP TABLE conversation_audit_events,catalog_change_events,catalog_audit_reviews,catalog_audit_findings,catalog_audit_runs; ALTER TABLE conversations DROP COLUMN active_item_id; DELETE FROM schema_migrations WHERE version=50');
  await setupDatabase(pool,'mock');await setupDatabase(pool,'mock');
  const events:any=await catalogAiActivity(pool,p,{});assert.equal(events.total,1);assert.equal(events.items[0].historical,true);assert.equal(events.items[0].changes,null);assert.match(events.items[0].historyNote,/unavailable/);
  assert.deepEqual((await pool.query('SELECT row_to_json(p) AS data FROM products p WHERE store_id=$1 AND sku=$2',[fixtureStore,sku])).rows[0].data,before);
@@ -265,4 +268,48 @@ test('bulk preview identifies contradictory additions and removals on one produc
  const findingIds=[first.findingId,second],result:any=await previewCatalogAuditBatch(pool,p,{auditId:first.auditId,findingIds});assert.equal(result.canApplyAll,false);assert.equal(result.readyFindingIds.length,0);assert.deepEqual(result.blocked[0].issues,['conflicting_terms']);
  await assert.rejects(applyCatalogAudit(pool,p,{operationId:id(),auditId:first.auditId,findingIds}),/disagree about a term/);
  assert.ok(!(await pool.query('SELECT aliases FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,sku])).rows[0].aliases.includes('local elbow name'));
+}));
+
+
+test('owner swipe applies exactly the displayed revision, preserves unrelated facts, and retries once',()=>fixture(async pool=>{
+ const s=await suggestion(pool),before=(await pool.query('SELECT * FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,sku])).rows[0];
+ const input={operationId:id(),auditId:s.auditId,findingId:s.findingId,findingVersion:1,decision:'approve'};
+ const result:any=await decideCatalogReview(pool,p,input);assert.equal(result.decision,'applied');assert.equal(result.customerMessagesSent,0);
+ const after=(await pool.query('SELECT * FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,sku])).rows[0];assert.ok(after.aliases.includes('local elbow name'));
+ for(const k of ['price_paise','stock','unit','image_path'])assert.deepEqual(after[k],before[k]);assert.deepEqual(await decideCatalogReview(pool,p,input),result);
+ const stale=await suggestion(pool,{term:'other name'});await pool.query('UPDATE products SET version=version+1 WHERE store_id=$1 AND sku=$2',[fixtureStore,sku]);
+ await assert.rejects(decideCatalogReview(pool,p,{operationId:id(),auditId:stale.auditId,findingId:stale.findingId,findingVersion:1,decision:'approve'}),/product changed/i);
+}));
+
+test('recorded owner feedback is held, exposed only to authorized AI, and returned to review after a fresh finding',()=>fixture(async pool=>{
+ const s=await suggestion(pool);const pcm=Buffer.alloc(16000);for(let n=0;n<8000;n++)pcm.writeInt16LE(Math.round(1200*Math.sin(n/10)),n*2);const encoded=spawnSync('ffmpeg',['-hide_banner','-loglevel','error','-i','pipe:0','-f','webm','-c:a','libopus','pipe:1'],{input:pcmWav(pcm)});assert.equal(encoded.status,0);const input={operationId:id(),auditId:s.auditId,findingId:s.findingId,findingVersion:1,decision:'approve',audio:{mime:'audio/webm',data:encoded.stdout.toString('base64')}};
+ const pending:any=await decideCatalogReview(pool,p,input);assert.equal(pending.decision,'queued_for_ai');assert.equal(pending.published,false);
+ assert.equal((await catalogAiActivity(pool,p,{mode:'review'}) as any).total,0);assert.equal((await pool.query('SELECT aliases FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,sku])).rows[0].aliases.includes('local elbow name'),false);
+ await assert.rejects(applyCatalogAudit(pool,p,s.apply),/feedback/);assert.ok((await previewCatalogAuditBatch(pool,p,{auditId:s.auditId,findingIds:[s.findingId]}) as any).blocked[0].issues.includes('feedback_pending'));await assert.rejects(readCatalogReviewFeedback(pool,{...p,canReadOwner:false},{}),/owner permission/);
+ const feedback:any=await readCatalogReviewFeedback(pool,p,{});assert.equal(feedback.items[0].hasAudio,true);assert.equal((await readCatalogReviewAudio(pool,p,{feedbackId:input.operationId,format:'original'})).data,input.audio.data);
+ await connect(pool,p,async client=>{const response:any=await client.callTool({name:'catalog_review_audio',arguments:{feedbackId:input.operationId}});assert.equal(response.isError,undefined);assert.equal(response.content[0].type,'audio');assert.equal(response.content[0].mimeType,'audio/wav');assert.equal(Buffer.from(response.content[0].data,'base64').subarray(0,4).toString(),'RIFF');});
+ const current:any=await getCatalogAudit(pool,p,{auditId:s.auditId});const f=current.findings[0];
+ await saveCatalogAudit(pool,p,{operationId:id(),auditId:s.auditId,expectedVersion:current.audit.version,title:'Review after voice',range:s.period,findings:[{id:f.id,expectedVersion:f.version,category:f.category,sku:f.sku,wording:f.wording,explanation:'Updated after owner feedback.',patch:f.patch,evidence:f.evidence}]});
+ await resolveCatalogReviewFeedback(pool,p,{operationId:id(),feedbackId:input.operationId,findingVersion:2});assert.equal((await catalogAiActivity(pool,p,{mode:'review'}) as any).total,1);
+}));
+
+test('name corrections use current product revision and can be safely undone',()=>fixture(async pool=>{
+ const s=await suggestion(pool),current:any=await getCatalogAudit(pool,p,{auditId:s.auditId});const f=current.findings[0],before=(await pool.query('SELECT name FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,sku])).rows[0].name;
+ await saveCatalogAudit(pool,p,{operationId:id(),auditId:s.auditId,expectedVersion:current.audit.version,title:'Name correction',range:s.period,findings:[{id:f.id,expectedVersion:f.version,category:'name_correction',sku,wording:f.wording,explanation:'Correct the displayed name.',patch:{name:'Test elbow corrected'},evidence:f.evidence}]});
+ const applied:any=await decideCatalogReview(pool,p,{operationId:id(),auditId:s.auditId,findingId:s.findingId,findingVersion:2,decision:'approve'});assert.equal((await pool.query('SELECT name FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,sku])).rows[0].name,'Test elbow corrected');
+ await undoCatalogAudit(pool,p,{operationId:id(),auditId:s.auditId,eventIds:applied.events.map((e:any)=>e.id)});assert.equal((await pool.query('SELECT name FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,sku])).rows[0].name,before);
+}));
+
+test('review card endpoint is owner scoped and developer issues are local-only',()=>fixture(async pool=>{
+ const s=await suggestion(pool);const owner={hostname:'owner.example.test',issuer:'https://fixture.cloudflareaccess.com',audience:'offline_fixture_audience',email:'owner@example.test',storeId:fixtureStore};
+ const app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,port:3017,host:'127.0.0.1',mediaDir:'/tmp/rsi-test-media',owner},pool,undefined,undefined,async()=>({email:owner.email,subject:'offline-owner'}));
+ try{
+  const headers={host:owner.hostname,'cf-access-jwt-assertion':'offline-owner',origin:'https://'+owner.hostname,'x-shopbot-owner':'1'};
+  const body={operationId:id(),auditId:s.auditId,findingId:s.findingId,findingVersion:1,decision:'approve'};
+  const denied=await app.inject({method:'POST',url:'/api/owner/catalog/ai-review/decision',headers:{...headers,origin:'https://other.example'},payload:body});assert.equal(denied.statusCode,403);
+  const saved=await app.inject({method:'POST',url:'/api/owner/catalog/ai-review/decision',headers,payload:body});assert.equal(saved.statusCode,200,saved.body);assert.equal(saved.json().decision,'applied');
+  const publicIssue=await app.inject({method:'GET',url:'/internal/developer/issues',headers});assert.equal(publicIssue.statusCode,404);
+  const forwarded=await app.inject({method:'GET',url:'/internal/developer/issues',headers:{host:'localhost:3017','x-forwarded-for':'203.0.113.1'}});assert.equal(forwarded.statusCode,404);
+  const localIssue=await app.inject({method:'GET',url:'/internal/developer/issues',headers:{host:'localhost:3017'}});assert.equal(localIssue.statusCode,200);assert.match(localIssue.body,/Developer issues/);
+ }finally{await app.close();}
 }));

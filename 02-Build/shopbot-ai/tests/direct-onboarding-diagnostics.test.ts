@@ -107,11 +107,11 @@ test('additive v46 upgrade preserves customer guards, products and messages and 
  await messages(pool);await pool.query('INSERT INTO whatsapp_customer_guards(conversation_id,operator_revision) VALUES($1,1)',[fixtureConversation]);
  const before=(await pool.query("SELECT (SELECT count(*)::int FROM products) AS products,(SELECT count(*)::int FROM messages) AS messages,(SELECT count(*)::int FROM whatsapp_customer_guards) AS guards")).rows[0];
  await pool.query('DROP TABLE owner_demo_sessions,owner_demo_login_limits');
- await pool.query('DROP TRIGGER products_connected_activity ON products; DROP FUNCTION record_connected_catalog_change(); DROP TABLE conversation_audit_events,catalog_change_events,catalog_audit_reviews,catalog_audit_findings,catalog_audit_runs; ALTER TABLE conversations DROP COLUMN active_item_id');
+ await pool.query('DROP TABLE catalog_review_feedback; ALTER TABLE catalog_audit_findings DROP COLUMN explanation_ta; DROP TRIGGER products_connected_activity ON products; DROP FUNCTION record_connected_catalog_change(); DROP TABLE conversation_audit_events,catalog_change_events,catalog_audit_reviews,catalog_audit_findings,catalog_audit_runs; ALTER TABLE conversations DROP COLUMN active_item_id');
  await pool.query('DROP TABLE owner_order_reads,owner_chat_reads; DROP INDEX messages_owner_unread');
  await pool.query('DROP TABLE developer_diagnostic_snapshots,developer_diagnostic_reports,catalog_chat_operations,catalog_chat_reviews');
  await pool.query('ALTER TABLE catalog_proposal_assets DROP COLUMN asset_kind,DROP COLUMN source_asset_id,DROP CONSTRAINT catalog_asset_identity');await pool.query('DELETE FROM schema_migrations WHERE version>=47');
  await setupDatabase(pool,'mock');await setupDatabase(pool,'mock');
  const after=(await pool.query("SELECT (SELECT count(*)::int FROM products) AS products,(SELECT count(*)::int FROM messages) AS messages,(SELECT count(*)::int FROM whatsapp_customer_guards) AS guards")).rows[0];assert.deepEqual(after,before);
- assert.equal((await pool.query('SELECT max(version) AS version FROM schema_migrations')).rows[0].version,51);
+ assert.equal((await pool.query('SELECT max(version) AS version FROM schema_migrations')).rows[0].version,52);
 }));
