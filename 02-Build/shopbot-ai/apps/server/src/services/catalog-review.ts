@@ -47,6 +47,7 @@ export async function readCatalogReviewAudio(pool:Pool,p:CatalogPrincipal,input:
 }
 export async function resolveCatalogReviewFeedback(pool:Pool,p:CatalogPrincipal,input:unknown){const a=reviewFeedbackResolveSchema.parse(input);return mutate(pool,p,'catalog:draft',a.operationId,'review_feedback_resolve',a,async c=>{
  await assertCatalogPermission(c,p,'owner:read');const row=(await c.query('SELECT r.finding_version,f.version,f.status FROM catalog_review_feedback r JOIN catalog_audit_findings f ON f.store_id=r.store_id AND f.id=r.finding_id WHERE r.store_id=$1 AND r.id=$2 AND r.state=\'pending\' FOR UPDATE OF r,f',[p.storeId,a.feedbackId])).rows[0];
+ if(!row){const done=(await c.query("SELECT f.version FROM catalog_review_feedback r JOIN catalog_audit_findings f ON f.store_id=r.store_id AND f.id=r.finding_id WHERE r.store_id=$1 AND r.id=$2 AND r.state='resolved'",[p.storeId,a.feedbackId])).rows[0];if(done?.version===a.findingVersion)return {resolved:true};}
  if(!row||row.version!==a.findingVersion||row.version<=row.finding_version)throw chatError('stale_feedback','First save or dismiss the reviewed finding, then resolve this feedback.');
  await c.query("UPDATE catalog_review_feedback SET state='resolved',resolved_at=now() WHERE store_id=$1 AND id=$2",[p.storeId,a.feedbackId]);return {resolved:true};
  });}
