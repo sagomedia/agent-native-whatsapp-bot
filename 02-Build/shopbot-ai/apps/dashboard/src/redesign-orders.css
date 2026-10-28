@@ -25,3 +25,5 @@
 .redesign .rd-orders-cancel-actions .rd-orders-cancel-submit{background:#923e33;border-color:#923e33;color:#fff}
 .redesign .rd-orders-cancel-actions .rd-orders-cancel-submit:hover:not(:disabled){background:#773128}
 .redesign .rd-orders-unread{display:inline-block;width:9px;height:9px;margin-left:9px;border-radius:50%;background:#c73535;vertical-align:middle;box-shadow:0 0 0 2px #fff}
+
+.redesign .rd-orders-customer-wording{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

@@ -4,6 +4,8 @@ import {compactTamil} from './owner-compact-tamil.js';
 
 export type OwnerLocale='en'|'ta';
 const tamil:Record<string,string>={
+ "Customer said":"வாடிக்கையாளர் சொன்னது",
+ "Customer wording unavailable":"வாடிக்கையாளர் சொன்ன விவரம் இல்லை",
  'Use your inventory in ChatGPT':'ChatGPT-இல் உங்கள் பொருள் இருப்பைப் பயன்படுத்துங்கள்',
  'Copies your inventory connection link, then opens ChatGPT. Paste the link when adding your connection.':'உங்கள் பொருள் இருப்புக்கான இணைப்பை நகலெடுத்து, ChatGPT-ஐத் திறக்கும். இணைப்பைச் சேர்க்கும்போது இதை ஒட்டுங்கள்.',
  'Copy link & open ChatGPT':'இணைப்பை நகலெடுத்து ChatGPT-ஐத் திற',
