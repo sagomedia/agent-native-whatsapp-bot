@@ -141,7 +141,7 @@ test('MCP exposes actual audit permissions and invokes the full read/save/apply/
  await connect(pool,p,async client=>{
   const tools=(await client.listTools()).tools;assert.equal(tools.find(t=>t.name==='catalog_audit')?.annotations?.readOnlyHint,true);assert.equal(tools.find(t=>t.name==='catalog_audit_save')?.annotations?.readOnlyHint,false);
   const call=async(name:string,args:any)=>{const result=await client.callTool({name,arguments:args});assert.ok(!result.isError,JSON.stringify(result));return result.structuredContent as any;};
-  const evidence=await call('catalog_audit',{range:range()});assert.ok(evidence.messages.some((m:any)=>m.id===messageId));
+  const evidence=await call('catalog_audit',{range:range()});assert.ok(evidence.messages.some((m:any)=>m.id===messageId));assert.match(evidence.instructions,/three real candidates/);const prompt=await client.getPrompt({name:'audit_product_matching'});const content=prompt.messages[0].content;assert.equal(content.type,'text');if(content.type==='text'){assert.match(content.text,/several plausible English, Tamil and Tanglish/);assert.match(content.text,/separate audit for the correct interval/);}
   await call('catalog_audit_save',{operationId:id(),auditId,title:'MCP audit',range:range(),findings:[{id:findingId,sku,category:'alias_gap',wording:'local elbow name',explanation:'Owner reviewed this exact item.',patch:{aliases:{add:['local elbow name']}},evidence:[{conversationId:fixtureConversation,messageIds:[messageId]}]}]});
   assert.equal((await call('catalog_audit_get',{auditId})).findings.length,1);
   assert.deepEqual((await call('catalog_audit_batch_preview',{auditId,findingIds:[findingId]})).readyFindingIds,[findingId]);
