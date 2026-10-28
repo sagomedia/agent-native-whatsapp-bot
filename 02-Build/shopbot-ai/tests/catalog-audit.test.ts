@@ -313,3 +313,37 @@ test('review card endpoint is owner scoped and developer issues are local-only',
   const localIssue=await app.inject({method:'GET',url:'/internal/developer/issues',headers:{host:'localhost:3017'}});assert.equal(localIssue.statusCode,200);assert.match(localIssue.body,/Developer issues/);
  }finally{await app.close();}
 }));
+
+test('candidate match confirms only an existing product and returns as a separate proposed change',()=>fixture(async pool=>{
+ const messageId=await message(pool,'local elbow name'),auditId=id(),findingId=id(),period=range(),evidence=[{conversationId:fixtureConversation,messageIds:[messageId]}];
+ const before=(await pool.query('SELECT * FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,sku])).rows[0];
+ await connect(pool,p,async client=>{const saved=await client.callTool({name:'catalog_audit_save',arguments:{operationId:id(),auditId,title:'Candidate test',range:period,findings:[{id:findingId,category:'insufficient_evidence',sku,wording:'local elbow name',explanation:'This product may be the one requested.',evidence}]}});assert.equal(saved.isError,undefined);});
+ const cards:any=await catalogAiActivity(pool,p,{mode:'review'});assert.equal(cards.total,1);assert.equal(cards.items[0].category,'match_candidate');assert.equal(cards.items[0].sku,sku);
+ const request={operationId:id(),auditId,findingId,findingVersion:1,decision:'approve'};const decision:any=await decideCatalogReview(pool,p,request);assert.equal(decision.decision,'match_confirmed');assert.equal(decision.published,false);assert.deepEqual(await decideCatalogReview(pool,p,request),decision);
+ const after=(await pool.query('SELECT * FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,sku])).rows[0];for(const field of ['aliases','keywords','name','version','image_path','stock','price_paise'])assert.deepEqual(after[field],before[field]);
+ const feedback:any=await readCatalogReviewFeedback(pool,p,{});assert.equal(feedback.items[0].category,'match_candidate');assert.equal(feedback.items[0].decision,'approve');assert.equal((await catalogAiActivity(pool,p,{mode:'review'}) as any).total,0);
+ await assert.rejects(resolveCatalogReviewFeedback(pool,p,{operationId:id(),feedbackId:request.operationId,findingVersion:1}),/First save/);
+ await assert.rejects(saveCatalogAudit(pool,p,{operationId:id(),auditId,expectedVersion:1,title:'Candidate test',range:period,findings:[{id:findingId,expectedVersion:1,category:'keyword_gap',sku,wording:'different customer words',explanation:'Wrong wording.',patch:{keywords:{add:['different customer words']}},evidence}]}),/confirmed product or wording changed/i);
+ await saveCatalogAudit(pool,p,{operationId:id(),auditId,expectedVersion:1,title:'Candidate test',range:period,findings:[{id:findingId,expectedVersion:1,category:'keyword_gap',sku,wording:'local elbow name',explanation:'Add the confirmed customer term.',patch:{keywords:{add:['local elbow name']}},evidence}]});
+ await resolveCatalogReviewFeedback(pool,p,{operationId:id(),feedbackId:request.operationId,findingVersion:2});const next:any=await catalogAiActivity(pool,p,{mode:'review'});assert.equal(next.total,1);assert.equal(next.items[0].category,'keyword_gap');assert.ok(!(await pool.query('SELECT keywords FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,sku])).rows[0].keywords.includes('local elbow name'));
+ await decideCatalogReview(pool,p,{operationId:id(),auditId,findingId,findingVersion:2,decision:'approve'});assert.ok((await pool.query('SELECT keywords FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,sku])).rows[0].keywords.includes('local elbow name'));
+}));
+
+test('candidate cards reject invented products, unsubstantiated wording, hidden edits and stale products',()=>fixture(async pool=>{
+ const messageId=await message(pool,'local elbow name'),auditId=id(),period=range(),evidence=[{conversationId:fixtureConversation,messageIds:[messageId]}],base={operationId:id(),auditId,title:'Candidate validation',range:period};
+ await assert.rejects(saveCatalogAudit(pool,p,{...base,findings:[{id:id(),category:'match_candidate',sku,wording:'not customer text',explanation:'Unproven wording.',evidence}]}),/match candidate/i);
+ await assert.rejects(saveCatalogAudit(pool,p,{...base,operationId:id(),findings:[{id:id(),category:'match_candidate',sku,wording:'local elbow name',explanation:'Hidden edit.',patch:{keywords:{add:['new term']}},evidence}]}),/match candidate/i);
+ await assert.rejects(saveCatalogAudit(pool,p,{...base,operationId:id(),findings:[{id:id(),category:'match_candidate',sku:'NOT-A-PRODUCT',wording:'local elbow name',explanation:'Unknown product.',evidence}]}),/not found/i);
+ const findingId=id();await saveCatalogAudit(pool,p,{...base,operationId:id(),findings:[{id:findingId,category:'match_candidate',sku,wording:'local elbow name',explanation:'Possible match.',evidence}]});
+ await pool.query('UPDATE products SET version=version+1 WHERE store_id=$1 AND sku=$2',[fixtureStore,sku]);await assert.rejects(decideCatalogReview(pool,p,{operationId:id(),auditId,findingId,findingVersion:1,decision:'approve'}),/product changed/i);
+}));
+
+test('rejected and voice-noted candidate matches remain feedback, never catalog edits',()=>fixture(async pool=>{
+ const messageId=await message(pool,'local elbow name'),auditId=id(),period=range(),evidence=[{conversationId:fixtureConversation,messageIds:[messageId]}],ids=[id(),id()];
+ await saveCatalogAudit(pool,p,{operationId:id(),auditId,title:'Candidate feedback',range:period,findings:ids.map(id=>({id,category:'match_candidate',sku,wording:'local elbow name',explanation:'Possible product.',evidence}))});
+ const rejected:any=await decideCatalogReview(pool,p,{operationId:id(),auditId,findingId:ids[0],findingVersion:1,decision:'reject'});assert.equal(rejected.decision,'dismissed');assert.equal(rejected.published,false);
+ const pcm=Buffer.alloc(16000);for(let n=0;n<8000;n++)pcm.writeInt16LE(Math.round(1200*Math.sin(n/10)),n*2);const encoded=spawnSync('ffmpeg',['-hide_banner','-loglevel','error','-i','pipe:0','-f','webm','-c:a','libopus','pipe:1'],{input:pcmWav(pcm)});assert.equal(encoded.status,0);
+ const input={operationId:id(),auditId,findingId:ids[1],findingVersion:1,decision:'approve',audio:{mime:'audio/webm',data:encoded.stdout.toString('base64')}};const held:any=await decideCatalogReview(pool,p,input);assert.equal(held.decision,'queued_for_ai');assert.equal(held.published,false);
+ const feedback:any=await readCatalogReviewFeedback(pool,p,{});assert.equal(feedback.items.length,2);assert.equal(feedback.items.find((x:any)=>x.id===input.operationId).hasAudio,true);assert.equal((await catalogAiActivity(pool,p,{mode:'review'}) as any).total,0);
+ assert.ok(!(await pool.query('SELECT keywords FROM products WHERE store_id=$1 AND sku=$2',[fixtureStore,sku])).rows[0].keywords.includes('local elbow name'));
+}));
