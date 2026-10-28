@@ -127,10 +127,10 @@ test('ordinary connected stock and visibility changes record provenance, failed 
  await assert.rejects(ownerStockAction(pool,p,{...action,operationId:id()}));assert.equal((await catalogAiActivity(pool,p,{}) as any).total,total);
 }));
 
-test('AI activity includes unmatched findings and honest historic actions, with scoped stable pagination',()=>fixture(async pool=>{
+test('AI activity keeps unmatched findings out of approval cards and retains historic actions, with scoped stable pagination',()=>fixture(async pool=>{
  const messageId=await message(pool,'unknown thing'),auditId=id();
  await saveCatalogAudit(pool,p,{operationId:id(),auditId,title:'Unidentified request',range:range(),findings:[{id:id(),category:'insufficient_evidence',wording:'unknown thing',explanation:'Ask the owner which product this could mean.',evidence:[{conversationId:fixtureConversation,messageIds:[messageId]}]}]});
- const pending:any=await catalogAiActivity(pool,p,{mode:'review'});assert.equal(pending.items[0].sku,null);assert.equal(pending.items[0].live,false);assert.equal(pending.items[0].conversationId,fixtureConversation);assert.equal(pending.items[0].hasPhoto,false);assert.equal(pending.items[0].productVersion,null);
+ const pending:any=await catalogAiActivity(pool,p,{mode:'review'});assert.equal(pending.total,0);assert.equal((await getCatalogAudit(pool,p,{auditId}) as any).findings.length,1);
  for(let i=0;i<4;i++)await mutate(pool,p,'catalog:publish',id(),'commit',{},async c=>{await c.query('UPDATE products SET keywords=$3 WHERE store_id=$1 AND sku=$2',[fixtureStore,sku,JSON.stringify(['change '+i])]);return {sku};});
  let cursor:string|undefined;const seen:string[]=[];do{const page:any=await catalogAiActivity(pool,p,{limit:1,cursor});seen.push(...page.items.map((i:any)=>i.id));cursor=page.nextCursor??undefined;}while(cursor);assert.equal(new Set(seen).size,4);
  const page:any=await catalogAiActivity(pool,p,{limit:1});await assert.rejects(catalogAiActivity(pool,p,{cursor:page.nextCursor,q:'other filter'}),/another filter/);
@@ -144,7 +144,7 @@ test('MCP exposes actual audit permissions and invokes the full read/save/apply/
  await connect(pool,p,async client=>{
   const tools=(await client.listTools()).tools;assert.equal(tools.find(t=>t.name==='catalog_audit')?.annotations?.readOnlyHint,true);assert.equal(tools.find(t=>t.name==='catalog_audit_save')?.annotations?.readOnlyHint,false);
   const call=async(name:string,args:any)=>{const result=await client.callTool({name,arguments:args});assert.ok(!result.isError,JSON.stringify(result));return result.structuredContent as any;};
-  const evidence=await call('catalog_audit',{range:range()});assert.ok(evidence.messages.some((m:any)=>m.id===messageId));assert.match(evidence.instructions,/three real candidates/);const prompt=await client.getPrompt({name:'audit_product_matching'});const content=prompt.messages[0].content;assert.equal(content.type,'text');if(content.type==='text'){assert.match(content.text,/several plausible English, Tamil and Tanglish/);assert.match(content.text,/separate audit for the correct interval/);}
+  const evidence=await call('catalog_audit',{range:range()});assert.ok(evidence.messages.some((m:any)=>m.id===messageId));assert.match(evidence.instructions,/owner review cards/);assert.match(evidence.instructions,/catalog_inventory/);const prompt=await client.getPrompt({name:'audit_product_matching'});const content=prompt.messages[0].content;assert.equal(content.type,'text');if(content.type==='text'){assert.match(content.text,/several plausible English, Tamil and Tanglish/);assert.match(content.text,/separate audit for the correct interval/);}
   await call('catalog_audit_save',{operationId:id(),auditId,title:'MCP audit',range:range(),findings:[{id:findingId,sku,category:'alias_gap',wording:'local elbow name',explanation:'Owner reviewed this exact item.',patch:{aliases:{add:['local elbow name']}},evidence:[{conversationId:fixtureConversation,messageIds:[messageId]}]}]});
   assert.equal((await call('catalog_audit_get',{auditId})).findings.length,1);
   assert.deepEqual((await call('catalog_audit_batch_preview',{auditId,findingIds:[findingId]})).readyFindingIds,[findingId]);
@@ -238,11 +238,11 @@ test('saved scan progress resumes the exact conversation cutoff and previous cal
  const next:any=await catalogAudit(pool,p,{conversationId:resumed.coverage.conversationId,cursor:resumed.coverage.scanProgress.nextCursor});assert.equal(next.messages[0].id,secondId);
  const operationId=id(),request={operationId,auditId,expectedVersion:1,title:'Scoped resumable audit',range:page.range,conversationId:fixtureConversation,reviewedMessageIds:[secondId]};await saveCatalogAudit(pool,p,request);
  await assert.rejects(saveCatalogAudit(pool,{...p,canReadOwner:false},request),/owner permission/);
- const defaults:any=await catalogAudit(pool,p,{});assert.equal(Date.parse(defaults.range.until)-Date.parse(defaults.range.since),7*86400000);assert.equal(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(defaults.range.until)),'00:00');
+ const defaults:any=await catalogAudit(pool,p,{});assert.ok(Date.parse(defaults.range.until)-Date.parse(defaults.range.since)>=6*86400000);assert.ok(Date.parse(defaults.range.until)-Date.parse(defaults.range.since)<=7*86400000);assert.ok(Math.abs(Date.now()-Date.parse(defaults.range.until))<10000);
 }));
 
 test('needs-review pagination preserves microseconds for findings created together',()=>fixture(async pool=>{
- const messageId=await message(pool),auditId=id();await saveCatalogAudit(pool,p,{operationId:id(),auditId,title:'Same timestamp review queue',range:range(),findings:Array.from({length:5},(_,i)=>({id:id(),category:'insufficient_evidence',wording:'item '+i,explanation:'Unresolved matching needs owner context.',evidence:[{conversationId:fixtureConversation,messageIds:[messageId]}]}))});
+ const messageId=await message(pool,'local fixture name'),auditId=id();await saveCatalogAudit(pool,p,{operationId:id(),auditId,title:'Same timestamp review queue',range:range(),findings:Array.from({length:5},()=>({id:id(),category:'alias_gap',sku,wording:'local fixture name',explanation:'A search term for this product.',patch:{aliases:{add:['local fixture name']}},evidence:[{conversationId:fixtureConversation,messageIds:[messageId]}]}))});
  let cursor:string|undefined;const ids:string[]=[];do{const page:any=await catalogAiActivity(pool,p,{mode:'review',limit:2,cursor});ids.push(...page.items.map((r:any)=>r.id));cursor=page.nextCursor??undefined;}while(cursor);assert.equal(ids.length,5);assert.equal(new Set(ids).size,5);
 }));
 
