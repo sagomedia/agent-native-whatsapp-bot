@@ -1,3 +1,4 @@
+import {registerOwnerHours} from './owner-hours.js';
 import {registerOwnerAiReview} from './owner-ai-review.js';
 import {registerOwnerAiActivity} from './owner-ai-activity.js';
 import {ownerDemoLogin} from './owner-demo-login.js';
@@ -114,6 +115,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
   registerOwnerAiReview(app,pool,owner.storeId,owner.email);
   registerOwnerFacts(app,pool,owner.storeId,write);
   registerOwnerOperations(app,pool,owner.storeId);
+  registerOwnerHours(app,pool,owner.storeId,write);
   await registerOwnerCatalog(app,pool,owner.storeId,write,catalogGenerator??(config.catalogAi?new GoogleCatalogGenerator(config.catalogAi.apiKey):undefined));
   registerOwnerSimpleProducts(app,pool,owner.storeId,write);
   registerOwnerImport(app,pool,owner.storeId,owner.email);

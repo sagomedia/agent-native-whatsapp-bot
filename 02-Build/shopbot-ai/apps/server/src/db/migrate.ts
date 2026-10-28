@@ -1,3 +1,4 @@
+import {migrateStoreHours} from './store-hours.js';
 import {migrateCatalogReview} from './catalog-review.js';
 import {migrateCatalogAudit} from './catalog-audit.js';
 import {migrateOwnerDemoLogin} from './owner-demo-login.js';
@@ -557,6 +558,7 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
     await migrateCatalogAudit(client);
     await migrateOwnerDemoLogin(client);
     await migrateCatalogReview(client);
+    await migrateStoreHours(client);
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

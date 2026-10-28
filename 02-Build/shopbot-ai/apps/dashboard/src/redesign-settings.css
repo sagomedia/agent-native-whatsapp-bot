@@ -33,3 +33,5 @@
 .redesign .rd-settings-costs .rd-settings-facts>div{flex-wrap:wrap;gap:8px 20px}
 .redesign .rd-settings-costs .rd-settings-facts>div>span{flex:1 1 170px;min-width:0}
 .redesign .rd-settings-costs .rd-settings-facts strong{white-space:nowrap;flex-shrink:0}
+
+.redesign .rd-settings-hours{margin-top:28px;padding-top:24px;border-top:1px solid var(--rd-line)}.redesign .rd-settings-hours p{font-size:14px;color:var(--rd-muted);line-height:1.5}.redesign .rd-settings-hours-times{display:grid;grid-template-columns:1fr 1fr;gap:16px}.redesign .rd-settings-hours-days{border:0;padding:0;margin:16px 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.redesign .rd-settings-hours-days legend{margin-bottom:12px}.redesign .rd-settings-hours-days label{display:flex;gap:9px;align-items:center;min-height:36px}.redesign .rd-settings-hours-days input{width:18px;height:18px;accent-color:var(--rd-teal)}

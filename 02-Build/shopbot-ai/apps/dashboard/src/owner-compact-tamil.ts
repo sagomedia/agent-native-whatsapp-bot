@@ -1,5 +1,6 @@
 /** Everyday owner controls; product names and customer messages stay untouched. */
 export const compactTamil:Record<string,string>={
+ 'Call':'அழை','Call customer':'வாடிக்கையாளரை அழை',
  'Search products':'பொருளைத் தேடு','Low stock':'குறைந்த இருப்பு','Out of stock':'இருப்பு இல்லை','Needs attention':'கவனம் தேவை',
  'Shop details':'கடை விவரங்கள்','Name and account details':'பெயர், கணக்கு விவரங்கள்','Preview replies':'பதில் மாதிரிகள்','See how your replies look to customers':'வாடிக்கையாளருக்குத் தோன்றும் பதிலைப் பார்',
  'WhatsApp connection':'வாட்ஸ்அப் இணைப்பு','Manage connection':'இணைப்பை நிர்வகி','Connection details':'இணைப்பு விவரங்கள்','Usage and billing':'பயன்பாடும் கட்டணமும்','View recorded usage':'பதிவு செய்த பயன்பாட்டைப் பார்','Help':'உதவி','Find answers':'பதில்களைக் கண்டுபிடி','Technical details':'தொழில்நுட்ப விவரங்கள்','For advanced users':'கூடுதல் விவரங்கள்',

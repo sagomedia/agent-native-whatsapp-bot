@@ -23,7 +23,7 @@ test('daily briefing uses local yesterday boundaries, scoped orders, current can
  const other=randomUUID();await pool.query("INSERT INTO stores(id,name,synthetic) VALUES($1,'Other shop','true')",[other]);await order(pool,start,other);
  const result=await ownerDailyBriefing(pool,principal,{});
  assert.equal(result.yesterday.received,2);assert.equal(result.yesterday.cancelled,1);assert.equal(result.yesterday.estimatedOrderValuePaise,'3000');
- assert.equal(result.yesterday.since.slice(11),'18:30:00.000Z');assert.equal(result.afterClosing.status,'closing_time_needed');assert.equal(result.afterClosing.received,null);
+ assert.equal(result.yesterday.since.slice(11),'18:30:00.000Z');assert.equal(result.afterClosing.status,'hours_not_configured');assert.equal(result.afterClosing.received,null);
  assert.ok(result.priorities.length<=3);assert.match(result.presentationInstructions,/Tamil/);
 }));
 test('after-closing is an explicit window and is read only across retries',()=>fixture(async pool=>{

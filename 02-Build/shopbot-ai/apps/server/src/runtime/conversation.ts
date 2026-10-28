@@ -1,3 +1,4 @@
+import {readStoreHours,hoursAnswer,appendClosedShopNotice} from '../services/store-hours.js';
 import {recordConversationAudit} from '../services/catalog-audit.js';
 import {trackItemClarification} from '../services/item-clarification.js';
 import {cartChangeFeedback} from '../services/cart-change-feedback.js';
@@ -627,7 +628,11 @@ export class ConversationRuntime {
       if(replyRequest?.advanceRequired&&this.options.advance&&!rich.readOnly)rich=await upiAdvanceReply(client,ctx,finalState,this.options.advance.hostname,{demoPayAtShop:this.options.advance.demoPayAtShop,onlyOnce:true})??rich;
       const alreadySeen=finalState.draft.length>0&&finalState.draft.every(line=>{const product=line.candidates?.find(p=>p.sku===line.sku);return product&&claimed.displayedProducts.some(p=>p.delivered&&p.event.type==='edit_item'&&p.event.lineId===line.id&&productIdentity(p.product)===productIdentity(product));});
       const editVisual=finalState.visualOrdering&&cartMutated&&!failure&&rich.stage!=='error'&&!rich.readOnly&&finalState.pending?.kind==='products'&&!['cart_edit_target','keep_only_target','intent_clarification'].includes(rich.clarificationReason??'')?visualCartMutation(cartBefore,finalState,{contextLines:rich.contextLines,fullList:interpretation?.understanding?.intents.includes('view_list')}):undefined;
+      const wantsHours=interpretation?.shopQuestions?.includes('hours'),billStage=rich.stage==='bill'||rich.stage==='submitted'||finalState.pending?.kind==='review'&&rich.kind==='order_review';
+      const shopHours=wantsHours||billStage?await readStoreHours(client,ctx.storeId):undefined;
+      if(wantsHours&&shopHours){const oldAnswer=shopAnswers(finalState,['hours']),answer=hoursAnswer(shopHours,finalState);rich={...rich,text:rich.text.replaceAll(oldAnswer,answer),contextLines:rich.contextLines?.map(v=>v.replaceAll(oldAnswer,answer)),parts:rich.parts?.map(part=>({...part,text:part.text.replaceAll(oldAnswer,answer)}))};}
       rich=materializeVisualReply({...editVisual??visualReply({...rich,compactReview:alreadySeen&&!cartMutated},finalState,replyRequest),storeName:claimed.catalogMap?.store.name});
+      if(shopHours&&(billStage||rich.stage==='bill'||rich.stage==='submitted'))rich=appendClosedShopNotice(rich,shopHours,finalState,rich.stage==='submitted'&&!!replyRequest);
       // Confirm only persisted customer CRUD, after presentation has chosen its
       // primary question. Read-only refreshes and rejected plans say nothing.
       const feedback=cartBefore.draft.length>0&&finalState.visualOrdering&&!failure&&rich.stage!=='error'&&cartMutated&&!cartBefore.lastRequestId&&!finalState.lastRequestId?cartChangeFeedback(cartBefore,finalState,rich.parts?.some(part=>part.cards.length)?30:70):undefined;

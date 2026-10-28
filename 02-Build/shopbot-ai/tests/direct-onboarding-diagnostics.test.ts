@@ -113,5 +113,5 @@ test('additive v46 upgrade preserves customer guards, products and messages and 
  await pool.query('ALTER TABLE catalog_proposal_assets DROP COLUMN asset_kind,DROP COLUMN source_asset_id,DROP CONSTRAINT catalog_asset_identity');await pool.query('DELETE FROM schema_migrations WHERE version>=47');
  await setupDatabase(pool,'mock');await setupDatabase(pool,'mock');
  const after=(await pool.query("SELECT (SELECT count(*)::int FROM products) AS products,(SELECT count(*)::int FROM messages) AS messages,(SELECT count(*)::int FROM whatsapp_customer_guards) AS guards")).rows[0];assert.deepEqual(after,before);
- assert.equal((await pool.query('SELECT max(version) AS version FROM schema_migrations')).rows[0].version,52);
+ assert.equal((await pool.query('SELECT max(version) AS version FROM schema_migrations')).rows[0].version,53);
 }));
