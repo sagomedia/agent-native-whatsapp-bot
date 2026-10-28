@@ -62,7 +62,7 @@ export async function reviewOwnerOrder(client:PoolClient,scope:OrderOwner,reques
       if(input.action==='revise'){
         const customer=(await client.query('SELECT c.reply_language,s.name AS store_name FROM conversations c JOIN stores s ON s.id=c.store_id WHERE c.id=$1 AND c.store_id=$2',[current.conversation_id,scope.storeId])).rows[0];
         const language=customer?.reply_language??'en';
-        const bill=appendClosedShopNotice(confirmedPriceBill(language,current.id,lines,total,customer?.store_name),await readStoreHours(client,scope.storeId),{replyLanguage:language},true);
+        const bill=appendClosedShopNotice(confirmedPriceBill(language,current.id,lines,total,customer?.store_name),await readStoreHours(client,scope.storeId),{replyLanguage:language});
         // Keep a readable text fallback when visual messages are disabled or image generation fails.
         let noticeReply=textPresentation(bill.text);
         if(input.notify&&channel?.visualOrdering)try{noticeReply=materializeVisualReply(bill);}catch{noticeReply=textPresentation(bill.text);}

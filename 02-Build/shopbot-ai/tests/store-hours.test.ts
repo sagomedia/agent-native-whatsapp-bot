@@ -48,13 +48,12 @@ test('morning preparation uses the saved closing boundary, exposes audit steps a
  assert.deepEqual(report.preparation.steps.slice(0,3).map(s=>s.tool),['catalog_audit_get','catalog_audit','owner_operations']);assert.equal(report.preparation.status,'checks_required');
  assert.deepEqual((await pool.query('SELECT (SELECT count(*) FROM owner_audit) audit,(SELECT count(*) FROM whatsapp_outbox) outbox')).rows,before.rows);
 }));
-test('closing captions distinguish a draft bill from a received order and append only once',()=>fixture(async pool=>{
+test('closed bills show only the reopening notice and append it once',()=>fixture(async pool=>{
  await save(pool,normal);const hours=await read(pool,'2026-10-28T16:00:00Z');
  for(const replyLanguage of ['en','ta','ta-Latn'] as const){const bill=confirmedPriceBill(replyLanguage,randomUUID(),[{id:randomUUID(),name:'Tape',quantity:1,unit:'piece',pricePaise:1000,resolution:'matched',merchantConfirmed:{actor:'shop',at:'2026-01-01',free:false}}],1000);
-  const received=appendClosedShopNotice(bill,hours,{replyLanguage},true);assert.equal(received.parts!.at(-1)!.text.includes(hoursAnswer(hours,{replyLanguage})),true);assert.deepEqual(appendClosedShopNotice(received,hours,{replyLanguage},true),received);
-  const draft=appendClosedShopNotice(bill,hours,{replyLanguage},false);assert.notEqual(draft.text,received.text);if(replyLanguage==='en'){assert.match(received.text,/order request is noted/);assert.match(draft.text,/send your order now/);assert.doesNotMatch(draft.text,/order request is noted/);}
+  const decorated=appendClosedShopNotice(bill,hours,{replyLanguage});assert.equal(decorated.parts!.at(-1)!.text.includes(hoursAnswer(hours,{replyLanguage})),true);assert.deepEqual(appendClosedShopNotice(decorated,hours,{replyLanguage}),decorated);assert.equal(decorated.text,bill.text+'\n\n'+hoursAnswer(hours,{replyLanguage}));
  }
- const open=await read(pool,'2026-10-28T07:00:00Z'),bill=confirmedPriceBill('en',randomUUID(),[{id:randomUUID(),name:'Tape',quantity:1,unit:'piece',pricePaise:1000,resolution:'matched',merchantConfirmed:{actor:'shop',at:'2026-01-01',free:false}}],1000);assert.deepEqual(appendClosedShopNotice(bill,open,{replyLanguage:'en'},true),bill);
+ const open=await read(pool,'2026-10-28T07:00:00Z'),bill=confirmedPriceBill('en',randomUUID(),[{id:randomUUID(),name:'Tape',quantity:1,unit:'piece',pricePaise:1000,resolution:'matched',merchantConfirmed:{actor:'shop',at:'2026-01-01',free:false}}],1000);assert.deepEqual(appendClosedShopNotice(bill,open,{replyLanguage:'en'}),bill);
 }));
 test('hours settings require authenticated owner origin, validate input and reject stale edits',()=>fixture(async pool=>{
  const owner={hostname:'owner.example.test',issuer:'https://fixture.cloudflareaccess.com',audience:'hours-test',email:'owner@example.test',storeId:fixtureStore};
@@ -72,11 +71,11 @@ test('saved WhatsApp numbers produce a dialer link without guessing or accepting
  assert.deepEqual(customerContact('919876543210'),{number:'+919876543210',href:'tel:+919876543210'});assert.equal(customerContact('+919876543210')!.href,'tel:+919876543210');
  for(const value of [undefined,'local-simulator','javascript:alert(1)','123','0001234567','+91 98765'])assert.equal(customerContact(value),null);
 });
-test('customer opening-hours questions use the saved schedule in the real conversation runtime',()=>fixture(async pool=>{
+test('saved hours do not change responses outside the billing flow',()=>fixture(async pool=>{
  await save(pool,normal);const conversationId=randomUUID();await pool.query("INSERT INTO conversations(id,store_id,actor) VALUES($1,$2,'hours-runtime')",[conversationId,fixtureStore]);
  const inbox=new SimulatorService(pool,{storeId:fixtureStore,conversationId,actor:'hours-runtime',role:'customer'}),runtime=new ConversationRuntime(pool,new MockInterpreter());
  await inbox.ingest({id:randomUUID(),type:'text',text:'What are your opening hours?'});await runtime.processNext(inbox.context);
- const state=await inbox.snapshot(),last=state.messages.at(-1)!;assert.doesNotMatch(last.text,/aren’t in this catalog/);assert.match(last.text,/The shop is (open|closed)/);
+ const state=await inbox.snapshot(),last=state.messages.at(-1)!;assert.match(last.text,/opening hours aren’t in this catalog/);
 }));
 
 for(const visualOrdering of [false,true])test(`real ${visualOrdering?'image':'text'} bills and submissions attach truthful closing context`,()=>fixture(async pool=>{
@@ -86,7 +85,7 @@ for(const visualOrdering of [false,true])test(`real ${visualOrdering?'image':'te
  const inbox=new SimulatorService(pool,{storeId:fixtureStore,conversationId,actor:'hours-bill',role:'customer'}),runtime=new ConversationRuntime(pool,new MockInterpreter(),{visualOrdering});
  await inbox.ingest({id:randomUUID(),type:'text',text:'I need two PTFE tape rolls'});await runtime.processNext(inbox.context);
  if(visualOrdering){const preview=await inbox.snapshot(),r=preview.messages.at(-1)!.rich!;const approval=[...r.buttons??[],...(r.parts??[]).flatMap(part=>[...part.buttons??[],...part.cards.flatMap(card=>card.buttons??[])])].find(b=>b.event.type==='confirm_products');assert.ok(approval);await inbox.ingest({...approval.event,id:randomUUID()});await runtime.processNext(inbox.context);}
- const draft=await inbox.snapshot(),reply=draft.messages.at(-1)!.rich!;assert.equal(reply.kind,'order_review',JSON.stringify({text:reply.text,pending:draft.conversation.pending,stage:reply.stage}));assert.match(reply.text,/The shop is closed/);assert.match(reply.text,/send your order now/);assert.doesNotMatch(reply.text,/order request is noted/);assert.equal(draft.requests.length,0);assert.equal(draft.conversation.pending?.kind,'review');
+ const draft=await inbox.snapshot(),reply=draft.messages.at(-1)!.rich!;assert.equal(reply.kind,'order_review',JSON.stringify({text:reply.text,pending:draft.conversation.pending,stage:reply.stage}));assert.match(reply.text,/The shop is closed/);assert.match(reply.text,/Opens/);assert.doesNotMatch(reply.text,/send your order now|order request is noted/);assert.equal(draft.requests.length,0);assert.equal(draft.conversation.pending?.kind,'review');
  await inbox.ingest({id:randomUUID(),type:'confirm',reviewId:draft.conversation.pending!.id});await runtime.processNext(inbox.context);
- const submitted=await inbox.snapshot();assert.equal(submitted.requests.length,1);assert.match(submitted.messages.at(-1)!.text,/order request is noted/);
+ const submitted=await inbox.snapshot();assert.equal(submitted.requests.length,1);assert.match(submitted.messages.at(-1)!.text,/The shop is closed.*Opens/);assert.doesNotMatch(submitted.messages.at(-1)!.text,/order request is noted/);
 }));

@@ -39,10 +39,10 @@ export function hoursAnswer(h:StoreHoursStatus,state:Pick<ConversationState,'rep
  return h.status==='open'?say(state,`The shop is open${label?`. Closes ${label}`:''}.`,`கடை திறந்துள்ளது${label?`. மூடும் நேரம்: ${label}`:''}.`,`Kadai thirandhirukku${label?`. Moodum neram: ${label}`:''}.`):say(state,`The shop is closed${label?`. Opens ${label}`:''}.`,`கடை மூடப்பட்டுள்ளது${label?`. அடுத்து திறக்கும் நேரம்: ${label}`:''}.`,`Kadai moodiyirukku${label?`. Aduthu thirakkum neram: ${label}`:''}.`);
 }
 
-/** Attach once to the final bill caption. A draft bill is never described as a submitted order. */
-export function appendClosedShopNotice(reply:RichReply,h:StoreHoursStatus,state:Pick<ConversationState,'replyLanguage'>,received:boolean):RichReply{
+/** Attach the reopening time once to a bill without changing the order. */
+export function appendClosedShopNotice(reply:RichReply,h:StoreHoursStatus,state:Pick<ConversationState,'replyLanguage'>):RichReply{
  if(h.status!=='closed')return reply;
- const note=hoursAnswer(h,state)+' '+(received?say(state,'Your order request is noted. The shop will confirm pickup.','உங்கள் ஆர்டர் கோரிக்கை பதிவு செய்யப்பட்டுள்ளது. வாங்க வரும் நேரத்தைக் கடை உறுதி செய்யும்.','Unga order request padhivu aachu. Vaanga varum nerathai kadai confirm pannum.'):say(state,'You can send your order now; the shop will check it after opening.','இப்போது ஆர்டரை அனுப்பலாம்; கடை திறந்ததும் சரிபார்ப்பார்கள்.','Ippo order anuppalaam; kadai thirandhathum check pannuvaanga.'));
+ const note=hoursAnswer(h,state);
  if(reply.text.includes(note))return reply;
  return {...reply,text:reply.text+'\n\n'+note,accessibleText:(reply.accessibleText??reply.text)+'\n\n'+note,parts:reply.parts?.map((part,i)=>i===reply.parts!.length-1?{...part,text:part.text+'\n\n'+note}:part)};
 }

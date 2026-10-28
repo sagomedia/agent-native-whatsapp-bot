@@ -404,7 +404,7 @@ test('quantity quotes are read-only, computed from catalog prices, and reject un
 test('owner questions give truthful answers in one reply without mutating or sending the review',async()=>fixture(async(pool,inbox)=>{
   let s=await turn(inbox,inbox.runtime,'I need two PTFE tape rolls');const before=s.conversation;
   s=await turn(inbox,inbox.runtime,'Can you deliver today and give me the plumber rate?');assert.deepEqual(s.conversation,before);assert.equal(s.interpretationAttempts,1);assert.match(s.messages.at(-1)!.text,/delivery timing.*shop.*trade rates.*confirmation/);assert.equal(s.messages.at(-1)!.rich?.cards,undefined);assert.equal(s.messages.at(-1)!.rich?.buttons,undefined);assert.equal(s.messages.at(-1)!.rich?.outboundMessages,1);
-  s=await turn(inbox,inbox.runtime,'What time do you close?');assert.deepEqual(s.conversation,before);assert.match(s.messages.at(-1)!.text,/has not set its opening hours yet/);assert.equal(s.requests.length,0);
+  s=await turn(inbox,inbox.runtime,'What time do you close?');assert.deepEqual(s.conversation,before);assert.match(s.messages.at(-1)!.text,/opening hours aren’t in this catalog/);assert.equal(s.requests.length,0);
 }));
 
 test('mock diagnostic parser preserves box packaging and supported unit synonyms',async()=>fixture(async(pool,inbox)=>{
