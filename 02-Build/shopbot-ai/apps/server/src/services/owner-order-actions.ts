@@ -7,12 +7,11 @@ import {reserveRequest,closeRequestStock} from './inventory.js';
 import {prepareOwnerOrderReview,recordOwnerOrderReview,type OwnerOrderReview} from './owner-order-review.js';
 import {queueOrderNotice} from './order-notices.js';
 import {textPresentation} from './message-presentation.js';
-import {formatMoney,lineTotal} from '../../../../packages/contracts/money.js';
-import {say} from '../../../../packages/contracts/language.js';
 import {recipientAllowed} from './customer-admission.js';
 import {requestStatusText} from './request-status.js';
 import {materializeVisualReply} from './visual-images.js';
 import {visualStatus} from './visual-ordering.js';
+import {confirmedPriceBill} from './confirmed-bill.js';
 import {renderWhatsAppReply} from './whatsapp-reply.js';
 import {currentReleaseFingerprint} from './release-manifest.js';
 export type OrderOwner={storeId:string;actor:string};
@@ -60,10 +59,13 @@ export async function reviewOwnerOrder(client:PoolClient,scope:OrderOwner,reques
       await client.query('UPDATE conversations SET draft=$1::jsonb,version=version+1 WHERE id=$2 AND last_request_id=$3',[JSON.stringify(lines),current.conversation_id,current.id]);
       let notice:any={customerNotification:'not_requested'};
       if(input.action==='revise'){
-        const language=(await client.query('SELECT reply_language FROM conversations WHERE id=$1',[current.conversation_id])).rows[0]?.reply_language??'en';
-        const list=lines.map(line=>`${line.quantity} ${line.unit} × ${formatMoney(line.pricePaise!)} · ${line.name} · ${formatMoney(lineTotal(line.pricePaise!,line.quantity!))}`).join('\n');
-        const text=say({replyLanguage:language},`Updated bill for order #${current.id.replaceAll('-','').slice(0,8).toUpperCase()}:\n${list}\nTotal: ${formatMoney(total)}\nThe shop will tell you when it is ready for pickup.`,`Order #${current.id.replaceAll('-','').slice(0,8).toUpperCase()} புதிய பில்:\n${list}\nமொத்தம்: ${formatMoney(total)}\nபெற தயாரானதும் கடை தெரிவிக்கும்.`,`Order #${current.id.replaceAll('-','').slice(0,8).toUpperCase()} pudhu bill:\n${list}\nTotal: ${formatMoney(total)}\nReady aanathum kadai sollum.`);
-        notice=await queueOrderNotice(client,scope.storeId,current.id,`revised-${changed.effective_revision}`,textPresentation(text),channel,input.notify);
+        const customer=(await client.query('SELECT c.reply_language,s.name AS store_name FROM conversations c JOIN stores s ON s.id=c.store_id WHERE c.id=$1 AND c.store_id=$2',[current.conversation_id,scope.storeId])).rows[0];
+        const language=customer?.reply_language??'en';
+        const bill=confirmedPriceBill(language,current.id,lines,total,customer?.store_name);
+        // Keep a readable text fallback when visual messages are disabled or image generation fails.
+        let noticeReply=textPresentation(bill.text);
+        if(input.notify&&channel?.visualOrdering)try{noticeReply=materializeVisualReply(bill);}catch{noticeReply=textPresentation(bill.text);}
+        notice=await queueOrderNotice(client,scope.storeId,current.id,`revised-${changed.effective_revision}`,noticeReply,channel,input.notify);
       }else if(input.action==='ready')notice=await notifyOrderStatus(client,scope,changed,input.notify,channel);
       const result={requestId:current.id,stage:input.action==='ready'?'ready':'new',effectiveRevision:changed.effective_revision,totalPaise:total,...notice,replayed:false};
       await recordOwnerOrderReview(client,scope.storeId,current.id,input,hash,result);

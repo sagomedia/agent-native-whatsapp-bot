@@ -41,7 +41,7 @@ function invoiceSvg(card:Exclude<VisualCard,{kind:'product'}>):string {
  let y=64,content='';
  const draw=(value:string,x:number,baseline:number,size=24,color=ink,anchor='start')=>shapedText(value,x,baseline,size,color,anchor);
  for(const name of wrapPixels(card.storeName??'Shop',640,32)){content+=draw(name,56,y,32);y+=42;}
- content+=draw(card.invoiceType==='quote'?'Shop quote':'Estimate',1024,64,30,accent,'end');
+ content+=draw(card.invoiceType==='confirmed'?card.title:card.invoiceType==='quote'?'Shop quote':'Estimate',1024,64,30,accent,'end');
  content+=draw('INR',1024,102,20,muted,'end');
  if(card.reference){content+=draw(card.reference,56,y+10,20,muted);y+=40;}
  y=Math.max(y+24,156);content+=`<path d="M56 ${y}H1024" stroke="${ink}" stroke-width="2"/>`;y+=42;
