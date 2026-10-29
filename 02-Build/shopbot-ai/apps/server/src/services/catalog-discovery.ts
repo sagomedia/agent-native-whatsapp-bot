@@ -115,8 +115,21 @@ function customerIdentityWords(query:string) {
  const generic=new Set(['tool','tools','item','items','product','products','some','need','want','a','an','the','and','or','one','two','x','of','my','me','show','please','inch','inches','mm','cm']);
  return tokens(withoutPackMeasures(namedObjectPhrase(query))).filter(t=>!/\d/.test(t)&&!generic.has(t));
 }
+function supportsCementIdentity(query:string,product:Product){
+ const words=customerIdentityWords(query);
+ // A product may mention an ingredient in specifications or keywords. That
+ // does not make the finished product the ingredient: white-cement-based
+ // wall putty and PVC solvent cement are not bags of white cement. Inspect
+ // the product's own name, not its ingredient/search metadata.
+ if(words.includes('white')&&words.includes('cement')&&!words.some(w=>['putty','solvent','adhesive','glue'].includes(w))){
+  const name=tokens(product.name);
+  if(name.some(w=>['putty','solvent','adhesive','glue','trowel'].includes(w)))return false;
+ }
+ return true;
+}
 function supportsCustomerIdentity(query:string,product:Product,nodes:{id:string;kind:string;label:string;aliases:string[]}[],requestedFamilies:string[]) {
  const words=customerIdentityWords(query).filter(word=>!tokens(product.unit).some(unit=>word===unit||word===unit+'s'));
+ if(!supportsCementIdentity(query,product))return false;
  const source=unique([product.name,...Object.values(product.localNames??{}),product.brand??'',...Object.values(product.specifications??{}),...product.aliases,...(product.keywords??[])].flatMap(tokens));
  if(words.length&&!requestedFamilies.length&&unsupportedNamedObject(query,nodes)&&!source.some(word=>sameObjectHead(words.at(-1)!,word)))return false;
  if(words.length<2)return true; // Vague single-word jobs still offer alternatives.
@@ -225,7 +238,7 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
  }
  if(needsSolventUse(query)&&!namedCatalogProduct)return solventGroups(client,ctx,query,plan,nodes);
  if(needsPipeType(query)&&!namedCatalogProduct)return emptyDiscovery(query,plan,'pipe_type_required');
- const root=candidate&&matchesPackMeasures(query,candidate)&&(!plan.selectedSkus||plan.selectedSkus.includes(candidate.sku))&&(!plan.familyId||candidate.familyId===plan.familyId)&&(!plan.familyIds||plan.familyIds.includes(candidate.familyId??''))&&(!plan.departmentId||nodes.some(n=>n.id===candidate.familyId&&n.parent_id===plan.departmentId))&&(!plan.brand||normalize(candidate.brand??'')===normalize(plan.brand))&&Object.entries(plan.specifications??{}).every(([key,value])=>specMatches(candidate,key,value))?candidate:undefined;
+ const root=candidate&&supportsCementIdentity(query,candidate)&&matchesPackMeasures(query,candidate)&&(!plan.selectedSkus||plan.selectedSkus.includes(candidate.sku))&&(!plan.familyId||candidate.familyId===plan.familyId)&&(!plan.familyIds||plan.familyIds.includes(candidate.familyId??''))&&(!plan.departmentId||nodes.some(n=>n.id===candidate.familyId&&n.parent_id===plan.departmentId))&&(!plan.brand||normalize(candidate.brand??'')===normalize(plan.brand))&&Object.entries(plan.specifications??{}).every(([key,value])=>specMatches(candidate,key,value))?candidate:undefined;
  // A validated unique catalog identity outranks an inferred taxonomy label.
  // Its returned plan must remain valid when the same search is refreshed.
  if(root)requestedFamilies=[];
@@ -382,7 +395,7 @@ export async function discoverProducts(client:PoolClient,ctx:ActorContext,custom
  if(!tokens(relatedQuery).some(t=>!/^\d/.test(t)))return result;
  const supportedFamilies=result.diagnostics?.appliedConstraints.familyIds??[];
  const related=await discoverExactProducts(client,ctx,relatedQuery,{...plan,...(!plan.familyId&&!plan.familyIds&&supportedFamilies.length?{familyIds:supportedFamilies}:{}),brand:undefined,specifications:specs,allowAlternatives:false,keywords:[relatedQuery.slice(0,120)]});
- const alternatives=related.products.flatMap(product=>{
+ const alternatives=related.products.filter(product=>supportsCementIdentity(query,product)).flatMap(product=>{
   const differences:{field:string;requested:string;actual?:string}[]=[];
   if(plan.brand&&normalize(product.brand??'')!==normalize(plan.brand))differences.push({field:'brand',requested:plan.brand,actual:product.brand});
   for(const key of relaxable){const requested=plan.specifications![key],actual=specificationValue(product,key),requestedMeasures=catalogMeasurements(requested);if(requestedMeasures.length){const actualMeasures=catalogMeasurements([product.name,...Object.values(product.specifications??{})].join('; '));if(requestedMeasures.some(m=>!actualMeasures.some(a=>a.unit===m.unit)))return [];}if(!actual||!specMatches(product,key,requested))differences.push({field:key,requested,actual});}

@@ -81,6 +81,20 @@ test('a valid transcript with an invalid proposed reference yields a grounded no
  const a=(await pool.query('SELECT response,validation_issues FROM provider_attempts WHERE conversation_id=$1',[inbox.context.conversationId])).rows[0];assert.deepEqual(a.response.operations,[]);assert.equal(a.validation_issues[0].code,'invalid_evidence');
 }));
 
+test('rejected spoken sack correction preserves every cart line and asks to check the item, not the already spoken count',()=>fixture(async(pool,inbox)=>{
+ await pool.query("UPDATE products SET name='Birla White Wall Putty 1kg' WHERE store_id=$1 AND sku='H07'",[inbox.context.storeId]);
+ const seeded=await new RetailTools(pool).invoke(inbox.context,{name:'apply_draft_changes',args:{expectedVersion:0,operations:[{kind:'add_item',query:'H13',quantity:1},{kind:'add_item',query:'H07',quantity:1}]}},'seed-sack');
+ const before=JSON.parse(JSON.stringify(seeded.state!.draft));
+ const transcript='ஒயிட் சிமெண்ட் ஒரு பாக்கெட்னு சொன்னோம்ல ஒரு மூடை சோ ஒன்னுன்னு ஆட் பண்ணிரு அதுல.';
+ const output={...base('audio'),transcript,proposedEdits:[{kind:'set_quantity',targetLineId:randomUUID(),sourceText:transcript,quantity:1}]};
+ const r=new ConversationRuntime(pool,new GoogleInterpreter(settings,{generateContent:async()=>response(output)}),{allowPaidInference:true,visualOrdering:true});
+ const s=await voice(inbox,r);
+ assert.deepEqual(s.conversation.draft,before);assert.equal(s.requests.length,0);
+ const message=s.messages.at(-1)!;assert.match(message.text,/ஒயிட் சிமெண்ட்/);assert.match(message.text,/White cement and wall putty are different/);assert.doesNotMatch(message.text,/what type and quantity do you want/i);
+ const attempts=(await pool.query('SELECT failure_code FROM provider_attempts WHERE conversation_id=$1',[inbox.context.conversationId])).rows;
+ assert.ok(attempts.some(a=>a.failure_code==='invalid_evidence'));
+}));
+
 test('a negated typed clear never asks the model or hands control to the owner',()=>fixture(async(pool,inbox)=>{
  await new RetailTools(pool).invoke(inbox.context,{name:'apply_draft_changes',args:{expectedVersion:0,operations:[{kind:'add_item',query:'H13',quantity:1}]}},'seed');
  let calls=0;const r=new ConversationRuntime(pool,new GoogleInterpreter(settings,{generateContent:async()=>{calls++;return response({...base(),intents:['cancel']});}}),{allowPaidInference:true,visualOrdering:true});

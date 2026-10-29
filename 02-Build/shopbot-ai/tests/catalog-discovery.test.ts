@@ -4,6 +4,22 @@ async function fixture(run:(pool:pg.Pool,inbox:SimulatorService)=>Promise<void>)
 async function event(inbox:SimulatorService,runtime:ConversationRuntime,e:SimulatorEvent){await inbox.ingest(e);await runtime.processNext(inbox.context);return inbox.snapshot();}async function text(inbox:SimulatorService,runtime:ConversationRuntime,value:string){return event(inbox,runtime,{id:randomUUID(),type:'text',text:value});}function last(s:Snapshot){return s.messages.at(-1)!.rich!;}
 const never:Interpreter={name:'no-ai-for-choices',mode:'mock',interpret:async()=>{throw new Error('Unexpected AI call');}};
 
+test('white cement is not confused with white-cement-based putty or solvent cement',async()=>fixture(async(pool,inbox)=>{
+ await pool.query(`UPDATE products SET name='Birla White Wall Putty 1kg',aliases='["white cement"]'::jsonb,keywords='["white cement"]'::jsonb,specifications='{"form":"white cement based powder","colour":"white"}'::jsonb WHERE store_id=$1 AND sku='H07'`,[inbox.context.storeId]);
+ const c=await pool.connect();try{
+  const plan={keywords:['white cement'],specifications:{colour:'white'},allowAlternatives:true};
+  let r=await discoverProducts(c,inbox.context,'white cement',plan);
+  assert.ok(!r.products.some(p=>p.sku==='H07'));
+  const runtime=new ConversationRuntime(pool,{name:'white-cement-request',mode:'mock',interpret:async()=>({output:{operations:[{kind:'add_item',query:'white cement',quantity:1,requestedUnit:'sack',search:plan}],next:'review'},truncated:false,usage:null})},{visualOrdering:true});
+  const snapshot=await text(inbox,runtime,'white cement one sack');
+  assert.equal(snapshot.conversation.draft.length,1);assert.equal(snapshot.conversation.draft[0].sku,undefined);
+  assert.ok(!snapshot.conversation.draft[0].candidates?.some(p=>p.sku==='H07'));assert.equal(snapshot.requests.length,0);
+  await pool.query(`UPDATE products SET name='Birla White Cement Bag',aliases='["white cement"]'::jsonb,keywords='["white cement"]'::jsonb,specifications='{"colour":"white"}'::jsonb WHERE store_id=$1 AND sku='H13'`,[inbox.context.storeId]);
+  r=await discoverProducts(c,inbox.context,'white cement',plan);
+  assert.ok(r.products.some(p=>p.sku==='H13'));assert.ok(!r.products.some(p=>p.sku==='H07'));
+ }finally{c.release();}
+}));
+
 test('store mind map separates actual departments, families and SKU facts; broad blade compares all four verified options across three families',async()=>fixture(async(pool,inbox)=>{const client=await pool.connect();try{const map=await getCatalogMap(client,inbox.context);assert.equal(map.productCount,30);assert.equal(map.store.type,'hardware');assert.ok(map.departments.find(d=>d.id==='tools')!.families.some(f=>f.id==='saw-blades'));const r=await discoverProducts(client,inbox.context,'blade',{keywords:['blade','saw blade','cutting disc','putty scraper']});assert.equal(r.products.length,4);assert.ok(r.products.some(p=>p.sku==='H16'));assert.ok(r.products.some(p=>p.sku==='H22'));assert.equal(r.facets[0].key,'family');const db=(await pool.query('SELECT sku,name,price_paise,image_path FROM products WHERE store_id=$1',[inbox.context.storeId])).rows;for(const p of r.products){const row=db.find(x=>x.sku===p.sku)!;assert.equal(p.name,row.name);assert.equal(p.pricePaise,row.price_paise);assert.equal(p.imageUrl,row.image_path);}assert.ok(r.rankings.every(r=>Number.isInteger(r.score)));}finally{client.release();}}));
 
 test('type, brand and numeric specifications are hard constraints; unsupported filters never become arbitrary products',async()=>fixture(async(pool,inbox)=>{const c=await pool.connect();try{let r=await discoverProducts(c,inbox.context,'1 inch PVC pipe');assert.deepEqual(r.products.map(p=>p.sku),['H01','H02']);assert.equal(r.facets[0].key,'brand');r=await discoverProducts(c,inbox.context,'blade',{keywords:['blade','cutting wheel'],familyId:'cutting-discs',brand:'Pro-Cut',specifications:{size:'4 inch'}});assert.deepEqual(r.products.map(p=>p.sku),['H14']);r=await discoverProducts(c,inbox.context,'1.25 inch PVC pipe');assert.equal(r.products.length,0);await assert.rejects(discoverProducts(c,inbox.context,'blade',{keywords:['blade'],departmentId:'plumbing',familyId:'saw-blades'}),/does not belong/);await assert.rejects(discoverProducts(c,inbox.context,'blade',{keywords:['blade'],familyId:'foreign-family'}),/this shop/);r=await discoverProducts(c,inbox.context,"' OR 1=1 --",{keywords:["' OR 1=1 --"],brand:"' OR 1=1 --"});assert.equal(r.products.length,0);}finally{c.release();}}));
