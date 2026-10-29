@@ -6,17 +6,18 @@ const never:Interpreter={name:'no-ai-for-choices',mode:'mock',interpret:async()=
 
 test('white cement is not confused with white-cement-based putty or solvent cement',async()=>fixture(async(pool,inbox)=>{
  await pool.query(`UPDATE products SET name='Birla White Wall Putty 1kg',aliases='["white cement"]'::jsonb,keywords='["white cement"]'::jsonb,specifications='{"form":"white cement based powder","colour":"white"}'::jsonb WHERE store_id=$1 AND sku='H07'`,[inbox.context.storeId]);
+ await pool.query(`UPDATE products SET name='Finolex PVC Solution 100ml',aliases='["white cement"]'::jsonb,keywords='["white cement"]'::jsonb,specifications='{"colour":"white"}'::jsonb WHERE store_id=$1 AND sku='H01'`,[inbox.context.storeId]);
  const c=await pool.connect();try{
   const plan={keywords:['white cement'],specifications:{colour:'white'},allowAlternatives:true};
   let r=await discoverProducts(c,inbox.context,'white cement',plan);
-  assert.ok(!r.products.some(p=>p.sku==='H07'));
+  assert.ok(!r.products.some(p=>['H07','H01'].includes(p.sku)));
   const runtime=new ConversationRuntime(pool,{name:'white-cement-request',mode:'mock',interpret:async()=>({output:{operations:[{kind:'add_item',query:'white cement',quantity:1,requestedUnit:'sack',search:plan}],next:'review'},truncated:false,usage:null})},{visualOrdering:true});
   const snapshot=await text(inbox,runtime,'white cement one sack');
   assert.equal(snapshot.conversation.draft.length,1);assert.equal(snapshot.conversation.draft[0].sku,undefined);
   assert.ok(!snapshot.conversation.draft[0].candidates?.some(p=>p.sku==='H07'));assert.equal(snapshot.requests.length,0);
   await pool.query(`UPDATE products SET name='Birla White Cement Bag',aliases='["white cement"]'::jsonb,keywords='["white cement"]'::jsonb,specifications='{"colour":"white"}'::jsonb WHERE store_id=$1 AND sku='H13'`,[inbox.context.storeId]);
   r=await discoverProducts(c,inbox.context,'white cement',plan);
-  assert.ok(r.products.some(p=>p.sku==='H13'));assert.ok(!r.products.some(p=>p.sku==='H07'));
+  assert.ok(r.products.some(p=>p.sku==='H13'));assert.ok(!r.products.some(p=>['H07','H01'].includes(p.sku)));
  }finally{c.release();}
 }));
 

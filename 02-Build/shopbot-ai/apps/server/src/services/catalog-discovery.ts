@@ -123,7 +123,10 @@ function supportsCementIdentity(query:string,product:Product){
  // the product's own name, not its ingredient/search metadata.
  if(words.includes('white')&&words.includes('cement')&&!words.some(w=>['putty','solvent','adhesive','glue'].includes(w))){
   const name=tokens(product.name);
-  if(name.some(w=>['putty','solvent','adhesive','glue','trowel'].includes(w)))return false;
+  // Only the actual product name can establish this identity. A broad alias,
+  // colour relaxation or ingredient description can also match PVC solution.
+  const namedWhiteCement=name.includes('white')&&name.includes('cement')||/வெள்ளை\s*சிமெண்ட்|ஒயிட்\s*சிமெண்ட்/iu.test(product.name);
+  if(!namedWhiteCement||name.some(w=>['putty','solvent','adhesive','glue','trowel','solution','pvc'].includes(w)))return false;
  }
  return true;
 }
