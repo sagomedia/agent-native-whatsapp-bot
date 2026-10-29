@@ -29,7 +29,7 @@ The adapter uses the native Generate Content API with [structured JSON output](h
 
 ## Accounting
 
-A dated rate snapshot stores USD input/output prices and model limits. The current [standard text rates](https://ai.google.dev/gemini-api/docs/pricing) were checked on 2 October 2026: $0.30 input and $2.50 output per million tokens. Output includes thinking. This profile expires on 1 November 2026; recheck official rates and compatibility before extending it. There is no automatic model fallback or unpriced model alias.
+A dated rate snapshot stores USD input/output prices and model limits. The current [standard text rates](https://ai.google.dev/gemini-api/docs/pricing) were checked on 2 October 2026: $0.30 input and $2.50 output per million tokens. Output includes thinking. Price-review dates are advisory and do not shut off AI. Recheck official prices when reviewing cost estimates; malformed rates and existing spending/token guards remain enforced. Owner usage is shown as rupee estimates with an editable display conversion, while provider accounting retains its source currency. There is no automatic model fallback or unpriced model alias.
 
 Before each generation call, the runtime locks the store budget and commits a worst-case reservation plus attempt record. The initial conservative reservation uses the entire supported model input limit and the configured output cap: $0.324813. This avoids estimating token counts from character length and needs no extra token-count network call. It is a temporary hold, not a claim about the likely cost of one shopping message. A configured budget below this hold cannot start a call.
 
