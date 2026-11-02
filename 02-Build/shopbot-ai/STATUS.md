@@ -211,3 +211,8 @@ Mobile product photo release `preview-2a58e8b0d292` is deployed from source `52c
 ### Inventory-driven understanding and cart decisions (2 November 2026; issue #88)
 
 Per-item semantic searches and source evidence now survive unified understanding. One bounded inventory grounding pass checks current names/specifications and SKU scope; category cards use real inventory families. Product-specific cement/pipe/solvent menus and cutter/nail decision branches are removed. Voice/text cart targets, counts, pack measurements, safe unit replies and product/submission consent retain independent validation. See `../../03-Output/inventory-driven-decisions/README.md` for provenance, verification and remaining live/device acceptance. Production activation is a separate recorded step.
+
+
+### 2 November — inventory decisions and local connected development
+
+Inventory grounding now returns search-only patches over fresh store facts, preserving source counts, measurements and actions in the backend. Candidate retrieval can recover real names from incorrect taxonomy labels. Full build, 1,106 UTF-8 integration tests, four catalog checks, two route checks and five bounded real-model cases pass. The persistent local checkout has isolated dev/test databases, inventory/photos, private Gemini/WhatsApp profiles and a same-number SSH bridge with verified watchdog restoration. See `../../LOCAL-DEVELOPMENT.md` and `../../03-Output/inventory-driven-decisions/README.md`; actual fresh voice/device acceptance remains in issue #88.

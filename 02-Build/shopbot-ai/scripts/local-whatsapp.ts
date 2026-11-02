@@ -20,7 +20,7 @@ function remote(command:string){
 function runRemote(command:string){return new Promise<void>((done,reject)=>{
  const child=spawn(gcloud,remote(command),{stdio:'inherit'});child.on('error',()=>reject(new Error('Could not start gcloud.')));child.on('exit',code=>code===0?done():reject(new Error('The VPS command failed. See the command output.')));
 });}
-const restoreCommand=`sudo systemctl stop shopbot-local-route.service; sudo python3 ${remoteScript} restore`;
+const restoreCommand=`if sudo systemctl is-active --quiet shopbot-local-route.service; then sudo systemctl stop shopbot-local-route.service; fi; sudo python3 ${remoteScript} restore`;
 const delay=(ms:number)=>new Promise(done=>setTimeout(done,ms));
 // Node's bundled fetch can replace a supplied Host header. Use HTTP directly
 // when verifying the production hostname through the local loopback address.
@@ -76,7 +76,7 @@ async function main(){
   tunnel=spawn(gcloud,[...remote(command),'--ssh-flag=-R127.0.0.1:33018:127.0.0.1:3018','--ssh-flag=-oExitOnForwardFailure=yes','--ssh-flag=-oServerAliveInterval=10','--ssh-flag=-oServerAliveCountMax=2'],{stdio:['ignore','pipe','inherit']});
   await new Promise<void>((done,reject)=>{
    tunnel!.on('error',()=>reject(new Error('Could not open the SSH tunnel.')));
-   tunnel!.on('exit',code=>code===0?done():reject(new Error('The local tunnel ended.')));
+   tunnel!.on('exit',code=>code===0||stopping?done():reject(new Error('The local tunnel ended.')));
    tunnel!.stdout!.on('data',(bytes:Buffer)=>{
     process.stdout.write(bytes);
     if(!routed&&bytes.toString().includes('LOCAL_ROUTE_READY:')){routed=true;console.log('Send a new WhatsApp message from the configured test phone. Open https://'+config.owner!.hostname+'/owner and sign in with the existing dashboard password. Ctrl+C restores the VPS.');}
