@@ -74,13 +74,13 @@ function countSupported(edit:TurnUnderstanding['proposedEdits'][number],source:s
  if(evidence)return evidence.value===edit.quantity&&evidence.mode===mode&&edit.sourceText.includes(evidence.sourceText)&&source.includes(evidence.sourceText)&&!spokenMeasures(evidence.sourceText).length;
  return explicitPurchaseCount(edit.sourceText)===edit.quantity;
 }
-function validateSearch(search:TurnUnderstanding['requestedItems'][number]['search'],input:InterpretationInput,ordinal?:number){
+function validateSearch(search:TurnUnderstanding['requestedItems'][number]['search'],input:InterpretationInput,ordinal?:number,editQuery?:string){
  if(!search)return;
  const families=input.catalogMap?.departments.flatMap(d=>d.families);
  if(families&&search.familyIds?.some(id=>!families.some(f=>f.id===id)))throw new Error('Search family must belong to the current store inventory');
  if(search.selectedSkus?.length){
   const prior=input.proposal?.understanding?.requestedItems.find(item=>item.ordinal===ordinal);
-  const observations=prior?(input.observations??[]).filter(o=>o.query===itemObservationQuery(input.proposal!,prior)):input.observations??[];
+  const observations=(input.observations??[]).filter(o=>prior?o.query===itemObservationQuery(input.proposal!,prior):editQuery?o.query===editQuery:true);
   const available=new Set(observations.flatMap(o=>o.products.map(p=>p.sku)));
   if(search.selectedSkus.some(sku=>!available.has(sku)))throw new Error('Product selections must come from this item’s fresh inventory results');
  }
@@ -257,7 +257,7 @@ export function understandingToInterpretation(value:unknown,input:Interpretation
    if(quantity<0)throw new Error('Cannot remove more than the current quantity');
    operations.push(quantity===0?{kind:'remove_item',reference:target.id,supportingPhrase:e.sourceText}:{kind:'set_quantity',reference:target.id,quantity,supportingPhrase:e.sourceText});
   }
-  else if(e.kind==='replace'){if(material)e.query=materialReplacementQuery(target.query??target.name,material);if(!e.query)throw new Error('Replacement query missing');validateSearch(e.search,input);operations.push({kind:'resolve_line',lineId:e.targetLineId,query:e.query,supportingPhrase:e.sourceText,...(e.search?{search:understandingSearch({query:e.query,search:e.search})}:{}),...(e.amount&&convertAmount(e.amount,e.amount.unit)!==null?{requestedAmount:e.amount,amountMode:e.mode}:{})});}
+  else if(e.kind==='replace'){if(material)e.query=materialReplacementQuery(target.query??target.name,material);if(!e.query)throw new Error('Replacement query missing');validateSearch(e.search,input,undefined,e.query);operations.push({kind:'resolve_line',lineId:e.targetLineId,query:e.query,supportingPhrase:e.sourceText,...(e.search?{search:understandingSearch({query:e.query,search:e.search})}:{}),...(e.amount&&convertAmount(e.amount,e.amount.unit)!==null?{requestedAmount:e.amount,amountMode:e.mode}:{})});}
   else if(e.kind==='remove_item'){operations.push({kind:'remove_item',reference:e.targetLineId,supportingPhrase:removalSource});}
   else if(e.kind==='set_quantity'||e.kind==='increment_quantity'){if(e.quantity===undefined)throw new Error('Edit amount missing');operations.push(e.kind==='set_quantity'?{kind:'set_quantity',reference:e.targetLineId,quantity:e.quantity,supportingPhrase:e.sourceText}:{kind:'increment_quantity',reference:e.targetLineId,delta:e.quantity,supportingPhrase:e.sourceText});}
   else {if(!e.amount)throw new Error('Measured edit missing');operations.push(e.kind==='set_amount'?{kind:'set_amount',reference:e.targetLineId,amount:e.amount,mode:e.mode,supportingPhrase:e.sourceText}:{kind:'increment_amount',reference:e.targetLineId,delta:e.amount,supportingPhrase:e.sourceText});}

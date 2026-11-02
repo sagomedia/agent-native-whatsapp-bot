@@ -162,3 +162,12 @@ test('an observed semantic selection can match a synonym without the literal que
  const s=await turn(inbox,new ConversationRuntime(pool,provider,{inventoryGrounding:true,visualOrdering:true}),{id:randomUUID(),type:'text',text:source});
  assert.equal(calls,2);assert.deepEqual(s.conversation.draft[0].candidates?.map(p=>p.sku),['OAT']);assert.equal(s.requests.length,0);assert.ok(!s.conversation.draft[0].productConfirmation);
 }));
+
+
+test('a replacement cannot select a SKU observed for a different requested replacement',()=>{
+ const source='replace hammer with oat drink',edit={kind:'replace',targetLineId:id,targetQuery:'hammer',sourceText:source,query:'oat drink',search:{keywords:['oat drink']}};
+ const raw={...base(),proposedEdits:[edit]},original=understandingToInterpretation(raw,{text:source,state:cart,inventoryGrounding:true},false);
+ const product={sku:'DAIRY',name:'Dairy milk',unit:'can',pricePaise:100,stock:1,version:1,aliases:[],quantityStep:1};
+ const observations=[{tool:'discover_products' as const,query:'oat drink',products:[],totalCount:0},{tool:'discover_products' as const,query:'dairy milk',products:[product],totalCount:1}];
+ assert.throws(()=>understandingToInterpretation({...raw,proposedEdits:[{...edit,search:{...edit.search,selectedSkus:['DAIRY']}}]},{text:source,state:cart,inventoryGrounding:true,proposal:original,observations},false),/this item’s fresh inventory/);
+});

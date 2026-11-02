@@ -36,6 +36,12 @@ export function validateInventoryReplan(original:Interpretation,replanned:Interp
   if(available.size&&item.query===before.requestedItems[index].query&&item.search?.identityQuery===before.requestedItems[index].search?.identityQuery&&item.search?.selectedSkus===undefined)throw new ToolError('Inventory grounding must explicitly select or reject the observed candidates.','grounding_evidence');
   if(item.search?.selectedSkus?.some(sku=>!available.has(sku)))throw new ToolError('Choose products observed for this item only.','grounding_scope');
  }
+ for(const [index,edit] of after.proposedEdits.entries()){
+  const prior=before.proposedEdits[index],observed=observations.filter(o=>o.query===prior.query);
+  if(!observed.length&&JSON.stringify(edit.search)!==JSON.stringify(prior.search))throw new ToolError('Unobserved replacement searches must remain unchanged.','grounding_scope');
+  const available=new Set(observed.flatMap(o=>o.products.map(p=>p.sku)));
+  if(edit.search?.selectedSkus?.some(sku=>!available.has(sku)))throw new ToolError('Choose products observed for this replacement only.','grounding_scope');
+ }
  return replanned;
 }
 
