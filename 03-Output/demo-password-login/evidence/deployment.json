@@ -1,0 +1,21 @@
+{
+  "status": "deployed_password_gate_verified_cloudflare_edge_pending",
+  "release": "preview-afe86f9b5a08",
+  "sourceCommit": "1c4c4049a3fc8e2bdc48c933461e1865b8ed2efa",
+  "artifactHash": "aee8492c757a0aa5a8d087b0d721e83d0a4138aa91e6f5e3ecd6a349cd01b220",
+  "schemaVersion": 51,
+  "testsPassed": 1010,
+  "ci": {
+    "status": "success",
+    "url": "https://github.com/sagomedia/agent-native-whatsapp-bot/actions/runs/40304712010",
+    "commit": "b3dba0fd9566c255ac214e0908c9d75198378fdb"
+  },
+  "privateDatabaseBackup": "/var/backups/shopbot-migration/owner-20261026T100552Z",
+  "privateEnvironmentAndTunnelBackup": "/var/backups/shopbot-demo-login-2026-10-26T10-15-46-286Z",
+  "appPasswordGateVerified": true,
+  "connectedMcpReadVerified": true,
+  "ownerTunnelIdentityCheckRemoved": true,
+  "otherIngressAndEnvironmentPreserved": true,
+  "cloudflareEdgeStillRequiresEmail": true,
+  "remaining": "Connect Cloudflare or add a dashboard-only Access Bypass policy (Include Everyone) for shopbot-preview.sagoautomation.tech; verify a fresh public browser and actual owner device. Restore identity authentication before production."
+}
