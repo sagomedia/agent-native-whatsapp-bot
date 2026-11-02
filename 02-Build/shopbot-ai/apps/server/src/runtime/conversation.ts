@@ -1,5 +1,5 @@
 import {readStoreHours,hoursAnswer,appendClosedShopNotice} from '../services/store-hours.js';
-import {inventoryItems,validateInventoryReplan,retainUngroundedItems} from '../services/inventory-grounding.js';
+import {inventoryItems,validateInventoryReplan,retainUngroundedItems,inventoryCandidateFacts} from '../services/inventory-grounding.js';
 import {recordConversationAudit} from '../services/catalog-audit.js';
 import {trackItemClarification} from '../services/item-clarification.js';
 import {cartChangeFeedback} from '../services/cart-change-feedback.js';
@@ -948,6 +948,15 @@ export class ConversationRuntime {
               current.totalCount=Math.max(current.totalCount,extra.totalCount,current.products.length);
             }
           }
+          if(!['sku','name'].includes(current.discovery?.diagnostics?.identity??'none')){
+            const facts=await inventoryCandidateFacts(client,ctx,item.query!,item.search);
+            if(facts.some(p=>!current.products.some(existing=>existing.sku===p.sku))){
+              current.products=[...new Map([...facts,...current.products].map(p=>[p.sku,p])).values()].slice(0,10);
+              current.totalCount=Math.max(current.totalCount,current.products.length);
+              // Family labels are hypotheses; widened facts require semantic review.
+              current.discovery=undefined;
+            }
+          }
           found.push(current);
         }
         return found;
@@ -959,7 +968,7 @@ export class ConversationRuntime {
         const calls=Number((await this.pool.query("SELECT count(*)::int AS calls FROM provider_attempts WHERE message_id=$1 AND stage<>'recognize'",[claim.id])).rows[0].calls);
         if(calls>=2)return retainUngroundedItems(identified,fresh);
         try{
-          const grounded=await this.callProvider(ctx,claim,{...input,audio:undefined,image:undefined,text,observations:fresh,proposal:identified,repairSourceKind:voice?'audio':'text',planningFeedback:'Ground the original product requests in these fresh inventory results. Preserve every item, sourceText, count, attribute, intent and cart edit. For each observed item choose only genuinely matching selectedSkus; use [] when the returned names/specifications describe a different object. A bad alias or family is not proof of a match. If useful items were missed, refine search.identityQuery and keywords using faithful product meaning. Unobserved items must remain unchanged. Ask one practical question only for unresolved meaning.'},'repair');
+          const grounded=await this.callProvider(ctx,claim,{...input,inventoryReplan:true,audio:undefined,image:undefined,text,observations:fresh,proposal:identified,repairSourceKind:voice?'audio':'text',planningFeedback:'Ground the original product requests in these fresh inventory results. Preserve every item, sourceText, count, attribute, intent and cart edit. For each observed item choose only genuinely matching selectedSkus; use [] when the returned names/specifications describe a different object. A bad alias or family is not proof of a match. If useful items were missed, refine search.identityQuery and keywords using faithful product meaning. Unobserved items must remain unchanged. Ask one practical question only for unresolved meaning.'},'repair');
           return {...validateInventoryReplan(identified,grounded,fresh),...(voice?{transcript}:{})};
         }catch(error){
           if(error instanceof DeferredRecommendation)throw error;

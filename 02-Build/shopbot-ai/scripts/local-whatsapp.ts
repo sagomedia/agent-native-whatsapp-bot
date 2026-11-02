@@ -2,6 +2,7 @@ import {spawn,type ChildProcess} from 'node:child_process';
 import {open,mkdir} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {createServer} from 'node:net';
+import {request} from 'node:http';
 import {createHmac} from 'node:crypto';
 import pg from 'pg';
 import {readConfig} from '../apps/server/src/config.js';
@@ -21,6 +22,13 @@ function runRemote(command:string){return new Promise<void>((done,reject)=>{
 });}
 const restoreCommand=`sudo systemctl stop shopbot-local-route.service; sudo python3 ${remoteScript} restore`;
 const delay=(ms:number)=>new Promise(done=>setTimeout(done,ms));
+// Node's bundled fetch can replace a supplied Host header. Use HTTP directly
+// when verifying the production hostname through the local loopback address.
+function localProbe(path:string,host:string,body?:string,signature?:string){return new Promise<{status:number;text:string}>((done,reject)=>{
+ const req=request({hostname:'127.0.0.1',port:3018,path,method:body?'POST':'GET',headers:{host,...(body?{'content-type':'application/json','content-length':Buffer.byteLength(body),'x-hub-signature-256':signature!}:{})}},response=>{const chunks:Buffer[]=[];response.on('data',chunk=>chunks.push(chunk));response.on('end',()=>done({status:response.statusCode??0,text:Buffer.concat(chunks).toString('utf8')}));});
+ req.setTimeout(5000,()=>req.destroy(new Error('Local webhook probe timed out.')));req.on('error',reject);req.end(body);
+});}
+
 async function main(){
  const action=process.argv[2]??'check';
  if(!['check','start','restore'].includes(action))throw new Error('Use check, start or restore.');
@@ -59,11 +67,11 @@ async function main(){
   if(stopping)return;
   if(!ready)throw new Error('Local backend did not become ready; inspect data/logs/local-whatsapp.log.');
   const challenge=new URLSearchParams({'hub.mode':'subscribe','hub.verify_token':wa.verifyToken,'hub.challenge':'714092'});
-  const probe=await fetch('http://127.0.0.1:3018'+wa.path+'?'+challenge,{headers:{host:wa.hostname}});
-  if(!probe.ok||await probe.text()!=='714092')throw new Error('Local webhook verification failed.');
+  const probe=await localProbe(wa.path+'?'+challenge,wa.hostname);
+  if(probe.status!==200||probe.text!=='714092')throw new Error('Local webhook verification failed.');
   const body=JSON.stringify({object:'whatsapp_business_account',entry:[]}),signature='sha256='+createHmac('sha256',wa.appSecret).update(body).digest('hex');
-  const signed=await fetch('http://127.0.0.1:3018'+wa.path,{method:'POST',headers:{host:wa.hostname,'content-type':'application/json','x-hub-signature-256':signature},body});
-  if(!signed.ok)throw new Error('Local webhook signature/storage check failed.');
+  const signed=await localProbe(wa.path!,wa.hostname,body,signature);
+  if(signed.status!==200)throw new Error('Local webhook signature/storage check failed.');
   const command=`sudo systemd-run --unit=shopbot-local-route --collect --wait --pipe --property=RuntimeMaxSec=21600 --property='ExecStopPost=/usr/bin/python3 ${remoteScript} restore' /usr/bin/python3 ${remoteScript} run`;
   tunnel=spawn(gcloud,[...remote(command),'--ssh-flag=-R127.0.0.1:33018:127.0.0.1:3018','--ssh-flag=-oExitOnForwardFailure=yes','--ssh-flag=-oServerAliveInterval=10','--ssh-flag=-oServerAliveCountMax=2'],{stdio:['ignore','pipe','inherit']});
   await new Promise<void>((done,reject)=>{

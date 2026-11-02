@@ -1,6 +1,20 @@
-import type {Interpretation,Operation} from '../../../../packages/contracts/index.js';
+import type {Interpretation,Operation,DiscoveryPlan,Product} from '../../../../packages/contracts/index.js';
+import type {PoolClient} from 'pg';
+import type {ActorContext} from './context.js';
+import {productColumns,productForContext} from './catalog.js';
 import type {CatalogObservation} from './agent-assistance.js';
 import {ToolError} from './context.js';
+
+/** Retrieval facts for semantic review, including names filed under a wrong
+ * family. These bounded rows are never customer-facing without validation. */
+export async function inventoryCandidateFacts(client:PoolClient,ctx:ActorContext,query:string,plan?:DiscoveryPlan):Promise<Product[]> {
+ const terms=[...new Set([plan?.identityQuery??query,...plan?.keywords??[]])].filter(Boolean).slice(0,8);
+ const result=await client.query(`WITH terms AS (SELECT plainto_tsquery('simple',term) AS q FROM unnest($2::text[]) term)
+ SELECT ${productColumns.split(',').map(c=>'p.'+c).join(',')} FROM products p
+ WHERE p.store_id=$1 AND p.active=true AND EXISTS(SELECT 1 FROM terms WHERE p.search_vector @@ q)
+ ORDER BY (SELECT max(CASE WHEN to_tsvector('simple',p.name) @@ q THEN 2 ELSE 0 END+ts_rank_cd(p.search_vector,q)) FROM terms) DESC,p.sku LIMIT 10`,[ctx.storeId,terms]);
+ return result.rows.map(row=>productForContext(row,ctx));
+}
 
 export function inventoryItems(plan:Interpretation){
  const items=plan.operations.filter((op):op is Extract<Operation,{kind:'add_item'|'resolve_line'}>=>

@@ -266,3 +266,12 @@ test('dedicated voice can use a separate fresh-catalog recommendation after text
  assert.equal(shoppingCalls,2);assert.equal(after.conversation.draft.length,0);assert.equal(after.requests.length,0);
  assert.deepEqual((await pool.query('SELECT stage,state FROM provider_attempts ORDER BY attempt')).rows,[{stage:'recognize',state:'succeeded'},{stage:'identify',state:'succeeded'},{stage:'recommend',state:'succeeded'}]);
 }));
+
+test('Google grounding uses a search-patch grammar and preserves the original customer order',async()=>{
+ const source='two oat drinks',prior=understandingToInterpretation({...base(),requestedItems:[item(source,'oat drinks',2)]},{text:source,state},false);
+ let request:GenerateContentParameters|undefined;
+ const provider=new GoogleInterpreter(settings,{generateContent:async params=>{request=params;return response({items:[{ordinal:0,query:'oat drink',search:{keywords:['oat drink'],selectedSkus:['OAT']}}],replacements:[]});}});
+ const result=await provider.interpret({text:source,state,proposal:prior,inventoryReplan:true,observations:[{tool:'discover_products',query:'oat drinks',products:[{sku:'OAT',name:'Oat Drink',unit:'can',pricePaise:100,stock:2,version:1,aliases:[],quantityStep:1}],totalCount:1}]},new AbortController().signal);
+ assert.equal(result.validationIssues,undefined);assert.equal((result.output as any).operations[0].quantity,2);assert.equal((result.output as any).operations[0].search.selectedSkus[0],'OAT');
+ const schema=request!.config!.responseJsonSchema as any;assert.ok(schema.properties.items);assert.equal(schema.properties.requestedItems,undefined);assert.equal(schema.properties.items.items.properties.purchaseCount,undefined);
+});

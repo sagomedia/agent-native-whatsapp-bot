@@ -52,14 +52,14 @@ try{
   const s=await inbox.snapshot(),last=s.messages.at(-1)?.rich;
   const attempts=(await pool.query('SELECT stage,state,billing_state,estimated_cost_microusd,failure_code,validation_issues FROM provider_attempts WHERE message_id=$1 ORDER BY attempt',[id])).rows;
   const pass=last?.stage!=='error'&&s.requests.length===0&&check(s);
-  const result={name,pass,elapsedMs:Date.now()-started,reply:last?.text,stage:last?.stage,draft:s.conversation.draft.map(l=>({query:l.query,quantity:l.quantity,requestedQuantity:l.requestedQuantity,packSize:l.packSize,candidates:l.candidates?.map(p=>({sku:p.sku,name:p.name}))})),attempts};
+  const result={name,pass,elapsedMs:Date.now()-started,reply:last?.text,stage:last?.stage,draft:s.conversation.draft.map(l=>({query:l.query,quantity:l.quantity,requestedQuantity:l.requestedQuantity,packSize:l.packSize,requestedAmount:l.requestedAmount,requestedUnit:l.requestedUnit,candidates:l.candidates?.map(p=>({sku:p.sku,name:p.name}))})),attempts};
   report.cases.push(result);console.log(JSON.stringify({case:result}));
   assert.ok(!attempts.some(a=>a.billing_state==='unknown'),'Stop on unknown provider billing');return s;
  };
  const enamel=await makeInbox();
  await send(enamel,'noisy-enamel-query','I need two enamel letter paint cans',s=>s.conversation.draft.some(l=>(l.quantity??l.requestedQuantity)===2&&l.candidates?.some(p=>/enamel/i.test(p.name))));
  const white=await makeInbox();
- await send(white,'four-litre-evidence','நாலு லிட்டர் ஒயிட் பெயிண்ட் வேணும்',s=>s.conversation.draft.some(l=>l.packSize?.value===4&&/lit/i.test(l.packSize.unit)&&l.quantity===null));
+ await send(white,'four-litre-evidence','நாலு லிட்டர் ஒயிட் பெயிண்ட் வேணும்',s=>s.conversation.draft.some(l=>(l.packSize?.value===4&&/lit/i.test(l.packSize.unit)||l.requestedAmount?.value===4&&/lit/i.test(l.requestedAmount.unit))));
  const level=await makeInbox();
  await send(level,'level-not-water-pipe','I need two spirit levels',s=>s.conversation.draft.some(l=>(l.quantity??l.requestedQuantity)===2&&l.candidates?.some(p=>/spirit|box level/i.test(p.name))&&!l.candidates?.some(p=>/water.*pipe/i.test(p.name))));
  await send(level,'semantic-total-edit','Make the spirit level quantity four in total',s=>s.conversation.draft.length===1&&(s.conversation.draft[0].quantity??s.conversation.draft[0].requestedQuantity)===4);

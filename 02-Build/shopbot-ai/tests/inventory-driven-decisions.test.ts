@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import pg from 'pg';
 import {setupDatabase} from '../apps/server/src/db/migrate.js';
-import {understandingToInterpretation,understandingPrompt} from '../apps/server/src/adapters/turn-understanding.js';
+import {understandingToInterpretation,understandingPrompt,inventoryGroundingToInterpretation} from '../apps/server/src/adapters/turn-understanding.js';
 import {discoverProducts,refinementPlan} from '../apps/server/src/services/catalog-discovery.js';
 import {validateCurrentTurn} from '../apps/server/src/services/current-turn.js';
 import {ConversationRuntime} from '../apps/server/src/runtime/conversation.js';
 import {SimulatorService} from '../apps/server/src/services/simulator.js';
-import {validateInventoryReplan} from '../apps/server/src/services/inventory-grounding.js';
+import {validateInventoryReplan,inventoryCandidateFacts} from '../apps/server/src/services/inventory-grounding.js';
 import {catalogGroupReply} from '../apps/server/src/services/catalog-group-replies.js';
 import {RetailTools} from '../apps/server/src/services/tools.js';
 import type {ConversationState,Interpretation,SimulatorEvent} from '../packages/contracts/index.js';
@@ -186,4 +186,34 @@ test('optional count evidence cannot turn a measured pack with unknown count int
  const source='நாலு லிட்டர் ஒயிட் பெயிண்ட் வேணும்',raw={...base(),intents:['add'],requestedItems:[{ordinal:0,sourceText:source,query:'white paint',purchaseCount:null,packSize:{value:4,unit:'litre'},countEvidence:{sourceText:'நாலு லிட்டர்',value:4,mode:'total'},unresolved:[],attributeEvidence:[],dimensions:[]}]};
  const plan=understandingToInterpretation(raw,{text:source,state:empty},false);
  assert.equal((plan.operations[0] as any).quantity,null);assert.deepEqual((plan.operations[0] as any).packSize,{value:4,unit:'litre'});assert.equal(plan.understanding!.requestedItems[0].countEvidence,undefined);
+});
+
+test('grounding search patches preserve all source fields and cannot invent a pack or rewrite counts',()=>{
+ const source='two oat drinks',item={ordinal:1,sourceText:source,query:'oat drinks',purchaseCount:2,unresolved:['variant'],search:{keywords:['oat drink'],familyIds:['dairy-drinks']}};
+ const raw={...base(),intents:['add'],requestedItems:[item]},original=understandingToInterpretation(raw,{text:source,state:empty},false);
+ const observations=[{tool:'discover_products' as const,query:'oat drinks',products:[{sku:'OAT',name:'Oat Drink',unit:'can',pricePaise:100,stock:1,version:1,aliases:[],quantityStep:1,familyId:'plant-drinks'}],totalCount:1}];
+ const input={text:source,state:empty,proposal:original,observations,inventoryReplan:true};
+ const patch={items:[{ordinal:1,query:'oat drink',search:{keywords:['oat drink'],selectedSkus:['OAT'],familyIds:['dairy-drinks']}}],replacements:[]};
+ const plan=inventoryGroundingToInterpretation(patch,input,false);
+ assert.equal((plan.operations[0] as any).quantity,2);assert.equal((plan.operations[0] as any).packSize,undefined);assert.equal((plan.operations[0] as any).search.familyIds,undefined);
+ assert.deepEqual(plan.understanding!.requestedItems[0].unresolved,['variant']);assert.equal(validateInventoryReplan(original,plan,observations).operations.length,1);
+ assert.throws(()=>inventoryGroundingToInterpretation({...patch,items:[{...patch.items[0],purchaseCount:10}]},input,false));
+ assert.throws(()=>inventoryGroundingToInterpretation({...patch,items:[{...patch.items[0],search:{keywords:['drink'],selectedSkus:['FOREIGN']}}]},input,false),/fresh inventory/);
+ assert.throws(()=>inventoryGroundingToInterpretation({...patch,items:[]},input,false),/observed items/);
+});
+
+test('semantic retrieval finds actual names across wrong family labels and remains store scoped',()=>fixture(async(pool,inbox)=>{
+ await pool.query("UPDATE products SET family_id='dairy-drinks' WHERE store_id=$1 AND sku='OAT'",[inbox.context.storeId]);
+ const c=await pool.connect();try{
+  const products=await inventoryCandidateFacts(c,inbox.context,'oat drink',{keywords:['oat drink'],familyIds:['plant-drinks']});
+  assert.equal(products[0].sku,'OAT');assert.equal(products[0].familyId,'dairy-drinks');
+  assert.deepEqual(await inventoryCandidateFacts(c,{...inbox.context,storeId:randomUUID()},'oat drink',{keywords:['oat drink']}),[]);
+ }finally{c.release();}
+}));
+
+test('a count expression that belongs only to a measurement cannot count packages',()=>{
+ for(const [source,word] of [['நாலு லிட்டர் ஒயிட் பெயிண்ட்','நாலு'],['four litres of oat drink','four']]){
+  const plan=understandingToInterpretation({...base(),intents:['add'],requestedItems:[{ordinal:0,sourceText:source,query:'drink',purchaseCount:4,requestedAmount:{value:4,unit:'litre'},amountMode:'total',countEvidence:{sourceText:word,value:4,mode:'total'},unresolved:[]}]},{text:source,state:empty},false);
+  assert.equal((plan.operations[0] as any).quantity,null);assert.equal((plan.operations[0] as any).requestedAmount.value,4);
+ }
 });
