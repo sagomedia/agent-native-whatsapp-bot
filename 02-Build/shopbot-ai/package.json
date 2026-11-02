@@ -10,7 +10,7 @@
     "build": "npm run typecheck && vite build --config apps/dashboard/vite.config.ts && node scripts/compress-dashboard.mjs && tsc -p tsconfig.server.json",
     "typecheck": "tsc --noEmit",
     "start": "node dist/apps/server/src/index.js",
-    "dev": "tsx apps/server/src/index.ts",
+    "dev": "node --env-file=.env --watch --import tsx apps/server/src/index.ts",
     "test:integration": "tsx --test --test-concurrency=4 tests/*.test.ts",
     "db:migrate": "tsx apps/server/src/db/maintenance.ts migrate",
     "db:reset:mock": "tsx apps/server/src/db/maintenance.ts reset",
@@ -29,7 +29,15 @@
     "catalog:scale-eval": "tsx scripts/evaluate-catalog-scale.ts",
     "catalog:facts": "tsx scripts/import-shop-facts.ts",
     "demo:evidence": "tsx scripts/demo-evidence.ts",
-    "mcp:diagnostics": "tsx apps/server/src/mcp/diagnostics-stdio.ts"
+    "mcp:diagnostics": "tsx apps/server/src/mcp/diagnostics-stdio.ts",
+    "dev:dashboard": "vite build --watch --config apps/dashboard/vite.config.ts",
+    "local:db": "node --env-file=.env --import tsx scripts/local-database.ts",
+    "test:local": "node --env-file=.env --import tsx scripts/local-command.ts test",
+    "eval:local": "node --env-file=.env --env-file=.env.ai --import tsx scripts/local-command.ts eval",
+    "local:catalog": "node --env-file=.env --import tsx scripts/local-catalog-import.ts --import-catalog",
+    "whatsapp:check": "node --env-file=.env --env-file=.env.ai --env-file=.env.whatsapp --import tsx scripts/local-whatsapp.ts check",
+    "whatsapp:local": "node --env-file=.env --env-file=.env.ai --env-file=.env.whatsapp --import tsx scripts/local-whatsapp.ts start",
+    "whatsapp:restore": "node --env-file=.env --env-file=.env.ai --env-file=.env.whatsapp --import tsx scripts/local-whatsapp.ts restore"
   },
   "dependencies": {
     "@fastify/static": "10.1.5",

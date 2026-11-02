@@ -124,7 +124,8 @@ test('read before delivered proves delivery without inventing its billing month 
  assert.equal(new Date(row.delivered_at).getTime(),seconds*1000);
 }));
 
-test('the thousandth signed free delivery and next billable delivery never imply a complete local allowance',()=>fixture(async(pool,channel)=>{
+test('the thousandth signed free delivery and next billable delivery never imply a complete local allowance',(t)=>fixture(async(pool,channel)=>{
+ t.mock.method(Date,'now',()=>seconds*1000);
  await pool.query(`INSERT INTO whatsapp_delivery_costs(store_id,phone_id,provider_id,recipient,delivered_at,account_timezone,billing_month,category,pricing_type,billable,pricing_model,currency,estimated_microunits,state)
    SELECT $1,$2,'synthetic-free-'||n,'919000000003',to_timestamp($3),'Asia/Kolkata','2026-10','service','free_customer_service',false,'PMP','INR',0,'free' FROM generate_series(1,999) n`,[cfg.storeId,cfg.phoneId,seconds]);
  await receive(channel,receipt('1000','delivered',free),receipt('1001'));

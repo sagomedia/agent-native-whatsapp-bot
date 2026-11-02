@@ -1,3 +1,4 @@
+import {typePlan} from './catalog-type-fixture.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -63,7 +64,7 @@ function visible(reply:RichReply) {
     actions:rendered.actions.map(a=>({label:a.label,type:a.event.type,
       ...(a.event.type==='shopping_action'?{action:a.event.action}:{}),
       ...(a.event.type==='select_product'?{sku:a.event.sku}:{}),
-      ...(a.event.type==='choose_pipe_type'?{pipeType:a.event.pipeType}:{})})),
+      ...(a.event.type==='refine_search'?{facet:a.event.facet,value:a.event.value}:{})})),
   }));
 }
 function visibleTurn(snapshot:Snapshot){const message=snapshot.messages.filter(m=>m.direction==='outbound').at(-1)!;return snapshot.messages.filter(m=>m.direction==='outbound'&&(message.rich?.groupId?m.rich?.groupId===message.rich.groupId:m.id===message.id)).map(m=>visible(m.rich!));}
@@ -73,8 +74,8 @@ function textOnPhone(reply:RichReply) {
 }
 
 const fiveItems:Operation[]=[
-  {kind:'add_item',query:'1 inch pipe',quantity:1,productMeasures:[{value:1,unit:'inch'}],supportingPhrase:'one 1 inch pipe'},
-  {kind:'add_item',query:'0.75 inch pipe',quantity:1,productMeasures:[{value:0.75,unit:'inch'}],supportingPhrase:'one 0.75 inch pipe'},
+  {kind:'add_item',query:'1 inch pipe',search:typePlan,quantity:1,productMeasures:[{value:1,unit:'inch'}],supportingPhrase:'one 1 inch pipe'},
+  {kind:'add_item',query:'0.75 inch pipe',search:typePlan,quantity:1,productMeasures:[{value:0.75,unit:'inch'}],supportingPhrase:'one 0.75 inch pipe'},
   {kind:'add_item',query:'COUNTER-SCRAPER-4',quantity:1,supportingPhrase:'one scraper'},
   {kind:'add_item',query:'H19',quantity:1,supportingPhrase:'one PVC pipe cutter'},
   {kind:'add_item',query:'PAINT10',quantity:1,supportingPhrase:'one 10L can white paint'},
@@ -103,7 +104,7 @@ test('pipe choice retains the diameter and progresses this line before the secon
   const runtime=new ConversationRuntime(pool,planner(fiveItems),{visualOrdering:true});
   let snapshot=await turn(inbox,runtime,shoppingList);
   const ids=snapshot.conversation.draft.map(l=>l.id);
-  snapshot=await turn(inbox,runtime,action(snapshot,e=>e.type==='choose_pipe_type'&&e.pipeType==='pvc'));
+  snapshot=await turn(inbox,runtime,action(snapshot,e=>e.type==='refine_search'&&e.facet==='family'&&e.value==='pvc-pipes'));
   assert.deepEqual(snapshot.conversation.draft.map(l=>l.id),ids);
   assert.deepEqual(snapshot.conversation.draft[0].productMeasures,[{value:1,unit:'inch'}]);
   assert.match(textOnPhone(lastReply(snapshot)),/1 inch PVC pipe/i);
@@ -113,8 +114,8 @@ test('pipe choice retains the diameter and progresses this line before the secon
   assert.deepEqual(snapshot.conversation.pending.groups.find(g=>g.lineId===ids[0])!.products.map(p=>p.sku).sort(),['H01','H02']);
   snapshot=await turn(inbox,runtime,action(snapshot,e=>e.type==='select_product'&&e.sku==='H01'));
   assert.match(textOnPhone(lastReply(snapshot)),/0\.75 inch pipe/);
-  assert.equal(snapshot.conversation.pending?.kind,'question');
-  if(snapshot.conversation.pending?.kind==='question')assert.equal(snapshot.conversation.pending.lineId,ids[1]);
+  assert.equal(snapshot.conversation.pending?.kind,'products');
+  if(snapshot.conversation.pending?.kind==='products')assert.ok(snapshot.conversation.pending.groups.some(g=>g.lineId===ids[1]&&g.discovery?.groups?.length));
 }));
 
 test('read-only cutter price answers the question without cart noise or changing its pending choice',()=>fixture(async(pool,inbox)=>{
@@ -184,11 +185,11 @@ test('five-item conversation matches the full phone transcript and submits exact
   const runtime=new ConversationRuntime(pool,planner(fiveItems),{visualOrdering:true});
   const frames:ReturnType<typeof visible>[]=[];
   let snapshot=await turn(inbox,runtime,shoppingList);frames.push(...visibleTurn(snapshot));
-  snapshot=await turn(inbox,runtime,action(snapshot,e=>e.type==='choose_pipe_type'&&e.pipeType==='pvc'));frames.push(...visibleTurn(snapshot));
+  snapshot=await turn(inbox,runtime,action(snapshot,e=>e.type==='refine_search'&&e.facet==='family'&&e.value==='pvc-pipes'));frames.push(...visibleTurn(snapshot));
   const pipeChoice=action(snapshot,e=>e.type==='select_product'&&e.sku==='H01');
   snapshot=await turn(inbox,runtime,'price of H19');frames.push(...visibleTurn(snapshot));
   snapshot=await turn(inbox,runtime,pipeChoice);frames.push(...visibleTurn(snapshot));
-  snapshot=await turn(inbox,runtime,action(snapshot,e=>e.type==='choose_pipe_type'&&e.pipeType==='pvc'));frames.push(...visibleTurn(snapshot));
+  snapshot=await turn(inbox,runtime,action(snapshot,e=>e.type==='refine_search'&&e.facet==='family'&&e.value==='pvc-pipes'));frames.push(...visibleTurn(snapshot));
   snapshot=await turn(inbox,runtime,action(snapshot,e=>e.type==='confirm_products'));frames.push(...visibleTurn(snapshot));
   assert.equal(snapshot.requests.length,0);
   const confirm=action(snapshot,e=>e.type==='confirm');

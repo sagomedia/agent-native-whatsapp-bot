@@ -1,3 +1,4 @@
+import {categoryState} from './catalog-type-fixture.js';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -59,14 +60,14 @@ test('product choices do not display the model’s quantity question',()=>{
  }
 });
 
-test('pipe category clarification asks one question with three versioned choices',()=>{
- const l:DraftLine={id:randomUUID(),name:'pipe',query:'pipe',quantity:2,resolution:'unavailable'},s=state([l]);
- const questionId=randomUUID();s.pending={kind:'question',id:questionId,lineId:l.id,version:s.version};
- const reply=visualReply({version:1,kind:'text',text:'A lengthy internal explanation about two pipes',presentation:'text',outboundMessages:1,contextLines:['Other items have these issues']},s);
- assert.equal(reply.text,'எந்த வகை பைப் வேணும்?');assert.equal(reply.parts?.[0].cards.length,3);
- const choices=reply.parts![0].cards.flatMap(card=>card.buttons??[]);assert.equal(choices.length,3);
- for(const button of choices){assert.equal(button.event.type,'choose_pipe_type');if(button.event.type==='choose_pipe_type'){assert.equal(button.event.lineId,l.id);assert.equal(button.event.expectedVersion,s.version);assert.equal(button.event.questionId,questionId);}}
- assert.deepEqual(choices.map(b=>b.event.type==='choose_pipe_type'?b.event.pipeType:undefined),['pvc','hose','pump']);
+test('inventory category clarification asks one question with actual bound choices',()=>{
+ const l:DraftLine={id:randomUUID(),name:'pipe',query:'pipe',quantity:2,resolution:'unavailable'},s=categoryState(state([l]));
+ const questionId=s.pending!.id;
+ const reply=visualReply({version:1,kind:'text',text:'Choose category',presentation:'text',outboundMessages:1},s);
+ assert.match(reply.text,/வகையைத் தேர்வு செய்யுங்கள்/);assert.equal(reply.parts?.[0].cards.length,2);
+ const choices=reply.parts![0].cards.flatMap(card=>card.buttons??[]);assert.equal(choices.length,2);
+ for(const button of choices){assert.equal(button.event.type,'refine_search');if(button.event.type==='refine_search'){assert.equal(button.event.lineId,l.id);assert.equal(button.event.batchId,questionId);}}
+ assert.deepEqual(choices.map(b=>b.event.type==='refine_search'?b.event.value:undefined),['pvc-pipes','hose']);
 });
 
 test('indicative invoice amounts stay approximate and cannot satisfy final shop quote checks',()=>{

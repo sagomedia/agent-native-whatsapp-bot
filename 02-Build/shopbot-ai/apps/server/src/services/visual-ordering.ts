@@ -15,7 +15,6 @@ import {fitText} from './whatsapp-reply.js';
 import {requestStatusText} from './request-status.js';
 import {catalogPack,catalogContent} from './quantity-evidence.js';
 import {INVOICE_ROWS_PER_PAGE} from './visual-images.js';
-import {needsPipeType,needsSolventUse} from './catalog-discovery.js';
 import {planReply} from './reply-plan.js';
 
 type Button=NonNullable<RichReply['buttons']>[number];
@@ -153,7 +152,9 @@ export function visualProductReview(state:ConversationState,compact=false,clarif
   const final=offset+10>=reviewCards.length;
   const group=reviewCards.slice(offset,offset+10).map(card=>({...card,buttons:final&&primary?[primary,...(card.buttons??[change(state)]).slice(0,1)]:card.buttons?.slice(0,2)??[change(state)]}));
   const question=catalogQuestion(clarifyQuestion,state,check.groups.flatMap(g=>g.products));
-  const firstText=noListings?[title,question].filter(Boolean).join('\n'):question??(compact?guidance:title);
+  const missingCount=noListings&&state.draft.length===1&&state.draft[0].quantity===null&&state.draft[0].discovery?.matchStatus!=='needs_detail';
+  const countAction=missingCount?say(state,'How many do you need? Reply with a number.','எத்தனை வேணும்? எண்ணிக்கையை reply பண்ணுங்க.','Eththanai venum? Count-ai reply pannunga.'):undefined;
+  const firstText=noListings?[title,question??countAction].filter(Boolean).join('\n'):question??(compact?guidance:title);
   parts.push(part(group,offset===0?firstText:say(state,'More items → Check these too.','மீதமுள்ள items-யும் பாருங்க →','Meethamulla items-aiyum paarunga →')));
  }
  return reply(missing.length?'shop_check':'products',parts,missing.length?missing.find(l=>l.catalogIssue)?.catalogIssue??'catalog_missing':undefined);
@@ -226,32 +227,22 @@ export function visualReply(base:RichReply,state:ConversationState,request?:Orde
  const questionId=state.pending?.kind==='question'?state.pending.lineId:undefined;
  const line=plan.purpose==='clarification'?plan.line:state.draft.find(l=>l.id===questionId);
  if(line?.discovery&&state.pending){const grouped=catalogGroupReply(line.discovery,state,{lineId:line.id,batchId:state.pending.id});if(grouped)return grouped;}
- if(line&&!line.sku&&needsSolventUse(line.query??line.name)&&!(base.stage==='identify'&&base.cards?.length)){
-  const question=say(state,'Is it for joining PVC pipes or for thinning paint?','PVC பைப் ஒட்டுவதற்கா, பெயிண்ட் கலப்பதற்கா?','PVC pipe ottavatha, paint kalappatharka?');
-  return {...reply('identify',[part([instruction(say(state,'Choose the solvent use','சால்வென்ட் எதற்கு?','Solvent etharku?'),[question],question,[shop(state)])],question)],'product_or_specification'),replyLanguage:state.replyLanguage};
- }
- if(line&&!line.sku&&line.productIntent?.kind!=='ambiguous'&&needsPipeType(line.query??line.name)&&!(base.stage==='identify'&&base.cards?.length)){
-  const pump=/\bpump(?:ing)?\b|\bsuction\b|\bmotor\b|பம்ப்|மோட்டார்/i.test(line.query??line.name);
-  const prompt=pump?say(state,'Which kind of pipe for the pump do you need? A brand or photo will help the shop identify it.','பம்புக்கு எந்த வகை பைப் வேணும்? பிராண்ட் அல்லது படம் இருந்தா சொல்லுங்க.','Pump-ku entha vagai pipe venum? Brand illa photo iruntha sollunga.'):say(state,'Which type of pipe do you need?','எந்த வகை பைப் வேணும்?','Entha vagai pipe venum?');
-  const size=line.productMeasures?.map(m=>measurementText(`${m.value} ${m.unit}`,state)).join(' × ');
-  const question=size?`${size} ${say(state,'pipe','பைப்','pipe')} — ${prompt}`:prompt;
-  const choices:Button[]=!pump&&state.pending?.kind==='question'?(['pvc','hose','pump'] as const).map(pipeType=>({label:{pvc:say(state,'Rigid PVC','கெட்டியான PVC','Rigid PVC'),hose:say(state,'Flexible hose','வளையும் ஹோஸ்','Flexible hose'),pump:say(state,'Pump pipe','மோட்டார் பைப்','Pump pipe')}[pipeType],event:{id:randomUUID(),type:'choose_pipe_type',lineId:line.id,questionId:state.pending!.id,pipeType,expectedVersion:state.version}})):[shop(state)];
-  return {...reply('identify',[part(choices.map(choice=>instruction(choice.label,[question],choice.label,[choice])),question)],'product_or_specification'),replyLanguage:state.replyLanguage};
- }
  if(line&&!(base.stage==='identify'&&base.cards?.length)&&(line.resolution==='needs_quantity'||line.resolution==='needs_unit')){
   const product=line.candidates?.find(p=>p.sku===line.sku);
   const size=line.packSize??(product?catalogPack(product):undefined);
   const prompt=line.catalogIssue?draftIssueText(line,state)!:say(state,`How many ${line.unit??'packs'} of ${lineName(line,state)}?`,`${lineName(line,state)} — எத்தனை ${unitName(line.unit??'unit',state)} வேணும்?`,`${lineName(line,state)} — eththanai ${line.unit??'packs'} venum?`);
   const details=size?`${size.value} ${size.unit}`:'';
   if(!product)return nativeReply({...base,text:prompt,stage:'quantity',clarificationReason:line.requestedAmount?'requested_amount_conversion':'purchase_count'},state);
-  const needsCount=line.resolution==='needs_quantity'&&line.quantity===null&&line.requestedQuantity===undefined&&!line.requestedAmount;
+  const needsCount=line.resolution==='needs_quantity'&&line.quantity===null&&line.requestedQuantity===undefined&&!line.requestedAmount||line.resolution==='needs_unit'&&!line.requestedAmount&&!!product.sellingUnitVerified&&state.pending?.kind==='question'&&state.pending.lineId===line.id;
   if(!needsCount){
    const card:VisualCard={kind:'product',lineId:line.id,product,caption:productCaption(product,state,[measurementText(details,state),requestedAmountText(line,state),productPriceText(product,state),productStockText(product,state),prompt]),buttons:base.buttons?.slice(0,3)};
    return withContext({...reply('quantity',[part([card],prompt,base.buttons?.slice(0,3))],line.requestedAmount?'requested_amount_conversion':'purchase_count'),replyLanguage:state.replyLanguage},base.contextLines);
   }
   const step=product.quantityStep||1;
-  const quantityButtons:Button[]=needsCount?[1,2,5].map(n=>Math.round(n*step*1000)/1000).filter(n=>n>0&&n<=100).map(quantity=>({label:`${quantity} ${unitName(product.unit,state,quantity)}`,event:{id:randomUUID(),type:'set_quantity',lineId:line.id,quantity,expectedVersion:state.version}})):base.buttons?.slice(0,3)??[];
-  const question=say(state,`How many ${unitName(product.unit,state)}?`,`எத்தனை ${unitName(product.unit,state)} வேணும்?`,`Eththanai ${unitName(product.unit,state)} venum?`);
+  const quantityButtons:Button[]=needsCount?[1,2,3].map(n=>Math.round(n*step*1000)/1000).filter(n=>n>0&&n<=100).map(quantity=>({label:`${quantity} ${unitName(product.unit,state,quantity)}`,event:{id:randomUUID(),type:'set_quantity',lineId:line.id,quantity,expectedVersion:state.version}})):base.buttons?.slice(0,3)??[];
+  const requested=line.resolution==='needs_unit'&&line.requestedQuantity!==undefined&&line.requestedUnit?say(state,`You asked for ${line.requestedQuantity} ${unitName(line.requestedUnit,state,line.requestedQuantity)}. `,`நீங்க ${line.requestedQuantity} ${unitName(line.requestedUnit,state,line.requestedQuantity)} கேட்டீங்க. `,`Neenga ${line.requestedQuantity} ${unitName(line.requestedUnit,state,line.requestedQuantity)} ketteenga. `):'';
+  const pack=details?`${measurementText(details,state)} ${unitName(product.unit,state)} — `:'';
+  const question=requested+pack+say(state,`How many ${unitName(product.unit,state)}? Tap a number or reply with the count.`,`எத்தனை ${unitName(product.unit,state)} வேணும்? எண்ணைத் தேர்வு செய்யுங்க அல்லது எண்ணிக்கையை reply பண்ணுங்க.`,`Eththanai ${unitName(product.unit,state)} venum? Number-ai choose pannunga illa count reply pannunga.`);
   const card:VisualCard={kind:'product',lineId:line.id,product,caption:productCaption(product,state,[question,measurementText(details,state)]),buttons:quantityButtons};
   return withContext({...reply('quantity',[part([card],question)],'purchase_count'),replyLanguage:state.replyLanguage},base.contextLines);
  }

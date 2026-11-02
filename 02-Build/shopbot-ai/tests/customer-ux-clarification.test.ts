@@ -51,7 +51,7 @@ test('persisted no-match line keeps supplied count and asks for a missing detail
  s.draft=[{id:lineId,name:'paint',query:'paint',quantity:2,unit:'tin',resolution:'unavailable'}];
  const reply=discoveryPresentation({...result([]),query:'paint'},s,undefined,lineId,undefined,{quantity:2,unit:'tin'});
  assert.match(reply.text,/paint.*2 tin.*on your list/i);
- assert.match(reply.text,/What are you painting/);
+ assert.match(reply.text,/What will you use it for/);
  assert.doesNotMatch(reply.text,/How many/i);
 });
 

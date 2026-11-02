@@ -10,6 +10,8 @@ WhatsApp runs on Google VPS `sago-counter-ksmc`; the owner dashboard is at `http
 
 ## Run
 
+For local code changes, private environment setup, isolated model/voice tests and WhatsApp test routing, see [LOCAL-DEVELOPMENT.md](../../LOCAL-DEVELOPMENT.md).
+
 From this folder, copy `.env.example` to `.env`, then:
 
 ```sh

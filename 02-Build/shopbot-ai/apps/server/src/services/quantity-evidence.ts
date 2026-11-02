@@ -10,6 +10,12 @@ const measureUnit=canonicalMeasurementUnit;
 export const physicalMeasure=(measure:Measure)=>['inch','mm','cm','m','foot'].includes(measureUnit(measure.unit));
 function number(s:string){return (/^[\d½¼¾⅛⅜⅝⅞]/.test(s)?measurementNumber(s):undefined)??({a:1,an:1,mukkal:.75,'முக்கால்':.75,kaal:.25,ara:.5,arai:.5,'கால்':.25,'அரை':.5,'ஒண்ணு':1,'ஒன்ன':1,'ஒண்ண':1,'மூணு':3,fifty:50,hundred:100,'இருபது':20,'ஐம்பது':50,'நூறு':100} as Record<string,number>)[s.toLowerCase()]??quantityReply(s)?.quantity;}
 export function spokenMeasures(text:string):Measure[]{return [...text.matchAll(measures)].flatMap(m=>{const value=number(m[1]);return value?[{value,unit:measureUnit(m[2])}]:[];});}
+export function countExpressionIsMeasurement(source:string,evidence:string):boolean {
+ const spans=[...source.matchAll(measures)].map(m=>({start:m.index!,end:m.index!+m[0].length}));
+ const positions:number[]=[];let at=source.indexOf(evidence);
+ while(evidence.length&&at>=0){positions.push(at);at=source.indexOf(evidence,at+evidence.length);}
+ return positions.length>0&&positions.every(start=>spans.some(span=>start>=span.start&&start+evidence.length<=span.end));
+}
 export function explicitPurchaseCount(phrase:string):number|undefined {
  const remainder=phrase.replace(measures,' '),re=new RegExp('(?:^|[^\\p{L}\\p{N}.])(\\d+(?:\\.\\d+)?|'+countWords+')(?=$|[^\\p{L}\\p{N}.])','giu');
  const counts=[...remainder.matchAll(re)].map(m=>number(m[1])).filter((n):n is number=>n!==undefined);

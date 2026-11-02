@@ -6,8 +6,11 @@ __pycache__/
 .env
 .env.*
 !.env.example
+!.env.ai.example
 data/
 preview/
 
 # Also ignore a local dependency symlink.
 /node_modules
+
+!.env.whatsapp.example

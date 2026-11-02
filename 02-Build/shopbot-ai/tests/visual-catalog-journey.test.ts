@@ -27,7 +27,7 @@ async function fixture(run:(pool:pg.Pool,inbox:SimulatorService,runtime:Conversa
   await pool.query("INSERT INTO products(store_id,sku,name,family_id,brand,aliases,unit,price_paise,stock,selling_unit_verified,image_path) VALUES($1,'THINNER','Paint thinner','paint-thinners','Paint Brand','[\"solvent\"]','can',9000,30,true,NULL)",[storeId]);
   await pool.query("INSERT INTO conversations(id,store_id,actor,visual_ordering,reply_language,reply_language_explicit) VALUES($1,$2,$3,true,'en',true)",[conversationId,storeId,actor]);
   let calls=0;
-  const runtime=new ConversationRuntime(pool,{name:'offline-visual-catalog',mode:'mock',interpret:async()=>{calls++;return {output:{operations:[{kind:'add_item',query:'solvent',quantity:2},...(extras?[{kind:'add_item' as const,query:'C18',quantity:1},{kind:'add_item' as const,query:'C19',quantity:1}]:[])],next:'review'},usage:null,truncated:false};}},{visualOrdering:true});
+  const runtime=new ConversationRuntime(pool,{name:'offline-visual-catalog',mode:'mock',interpret:async()=>{calls++;return {output:{operations:[{kind:'add_item',query:'solvent',quantity:2,search:{keywords:['solvent'],clarifyType:true,familyIds:['solvent-cements','paint-thinners']}},...(extras?[{kind:'add_item' as const,query:'C18',quantity:1},{kind:'add_item' as const,query:'C19',quantity:1}]:[])],next:'review'},usage:null,truncated:false};}},{visualOrdering:true});
   const inbox=new SimulatorService(pool,{storeId,conversationId,actor,role:'customer'});
   await run(pool,inbox,runtime,()=>calls);
  }finally{await pool.end();await admin.query(`DROP SCHEMA ${schema} CASCADE`);await admin.end();}

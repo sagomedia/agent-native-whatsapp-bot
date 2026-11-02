@@ -6,11 +6,17 @@ import {matchesProductMeasures,spokenMeasures,convertAmount,catalogPack,catalogM
 type Item=TurnUnderstanding['requestedItems'][number];
 import {additionalMention,repeatMention,correctionMention,currentItemMention} from '../../../../packages/contracts/intent-language.js';
 export {additionalMention} from '../../../../packages/contracts/intent-language.js';
-function identity(query:string){return tokens(normalize(query).replace(/\bhose\s+pipe\b/g,'hose').replace(/\b\d+(?:\.\d+)?\s*(?:inch|inches|mm|cm|ml|litre|litres|kg|metre|metres|m)\b/g,' ')).join(' ');}
-// These nouns name several physically different shop products. A one-word
-// mention does not identify a previously selected type by itself.
-const ambiguousHeads=new Set(['pipe','tube','hose']);
-function ambiguousIdentity(query:string){const words=identity(query).split(' ');return words.length===1&&ambiguousHeads.has(words[0]);}
+function identity(query:string){return tokens(normalize(query).replace(/\b\d+(?:\.\d+)?\s*(?:inch|inches|mm|cm|ml|litre|litres|kg|metre|metres|m)\b/g,' ')).join(' ');}
+// A shorter identity cannot silently inherit a more specific current type.
+// This applies to every inventory noun, not a predefined product vocabulary.
+function ambiguousIdentity(query:string,line:DraftLine){
+ const product=line.candidates?.find(p=>p.sku===line.sku),primary=product?.name??line.name;
+ if(normalize(query)===normalize(product?.sku??line.sku??'')||identity(query)===identity(primary))return false;
+ const translated=/[^\x00-\x7f]/u.test(query)&&[...product?.aliases??[],...Object.values(product?.localNames??{})].some(name=>normalize(name)===normalize(query));
+ if(translated)return false;
+ return identity(query).split(' ').length===1;
+}
+
 function refersToCurrentItem(item:Item,state:ConversationState,line:DraftLine){
  return repeatMention.test(item.sourceText)||correctionMention.test(item.sourceText)||currentItemMention.test(item.sourceText)||state.editingLineId===line.id||state.pending?.kind==='question'&&state.pending.lineId===line.id||state.pending?.kind==='products'&&state.pending.groups.length===1&&state.pending.groups[0].lineId===line.id;
 }
@@ -183,13 +189,13 @@ export function existingMention(item:Item,state:ConversationState):{line?:DraftL
   if(!focused&&compatible.length>1)return {clarify:say(state,'Which existing item should receive this change?','ஏற்கனவே உள்ள எந்தப் பொருளுக்கு இந்த மாற்றம் வேண்டும்?','Irukkura entha porulukku intha maaththam venum?')};
   if(!refersToCurrentItem(item,state,line)){
    if(!compatibleLine(item,line))return {};
-   if(item.query&&ambiguousIdentity(item.query))return {clarify:say(state,`Do you mean your existing ${lineName(line,state)}, or a different ${item.query}?`,`ஏற்கனவே உள்ள ${lineName(line,state)}-ஐ சொல்கிறீர்களா, வேறு ${item.query} வேண்டுமா?`,`Irukkura ${lineName(line,state)}-a solreengala, vera ${item.query} venuma?`)};
+   if(item.query&&ambiguousIdentity(item.query,line))return {clarify:say(state,`Do you mean your existing ${lineName(line,state)}, or a different ${item.query}?`,`ஏற்கனவே உள்ள ${lineName(line,state)}-ஐ சொல்கிறீர்களா, வேறு ${item.query} வேண்டுமா?`,`Irukkura ${lineName(line,state)}-a solreengala, vera ${item.query} venuma?`)};
   }
   return {line};
  }
  const lines=state.draft.filter(l=>compatibleLine(item,l));
  if(lines.length>1)return {clarify:say(state,`Which existing item should change: ${lines.map(l=>`${state.draft.indexOf(l)+1}. ${lineName(l,state)}`).join('; ')}?`,`எந்தப் பொருளை மாற்றணும்: ${lines.map(l=>`${state.draft.indexOf(l)+1}. ${lineName(l,state)}`).join('; ')}?`,`Entha porulai maathanum: ${lines.map(l=>`${state.draft.indexOf(l)+1}. ${lineName(l,state)}`).join('; ')}?`)};
- if(lines.length===1&&item.query&&ambiguousIdentity(item.query)&&!refersToCurrentItem(item,state,lines[0]))return {clarify:say(state,`Do you mean your existing ${lineName(lines[0],state)}, or a different ${item.query}?`,`ஏற்கனவே உள்ள ${lineName(lines[0],state)}-ஐ சொல்கிறீர்களா, வேறு ${item.query} வேண்டுமா?`,`Irukkura ${lineName(lines[0],state)}-a solreengala, vera ${item.query} venuma?`)};
+ if(lines.length===1&&item.query&&ambiguousIdentity(item.query,lines[0])&&!refersToCurrentItem(item,state,lines[0]))return {clarify:say(state,`Do you mean your existing ${lineName(lines[0],state)}, or a different ${item.query}?`,`ஏற்கனவே உள்ள ${lineName(lines[0],state)}-ஐ சொல்கிறீர்களா, வேறு ${item.query} வேண்டுமா?`,`Irukkura ${lineName(lines[0],state)}-a solreengala, vera ${item.query} venuma?`)};
  if(!lines.length&&item.query&&correctionMention.test(item.sourceText)&&!additionalMention.test(item.sourceText)){
   const id=state.editingLineId??(state.pending?.kind==='question'?state.pending.lineId:state.pending?.kind==='products'&&state.pending.groups.length===1?state.pending.groups[0].lineId:undefined);
   const focused=state.draft.find(line=>line.id===id);

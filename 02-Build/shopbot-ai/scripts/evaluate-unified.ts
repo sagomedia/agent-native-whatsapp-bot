@@ -6,6 +6,7 @@ import pg from 'pg';
 import {GoogleInterpreter,readNativeSettings} from '../apps/server/src/adapters/google-interpreter.js';
 import {GEMINI_MODEL_ID} from '../packages/contracts/model-policy.js';
 import {setupDatabase} from '../apps/server/src/db/migrate.js';
+import {loadLocalCatalog} from './local-catalog.js';
 import {setupImageDemo,demoCatalogStore} from '../apps/server/src/services/demo-catalog.js';
 import {initializeBudget} from '../apps/server/src/services/inference-budget.js';
 import {ConversationRuntime} from '../apps/server/src/runtime/conversation.js';
@@ -26,13 +27,13 @@ async function main(){
  const pool=new pg.Pool({connectionString:databaseUrl,options:'-c search_path=flash_lite_evaluation'});
  const results:unknown[]=[];let failed=0;
  try{
-  await setupDatabase(pool,'mock');await setupImageDemo(pool);
+  await setupDatabase(pool,'mock');const localSnapshot=process.env.LOCAL_CATALOG_SNAPSHOT?await loadLocalCatalog(pool,resolve(process.env.LOCAL_CATALOG_SNAPSHOT)):undefined;const storeId=localSnapshot?.storeId??demoCatalogStore;if(!localSnapshot)await setupImageDemo(pool);
   for(const c of cases){
-   const id=randomUUID(),actor='flash-lite-evaluation';await pool.query('INSERT INTO conversations(id,store_id,actor,reply_language) VALUES($1,$2,$3,$4)',[id,demoCatalogStore,actor,'ta']);
-   const inbox=new SimulatorService(pool,{storeId:demoCatalogStore,conversationId:id,actor,role:'customer'});
+   const id=randomUUID(),actor='flash-lite-evaluation';await pool.query('INSERT INTO conversations(id,store_id,actor,reply_language) VALUES($1,$2,$3,$4)',[id,storeId,actor,'ta']);
+   const inbox=new SimulatorService(pool,{storeId,conversationId:id,actor,role:'customer'});
    // The fixed evaluation schema/store retains its cumulative budget across runs.
    await initializeBudget(pool,inbox.context,settings.budgetMicrousd);
-   const runtime=new ConversationRuntime(pool,new GoogleInterpreter(settings),{allowPaidInference:true,visualOrdering:true});const started=Date.now();
+   const runtime=new ConversationRuntime(pool,new GoogleInterpreter(settings),{allowPaidInference:true,visualOrdering:true,inventoryGrounding:true});const started=Date.now();
    try{
     for(const m of c.messages){const mid=randomUUID();
      if(m.kind==='text'){if(!m.text)throw new Error('Text is required');await inbox.ingest({id:mid,type:'text',text:m.text});}
@@ -49,7 +50,7 @@ async function main(){
     results.push({id:c.id,status,elapsedMs:Date.now()-started,draft:s.conversation.draft,requests:s.requests,messages:s.messages,attempts});
    }catch(error){failed++;results.push({id:c.id,status:'failed',error:error instanceof Error?error.message:'Evaluation failed'});}
   }
-  const budget=(await pool.query('SELECT limit_microusd,held_microusd,committed_microusd,blocked FROM inference_budgets WHERE store_id=$1',[demoCatalogStore])).rows[0];
+  const budget=(await pool.query('SELECT limit_microusd,held_microusd,committed_microusd,blocked FROM inference_budgets WHERE store_id=$1',[storeId])).rows[0];
   const output=resolve(process.env.EVALUATION_REPORT??'artifacts/unified-evaluation/report.json');await mkdir(dirname(output),{recursive:true});await writeFile(output,JSON.stringify({model:GEMINI_MODEL_ID,recordedAt:new Date().toISOString(),results,budget},null,2)+'\n');console.log(JSON.stringify({cases:cases.length,failed,report:output}));if(failed)process.exitCode=1;
  }finally{await pool.end();}
 }

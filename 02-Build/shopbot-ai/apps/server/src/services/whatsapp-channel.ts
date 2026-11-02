@@ -42,7 +42,7 @@ export class WhatsAppChannel {
   constructor(private pool:Pool,readonly config:WhatsAppConfig,private request:WhatsAppFetch=fetch,private provider?:Interpreter){
     if(config.aiEnabled&&(!provider||provider.mode!=='live'||!provider.freeQuota&&(!config.paidEnabled||!config.budgetMicrousd||config.budgetMicrousd>5000000)))throw new Error('WhatsApp AI requires the configured free-tier or explicitly budgeted interpreter');
     if(!config.aiEnabled&&provider)throw new Error('WhatsApp AI has not been enabled');
-    this.runtime=new ConversationRuntime(pool,provider??new MockInterpreter(),{observeTurn:config.audience==='public'?async(client,ctx,offTopic)=>{
+    this.runtime=new ConversationRuntime(pool,provider??new MockInterpreter(),{inventoryGrounding:!!provider?.unifiedUnderstanding,observeTurn:config.audience==='public'?async(client,ctx,offTopic)=>{
       if(!await observeCustomerIntent(client,ctx,offTopic))return false;
       await queueHandoffNotice(client,ctx,await loadState(client,ctx),config.sendEnabled);return true;
     }:undefined,allowFreeInference:!!config.aiEnabled,allowPaidInference:!!config.aiEnabled&&!!config.paidEnabled,discoveryStages:!!config.discoveryStages,mediaRecommendations:!!config.mediaRecommendations,sequentialItems:!!config.sequentialItems,visualOrdering:!!config.visualOrdering,maxDraftLines:config.maxDraftLines,advance:config.advance,partialReviews:config.partialReviews,welcomeAudio:config.welcomeAudio,queueReply:async(client,ctx,messageId,rich)=>{

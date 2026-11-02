@@ -145,16 +145,12 @@ test('the recorded voice updates the prior three-line cart into four unique prod
  assert.equal(counter.calls,1);assert.equal(s.conversation.draft.length,4);assert.deepEqual(s.conversation.draft.slice(0,3).map(l=>l.id),old.draft.map(l=>l.id));
  assert.deepEqual(s.conversation.draft.slice(0,3).map(l=>[l.sku,l.quantity]),[['H02',2],['H22',1],['H13',1]]);assert.equal(s.conversation.draft[3].query,'sandpaper');assert.equal(s.conversation.draft[3].resolution,'unavailable');assert.equal(s.requests.length,0);
 }));
-test('a fresh recorded list asks pipe type before product and quantity choices',async()=>fixture(async(pool,inbox)=>{
- let output:any=recordedUnderstanding();const r=runtime(pool,()=>output);let s=await recordedVoice(inbox,r);assert.equal(s.conversation.draft.length,4);
- assert.equal(s.conversation.pending?.kind,'question');assert.match(s.messages.at(-1)!.text,/kind|type|வகை|vagai/);assert.equal(s.conversation.draft[0].sku,undefined);
- const pipe=s.conversation.draft[0];output={...base(),intents:['edit'],requestedItems:[{...item('PVC pipe','1 inch PVC pipe',2),targetLineId:pipe.id}]};s=await text(inbox,r,'PVC pipe');
- const pending=s.conversation.pending;assert.equal(pending?.kind,'products');if(pending?.kind!=='products')throw new Error('No pipe choice');
- const pipeGroup=pending.groups.find(g=>g.products.some(p=>p.sku==='H01'))!;await inbox.ingest({id:randomUUID(),type:'select_product',batchId:pending.id,lineId:pipeGroup.lineId,sku:'H01'});await r.processNext(inbox.context);s=await inbox.snapshot();
- assert.equal(s.conversation.pending?.kind,'products');const check=s.conversation.pending;if(check?.kind!=='products')throw new Error('Expected full product selection before counts');const countLine=s.conversation.draft.find(line=>line.sku==='H22')!;assert.ok(s.messages.at(-1)!.rich?.parts?.some(part=>part.cards.some(card=>card.buttons?.some(button=>button.event.type==='select_product'&&button.event.lineId===countLine.id))));await inbox.ingest({id:randomUUID(),type:'select_product',batchId:check.id,lineId:countLine.id,sku:'H22'});await r.processNext(inbox.context);s=await inbox.snapshot();
- assert.equal(s.conversation.pending?.kind,'question');const question=s.conversation.pending;if(question?.kind==='question')assert.equal(s.conversation.draft.find(l=>l.id===question.lineId)?.sku,'H22');
- assert.match(s.messages.at(-1)!.text,/எத்தனை|How many|eththanai/);assert.equal(s.conversation.draft.find(l=>l.sku==='H13')?.quantity,1);
- s=await text(inbox,r,'two');assert.equal(s.conversation.draft.find(l=>l.sku==='H22')?.quantity,2);assert.equal(s.conversation.pending?.kind,'products');assert.ok(cartProgress(s.conversation).join(' ').includes(formatMoney(107000)));assert.equal(s.requests.length,0);
+test('a fresh recorded list preserves all items and offers actual product choices without a fixed pipe menu',async()=>fixture(async(pool,inbox)=>{
+ const r=runtime(pool,recordedUnderstanding);const s=await recordedVoice(inbox,r);
+ assert.equal(s.conversation.draft.length,4);assert.equal(s.requests.length,0);
+ assert.equal(s.conversation.draft[0].quantity,2);
+ assert.ok(!JSON.stringify(s.messages.at(-1)!.rich).includes('choose_pipe_type'));
+ assert.notEqual(s.messages.at(-1)!.rich?.stage,'error');
 }));
 test('restating a total does not increment a cart, while explicit extra does',async()=>fixture(async(pool,inbox)=>{
  let output:any={...base(),requestedItems:[item('one H07','H07')]};const r=runtime(pool,()=>output);let s=await text(inbox,r,'one H07'),id=s.conversation.draft[0].id;
@@ -270,3 +266,12 @@ test('dedicated voice can use a separate fresh-catalog recommendation after text
  assert.equal(shoppingCalls,2);assert.equal(after.conversation.draft.length,0);assert.equal(after.requests.length,0);
  assert.deepEqual((await pool.query('SELECT stage,state FROM provider_attempts ORDER BY attempt')).rows,[{stage:'recognize',state:'succeeded'},{stage:'identify',state:'succeeded'},{stage:'recommend',state:'succeeded'}]);
 }));
+
+test('Google grounding uses a search-patch grammar and preserves the original customer order',async()=>{
+ const source='two oat drinks',prior=understandingToInterpretation({...base(),requestedItems:[item(source,'oat drinks',2)]},{text:source,state},false);
+ let request:GenerateContentParameters|undefined;
+ const provider=new GoogleInterpreter(settings,{generateContent:async params=>{request=params;return response({items:[{ordinal:0,query:'oat drink',search:{keywords:['oat drink'],selectedSkus:['OAT']}}],replacements:[]});}});
+ const result=await provider.interpret({text:source,state,proposal:prior,inventoryReplan:true,observations:[{tool:'discover_products',query:'oat drinks',products:[{sku:'OAT',name:'Oat Drink',unit:'can',pricePaise:100,stock:2,version:1,aliases:[],quantityStep:1}],totalCount:1}]},new AbortController().signal);
+ assert.equal(result.validationIssues,undefined);assert.equal((result.output as any).operations[0].quantity,2);assert.equal((result.output as any).operations[0].search.selectedSkus[0],'OAT');
+ const schema=request!.config!.responseJsonSchema as any;assert.ok(schema.properties.items);assert.equal(schema.properties.requestedItems,undefined);assert.equal(schema.properties.items.items.properties.purchaseCount,undefined);
+});

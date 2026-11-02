@@ -31,9 +31,10 @@ export function specificationTextMatch(actual:string,requested:string):boolean {
  const a=normalize(actual).replace(/\bgray\b/g,'grey'),b=normalize(requested).replace(/\bgray\b/g,'grey');
  return a===b||(' '+a+' ').includes(' '+b+' ');
 }
-export function understandingSearch(item:{query?:string|null;brand?:string;colour?:string;material?:string;packSize?:{value:number;unit:string}}):DiscoveryPlan|undefined {
+export function understandingSearch(item:{query?:string|null;brand?:string;colour?:string;material?:string;packSize?:{value:number;unit:string};unresolved?:string[];search?:import('../../../../packages/contracts/understanding.js').TurnUnderstanding['requestedItems'][number]['search']}):DiscoveryPlan|undefined {
  if(!item.query)return;
- const brand=item.brand&&!/^(?:teflon|ptfe|pvc|cpvc|upvc|n95|n99|n100|p100|ffp1|ffp2|ffp3)$/i.test(item.brand)?item.brand:undefined;
- if(!brand&&!item.colour&&!item.material&&!item.packSize)return;
- return {keywords:[item.query.slice(0,120)],allowAlternatives:true,...(brand?{brand}:{}),...((item.colour||item.material||item.packSize)?{specifications:{...(item.colour?{colour:item.colour}:{}),...(item.material?{material:item.material}:{}),...(item.packSize?{pack_size:`${item.packSize.value} ${item.packSize.unit}`}:{})}}:{})};
+ const brand=item.brand;
+ if(!brand&&!item.colour&&!item.material&&!item.packSize&&!item.search)return;
+ const groundedBrand=item.unresolved?.includes('brand')?undefined:brand;
+ return {...item.search,keywords:[...new Set([...(item.search?.keywords??[]),item.query.slice(0,120)])].slice(0,8),allowAlternatives:true,...(groundedBrand?{brand:groundedBrand}:{}),...((item.colour||item.material||item.packSize)?{specifications:{...(item.colour?{colour:item.colour}:{}),...(item.material?{material:item.material}:{}),...(item.packSize?{pack_size:`${item.packSize.value} ${item.packSize.unit}`}:{})}}:{})};
 }

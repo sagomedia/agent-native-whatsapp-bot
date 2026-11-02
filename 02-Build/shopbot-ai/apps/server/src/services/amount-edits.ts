@@ -50,5 +50,5 @@ export function normalizeAmountEdits(plan:Interpretation,text:string,state:Conve
 }
 export function amountEvidence(op:Extract<Operation,{kind:'set_amount'|'increment_amount'}>,text:string):boolean {
  const amount=op.kind==='set_amount'?op.amount:op.delta;
- return text.includes(op.supportingPhrase)&&spokenMeasures(op.supportingPhrase).some(m=>{const n=convertAmount(m,amount.unit);return n!==null&&Math.abs(n-amount.value)<1e-8;})&&(op.kind!=='increment_amount'||extra.test(op.supportingPhrase))&&(op.kind!=='set_amount'||op.mode!=='continuous'||continuousAmount(op.supportingPhrase));
+ return text.includes(op.supportingPhrase)&&spokenMeasures(op.supportingPhrase).some(m=>{const n=convertAmount(m,amount.unit);return n!==null&&Math.abs(n-amount.value)<1e-8;})&&(op.kind!=='set_amount'||op.mode!=='continuous'||continuousAmount(op.supportingPhrase));
 }
