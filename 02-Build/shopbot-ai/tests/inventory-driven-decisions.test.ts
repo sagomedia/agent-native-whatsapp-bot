@@ -171,3 +171,19 @@ test('a replacement cannot select a SKU observed for a different requested repla
  const observations=[{tool:'discover_products' as const,query:'oat drink',products:[],totalCount:0},{tool:'discover_products' as const,query:'dairy milk',products:[product],totalCount:1}];
  assert.throws(()=>understandingToInterpretation({...raw,proposedEdits:[{...edit,search:{...edit.search,selectedSkus:['DAIRY']}}]},{text:source,state:cart,inventoryGrounding:true,proposal:original,observations},false),/this item’s fresh inventory/);
 });
+
+
+test('an empty unobserved SKU array is absence, while an observed rejection stays explicit',()=>{
+ const source='two oat drinks',raw={...base(),intents:['add'],requestedItems:[{ordinal:0,sourceText:source,query:'oat drink',purchaseCount:2,unresolved:[],search:{keywords:['oat drink'],selectedSkus:[]}}]};
+ const original=understandingToInterpretation(raw,{text:source,state:empty},false);
+ assert.equal(original.understanding!.requestedItems[0].search?.selectedSkus,undefined);
+ assert.equal((original.operations[0] as any).search.selectedSkus,undefined);
+ const rejected=understandingToInterpretation(raw,{text:source,state:empty,proposal:original,observations:[{tool:'discover_products',query:'oat drink',products:[],totalCount:0}]},false);
+ assert.deepEqual(rejected.understanding!.requestedItems[0].search?.selectedSkus,[]);
+});
+
+test('optional count evidence cannot turn a measured pack with unknown count into a purchase amount',()=>{
+ const source='நாலு லிட்டர் ஒயிட் பெயிண்ட் வேணும்',raw={...base(),intents:['add'],requestedItems:[{ordinal:0,sourceText:source,query:'white paint',purchaseCount:null,packSize:{value:4,unit:'litre'},countEvidence:{sourceText:'நாலு லிட்டர்',value:4,mode:'total'},unresolved:[],attributeEvidence:[],dimensions:[]}]};
+ const plan=understandingToInterpretation(raw,{text:source,state:empty},false);
+ assert.equal((plan.operations[0] as any).quantity,null);assert.deepEqual((plan.operations[0] as any).packSize,{value:4,unit:'litre'});assert.equal(plan.understanding!.requestedItems[0].countEvidence,undefined);
+});

@@ -61,6 +61,8 @@ export function normalizeUnderstandingAbsence(value:unknown):unknown {
   const item=clean(v,['targetLineId','sameItemOrdinal','requestMode','requestedContainer','brand','colour','material','packSize','dimensions','requestedAmount','amountMode','requestedBudgetPaise','crossedOut','search','countEvidence','attributeEvidence']);
   if(item.targetLineId==='00000000-0000-0000-0000-000000000000')delete item.targetLineId;
   if(item.requestedBudgetPaise===0)delete item.requestedBudgetPaise;
+  if(item.purchaseCount===null)delete item.countEvidence;
+  for(const field of ['dimensions','attributeEvidence'])if(Array.isArray(item[field])&&item[field].length===0)delete item[field];
   return item;
  });
  if(Array.isArray(result.proposedEdits))result.proposedEdits=result.proposedEdits.map(v=>v&&typeof v==='object'&&!Array.isArray(v)?clean(v,['targetQuery','quantity','query','amount','mode','search','countEvidence']):v);

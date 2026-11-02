@@ -22,23 +22,23 @@ const {initializeBudget,geminiTextRate}=await moduleAt('apps/server/src/services
 const {ConversationRuntime}=await moduleAt('apps/server/src/runtime/conversation.js');
 const {SimulatorService}=await moduleAt('apps/server/src/services/simulator.js');
 const {productColumns}=await moduleAt('apps/server/src/services/catalog.js');
-const schema='inventory_decisions_eval_20261102',storeId=env.WHATSAPP_STORE_ID;
-assert.match(storeId??'',/^[a-f0-9-]{36}$/);
+const schema='inventory_decisions_eval_20261102',sourceStoreId=env.WHATSAPP_STORE_ID,storeId='41b2f4fe-35d6-411b-80f4-a591e00d2026';
+assert.match(sourceStoreId??'',/^[a-f0-9-]{36}$/);
 const admin=new pg.Pool({connectionString:env.DATABASE_URL,max:1});
 const pool=new pg.Pool({connectionString:env.DATABASE_URL,options:`-c search_path=${schema}`,max:2});
 const report={schema,model:geminiTextRate.model,capMicrousd:cap,whatsAppSends:0,actualVoiceRecognition:'Not evaluated: these are text inputs to the shared understanding path.',cases:[]};
-let locked=false;
+let locked=false,phase='isolation setup';
 try{
  locked=(await admin.query("SELECT pg_try_advisory_lock(hashtext('shopbot-inventory-decision-evaluation')) AS locked")).rows[0].locked;
  assert.ok(locked,'An evaluation is already running');
  await admin.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
  await setupDatabase(pool,'mock');
- await pool.query("INSERT INTO stores(id,name,synthetic) SELECT id,name,true FROM public.stores WHERE id=$1 ON CONFLICT DO NOTHING",[storeId]);
- assert.equal((await pool.query('SELECT synthetic FROM stores WHERE id=$1',[storeId])).rows[0]?.synthetic,true);
- await pool.query("INSERT INTO catalog_profiles(store_id,store_type) SELECT store_id,store_type FROM public.catalog_profiles WHERE store_id=$1 ON CONFLICT DO NOTHING",[storeId]);
- await pool.query("INSERT INTO catalog_nodes(store_id,id,parent_id,kind,label,aliases,local_names) SELECT store_id,id,parent_id,kind,label,aliases,local_names FROM public.catalog_nodes WHERE store_id=$1 ON CONFLICT DO NOTHING",[storeId]);
+ await pool.query("INSERT INTO stores(id,name,synthetic) SELECT $2,name,true FROM public.stores WHERE id=$1 ON CONFLICT DO NOTHING",[sourceStoreId,storeId]);
+ assert.equal((await pool.query('SELECT synthetic FROM stores WHERE id=$1',[storeId])).rows[0]?.synthetic,'true');
+ await pool.query("INSERT INTO catalog_profiles(store_id,store_type) SELECT $2,store_type FROM public.catalog_profiles WHERE store_id=$1 ON CONFLICT DO NOTHING",[sourceStoreId,storeId]);
+ await pool.query("INSERT INTO catalog_nodes(store_id,id,parent_id,kind,label,aliases,local_names) SELECT $2,id,parent_id,kind,label,aliases,local_names FROM public.catalog_nodes WHERE store_id=$1 ON CONFLICT DO NOTHING",[sourceStoreId,storeId]);
  const columns=productColumns.split(',').filter(c=>!['product_group_id','product_group_name','variant_label'].includes(c)).join(',');
- await pool.query(`INSERT INTO products(store_id,${columns},active) SELECT store_id,${columns},active FROM public.products WHERE store_id=$1 ON CONFLICT DO NOTHING`,[storeId]);
+ await pool.query(`INSERT INTO products(store_id,${columns},active) SELECT $2,${columns},active FROM public.products WHERE store_id=$1 ON CONFLICT DO NOTHING`,[sourceStoreId,storeId]);
  await pool.query('INSERT INTO store_policies(store_id,require_product_confirmation) VALUES($1,true) ON CONFLICT DO NOTHING',[storeId]);
  const provider=new GoogleInterpreter({apiKey:env.GEMINI_API_KEY,model:geminiTextRate.model,allowPaidInference:true,allowMultimodal:true,unifiedUnderstanding:true,budgetMicrousd:cap});
  const runtime=new ConversationRuntime(pool,provider,{allowPaidInference:true,inventoryGrounding:true,visualOrdering:true});
@@ -48,7 +48,7 @@ try{
   await initializeBudget(pool,ctx,cap);return new SimulatorService(pool,ctx);
  };
  const send=async(inbox,name,text,check)=>{
-  const id=randomUUID(),started=Date.now();await inbox.ingest({id,type:'text',text});await runtime.processNext(inbox.context);
+  phase=name;const id=randomUUID(),started=Date.now();await inbox.ingest({id,type:'text',text});await runtime.processNext(inbox.context);
   const s=await inbox.snapshot(),last=s.messages.at(-1)?.rich;
   const attempts=(await pool.query('SELECT stage,state,billing_state,estimated_cost_microusd,failure_code,validation_issues FROM provider_attempts WHERE message_id=$1 ORDER BY attempt',[id])).rows;
   const pass=last?.stage!=='error'&&s.requests.length===0&&check(s);
@@ -69,5 +69,5 @@ try{
  assert.ok(Number(report.budget.committed_microusd)+Number(report.budget.held_microusd)<=cap);
  console.log(JSON.stringify({evaluation:report}));
  if(report.cases.some(c=>!c.pass))process.exitCode=1;
-}catch(error){console.error(JSON.stringify({evaluationFailed:true,code:typeof error?.code==='string'?error.code:'validation',note:'Credentials and provider errors suppressed; inspect the isolated evaluation ledger.'}));process.exitCode=1;}
+}catch(error){console.error(JSON.stringify({evaluationFailed:true,phase,code:typeof error?.code==='string'?error.code:'validation',note:'Credentials and provider errors suppressed; inspect the isolated evaluation ledger.'}));process.exitCode=1;}
 finally{await pool.end();if(locked)await admin.query("SELECT pg_advisory_unlock(hashtext('shopbot-inventory-decision-evaluation'))");await admin.end();}
