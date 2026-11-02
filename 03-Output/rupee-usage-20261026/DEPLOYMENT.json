@@ -1,0 +1,61 @@
+{
+  "release": "preview-21038354040d",
+  "previousRelease": "preview-2a58e8b0d292",
+  "source": "a45f0eb7f44e986dc74e196662a22df1441b43cd",
+  "artifact": "053473516298fc0d0e38c6824587682a77db5a469c3c2d8cfd6def9a49cd39fa",
+  "startedAt": "2026-10-26T09:56:54.667424+00:00",
+  "before": {
+    "schema": 50,
+    "products": 342,
+    "orders": 22,
+    "messages": 876,
+    "photos": 301,
+    "photoBytes": 19949608,
+    "proposals": 325,
+    "proposalAssets": 298,
+    "grants": 21,
+    "productHash": "6f798af0e9b3c739c28ae07c6ba4569b",
+    "budgetLimits": "cba753b8d243baab3d5996af04bf3b79",
+    "committedMicrousd": "484398",
+    "heldMicrousd": "1536820",
+    "catalogRevision": 1994
+  },
+  "environmentSha256": "d189e9318a405347a58f7dc4ab166920eee3f0f0a3b371bebd634c397c9aa939",
+  "after": {
+    "schema": 50,
+    "products": 342,
+    "orders": 22,
+    "messages": 876,
+    "photos": 301,
+    "photoBytes": 19949608,
+    "proposals": 325,
+    "proposalAssets": 298,
+    "grants": 21,
+    "productHash": "6f798af0e9b3c739c28ae07c6ba4569b",
+    "budgetLimits": "cba753b8d243baab3d5996af04bf3b79",
+    "committedMicrousd": "484398",
+    "heldMicrousd": "1536820",
+    "catalogRevision": 1994
+  },
+  "backup": "/var/backups/shopbot-migration/owner-20261026T095656Z",
+  "backupBytes": 424357304,
+  "backupFormat": "custom_uncompressed",
+  "backupRestoreListVerified": true,
+  "environmentUnchanged": true,
+  "processDirectoryVerified": true,
+  "automaticRestarts": 0,
+  "readiness": {
+    "status": "ready",
+    "mode": "mock"
+  },
+  "compiledRateProbe": {
+    "passed": true,
+    "textAndSpeechAfterReviewDate": true,
+    "invalidPricesRejected": true,
+    "providerCalls": 0,
+    "databaseWrites": 0,
+    "messagesSent": 0
+  },
+  "artifactVerified": true,
+  "completedAt": "2026-10-26T10:01:10.950377+00:00"
+}

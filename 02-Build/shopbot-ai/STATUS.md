@@ -1,6 +1,6 @@
 ## 26 October 2026 — rupee usage and advisory price reviews
 
-Removed the calendar-expiry AI admission stop while retaining malformed-rate checks, existing monetary budgets, token admission and unknown reservations. Both owner dashboards show rupee estimates with an editable browser-local conversion rate and Google spending link. See [change evidence](../../03-Output/rupee-usage-20261026/README.md). All 1,002 regressions, build/typecheck, four catalog checks and phone/desktop conversion checks pass. VPS activation pending.
+Removed the calendar-expiry AI admission stop while retaining malformed-rate checks, existing monetary budgets, token admission and unknown reservations. Both owner dashboards show rupee estimates with an editable browser-local conversion rate and Google spending link. See [change evidence](../../03-Output/rupee-usage-20261026/README.md). All 1,002 regressions, build/typecheck, four catalog checks and phone/desktop conversion checks pass. Active on the VPS as `preview-21038354040d` from source `a45f0eb`; ready, artifact/served assets verified, existing data/environment/budgets preserved, zero provider calls or customer sends for verification.
 
 ## 26 October 2026 — mobile product photo optimization
 
