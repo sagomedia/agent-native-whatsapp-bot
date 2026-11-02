@@ -59,3 +59,6 @@ coverage/
 
 # Portable local Git history export
 *.bundle
+
+# Private local speech fixtures used for explicit evaluations.
+02-Build/shopbot-ai/recordings/

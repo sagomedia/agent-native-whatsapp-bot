@@ -1,5 +1,7 @@
 # Continue ShopBot on another device or create a separate product
 
+For the prepared local-disk checkout and current pull/test commands, read [LOCAL-DEVELOPMENT.md](LOCAL-DEVELOPMENT.md). The dated recovery notes below describe earlier checkpoints; verify the current GitHub and VPS manifests before choosing a source.
+
 ## Pick the correct source first
 
 The application lives in `02-Build/shopbot-ai`. Use a local disk, not SMB, for npm dependencies. Runtime databases, uploaded images, environment secrets and agent chat history are separate from Git.
