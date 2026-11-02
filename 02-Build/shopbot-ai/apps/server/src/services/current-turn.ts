@@ -30,7 +30,7 @@ export function validateCurrentTurn(operations:Operation[],description:string,st
   if(op.kind==='remove_item'&&removalMention.test(op.supportingPhrase??description)&&!positiveRemoval(op.supportingPhrase??description,description))throw new ToolError('The customer asked to keep this item. Your list is unchanged.','interpretation_polarity');
   if((op.kind==='set_amount'||op.kind==='increment_amount')&&!amountEvidence(op,description))throw new ToolError('Use the exact measured amount and supporting phrase from the current message. Additional amounts need explicit extra wording.','interpretation_evidence');
   if('supportingPhrase' in op&&op.supportingPhrase&&!description.includes(op.supportingPhrase))throw new ToolError('Use the exact supporting phrase from the current message.','interpretation_evidence');
-  if(op.kind==='increment_quantity'&&!extra.test(op.supportingPhrase))throw new ToolError('An increment requires an explicitly additional count.','interpretation_evidence');
+  if(op.kind==='increment_quantity'&&!description.includes(op.supportingPhrase))throw new ToolError('An increment requires current supporting evidence.','interpretation_evidence');
   if(op.kind==='add_item'||op.kind==='resolve_line'){
    const evidence=op.supportingPhrase??(op.productIntent?.sourcePhrase);
    const name=op.kind==='add_item'?op.query:op.query??'';
@@ -44,7 +44,6 @@ export function validateCurrentTurn(operations:Operation[],description:string,st
    // A rejected PVC pipe must not reject a separately requested garden pipe
    // merely because both share the head noun. Require the requested identity.
    if(words.length&&clauses.some(c=>negative.test(c)&&words.every(w=>tokens(c).includes(w))))throw new ToolError('The customer declined this product; do not add it.','interpretation_polarity');
-   if(/\bscrews?\b/i.test(name)&&/ஆணி/.test(evidence??description)&&!/(?:ஸ்க்ரூ|திருகு)/.test(evidence??description))throw new ToolError('Nails and screws are different products. Keep the requested nail.','interpretation_identity');
   }
   if(op.kind==='set_quantity'||op.kind==='resolve_line'&&op.quantity!==undefined){
    const phrase=op.supportingPhrase;

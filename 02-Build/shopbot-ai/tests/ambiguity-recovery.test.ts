@@ -90,7 +90,7 @@ test('rejected spoken sack correction preserves every cart line and asks to chec
  const r=new ConversationRuntime(pool,new GoogleInterpreter(settings,{generateContent:async()=>response(output)}),{allowPaidInference:true,visualOrdering:true});
  const s=await voice(inbox,r);
  assert.deepEqual(s.conversation.draft,before);assert.equal(s.requests.length,0);
- const message=s.messages.at(-1)!;assert.match(message.text,/ஒயிட் சிமெண்ட்/);assert.match(message.text,/White cement and wall putty are different/);assert.doesNotMatch(message.text,/what type and quantity do you want/i);
+ const message=s.messages.at(-1)!;assert.match(message.text,/ஒயிட் சிமெண்ட்/);assert.match(message.text,/Which item should I check for product and pack/);assert.doesNotMatch(message.text,/what type and quantity do you want/i);
  const attempts=(await pool.query('SELECT failure_code FROM provider_attempts WHERE conversation_id=$1',[inbox.context.conversationId])).rows;
  assert.ok(attempts.some(a=>a.failure_code==='invalid_evidence'));
 }));

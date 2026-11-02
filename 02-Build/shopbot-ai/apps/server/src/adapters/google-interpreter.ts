@@ -202,14 +202,15 @@ export class GoogleInterpreter implements Interpreter {
     let output:unknown=null,validationIssues:ProviderResult['validationIssues'];
     let evidenceRepair:ProviderResult['evidenceRepair'];
     try{output=understandingToInterpretation(JSON.parse(text),input,this.supportsImageLists);}catch(error){
-      validationIssues=[{path:'understanding',code:error instanceof z.ZodError?'invalid_contract':'invalid_evidence'}];
+      validationIssues=error instanceof z.ZodError?error.issues.slice(0,6).map(issue=>({path:['understanding',...issue.path].join('.'),code:issue.code})): [{path:'understanding',code:'invalid_evidence',reason:error instanceof Error?error.message.slice(0,180):'Evidence validation failed'}];
       // A schema-valid plan can fail its verbatim evidence check. Let the
       // metered runtime repair it once from the same transcript, never here
       // inside an unaccounted provider call. Negated and stale targets stay rejected.
-      if(observation.envelopeValid&&!(error instanceof z.ZodError)&&error instanceof Error&&!/negates this cart mutation/.test(error.message)){
+      if(observation.envelopeValid&&error instanceof Error&&!/negates this cart mutation/.test(error.message)){
         const proposal=turnUnderstandingSchema.safeParse(normalizeUnderstandingAbsence(JSON.parse(text)));
         const current=(id:string)=>input.state.draft.some(line=>line.id===id);
         if(proposal.success&&proposal.data.proposedEdits.every(edit=>current(edit.targetLineId))&&proposal.data.requestedItems.every(item=>!item.targetLineId||current(item.targetLineId))&&(proposal.data.proposedEdits.length||proposal.data.requestedItems.length))evidenceRepair={understanding:proposal.data,feedback:error.message.slice(0,500)};
+        else if(error instanceof z.ZodError){const envelope=perceptionEnvelope(JSON.parse(text));if(envelope)evidenceRepair={understanding:envelope,feedback:'Repair the complete current request. Invalid contract fields: '+error.issues.slice(0,6).map(issue=>issue.path.join('.')+': '+issue.code).join('; ')};}
       }
       // A valid faithful transcript is still useful when a reference/evidence
       // contract fails. Retain it for a focused correction or deterministic
@@ -220,11 +221,7 @@ export class GoogleInterpreter implements Interpreter {
           // The transcript is evidence for a warning, not authority to replace
           // a selected SKU or to convert a sack into a packet. This also helps
           // customers whose older list already contains the wrong putty.
-          const heard=input.audio?understood.transcript??'':input.text;
-          const cementSack=/white\s*cement|ஒயிட்\s*சிமெண்ட்|வெள்ளை\s*சிமெண்ட்/iu.test(heard)&&/sack|bag|மூடை|முடை|சாக்கு/iu.test(heard);
-          const hasPutty=input.state.draft.some(line=>/putty|புட்டி/iu.test(line.name));
-          const safeQuestion=!invalid&&cementSack&&hasPutty?say(input.state,'White cement and wall putty are different. Your list is unchanged; which item should the shop check for the sack and product?','ஒயிட் சிமெண்டும் வால் புட்டியும் வேறு பொருட்கள். பட்டியல் அப்படியே இருக்கு; மூடை அளவையும் சரியான பொருளையும் சரிபார்க்க எந்தப் பொருளைத் தேர்வு செய்யணும்?','White cement-um wall putty-yum vera porutkal. List appadiye irukku; sack size-um correct product-um check panna entha item-ai choose pannanum?'):question;
-          output=interpretationSchema.parse({operations:[],next:'continue',...(input.audio?{transcript:understood.transcript}:{}),clarifyQuestion:safeQuestion,understanding:{...understood,requestedItems:[],proposedEdits:[],shopQuestions:[],unresolved:['validation_recovery']}});
+          output=interpretationSchema.parse({operations:[],next:'continue',...(input.audio?{transcript:understood.transcript}:{}),clarifyQuestion:question,understanding:{...understood,requestedItems:[],proposedEdits:[],shopQuestions:[],unresolved:['validation_recovery']}});
         }
       }catch{/* Invalid structure has no usable customer evidence. */}
     }

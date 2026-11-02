@@ -1,54 +1,45 @@
 [
   {
     "stage": "identify",
-    "text": "1 inch pipe — Which type of pipe do you need?",
+    "text": "1 inch pipe — Choose a category",
     "cards": [
       {
         "kind": "instruction",
-        "caption": "Rigid PVC",
-        "title": "Rigid PVC",
+        "caption": "Garden hoses\n1 matching products\nExample product photo",
+        "title": "Garden hoses",
         "lines": [
-          "1 inch pipe — Which type of pipe do you need?"
+          "1 matching products",
+          "Example product photo"
         ]
       },
       {
         "kind": "instruction",
-        "caption": "Flexible hose",
-        "title": "Flexible hose",
+        "caption": "PVC pipes\n4 matching products\nExample product photo",
+        "title": "PVC pipes",
         "lines": [
-          "1 inch pipe — Which type of pipe do you need?"
-        ]
-      },
-      {
-        "kind": "instruction",
-        "caption": "Pump pipe",
-        "title": "Pump pipe",
-        "lines": [
-          "1 inch pipe — Which type of pipe do you need?"
+          "4 matching products",
+          "Example product photo"
         ]
       }
     ],
     "actions": [
       {
-        "label": "Rigid PVC",
-        "type": "choose_pipe_type",
-        "pipeType": "pvc"
+        "label": "Show products",
+        "type": "refine_search",
+        "facet": "family",
+        "value": "hose"
       },
       {
-        "label": "Flexible hose",
-        "type": "choose_pipe_type",
-        "pipeType": "hose"
-      },
-      {
-        "label": "Pump pipe",
-        "type": "choose_pipe_type",
-        "pipeType": "pump"
+        "label": "Show products",
+        "type": "refine_search",
+        "facet": "family",
+        "value": "pvc-pipes"
       }
     ]
   },
   {
     "stage": "identify",
-    "text": "Changed 1 inch PVC pipe\nItem 1/5 — check one item at a time.\nWhich 1 inch PVC pipe do you need?",
+    "text": "Changed 1 inch PVC pipes\nItem 1/5 — check one item at a time.\nWhich 1 inch PVC pipes do you need?",
     "cards": [
       {
         "kind": "product",
@@ -83,48 +74,39 @@
   },
   {
     "stage": "identify",
-    "text": "0.75 inch pipe — Which type of pipe do you need?",
+    "text": "0.75 inch pipe — Choose a category",
     "cards": [
       {
         "kind": "instruction",
-        "caption": "Rigid PVC",
-        "title": "Rigid PVC",
+        "caption": "Garden hoses\n1 matching products\nExample product photo",
+        "title": "Garden hoses",
         "lines": [
-          "0.75 inch pipe — Which type of pipe do you need?"
+          "1 matching products",
+          "Example product photo"
         ]
       },
       {
         "kind": "instruction",
-        "caption": "Flexible hose",
-        "title": "Flexible hose",
+        "caption": "PVC pipes\n4 matching products\nExample product photo",
+        "title": "PVC pipes",
         "lines": [
-          "0.75 inch pipe — Which type of pipe do you need?"
-        ]
-      },
-      {
-        "kind": "instruction",
-        "caption": "Pump pipe",
-        "title": "Pump pipe",
-        "lines": [
-          "0.75 inch pipe — Which type of pipe do you need?"
+          "4 matching products",
+          "Example product photo"
         ]
       }
     ],
     "actions": [
       {
-        "label": "Rigid PVC",
-        "type": "choose_pipe_type",
-        "pipeType": "pvc"
+        "label": "Show products",
+        "type": "refine_search",
+        "facet": "family",
+        "value": "hose"
       },
       {
-        "label": "Flexible hose",
-        "type": "choose_pipe_type",
-        "pipeType": "hose"
-      },
-      {
-        "label": "Pump pipe",
-        "type": "choose_pipe_type",
-        "pipeType": "pump"
+        "label": "Show products",
+        "type": "refine_search",
+        "facet": "family",
+        "value": "pvc-pipes"
       }
     ]
   },

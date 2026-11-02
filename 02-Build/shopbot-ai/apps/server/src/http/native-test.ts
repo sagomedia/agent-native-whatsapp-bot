@@ -15,7 +15,7 @@ import {freeQuotaLimits} from '../services/inference-budget.js';
 export async function registerNativeTest(app:FastifyInstance,pool:Pool,provider:Interpreter,storeId=fixtureStore,planningPaise=0,visualOrdering=false) {
   if(provider.mode!=='live'||!provider.freeQuota) throw new Error('Local AI testing requires the explicitly configured free-tier adapter.');
   const secret=randomBytes(32),sign=(id:string)=>createHmac('sha256',secret).update(id).digest('hex');
-  const runtime=new ConversationRuntime(pool,provider,{allowFreeInference:true,visualOrdering});
+  const runtime=new ConversationRuntime(pool,provider,{allowFreeInference:true,visualOrdering,inventoryGrounding:!!provider.unifiedUnderstanding});
   let running:Promise<void>|undefined,stopping=false,timer:ReturnType<typeof setInterval>;
   app.addHook('onReady',async()=>{
     timer=setInterval(()=>{

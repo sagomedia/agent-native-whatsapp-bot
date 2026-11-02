@@ -4,6 +4,16 @@ const text=z.string().trim().min(1).max(200);
 const phrase=z.string().trim().min(1).max(500);
 const measure=z.object({value:z.number().positive().max(100000),unit:z.string().trim().min(1).max(30)}).strict();
 const uncertainty=z.enum(['identity','brand','variant','quantity','unit','budget','unreadable']);
+// Search language is a hypothesis grounded in this item, separate from the
+// verbatim evidence. Store IDs are validated against the current inventory.
+export const itemSearchSchema=z.object({
+ keywords:z.array(z.string().trim().min(1).max(120)).min(1).max(8),
+ identityQuery:text.optional(),familyIds:z.array(z.string().trim().min(1).max(120)).min(1).max(6).optional(),
+ selectedSkus:z.array(z.string().trim().min(1).max(120)).max(6).optional(),
+ useCase:text.optional(),
+ clarifyType:z.boolean().optional(),
+}).strict();
+const countEvidence=z.object({sourceText:phrase,value:quantity,mode:z.enum(['total','additional','decrement'])}).strict();
 export const understandingItemSchema=z.object({
  ordinal:z.number().int().min(0).max(49),sourceText:phrase,query:text.nullable(),
  targetLineId:z.uuid().optional(),sameItemOrdinal:z.number().int().min(0).max(49).optional(),requestMode:z.enum(['set','additional']).optional(),
@@ -13,8 +23,10 @@ export const understandingItemSchema=z.object({
  requestedAmount:measure.optional(),amountMode:z.enum(['total','continuous']).optional(),
  requestedBudgetPaise:z.number().int().positive().max(100000000).optional(),
  unresolved:z.array(uncertainty).max(7),crossedOut:z.boolean().optional(),
+ search:itemSearchSchema.optional(),countEvidence:countEvidence.optional(),
+ attributeEvidence:z.array(z.object({field:z.enum(['brand','colour','material']),value:text,sourceText:phrase}).strict()).max(3).optional(),
 }).strict();
-const edit=z.object({kind:z.enum(['set_quantity','increment_quantity','decrement_quantity','remove_item','replace','set_amount','increment_amount']),targetLineId:z.uuid(),sourceText:phrase,targetQuery:text.optional(),quantity:quantity.optional(),query:text.optional(),amount:measure.optional(),mode:z.enum(['total','continuous']).optional()}).strict();
+const edit=z.object({kind:z.enum(['set_quantity','increment_quantity','decrement_quantity','remove_item','replace','set_amount','increment_amount']),targetLineId:z.uuid(),sourceText:phrase,targetQuery:text.optional(),quantity:quantity.optional(),query:text.optional(),amount:measure.optional(),mode:z.enum(['total','continuous']).optional(),search:itemSearchSchema.optional(),countEvidence:countEvidence.optional()}).strict();
 const keepTarget=z.object({sourceText:phrase,query:text,targetLineId:z.uuid().optional(),duplicateSourceText:phrase.optional()}).strict();
 export const keepOnlySchema=z.object({sourceText:phrase,complete:z.boolean(),targets:z.array(keepTarget).min(1).max(50)}).strict();
 export const turnUnderstandingSchema=z.object({
@@ -46,11 +58,11 @@ export function normalizeUnderstandingAbsence(value:unknown):unknown {
  }
  if(Array.isArray(result.requestedItems))result.requestedItems=result.requestedItems.map(v=>{
   if(!v||typeof v!=='object'||Array.isArray(v))return v;
-  const item=clean(v,['targetLineId','sameItemOrdinal','requestMode','requestedContainer','brand','colour','material','packSize','dimensions','requestedAmount','amountMode','requestedBudgetPaise','crossedOut']);
+  const item=clean(v,['targetLineId','sameItemOrdinal','requestMode','requestedContainer','brand','colour','material','packSize','dimensions','requestedAmount','amountMode','requestedBudgetPaise','crossedOut','search','countEvidence','attributeEvidence']);
   if(item.targetLineId==='00000000-0000-0000-0000-000000000000')delete item.targetLineId;
   if(item.requestedBudgetPaise===0)delete item.requestedBudgetPaise;
   return item;
  });
- if(Array.isArray(result.proposedEdits))result.proposedEdits=result.proposedEdits.map(v=>v&&typeof v==='object'&&!Array.isArray(v)?clean(v,['targetQuery','quantity','query','amount','mode']):v);
+ if(Array.isArray(result.proposedEdits))result.proposedEdits=result.proposedEdits.map(v=>v&&typeof v==='object'&&!Array.isArray(v)?clean(v,['targetQuery','quantity','query','amount','mode','search','countEvidence']):v);
  return result;
 }

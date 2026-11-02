@@ -1,4 +1,5 @@
 import {readStoreHours,hoursAnswer,appendClosedShopNotice} from '../services/store-hours.js';
+import {inventoryItems,validateInventoryReplan,retainUngroundedItems} from '../services/inventory-grounding.js';
 import {recordConversationAudit} from '../services/catalog-audit.js';
 import {trackItemClarification} from '../services/item-clarification.js';
 import {cartChangeFeedback} from '../services/cart-change-feedback.js';
@@ -39,7 +40,7 @@ import type { Pool,PoolClient } from 'pg';
 import { interpretationSchema, type ConversationState, type Interpretation, type SimulatorEvent, type ToolCall, type Product, type RichReply } from '../../../../packages/contracts/index.js';
 import type { Interpreter,InterpretationInput } from '../adapters/interpreter.js';
 import {reserveAttempt,settleAttempt,rateHealth,validateRateCard,coolDownFreeQuota} from '../services/inference-budget.js';
-import {getProducts,catalogEnabled,catalogContext,sameUnit,normalizeUnit,tokens,exactProductMatch} from '../services/catalog.js';
+import {getProducts,catalogEnabled,catalogContext,sameUnit,normalize,normalizeUnit,tokens,exactProductMatch} from '../services/catalog.js';
 import {getCatalogMap,refinementPlan,refinementQuery,discoverProducts} from '../services/catalog-discovery.js';
 import { loadState, RetailTools,digest,referenceLine, type ToolResult } from '../services/tools.js';
 import { ToolError, withConversation, type ActorContext } from '../services/context.js';
@@ -126,7 +127,7 @@ function discoverySelection(item:Extract<Interpretation['operations'][number],{k
 }
 export class ConversationRuntime {
   readonly tools:RetailTools;
-  constructor(private pool:Pool,private provider:Interpreter,private options:{advance?:UpiAdvanceConfig;partialReviews?:boolean;welcomeAudio?:string;allowPaidInference?:boolean;allowFreeInference?:boolean;discoveryStages?:boolean;mediaRecommendations?:boolean;sequentialItems?:boolean;visualOrdering?:boolean;maxDraftLines?:number;observeTurn?:(client:PoolClient,ctx:ActorContext,offTopic:boolean|null)=>Promise<boolean>;queueReply?:(client:PoolClient,ctx:ActorContext,id:string,reply:RichReply)=>Promise<void>}={}) {
+  constructor(private pool:Pool,private provider:Interpreter,private options:{inventoryGrounding?:boolean;advance?:UpiAdvanceConfig;partialReviews?:boolean;welcomeAudio?:string;allowPaidInference?:boolean;allowFreeInference?:boolean;discoveryStages?:boolean;mediaRecommendations?:boolean;sequentialItems?:boolean;visualOrdering?:boolean;maxDraftLines?:number;observeTurn?:(client:PoolClient,ctx:ActorContext,offTopic:boolean|null)=>Promise<boolean>;queueReply?:(client:PoolClient,ctx:ActorContext,id:string,reply:RichReply)=>Promise<void>}={}) {
     if(provider.mode==='live') {
       if(!(provider.freeQuota?options.allowFreeInference:options.allowPaidInference)||!provider.billing) throw new ToolError('Live interpretation is disabled until explicitly authorized metered configuration is supplied');
       if(rateHealth(provider.billing).status==='invalid')validateRateCard(provider.billing);
@@ -706,11 +707,15 @@ export class ConversationRuntime {
       return {name:'apply_draft_changes',args:{expectedVersion:e.expectedVersion,operations:[{kind:'add_item',query:e.sku,quantity:e.quantity??remembered?.requestedQuantity??null,...(remembered?.requestedUnit?{requestedUnit:remembered.requestedUnit}:{})}]}};
     }
     if(e.type==='add_item') return {name:'apply_draft_changes',args:{expectedVersion:e.expectedVersion,operations:[{kind:'add_item',query:e.sku,quantity:e.quantity}]}};
-    if(e.type==='set_quantity') return {name:'apply_draft_changes',args:{expectedVersion:e.expectedVersion,operations:[e.quantity===0?{kind:'remove_item',reference:e.lineId}:{kind:'set_quantity',reference:e.lineId,quantity:e.quantity}]}};
+    if(e.type==='set_quantity') {
+      const line=s.draft.find(l=>l.id===e.lineId),product=line?.candidates?.find(p=>p.sku===line.sku);
+      if(e.quantity>0&&s.pending?.kind==='question'&&s.pending.lineId===line?.id&&line.resolution==='needs_unit'&&!line.requestedAmount&&product?.sellingUnitVerified&&line.unit)return {name:'apply_draft_changes',args:{expectedVersion:e.expectedVersion,operations:[{kind:'resolve_line',lineId:line.id,quantity:e.quantity,requestedUnit:line.unit}]}};
+      return {name:'apply_draft_changes',args:{expectedVersion:e.expectedVersion,operations:[e.quantity===0?{kind:'remove_item',reference:e.lineId}:{kind:'set_quantity',reference:e.lineId,quantity:e.quantity}]}};
+    }
     if(e.type==='review') return {name:'preview_order',args:{expectedVersion:e.expectedVersion}};
     if(e.type==='choose_pipe_type'){
       if(s.pending?.kind!=='question'||s.pending.id!==e.questionId||s.pending.lineId!==e.lineId||s.pending.version!==s.version||!claim.displayedActions.some(action=>digest(action)===digest(e)))throw new ToolError('Use the current pipe-type choices. Your list is kept.','stale_question');
-      return {name:'apply_draft_changes',args:{expectedVersion:e.expectedVersion,operations:[{kind:'resolve_line',lineId:e.lineId,query:{pvc:'PVC pipe',hose:'garden hose',pump:'water pumping pipe'}[e.pipeType]}]}};
+      throw new ToolError('This older category choice has expired. Ask for fresh inventory choices.','stale_question');
     }
     if(e.type==='confirm') return {name:'submit_order_request',args:{reviewId:e.reviewId}};
     if(e.type==='select_candidate') {
@@ -783,6 +788,8 @@ export class ConversationRuntime {
       }
       if(amount) {
         const targets=check.groups.filter(g=>!amount.unit||g.products.every(p=>sameUnit(amount.unit!,p.unit)||normalizeUnit(amount.unit!)==='container'&&p.sellingUnitVerified&&['can','tin','bucket','box','bottle','pack'].includes(p.unit)));
+        const missingCounts=s.draft.filter(line=>!line.sku&&!line.candidates?.length&&line.resolution==='unavailable'&&line.quantity===null&&line.discovery?.matchStatus!=='needs_detail');
+        if(!check.groups.length&&s.draft.length===1&&missingCounts.length===1)return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[quantityAnswer(s,missingCounts[0].id,amount,e.text)]}};
         if(targets.length!==1)throw new ToolError('Which item is that quantity for? Include the product name, or choose its photo first.');
         return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[quantityAnswer(s,targets[0].lineId,amount,e.text)]}};
       }
@@ -809,12 +816,18 @@ export class ConversationRuntime {
       const pendingLine=s.draft.find(l=>l.id===pendingQuestion.lineId);
       if(/^(?:remove|drop|delete) (?:it|this|that)(?: item)?$/.test(text))return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[{kind:'remove_item',reference:pendingLine!.id}]}};
       if(amount&&pendingLine&&(pendingLine.resolution==='needs_quantity'||pendingLine.resolution==='needs_unit')) {
-        if(pendingLine.resolution==='needs_unit'&&!amount.unit)return {name:'get_draft',args:{}};
+        if(pendingLine.resolution==='needs_unit'&&!amount.unit){
+          const product=pendingLine.candidates?.find(p=>p.sku===pendingLine.sku);
+          if(!pendingLine.requestedAmount&&pendingLine.unit&&product?.sellingUnitVerified)return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[{kind:'resolve_line',lineId:pendingLine.id,quantity:amount.quantity,requestedUnit:pendingLine.unit}]}};
+          return {name:'get_draft',args:{}};
+        }
         return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[quantityAnswer(s,pendingLine.id,amount,e.text)]}};
       }
+      if(amount&&pendingLine?.resolution==='unavailable'&&!pendingLine.sku&&!pendingLine.candidates?.length&&pendingLine.quantity===null&&pendingLine.discovery?.matchStatus!=='needs_detail')return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[quantityAnswer(s,pendingLine.id,amount,e.text)]}};
       if(/^(one|two|three|four|five|six|seven|eight|nine|ten)$/.test(text)&&pendingLine?.resolution==='needs_choice')return {name:'get_draft',args:{}};
       // A bare number answers a quantity question; it is not a catalog choice.
       if(pendingLine?.resolution==='needs_quantity'&&/^\d+(?:\.\d+)?$/.test(text))return {name:'apply_draft_changes',args:{expectedVersion:s.version,operations:[{kind:'resolve_line',lineId:pendingLine.id,quantity:Number(text)}]}};
+      if(pendingLine?.resolution==='needs_unit'&&/^\d+(?:\.\d+)?$/.test(text))return {name:'preview_order',args:{expectedVersion:s.version}};
       const ordinal=/^(?:the )?(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|10|[1-9])(?: one)?$/.exec(text);
       if(ordinal&&pendingLine?.resolution==='needs_choice') {
         const n=({first:1,second:2,third:3,fourth:4,fifth:5,sixth:6,seventh:7,eighth:8,ninth:9,tenth:10} as Record<string,number>)[ordinal[1]]??Number(ordinal[1]);
@@ -855,7 +868,7 @@ export class ConversationRuntime {
     }
     let text=claim.event.type==='text'?claim.event.text:claim.event.type==='image'?(claim.event.caption||'Find catalog products like the uploaded photo'):transcript??'Understand the current recording';
     const observations=image?[]:await withConversation(this.pool,ctx,async client=>observeCatalog(client,ctx,this.tools,observationQueries(text,claim.state,claim.memory),`${claim.id}:observe`));
-    const input={history:recent,text,audio:this.provider.unifiedUnderstanding&&!separateRecognition?audio:undefined,image:photo,state:claim.state,catalog:claim.catalog,catalogMap:claim.catalogMap,assistantMemory:claim.memory,observations};
+    const input={inventoryGrounding:!!this.options.inventoryGrounding,history:recent,text,audio:this.provider.unifiedUnderstanding&&!separateRecognition?audio:undefined,image:photo,state:claim.state,catalog:claim.catalog,catalogMap:claim.catalogMap,assistantMemory:claim.memory,observations};
     let identified=await this.callProvider(ctx,claim,input,'identify');
     if(voice){transcript=this.provider.unifiedUnderstanding&&!separateRecognition?identified.transcript:transcript;if(!transcript)throw new ToolError('No clear speech was recognized. Record again or type your request.','voice_unreadable');identified={...identified,transcript};text=transcript;}
     if(image&&identified.understanding?.inputKind==='handwritten_list')text=identified.understanding.observedText??text;
@@ -918,6 +931,42 @@ export class ConversationRuntime {
         const normalized=normalizeAmountEdits(repaired,text,claim.state);
         identified={...normalized,...(voice?{transcript}:{}),operations:validateCurrentTurn(normalized.operations,text,claim.state)};
       }
+    }
+    if(this.options.inventoryGrounding&&this.provider.unifiedUnderstanding&&identified.understanding&&inventoryItems(identified).length){
+      const items=inventoryItems(identified).slice(0,3);
+      const fresh=await withConversation(this.pool,ctx,async client=>{
+        const found:CatalogObservation[]=[];
+        for(const [index,item] of items.entries()){
+          const current=(await observeCatalog(client,ctx,this.tools,[item.query!],`${claim.id}:inventory:${index}`,item.search))[0];
+          // Search hypotheses may recover candidates rejected by the literal
+          // transcription. These facts go only to semantic review, not the UI.
+          if(!current.products.length&&item.search?.selectedSkus===undefined){
+            const alternatives=[...new Set(item.search?.keywords??[])].filter(keyword=>normalize(keyword)!==normalize(item.search?.identityQuery??item.query!)).slice(0,2);
+            for(const [hintIndex,keyword] of alternatives.entries()){
+              const extra=(await observeCatalog(client,ctx,this.tools,[keyword],`${claim.id}:inventory:${index}:hint:${hintIndex}`,{...item.search,keywords:[keyword],identityQuery:keyword,allowAlternatives:false}))[0];
+              current.products=[...new Map([...current.products,...extra.products].map(p=>[p.sku,p])).values()].slice(0,10);
+              current.totalCount=Math.max(current.totalCount,extra.totalCount,current.products.length);
+            }
+          }
+          found.push(current);
+        }
+        return found;
+      });
+      // Exact names/SKUs already have hard-filtered current facts. Other
+      // candidates get one metered semantic grounding pass, including empty
+      // results, coarse families and exact aliases that may be incorrect.
+      if(fresh.some(o=>!o.products.length||!['sku','name'].includes(o.discovery?.diagnostics?.identity??'none'))){
+        const calls=Number((await this.pool.query("SELECT count(*)::int AS calls FROM provider_attempts WHERE message_id=$1 AND stage<>'recognize'",[claim.id])).rows[0].calls);
+        if(calls>=2)return retainUngroundedItems(identified,fresh);
+        try{
+          const grounded=await this.callProvider(ctx,claim,{...input,audio:undefined,image:undefined,text,observations:fresh,proposal:identified,repairSourceKind:voice?'audio':'text',planningFeedback:'Ground the original product requests in these fresh inventory results. Preserve every item, sourceText, count, attribute, intent and cart edit. For each observed item choose only genuinely matching selectedSkus; use [] when the returned names/specifications describe a different object. A bad alias or family is not proof of a match. If useful items were missed, refine search.identityQuery and keywords using faithful product meaning. Unobserved items must remain unchanged. Ask one practical question only for unresolved meaning.'},'repair');
+          return {...validateInventoryReplan(identified,grounded,fresh),...(voice?{transcript}:{})};
+        }catch(error){
+          if(error instanceof DeferredRecommendation)throw error;
+          return retainUngroundedItems(identified,fresh);
+        }
+      }
+      return identified;
     }
     const mediaRecommendations=!!this.options.mediaRecommendations&&(voice||image);
     // Single spoken requests start with grounded choices, not an assumed cart selection.
@@ -982,7 +1031,7 @@ export class ConversationRuntime {
       failureCode='usage_validation';
       if(!await settleAttempt(this.pool,ctx,reservation.id!,output)) throw new ToolError('Provider usage exceeded the verified limits. No changes applied.');
       if(Date.now()>=claim.deadlineAt){failureCode='turn_deadline';throw new ToolError('The turn deadline was reached. Your list is retained.','turn_deadline');}
-      if(output.validationIssues?.length)await this.pool.query('UPDATE provider_attempts SET validation_issues=$1::jsonb WHERE id=$2 AND conversation_id=$3',[JSON.stringify(output.validationIssues.slice(0,6).map(i=>({path:i.path.slice(0,100),code:i.code.slice(0,40)}))),reservation.id,ctx.conversationId]);
+      if(output.validationIssues?.length)await this.pool.query('UPDATE provider_attempts SET validation_issues=$1::jsonb WHERE id=$2 AND conversation_id=$3',[JSON.stringify(output.validationIssues.slice(0,6).map(i=>({path:i.path.slice(0,100),code:i.code.slice(0,40),...(i.reason?{reason:i.reason.slice(0,180)}:{})}))),reservation.id,ctx.conversationId]);
       failureCode='truncated_or_model_mismatch';
       if(output.truncated) throw new ToolError('Interpretation was truncated. No partial list was applied.');
       failureCode=output.output===null?'invalid_json':'invalid_operations';

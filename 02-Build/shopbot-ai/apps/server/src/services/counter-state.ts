@@ -1,5 +1,4 @@
 import type {ConversationState,DraftLine,ProductCheck} from '../../../../packages/contracts/index.js';
-import {needsPipeType} from './catalog-discovery.js';
 import {productConfirmed,productIdentity} from './product-confirmation.js';
 import {sellingBasisIssues} from '../../../../packages/contracts/selling-basis.js';
 
@@ -9,7 +8,7 @@ export type CounterBlocker='specification'|'variant'|'product_confirmation'|'qua
 export function counterLine(line:DraftLine) {
   const product=line.candidates?.find(p=>p.sku===line.sku);
   const blockers:CounterBlocker[]=[];
-  if(line.productIntent?.kind==='ambiguous'||!line.sku&&needsPipeType(line.query??line.name))blockers.push('specification');
+  if(line.productIntent?.kind==='ambiguous'||!line.sku&&line.discovery?.matchStatus==='needs_detail')blockers.push('specification');
   else if(!product)blockers.push(line.candidates?.length?'variant':'shop_check');
   if(line.resolution==='unavailable'||line.catalogIssue)blockers.push(line.resolution==='needs_unit'?'unit':'shop_check');
   if(product&&!productConfirmed(line,product))blockers.push('product_confirmation');

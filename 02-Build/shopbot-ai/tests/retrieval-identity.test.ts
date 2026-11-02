@@ -67,8 +67,9 @@ test('customer named product type survives broad and adversarial search plans',a
    assert.deepEqual(cuttingJob.products.map(p=>p.sku),['H19','H16','H14','H15','H17','H18']);
    for(const plan of [undefined,{keywords:['pipe','pipe glue','pipe clamp','pipe cutter'],departmentId:'plumbing'}]){
     const pipe=await discoverProducts(client,ctx,'pipe',plan);
-    assert.deepEqual(pipe.products,[]);
-    assert.equal(pipe.noExactMatch,true);
+    assert.ok(pipe.products.length>0);
+    assert.ok(pipe.products.every(p=>p.familyId==='pvc-pipes'));
+    assert.equal(pipe.query,'pipe');
    }
    for(const [query,family] of [['PVC pipe','pvc-pipes'],['pipe fitting','pipe-fittings'],['garden hose','hose']] as const){
     const result=await discoverProducts(client,ctx,query);

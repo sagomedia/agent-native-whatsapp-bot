@@ -46,25 +46,6 @@ function matchesPackMeasures(query:string,product:Product){
  if(contents)actual.push({value:contents.value,unit:canonicalMeasurementUnit(contents.unit)});
  return requested.every(r=>actual.some(a=>sameCatalogMeasurement(a,r)));
 }
-// "Pipe" describes several physically different goods. A search hint or a
-// broad family alias such as "water pipe" cannot decide between rigid PVC,
-// flexible watering hose, and a pump delivery/suction pipe. Keep the request
-// unresolved until the customer supplies a product type or an exact catalog
-// identity. A stated diameter is useful evidence but does not identify type.
-export function needsSolventUse(query:string):boolean {
- const words=tokens(naturalCatalogQuery(query));
- return words.length===1&&['solvent','சால்வென்ட்'].includes(words[0]);
-}
-export function needsPipeType(query:string):boolean {
- const words=tokens(query);
- const pipe=words.some(w=>w==='pipe'||w==='பைப்'||w==='பைப்புகள்');
- const hose=words.some(w=>['hose','ஹோஸ்','ஓஸ்'].includes(w));
- const pump=words.some(w=>['pump','pumping','motor','suction','delivery','மோட்டார்','பம்ப்'].includes(w));
- if(pump&&(pipe||hose))return true;
- if(!pipe)return false;
- if(words.some(w=>['pvc','cpvc','upvc','பிவிசி','rigid','hose','ஹோஸ்','ஓஸ்','garden','watering','irrigation','irrigating','fitting','fittings','cutter','clamp','connector','elbow','coupler','solvent','cement','adhesive','glue','paste','சால்வென்ட்','கட்டர்','கட்டரு','பசை','க்ளாம்ப்'].includes(w)))return false;
- return true;
-}
 function sameObjectHead(a:string,b:string):boolean {
  if(a===b)return true;
  if(!/^[a-z]+$/.test(a+b)||Math.min(a.length,b.length)<4)return false;
@@ -82,9 +63,16 @@ function namedFamilies(query:string,nodes:{id:string;kind:string;label:string;al
  const phrases=families.flatMap(n=>[n.label,...n.aliases].map(alias=>({id:n.id,words:tokens(alias).filter(t=>!/^\d/.test(t))})));
  // The product head must match a curated noun, including its normalized plural.
  // Fuzzy heads turn real different objects (brush/bush) into false matches.
- const found=phrases.filter(p=>p.words.length&&p.words.length<=words.length&&p.words.every((w,j)=>j===p.words.length-1?sameObjectHead(words.at(-1)!,w):oneEdit(words[words.length-p.words.length+j],w)));
+ const found=phrases.filter(p=>p.words.length&&p.words.length<=words.length&&words.some((_,start)=>start+p.words.length===words.length&&p.words.every((w,j)=>start+j<words.length&&(j===p.words.length-1?sameObjectHead(words[start+j],w):oneEdit(words[start+j],w)))));
  const longest=Math.max(0,...found.map(p=>p.words.length));
  const explicit=unique(found.filter(p=>p.words.length===longest).map(p=>p.id));
+ // A generic family label may have specialized sibling types. Expand using
+ // current taxonomy labels, never a built-in list of shop categories.
+ if(longest===1){
+  const terms=found.filter(p=>p.words.length===longest).map(p=>p.words[0]);
+  const genericRoot=explicit.some(id=>{const label=tokens(families.find(n=>n.id===id)!.label);return label.length===1&&terms.some(term=>sameObjectHead(label[0],term));});
+  if(genericRoot)return unique([...explicit,...families.filter(n=>terms.some(term=>tokens(n.label).some(word=>sameObjectHead(word,term)))).map(n=>n.id)]);
+ }
  if(longest>1||words.length!==1)return explicit;
  // A single named object such as "pipe" can be the head noun of a more
  // specific family label. Keep all families sharing that head ("blade" remains
@@ -115,25 +103,20 @@ function customerIdentityWords(query:string) {
  const generic=new Set(['tool','tools','item','items','product','products','some','need','want','a','an','the','and','or','one','two','x','of','my','me','show','please','inch','inches','mm','cm']);
  return tokens(withoutPackMeasures(namedObjectPhrase(query))).filter(t=>!/\d/.test(t)&&!generic.has(t));
 }
-function supportsCementIdentity(query:string,product:Product){
- const words=customerIdentityWords(query);
- // A product may mention an ingredient in specifications or keywords. That
- // does not make the finished product the ingredient: white-cement-based
- // wall putty and PVC solvent cement are not bags of white cement. Inspect
- // the product's own name, not its ingredient/search metadata.
- if(words.includes('white')&&words.includes('cement')&&!words.some(w=>['putty','solvent','adhesive','glue'].includes(w))){
-  const name=tokens(product.name);
-  // Only the actual product name can establish this identity. A broad alias,
-  // colour relaxation or ingredient description can also match PVC solution.
-  const namedWhiteCement=name.includes('white')&&name.includes('cement')||/வெள்ளை\s*சிமெண்ட்|ஒயிட்\s*சிமெண்ட்/iu.test(product.name);
-  if(!namedWhiteCement||name.some(w=>['putty','solvent','adhesive','glue','trowel','solution','pvc'].includes(w)))return false;
- }
- return true;
-}
 function supportsCustomerIdentity(query:string,product:Product,nodes:{id:string;kind:string;label:string;aliases:string[]}[],requestedFamilies:string[]) {
  const words=customerIdentityWords(query).filter(word=>!tokens(product.unit).some(unit=>word===unit||word===unit+'s'));
- if(!supportsCementIdentity(query,product))return false;
  const source=unique([product.name,...Object.values(product.localNames??{}),product.brand??'',...Object.values(product.specifications??{}),...product.aliases,...(product.keywords??[])].flatMap(tokens));
+ // An alias alone cannot turn an unrelated object into the requested type.
+ // Regional synonyms remain supported by the store's actual type metadata.
+ if(words.length>1){
+  const attributes=new Set(tokens([product.specifications?.colour,product.specifications?.color,product.specifications?.material].filter(Boolean).join(' ')));
+  const withoutBrand=(name:string)=>product.brand?name.replace(new RegExp(product.brand.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i'),' '):name;
+  const head=words.filter(word=>!attributes.has(word)).at(-1),primary=tokens([product.name,...Object.values(product.localNames??{})].map(withoutBrand).join(' '));
+  const family=nodes.find(n=>n.id===product.familyId&&n.kind==='family');
+  const genericRoot=head&&nodes.some(node=>node.kind==='family'&&[node.label,...node.aliases].some(phrase=>{const ts=customerIdentityWords(phrase);return ts.length===1&&sameObjectHead(ts[0],head);}));
+  const familyIdentity=family&&[family.label,...family.aliases].some(phrase=>{const ts=customerIdentityWords(phrase);return ts.length>1&&ts.every(t=>words.some(w=>sameObjectHead(w,t)))||genericRoot&&ts.some(t=>sameObjectHead(t,head!));});
+  if(head&&!primary.some(word=>sameObjectHead(head,word))&&!familyIdentity)return false;
+ }
  if(words.length&&!requestedFamilies.length&&unsupportedNamedObject(query,nodes)&&!source.some(word=>sameObjectHead(words.at(-1)!,word)))return false;
  if(words.length<2)return true; // Vague single-word jobs still offer alternatives.
  let uncovered=[...words];
@@ -154,7 +137,7 @@ function numericDimensions(text:string){
 function normalizedSpec(s:string){return normalize(numericDimensions(s.toLowerCase()).replace(/(\d)\s*(?:["\u2033]|inches?\b|in\b)/g,'$1 inch')).replace(/\s+/g,'').replace(/^(\d+(?:\.\d+)?)(?:l|litres?|liters?)$/,'$1litre');}
 function specMatches(product:Product,key:string,value:string){if(['colour','color','material'].includes(key)){const actual=specificationKeys(key).map(k=>product.specifications?.[k]).filter((v):v is string=>!!v);return actual.length?actual.every(v=>specificationTextMatch(v,value)):specificationTextMatch(product.name,value);}return specificationKeys(key).some(k=>(measurementSpecEqual(product.specifications?.[k]??'',value)??(normalizedSpec(product.specifications?.[k]??'')===normalizedSpec(value))));}
 function keywordScore(query:string,plan:DiscoveryPlan,product:Product) {
- const source=[product.name,...Object.values(product.localNames??{}),product.brand??'',...Object.values(product.specifications??{}),...product.aliases,...(product.keywords??[])],words=unique(source.flatMap(tokens));
+ const source=[product.name,product.unit,...Object.values(product.localNames??{}),product.brand??'',...Object.values(product.specifications??{}),...product.aliases,...(product.keywords??[])],words=unique(source.flatMap(tokens));
  const needles=tokens(withoutPackMeasures(query)).filter(t=>!/^\d/.test(t));
  const covered=needles.filter(t=>words.some(w=>w===t||oneEdit(t,w)));
  let score=covered.length*35+(normalize(query)===normalize(product.name)?100:0);
@@ -174,11 +157,12 @@ function choosePhotos(products:Product[],rank:Map<string,ReturnType<typeof keywo
 function emptyDiscovery(query:string,plan:DiscoveryPlan,reason:string):DiscoveryResult {
  return {query,plan,products:[],rankings:[],totalCount:0,retrievedCount:0,facets:[],noExactMatch:true,diagnostics:{canonicalQuery:normalize(query),appliedConstraints:{familyIds:plan.familyId?[plan.familyId]:plan.familyIds??[],brand:plan.brand,specifications:plan.specifications??{},measurements:catalogMeasurements(namedObjectPhrase(query))},sqlMatchCount:0,scannedCount:0,rejectedCount:0,candidateLimited:false,identity:'none',uncertainty:[reason]}};
 }
-// Bare solvent is a use question, not permission to choose paint thinner.
-// Group actual shop families; the photograph is only a category example.
-async function solventGroups(client:PoolClient,ctx:ActorContext,query:string,plan:DiscoveryPlan,nodes:{id:string;kind:string;label:string;local_names?:Record<string,string>;aliases:string[]}[]):Promise<DiscoveryResult>{
- const eligible=nodes.filter(n=>n.kind==='family'&&/solvent|thinner|சால்வென்ட்|தின்னர்/i.test([n.id,n.label,...n.aliases].join(' ')));
- const result=emptyDiscovery(query,plan,'solvent_use_required');
+// Product-type choices come from this store's current catalog. The semantic
+// planner requests clarification; code validates IDs and supplies real examples.
+async function inventoryGroups(client:PoolClient,ctx:ActorContext,query:string,plan:DiscoveryPlan,nodes:{id:string;kind:string;label:string;local_names?:Record<string,string>;aliases:string[]}[]):Promise<DiscoveryResult>{
+ const familyIds=plan.familyId?[plan.familyId]:plan.familyIds??namedFamilies(plan.identityQuery??query,nodes,plan);
+ const eligible=nodes.filter(n=>n.kind==='family'&&familyIds.includes(n.id));
+ const result=emptyDiscovery(query,plan,'product_type_required');
  if(!eligible.length)return result;
  const rows=(await client.query(`SELECT * FROM (SELECT ${productColumns}, count(*) OVER(PARTITION BY family_id)::int AS matching_count,row_number() OVER(PARTITION BY family_id ORDER BY (image_path IS NULL),sku) AS sample FROM products WHERE store_id=$1 AND active=true AND family_id=ANY($2::text[])) ranked WHERE sample=1 ORDER BY family_id`,[ctx.storeId,eligible.map(n=>n.id)])).rows;
  const offset=plan.facetPage?.key==='family'?plan.facetPage.offset:0;
@@ -186,7 +170,7 @@ async function solventGroups(client:PoolClient,ctx:ActorContext,query:string,pla
  const page=groups.slice(offset,offset+9);
  result.groups=page;result.totalCount=groups.reduce((sum,g)=>sum+g.count,0);
  result.facets=[{key:'family',label:'product type',totalValues:groups.length,...(offset+page.length<groups.length?{nextOffset:offset+page.length}:{}),values:page.map(({value,label,localNames,count})=>({value,label,localNames,count}))}];
- return result;
+ result.matchStatus='needs_detail';return result;
 }
 // Scores are deterministic ordering weights, never calibrated probabilities.
 // Every product fact is read from the current, scoped SQL catalog.
@@ -212,10 +196,8 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
   FROM products WHERE store_id=$1 AND active=true AND (lower(sku)=lower($2) OR lower(name)=lower($2) OR EXISTS(SELECT 1 FROM jsonb_array_elements_text(aliases) a WHERE lower(a)=lower($2)))
  ) identified WHERE identity_rank=1 ORDER BY sku LIMIT 2`,[ctx.storeId,query.trim()])).rows.map(p=>productForContext(p,ctx));
  const candidate=identified.length===1?identified[0]:undefined;
- const pumpName=/\b(?:pump|pumping|suction|delivery)\b|மோட்டார்|பம்ப்/iu;
- const namedPumpAlias=!!candidate&&pumpName.test(query)&&[candidate.name,...candidate.aliases].some(name=>pumpName.test(name));
- const namedCatalogProduct=!!candidate&&(normalize(candidate.sku)===normalize(query)||normalize(candidate.name)===normalize(query)||namedPumpAlias);
- let requestedFamilies=namedCatalogProduct?[]:namedFamilies(query,nodes,plan);
+ const namedCatalogProduct=!!candidate&&(normalize(candidate.sku)===normalize(query)||normalize(candidate.name)===normalize(query));
+ let requestedFamilies=namedCatalogProduct||plan.selectedSkus?.length?[]:namedFamilies(query,nodes,plan);
  // A verified product alias can live in a merchant's general-purpose family.
  // Adding a physical size must not make that item disappear behind an
  // inferred taxonomy family. Keep all explicit filters and measurement checks.
@@ -235,18 +217,13 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
   }
   if(aliasFamilies.length)requestedFamilies=unique([...requestedFamilies,...aliasFamilies]);
  }
- const genericPaint=/\bpaints?\b/.test(query)&&! /\b(?:primer|putty|scraper|brush|roller|thinner|polish|stencil)\b/.test(query);
- if(genericPaint&&(!requestedFamilies.length||requestedFamilies.every(id=>nodes.find(n=>n.id===id)?.label.toLowerCase()==='paints'))){
-  requestedFamilies=nodes.filter(n=>n.kind==='family'&&(/\bpaints?\b/.test(n.label.toLowerCase())||n.aliases.some((a:string)=>/^(?:interior|exterior|wall|enamel) paint$/.test(a)))&&!/primer|putty|scraper|brush|roller|thinner|polish|stencil/i.test(n.label)).map(n=>n.id);
- }
- if(needsSolventUse(query)&&!namedCatalogProduct)return solventGroups(client,ctx,query,plan,nodes);
- if(needsPipeType(query)&&!namedCatalogProduct)return emptyDiscovery(query,plan,'pipe_type_required');
- const root=candidate&&supportsCementIdentity(query,candidate)&&matchesPackMeasures(query,candidate)&&(!plan.selectedSkus||plan.selectedSkus.includes(candidate.sku))&&(!plan.familyId||candidate.familyId===plan.familyId)&&(!plan.familyIds||plan.familyIds.includes(candidate.familyId??''))&&(!plan.departmentId||nodes.some(n=>n.id===candidate.familyId&&n.parent_id===plan.departmentId))&&(!plan.brand||normalize(candidate.brand??'')===normalize(plan.brand))&&Object.entries(plan.specifications??{}).every(([key,value])=>specMatches(candidate,key,value))?candidate:undefined;
+ if(plan.clarifyType&&!namedCatalogProduct)return inventoryGroups(client,ctx,query,plan,nodes);
+ const root=candidate&&(normalize(query)===normalize(candidate.sku)||normalize(query)===normalize(candidate.name)||supportsCustomerIdentity(query,candidate,nodes,requestedFamilies))&&matchesPackMeasures(query,candidate)&&(!plan.selectedSkus||plan.selectedSkus.includes(candidate.sku))&&(!plan.familyId||candidate.familyId===plan.familyId)&&(!plan.familyIds||plan.familyIds.includes(candidate.familyId??''))&&(!plan.departmentId||nodes.some(n=>n.id===candidate.familyId&&n.parent_id===plan.departmentId))&&(!plan.brand||normalize(candidate.brand??'')===normalize(plan.brand))&&Object.entries(plan.specifications??{}).every(([key,value])=>specMatches(candidate,key,value))?candidate:undefined;
  // A validated unique catalog identity outranks an inferred taxonomy label.
  // Its returned plan must remain valid when the same search is refreshed.
  if(root)requestedFamilies=[];
  if(requestedFamilies.length&&(plan.familyId&&!requestedFamilies.includes(plan.familyId)||plan.familyIds&&!plan.familyIds.some(id=>requestedFamilies.includes(id))))return emptyDiscovery(query,plan,'no_supported_match');
- if(!requestedFamilies.length&&!root&&unsupportedNamedObject(query,nodes)){
+ if(!requestedFamilies.length&&!root&&!plan.selectedSkus?.length&&unsupportedNamedObject(query,nodes)){
   const head=tokens(withoutPackMeasures(objectPhrase)).filter(t=>!/^\d/.test(t)&&!['inch','inches','mm','cm','piece','pieces','box','boxes'].includes(t)).at(-1)!;
   const hasNamedProduct=(await client.query("SELECT 1 FROM products WHERE store_id=$1 AND active=true AND (search_vector @@ plainto_tsquery('simple',$2) OR lower(unit)=lower($2)) LIMIT 1",[ctx.storeId,head])).rowCount;
   if(!hasNamedProduct&&!plan.brand&&!Object.keys(plan.specifications??{}).length)return emptyDiscovery(query,plan,'no_supported_match');
@@ -309,7 +286,7 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
  const coveredFamily=nodes.filter(n=>n.kind==='family'&&matches(core,[n.label,...n.aliases])).map(n=>n.id);
  const intendedFamilies=effective.familyId?[effective.familyId]:effective.familyIds??(exactFamily.length?exactFamily:coveredFamily);
  const base=constraints.join(' AND ');
- const automaticFamilies=requestedFamilies.length?requestedFamilies:intendedFamilies.length===1?intendedFamilies:hintedFamilies;
+ const automaticFamilies=plan.selectedSkus?.length?[]:requestedFamilies.length?requestedFamilies:intendedFamilies.length===1?intendedFamilies:hintedFamilies;
  const automaticFamily=!effective.familyId&&!effective.familyIds&&automaticFamilies.length?` AND p.family_id=ANY(${add(automaticFamilies)}::text[])`:'';
  const where=base+automaticFamily+' AND ('+(clauses.join(' OR ')||'false')+')';
  const rankQuery=add(normalize(query)),identityQuery=add(query.trim()),preferredOrder=effective.preferredSkus?.length?`(p.sku=ANY(${add(effective.preferredSkus)}::text[])) DESC,`:"";
@@ -321,7 +298,9 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
   const relatedDepartments=unique(nodes.filter(n=>n.kind==='department'&&tokens([n.label,...n.aliases].join(' ')).some((t:string)=>words.includes(t))).map(n=>n.id));
   if(relatedDepartments.length){usedWhere=base+` AND p.family_id IN (SELECT id FROM catalog_nodes WHERE store_id=$1 AND parent_id=ANY(${add(relatedDepartments)}::text[]))`;rows=await queryRows(usedWhere);}
  }
- const eligible=(p:Product)=>matchesPackMeasures(query,p)&&supportsCustomerIdentity(query,p,nodes,requestedFamilies)&&(usedWhere!==where||requestedFamilies.includes(p.familyId??'')||!!effective.departmentId||!!effective.familyId||!!effective.familyIds?.includes(p.familyId??'')||hintedFamilies.includes(p.familyId??'')||keywordScore(query,effective,p).match==='keyword_match');
+ // Selected SKUs were scoped to fresh observations by the understanding compiler.
+ // Keep hard brand/specification/measurement filters, without repeating a literal noun gate.
+ const eligible=(p:Product)=>matchesPackMeasures(query,p)&&(plan.selectedSkus?.includes(p.sku)||supportsCustomerIdentity(query,p,nodes,requestedFamilies))&&(usedWhere!==where||requestedFamilies.includes(p.familyId??'')||!!effective.departmentId||!!effective.familyId||!!effective.familyIds?.includes(p.familyId??'')||hintedFamilies.includes(p.familyId??'')||keywordScore(query,effective,p).match==='keyword_match');
  const sqlMatchCount=Number(rows[0]?.total_count??0),candidates:Product[]=[];
  const rejections:Record<string,number>={identity:0,measurement:0,relevance:0,category:0,brand:0,specifications:0};
  let rejectionSampleCount=0;
@@ -373,15 +352,15 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
 /** Shared customer resolver. Exact matching remains available without alternatives
  * for callers enforcing explicit filters; customer flows opt into labelled peers. */
 export async function discoverProducts(client:PoolClient,ctx:ActorContext,customerQuery:string,input?:DiscoveryPlan):Promise<DiscoveryResult> {
- const query=naturalCatalogQuery(customerQuery)||customerQuery;
+ const query=naturalCatalogQuery(input?.identityQuery??customerQuery)||(input?.identityQuery??customerQuery);
  const colour=queryColour(query);
- const inferredBrands=(await client.query("SELECT DISTINCT brand FROM products WHERE store_id=$1 AND active=true AND brand IS NOT NULL AND (position(lower(brand) in lower($2))>0 OR position(regexp_replace(lower(brand),'paints$','paint') in lower($2))>0) ORDER BY brand",[ctx.storeId,query])).rows.map(r=>r.brand as string);
+ const inferredBrands=(await client.query("SELECT DISTINCT brand FROM products WHERE store_id=$1 AND active=true AND brand IS NOT NULL AND (position(lower(brand) in lower($2))>0 OR position(regexp_replace(lower(brand),'s$','') in lower($2))>0) ORDER BY brand",[ctx.storeId,query])).rows.map(r=>r.brand as string);
  const plan:DiscoveryPlan={...(input??{keywords:[query.slice(0,120)]}),...(input?.brand?{}:inferredBrands.length===1?{brand:inferredBrands[0]}:{}),specifications:{...(colour?{colour}:{}),...(input?.specifications??{})}};
  plan.keywords=plan.keywords.map(naturalCatalogQuery).filter(Boolean);
  if(!plan.keywords.length)plan.keywords=[query.slice(0,120)];
  const result=await discoverExactProducts(client,ctx,query,plan);
  result.query=customerQuery;
- result.matchStatus=result.products.length?(result.products.length===1&&!result.noExactMatch?'exact':'ambiguous'):result.diagnostics?.uncertainty.some(reason=>['pipe_type_required','solvent_use_required'].includes(reason))?'needs_detail':'not_found';
+ result.matchStatus=result.products.length?(result.products.length===1&&!result.noExactMatch?'exact':'ambiguous'):result.diagnostics?.uncertainty.some(reason=>['product_type_required'].includes(reason))?'needs_detail':'not_found';
  if(result.products.length||!plan.allowAlternatives||plan.selectedSkus||result.matchStatus==='needs_detail')return result;
  // Relax only explicit customer-selectable attributes, never product type,
  // rating, material, diameter, or a conflicting physical measurement unit.
@@ -390,7 +369,7 @@ export async function discoverProducts(client:PoolClient,ctx:ActorContext,custom
  if(!plan.brand&&!relaxable.length&&!measures.some(m=>['litre','kg'].includes(m.unit)))return result;
  let relatedQuery=query;
  if(/^(?:[npr]\d{2,3}|ffp[123])$/i.test(plan.brand??''))return result;
- if(plan.brand){relatedQuery=removeTerm(relatedQuery,plan.brand);relatedQuery=removeTerm(relatedQuery,plan.brand.replace(/paints$/i,'paint'));}
+ if(plan.brand){relatedQuery=removeTerm(relatedQuery,plan.brand);relatedQuery=removeTerm(relatedQuery,plan.brand.replace(/s$/i,''));}
  for(const key of relaxable){relatedQuery=removeTerm(relatedQuery,specs[key]);delete specs[key];}
  if(measures.some(m=>['litre','kg'].includes(m.unit)))relatedQuery=withoutCatalogMeasurements(relatedQuery);
  // A brand-only paint request still searches paints, never the whole shop.
@@ -398,7 +377,7 @@ export async function discoverProducts(client:PoolClient,ctx:ActorContext,custom
  if(!tokens(relatedQuery).some(t=>!/^\d/.test(t)))return result;
  const supportedFamilies=result.diagnostics?.appliedConstraints.familyIds??[];
  const related=await discoverExactProducts(client,ctx,relatedQuery,{...plan,...(!plan.familyId&&!plan.familyIds&&supportedFamilies.length?{familyIds:supportedFamilies}:{}),brand:undefined,specifications:specs,allowAlternatives:false,keywords:[relatedQuery.slice(0,120)]});
- const alternatives=related.products.filter(product=>supportsCementIdentity(query,product)).flatMap(product=>{
+ const alternatives=related.products.flatMap(product=>{
   const differences:{field:string;requested:string;actual?:string}[]=[];
   if(plan.brand&&normalize(product.brand??'')!==normalize(plan.brand))differences.push({field:'brand',requested:plan.brand,actual:product.brand});
   for(const key of relaxable){const requested=plan.specifications![key],actual=specificationValue(product,key),requestedMeasures=catalogMeasurements(requested);if(requestedMeasures.length){const actualMeasures=catalogMeasurements([product.name,...Object.values(product.specifications??{})].join('; '));if(requestedMeasures.some(m=>!actualMeasures.some(a=>a.unit===m.unit)))return [];}if(!actual||!specMatches(product,key,requested))differences.push({field:key,requested,actual});}
@@ -417,7 +396,7 @@ export function refinementPlan(result:DiscoveryResult,key:string,value:string):D
  const facet=result.facets.find(f=>f.key===key);
  if(facet?.key===key&&value===discoveryMoreValue&&facet.nextOffset!==undefined)return {...result.plan,facetPage:{key,offset:facet.nextOffset,...(result.plan.facetPage?.search?{search:result.plan.facetPage.search}:{})}};
  if(!facet||!facet.values.some(v=>v.value===value))throw new ToolError('That filter was not offered in the current product question.','stale_question');
- return {...result.plan,facetPage:undefined,...(key==='family'?{familyId:value,familyIds:undefined}:key==='brand'?{brand:value}:{specifications:{...result.plan.specifications,[key.slice(5)]:value}})};
+ return {...result.plan,facetPage:undefined,...(key==='family'?{clarifyType:false,identityQuery:undefined,selectedSkus:undefined,familyId:value,familyIds:undefined}:key==='brand'?{brand:value}:{specifications:{...result.plan.specifications,[key.slice(5)]:value}})};
 }
 
 export function refinementQuery(result:DiscoveryResult,key:string,value:string):string {

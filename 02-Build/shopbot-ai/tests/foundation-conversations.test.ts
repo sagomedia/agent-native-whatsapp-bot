@@ -190,7 +190,7 @@ test('Tamil list additions are acknowledged before the pending missing item, and
 test('an unspecified cutter remains unselected and asks what to cut, without unknown-quantity symbols',async()=>fixture(async(pool,inbox)=>{
  const provider:Interpreter={name:'vague-cutter',mode:'mock',interpret:async()=>({output:{operations:[{kind:'add_item',query:'cutter',quantity:null,search:{keywords:['PVC pipe cutter'],familyId:'pipe-cutters'}}],clarifyQuestion:'இது சரியான பைப் கட்டர். உறுதி செய்யுங்கள்.',next:'review'},usage:null,truncated:false})};
  await pool.query("UPDATE conversations SET reply_language='ta' WHERE id=$1",[inbox.context.conversationId]);
- const s=await text(inbox,new ConversationRuntime(pool,provider,{sequentialItems:true}),'cutter venum');assert.equal(s.conversation.draft[0].sku,undefined);assert.equal(s.conversation.draft[0].quantity,null);assert.match(last(s).text,/எதை வெட்ட/);assert.doesNotMatch(last(s).text,/\?\s*×/);assert.equal(s.requests.length,0);
+ const s=await text(inbox,new ConversationRuntime(pool,provider,{sequentialItems:true}),'cutter venum');assert.equal(s.conversation.draft[0].sku,undefined);assert.equal(s.conversation.draft[0].quantity,null);assert.match(last(s).text,/என்ன வேலைக்காக/);assert.doesNotMatch(last(s).text,/\?\s*×/);assert.equal(s.requests.length,0);
 }));
 test('a catalogued item with insufficient stock is not described as missing from the catalog',async()=>fixture(async(pool,inbox)=>{
  await pool.query("UPDATE conversations SET reply_language='ta' WHERE id=$1",[inbox.context.conversationId]);

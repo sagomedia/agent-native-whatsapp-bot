@@ -12,10 +12,10 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { toolCallSchema, type ConversationState, type DraftLine, type OrderRequest, type Product, type ToolCall,type DiscoveryPlan,type DiscoveryResult,type CatalogMap } from '../../../../packages/contracts/index.js';
 import { formatMoney, lineTotal } from '../../../../packages/contracts/money.js';
-import { matches, searchProducts,exactProductMatch,normalize,sameUnit,normalizeUnit,productColumns,productFromRow } from './catalog.js';
+import { matches, searchProducts,exactProductMatch,normalize,tokens,sameUnit,normalizeUnit,productColumns,productFromRow } from './catalog.js';
 import { authorize, ToolError, withConversation, type ActorContext } from './context.js';
 import {catalogEnabled} from './catalog.js';
-import {getCatalogMap,discoverProducts,needsPipeType,needsSolventUse} from './catalog-discovery.js';
+import {getCatalogMap,discoverProducts} from './catalog-discovery.js';
 import {productIdentity,productConfirmed,preserveConfirmation,markProductConfirmed,makeProductCheck} from './product-verification.js';
 import {nextCounterLine,productCheckCoversDraft} from './counter-state.js';
 
@@ -152,7 +152,9 @@ async function resolveLine(client: PoolClient, ctx: ActorContext, query: string,
     }
     const exact=discovery.matchStatus==='alternatives'?[]:discovery.products.filter(p=>exactProductMatch(searchQuery,p));
     if(discovery.matchStatus!=='alternatives'&&!exact.length&&discovery.products.length===1&&evidence.packSize&&(!search?.familyId||search.familyId===discovery.products[0].familyId))exact.push(discovery.products[0]);
-    if(exact.length===1&&!/^(?:cutter|blade|கட்டர்|பிளேடு)$/i.test(query.trim())){const line=resolvedLine(exact[0],quantity,query,id,requestedUnit,evidence);line.candidates=discovery.products;line.discovery=discovery;return line;}
+    const explicitIdentity=exact.length===1&&[exact[0].sku,exact[0].name].some(name=>normalize(name)===normalize(searchQuery));
+    const specificQuery=tokens(search?.identityQuery??searchQuery).filter(word=>!/^\d/.test(word)).length>1;
+    if(exact.length===1&&(explicitIdentity||specificQuery||!!evidence.packSize||!!search?.brand||!!Object.keys(search?.specifications??{}).length||search?.selectedSkus?.length===1)){const line=resolvedLine(exact[0],quantity,query,id,requestedUnit,evidence);line.candidates=discovery.products;line.discovery=discovery;return line;}
     return {...evidence,id,query,quantity,name:query,...(requestedUnit?{requestedUnit:normalizeUnit(requestedUnit)}:{}),resolution:discovery.products.length?'needs_choice':'unavailable',candidates:discovery.products,discovery};
   }
   const candidates = await searchProducts(client,ctx,query);
@@ -399,26 +401,26 @@ export class RetailTools {
         return {state,message:estimateText(state,state.draft,!!this.options.advance)};
       }
 
-      // Ask for a missing product type or solvent use before the review batch.
+      // Clarification is requested by the semantic plan and backed by actual
+      // inventory groups, independent of the shop's product vocabulary.
       const active=state.visualOrdering?nextCounterLine(state):undefined;
-      const detailLine=state.visualOrdering
-        ?active&&!active.sku&&active.productIntent?.kind!=='ambiguous'&&(needsPipeType(active.query??active.name)||needsSolventUse(active.query??active.name))?active:undefined
-        :state.draft.find(l=>!l.sku&&l.productIntent?.kind!=='ambiguous'&&(needsPipeType(l.query??l.name)||needsSolventUse(l.query??l.name)));
-      const missingCount=state.visualOrdering&&!detailLine&&!state.draft.some(l=>!l.sku&&!l.shopCheckDeferred&&l.candidates?.length||l.productIntent?.kind==='ambiguous')
+      const detailLine=(state.visualOrdering?active:state.draft.find(l=>l.discovery?.matchStatus==='needs_detail'));
+      const typeQuestion=detailLine?.discovery?.matchStatus==='needs_detail'?detailLine:undefined;
+      const missingCount=state.visualOrdering&&!typeQuestion&&!state.draft.some(l=>!l.sku&&!l.shopCheckDeferred&&l.candidates?.length||l.productIntent?.kind==='ambiguous')
         ?state.draft.find(l=>l.sku&&(!state.requireProductConfirmation||productConfirmed(l))&&!l.shopCheckDeferred&&l.resolution==='needs_quantity'&&l.quantity===null&&l.requestedQuantity===undefined&&!l.requestedAmount):undefined;
       if(missingCount){
         state.pending={kind:'question',id:randomUUID(),lineId:missingCount.id,version:state.version};await saveState(client,ctx,state);
         return {state,message:say(state,`How many ${missingCount.unit??'packs'} of ${lineName(missingCount,state)}?`,`${lineName(missingCount,state)} — எத்தனை ${unitName(missingCount.unit??'unit',state)} வேணும்?`,`${lineName(missingCount,state)} — eththanai ${missingCount.unit??'packs'} venum?`)};
       }
-      if(state.requireProductConfirmation&&!detailLine) {
+      if(state.requireProductConfirmation) {
         const check=makeProductCheck(state,!!this.options.sequentialItems);
         if(check){state.pending=check;await saveState(client,ctx,state);return {state,message:'Check the products before adding them to your list.'};}
       }
-      const unresolved=detailLine??(state.visualOrdering?active:undefined)??state.draft.find(l=>l.resolution!=='matched'&&!l.shopCheckDeferred)??state.draft.find(l=>l.resolution!=='matched');
+      const unresolved=typeQuestion??(state.visualOrdering?active:undefined)??state.draft.find(l=>l.resolution!=='matched'&&!l.shopCheckDeferred)??state.draft.find(l=>l.resolution!=='matched');
       if(unresolved) {
         state.pending={kind:'question',id:randomUUID(),lineId:unresolved.id,version:state.version};
         await saveState(client,ctx,state);
-        const question=!unresolved.sku&&needsSolventUse(unresolved.query??unresolved.name)?say(state,'Is the solvent for joining PVC pipes or for thinning paint?','சால்வென்ட் PVC பைப் ஒட்டுவதற்கா, பெயிண்ட் கலப்பதற்கா?','Solvent PVC pipe ottavatha, paint kalappatharka?'):!unresolved.sku&&needsPipeType(unresolved.query??unresolved.name)?`Which kind of pipe do you mean for “${unresolved.query??unresolved.name}”? Tell me its material or use (for example rigid PVC versus a flexible water pump hose), diameter and length if known. I have kept your requested quantity; the shop must check availability.`:unresolved.resolution==='needs_quantity'?`How many ${unresolved.unit??'units'} of ${unresolved.name}?`:unresolved.resolution==='needs_choice'?`Choose the exact product for “${unresolved.query}”:\n${(unresolved.candidates??[]).map((p,i)=>`${i+1}. ${p.name} — ${formatMoney(p.pricePaise)}`).join('\n')}`:`“${unresolved.name}” is unavailable or unmatched. Give another specification or remove this line.`;
+        const question=typeQuestion?say(state,`Which product type do you mean for “${unresolved.query??unresolved.name}”? Choose a current category or describe its use.`,`“${unresolved.query??unresolved.name}” எந்த வகை வேணும்? படத்தில் தேர்வு செய்யுங்க அல்லது என்ன வேலைக்குன்னு சொல்லுங்க.`,`“${unresolved.query??unresolved.name}” entha vagai venum? Photo-la choose pannunga illa enna velaikkunnu sollunga.`):unresolved.resolution==='needs_quantity'?`How many ${unresolved.unit??'units'} of ${unresolved.name}?`:unresolved.resolution==='needs_choice'?`Choose the exact product for “${unresolved.query}”:\n${(unresolved.candidates??[]).map((p,i)=>`${i+1}. ${p.name} — ${formatMoney(p.pricePaise)}`).join('\n')}`:`“${unresolved.name}” has no supported catalog match yet. Tell me more about its type or use, or ask the shop to check it.`;
         return {state,message:`${renderDraft(state)}\n\n${question} Other lines are retained. No request submitted.`};
       }
       const totalPaise=state.draft.reduce((sum,l)=>sum+lineTotal(l.pricePaise!,l.quantity!),0);

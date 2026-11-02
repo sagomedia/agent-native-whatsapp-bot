@@ -2,7 +2,7 @@ import {fitText} from '../../../../packages/contracts/channel-text.js';
 import {randomUUID} from 'node:crypto';
 import type {ConversationState,DiscoveryResult,Product,RichReply,VisualCard} from '../../../../packages/contracts/index.js';
 import {discoveryMoreValue} from '../../../../packages/contracts/discovery.js';
-import {localName,say} from '../../../../packages/contracts/language.js';
+import {localName,say,measurementText} from '../../../../packages/contracts/language.js';
 
 type Binding={memoryId?:string;lineId?:string;batchId?:string};
 type Group=NonNullable<DiscoveryResult['groups']>[number];
@@ -30,7 +30,9 @@ export function catalogGroupReply(result:DiscoveryResult,state:ConversationState
  });
  if(pageFacet){const label=say(state,'More choices','மேலும் தேர்வுகள்','Melum choices');cards.push({kind:'instruction',title:label,lines:[],caption:label,buttons:[{label,event:event(pageFacet.key,discoveryMoreValue)}]});}
  const brand=groups.every(g=>g.key==='brand');
- const text=brand?say(state,'Choose a brand','பிராண்டைத் தேர்வு செய்யுங்கள்','Brand choose pannunga'):say(state,'Choose a category','வகையைத் தேர்வு செய்யுங்கள்','Vagai choose pannunga');
+ const current=binding.lineId?state.draft.find(line=>line.id===binding.lineId):undefined;
+ const categoryQuestion=brand?say(state,'Choose a brand','பிராண்டைத் தேர்வு செய்யுங்கள்','Brand choose pannunga'):say(state,'Choose a category','வகையைத் தேர்வு செய்யுங்கள்','Vagai choose pannunga');
+ const text=current?measurementText(current.query??current.name,state)+' — '+categoryQuestion:categoryQuestion;
  return {version:1,kind:'text',text,stage:'identify',clarificationReason:'catalog_group',parts:[{id:randomUUID(),cards,text}],outboundMessages:1,presentation:cards.length===1?'single_product':'carousel_preview',replyLanguage:state.replyLanguage};
 }
 function rank(key:string):number{return key==='family'?0:key==='brand'?1:key.startsWith('spec:')?2:3;}
