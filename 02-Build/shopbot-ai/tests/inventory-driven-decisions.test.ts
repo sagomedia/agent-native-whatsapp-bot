@@ -217,3 +217,20 @@ test('a count expression that belongs only to a measurement cannot count package
   assert.equal((plan.operations[0] as any).quantity,null);assert.equal((plan.operations[0] as any).requestedAmount.value,4);
  }
 });
+
+test('empty optional family hints do not reject an item or erase an explicit grounded rejection',()=>{
+ const source='two oat drinks',raw={...base(),intents:['add'],requestedItems:[{ordinal:0,sourceText:source,query:'oat drink',purchaseCount:2,unresolved:[],search:{keywords:['oat drink'],familyIds:[],identityQuery:null,useCase:null,clarifyType:null,selectedSkus:[]}}]};
+ const original=understandingToInterpretation(raw,{text:source,state:empty},false);
+ assert.equal((original.operations[0] as any).quantity,2);assert.equal(original.understanding!.requestedItems[0].search?.familyIds,undefined);
+ const input={text:source,state:empty,proposal:original,observations:[{tool:'discover_products' as const,query:'oat drink',products:[],totalCount:0}]};
+ const rejected=inventoryGroundingToInterpretation({items:[{ordinal:0,query:'oat drink',search:{keywords:['oat drink'],familyIds:[],selectedSkus:[]}}],replacements:[]},input,false);
+ assert.deepEqual(rejected.understanding!.requestedItems[0].search?.selectedSkus,[]);
+ assert.throws(()=>inventoryGroundingToInterpretation({items:[{ordinal:0,query:'oat drink',search:{keywords:[],selectedSkus:[]}}],replacements:[]},input,false));
+});
+
+test('replacement searches normalize absent family hints and still reject unknown keys',()=>{
+ const source='replace hammer with oat drink',edit={kind:'replace',targetLineId:id,targetQuery:'hammer',sourceText:source,query:'oat drink',search:{keywords:['oat drink'],familyIds:[]}};
+ const plan=understandingToInterpretation({...base(),proposedEdits:[edit]},{text:source,state:cart,inventoryGrounding:true},false);
+ assert.equal((plan.operations[0] as any).search.familyIds,undefined);
+ assert.throws(()=>understandingToInterpretation({...base(),proposedEdits:[{...edit,search:{...edit.search,unknownHint:'injected'}}]},{text:source,state:cart,inventoryGrounding:true},false));
+});

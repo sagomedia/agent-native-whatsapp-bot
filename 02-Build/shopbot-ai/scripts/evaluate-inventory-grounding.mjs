@@ -22,6 +22,7 @@ const {initializeBudget,geminiTextRate}=await moduleAt('apps/server/src/services
 const {ConversationRuntime}=await moduleAt('apps/server/src/runtime/conversation.js');
 const {SimulatorService}=await moduleAt('apps/server/src/services/simulator.js');
 const {productColumns}=await moduleAt('apps/server/src/services/catalog.js');
+const {convertAmount}=await moduleAt('apps/server/src/services/quantity-evidence.js');
 const schema='inventory_decisions_eval_20261102',sourceStoreId=env.WHATSAPP_STORE_ID,storeId='41b2f4fe-35d6-411b-80f4-a591e00d2026';
 assert.match(sourceStoreId??'',/^[a-f0-9-]{36}$/);
 const admin=new pg.Pool({connectionString:env.DATABASE_URL,max:1});
@@ -59,7 +60,7 @@ try{
  const enamel=await makeInbox();
  await send(enamel,'noisy-enamel-query','I need two enamel letter paint cans',s=>s.conversation.draft.some(l=>(l.quantity??l.requestedQuantity)===2&&l.candidates?.some(p=>/enamel/i.test(p.name))));
  const white=await makeInbox();
- await send(white,'four-litre-evidence','நாலு லிட்டர் ஒயிட் பெயிண்ட் வேணும்',s=>s.conversation.draft.some(l=>(l.packSize?.value===4&&/lit/i.test(l.packSize.unit)||l.requestedAmount?.value===4&&/lit/i.test(l.requestedAmount.unit))));
+ await send(white,'four-litre-evidence','நாலு லிட்டர் ஒயிட் பெயிண்ட் வேணும்',s=>s.conversation.draft.some(l=>(l.packSize&&convertAmount(l.packSize,'litre')===4||l.requestedAmount&&convertAmount(l.requestedAmount,'litre')===4)));
  const level=await makeInbox();
  await send(level,'level-not-water-pipe','I need two spirit levels',s=>s.conversation.draft.some(l=>(l.quantity??l.requestedQuantity)===2&&l.candidates?.some(p=>/spirit|box level/i.test(p.name))&&!l.candidates?.some(p=>/water.*pipe/i.test(p.name))));
  await send(level,'semantic-total-edit','Make the spirit level quantity four in total',s=>s.conversation.draft.length===1&&(s.conversation.draft[0].quantity??s.conversation.draft[0].requestedQuantity)===4);
