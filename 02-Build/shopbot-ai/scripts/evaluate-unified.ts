@@ -7,6 +7,7 @@ import {GoogleInterpreter,readNativeSettings} from '../apps/server/src/adapters/
 import {GEMINI_MODEL_ID} from '../packages/contracts/model-policy.js';
 import {setupDatabase} from '../apps/server/src/db/migrate.js';
 import {loadLocalCatalog} from './local-catalog.js';
+import {rejectedProviderTurns} from './evaluation-checks.js';
 import {setupImageDemo,demoCatalogStore} from '../apps/server/src/services/demo-catalog.js';
 import {initializeBudget} from '../apps/server/src/services/inference-budget.js';
 import {ConversationRuntime} from '../apps/server/src/runtime/conversation.js';
@@ -44,10 +45,11 @@ async function main(){
      await runtime.processNext(inbox.context);
     }
     const s=await inbox.snapshot(),errors=s.messages.filter(m=>m.direction==='outbound'&&m.rich?.stage==='error');
-    const checks=[!errors.length,c.expected?.draftCount===undefined||s.conversation.draft.length===c.expected.draftCount,c.expected?.counts===undefined||JSON.stringify(s.conversation.draft.map(l=>l.quantity))===JSON.stringify(c.expected.counts),c.expected?.orders===undefined||s.requests.length===c.expected.orders];
+    const attempts=(await pool.query('SELECT message_id,stage,state,response,validation_issues FROM provider_attempts WHERE conversation_id=$1 ORDER BY created_at',[id])).rows;
+    const rejectedTurns=rejectedProviderTurns(attempts);
+    const checks=[!errors.length,!rejectedTurns.length,c.expected?.draftCount===undefined||s.conversation.draft.length===c.expected.draftCount,c.expected?.counts===undefined||JSON.stringify(s.conversation.draft.map(l=>l.quantity))===JSON.stringify(c.expected.counts),c.expected?.orders===undefined||s.requests.length===c.expected.orders];
     const status=!checks.every(Boolean)?'failed':c.expected?'passed':'observed';if(status==='failed')failed++;
-    const attempts=(await pool.query('SELECT stage,state,response,validation_issues FROM provider_attempts WHERE conversation_id=$1 ORDER BY created_at',[id])).rows;
-    results.push({id:c.id,status,elapsedMs:Date.now()-started,draft:s.conversation.draft,requests:s.requests,messages:s.messages,attempts});
+    results.push({id:c.id,status,rejectedTurns,elapsedMs:Date.now()-started,draft:s.conversation.draft,requests:s.requests,messages:s.messages,attempts});
    }catch(error){failed++;results.push({id:c.id,status:'failed',error:error instanceof Error?error.message:'Evaluation failed'});}
   }
   const budget=(await pool.query('SELECT limit_microusd,held_microusd,committed_microusd,blocked FROM inference_budgets WHERE store_id=$1',[storeId])).rows[0];

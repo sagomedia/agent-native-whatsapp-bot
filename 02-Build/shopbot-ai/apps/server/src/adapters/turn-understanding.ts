@@ -4,7 +4,7 @@ import {listViewRequest} from '../services/list-view-intent.js';
 import {amendmentIntent} from '../services/order-amendments.js';
 import {say,safeQuestion} from '../../../../packages/contracts/language.js';
 import {z} from 'zod';
-import {turnUnderstandingSchema,itemSearchSchema,normalizeUnderstandingAbsence,type TurnUnderstanding} from '../../../../packages/contracts/understanding.js';
+import {turnUnderstandingSchema,itemSearchSchema,normalizeUnderstandingAbsence,normalizeSearchAbsence,type TurnUnderstanding} from '../../../../packages/contracts/understanding.js';
 import {interpretationSchema,type Interpretation,type Operation} from '../../../../packages/contracts/index.js';
 import {UNDERSTANDING_VERSION} from '../../../../packages/contracts/model-policy.js';
 import type {InterpretationInput} from './interpreter.js';
@@ -30,7 +30,9 @@ For every requested item with an observation matching its query, return its exac
 /** A search patch cannot manufacture a pack size or rewrite the order while
  * echoing it back. Source fields and actions are owned by the first plan. */
 export function inventoryGroundingToInterpretation(value:unknown,input:InterpretationInput,allowImageLists:boolean):Interpretation {
- const patch=inventoryGroundingSchema.parse(value),prior=input.proposal?.understanding;
+ const raw=value&&typeof value==='object'&&!Array.isArray(value)?{...value} as Record<string,unknown>:value;
+ if(raw&&typeof raw==='object'&&!Array.isArray(raw))for(const field of ['items','replacements'])if(Array.isArray((raw as Record<string,unknown>)[field]))(raw as Record<string,unknown>)[field]=((raw as Record<string,unknown>)[field] as unknown[]).map(item=>item&&typeof item==='object'&&!Array.isArray(item)?{...item,...('search' in item?{search:normalizeSearchAbsence(item.search)}:{})}:item);
+ const patch=inventoryGroundingSchema.parse(raw),prior=input.proposal?.understanding;
  if(!prior||!input.proposal)throw new Error('Inventory grounding requires the original understanding.');
  const observed=(query:string|null)=>query!==null&&input.observations?.some(o=>o.query===query);
  const expected=prior.requestedItems.filter(item=>observed(itemObservationQuery(input.proposal!,item))).map(item=>item.ordinal);

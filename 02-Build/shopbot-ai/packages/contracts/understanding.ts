@@ -43,6 +43,16 @@ export const turnUnderstandingSchema=z.object({
 }).strict().refine(t=>new Set(t.requestedItems.map(i=>i.ordinal)).size===t.requestedItems.length,'Duplicate source lines');
 export type TurnUnderstanding=z.infer<typeof turnUnderstandingSchema>;
 
+/** Optional search hints may use empty/null absence. An explicit empty SKU
+ * selection is a rejection and must survive normalization. */
+export function normalizeSearchAbsence(value:unknown):unknown {
+ if(!value||typeof value!=='object'||Array.isArray(value))return value;
+ const next={...value} as Record<string,unknown>;
+ for(const field of ['identityQuery','familyIds','selectedSkus','useCase','clarifyType'])if(next[field]===null||next[field]==='')delete next[field];
+ if(Array.isArray(next.familyIds)&&next.familyIds.length===0)delete next.familyIds;
+ return next;
+}
+
 // Normalize only absence representations for known optional fields. Required
 // counts/queries/arrays and all unknown keys still undergo strict validation.
 export function normalizeUnderstandingAbsence(value:unknown):unknown {
@@ -63,8 +73,14 @@ export function normalizeUnderstandingAbsence(value:unknown):unknown {
   if(item.requestedBudgetPaise===0)delete item.requestedBudgetPaise;
   if(item.purchaseCount===null)delete item.countEvidence;
   for(const field of ['dimensions','attributeEvidence'])if(Array.isArray(item[field])&&item[field].length===0)delete item[field];
+  if(item.search!==undefined)item.search=normalizeSearchAbsence(item.search);
   return item;
  });
- if(Array.isArray(result.proposedEdits))result.proposedEdits=result.proposedEdits.map(v=>v&&typeof v==='object'&&!Array.isArray(v)?clean(v,['targetQuery','quantity','query','amount','mode','search','countEvidence']):v);
+ if(Array.isArray(result.proposedEdits))result.proposedEdits=result.proposedEdits.map(v=>{
+  if(!v||typeof v!=='object'||Array.isArray(v))return v;
+  const edit=clean(v,['targetQuery','quantity','query','amount','mode','search','countEvidence']);
+  if(edit.search!==undefined)edit.search=normalizeSearchAbsence(edit.search);
+  return edit;
+ });
  return result;
 }
