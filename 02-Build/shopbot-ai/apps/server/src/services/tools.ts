@@ -62,7 +62,7 @@ function validateQuantity(product: Product, quantity: number | null) {
   if (quantity === null) return;
   const scaled = Math.round(quantity * 1000);
   const step = Math.round(product.quantityStep * 1000);
-  if (scaled <= 0 || quantity > 100 || !step || scaled % step !== 0) throw new ToolError(`Use increments of ${product.quantityStep} ${product.unit} for ${product.name}.`);
+  if (scaled <= 0 || quantity > 100 || !step || scaled % step !== 0) throw new ToolError(`Use increments of ${product.quantityStep} ${product.unit} for ${product.name}.`,'quantity_step');
 }
 type LineEvidence=Pick<DraftLine,'clarification'|'packUnitAlternative'|'budgetCountDerived'|'sourceUncertainty'|'requestedBudgetPaise'|'packSize'|'productMeasures'|'productIntent'|'requestedAmount'|'amountMode'|'supportingPhrase'|'quantityEvidenceVersion'>;
 function lineEvidence(value:LineEvidence):LineEvidence {return Object.fromEntries(['clarification','packUnitAlternative','budgetCountDerived','sourceUncertainty','requestedBudgetPaise','packSize','productMeasures','productIntent','requestedAmount','amountMode','supportingPhrase','quantityEvidenceVersion'].flatMap(key=>value[key as keyof LineEvidence]===undefined?[]:[[key,value[key as keyof LineEvidence]]])) as LineEvidence;}
@@ -288,7 +288,7 @@ export class RetailTools {
             const eligible=await discoverProducts(client,ctx,old.query??old.name,old.discovery.plan);
             if(!eligible.products.some(p=>p.sku===op.query))throw new ToolError('That option no longer matches the requested item. Review the latest choices.','stale_confirmation');
           }
-          if(old.resolution==='needs_unit'&&op.quantity!==undefined&&!op.requestedUnit)throw new ToolError(`Please include the unit, for example 2 ${old.unit??'units'}. I can’t convert ${old.requestedUnit??'the requested amount'} without a verified pack size or length.`);
+          if(old.resolution==='needs_unit'&&op.quantity!==undefined&&!op.requestedUnit)throw new ToolError(`Please include the unit, for example 2 ${old.unit??'units'}. I can’t convert ${old.requestedUnit??'the requested amount'} without a verified pack size or length.`,'selling_unit_required');
           const acceptedAlternative=!!op.query&&old.discovery?.matchStatus==='alternatives'&&old.candidates?.find(p=>p.sku===op.query);
           const next=await resolveLine(client,ctx,op.query??old.sku??old.query??old.name,op.quantity??old.requestedQuantity??old.quantity,old.id,op.requestedUnit??(!op.query?old.requestedUnit:undefined),op.search??(!op.query?old.discovery?.plan:undefined),{sourceUncertainty:op.sourceUncertainty,requestedBudgetPaise:op.requestedBudgetPaise,packSize:acceptedAlternative?catalogPack(acceptedAlternative):op.packSize,productMeasures:op.productMeasures,productIntent:op.productIntent,requestedAmount:op.requestedAmount,amountMode:op.amountMode,supportingPhrase:op.supportingPhrase,quantityEvidenceVersion:state.visualOrdering?1:undefined},old);
           if(!op.query)next.query=old.query??old.name;
@@ -318,7 +318,7 @@ export class RetailTools {
           }
           else {
             delete line.budgetCountDerived;
-            if(line.resolution==='needs_unit'&&!line.requestedAmount)throw new ToolError('Please state the quantity and catalog unit together before changing this item.');
+            if(line.resolution==='needs_unit'&&!line.requestedAmount)throw new ToolError('Please state the quantity and catalog unit together before changing this item.','selling_unit_required');
             const nextQuantity=op.kind==='increment_quantity'?line.quantity===null?undefined:Math.round((line.quantity+op.delta)*1000)/1000:op.quantity;
             if(nextQuantity===undefined)throw new ToolError('Tell me the total quantity for this item first.','quantity_unknown');
             if(nextQuantity>100)throw new ToolError('The resulting quantity exceeds 100. Tell the shop the required amount.','quantity_limit');

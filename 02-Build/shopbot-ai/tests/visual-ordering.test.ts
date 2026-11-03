@@ -237,3 +237,13 @@ test('a visual removal button drops only the selected unlisted request and canno
  s=await event(inbox,runtime,remove);assert.equal(s.conversation.draft.length,1);assert.equal(s.conversation.draft[0].id,known.id);assert.equal(s.conversation.draft[0].quantity,2);assert.equal(s.requests.length,0);
  s=await event(inbox,runtime,{...remove,id:randomUUID()});assert.equal(s.conversation.draft.length,1);assert.equal(s.conversation.draft[0].id,known.id);assert.equal(s.requests.length,0);
 }));
+
+test('mixed confirmed, unconfirmed and unlisted rows render native buttons without dropping approvals',()=>fixture(async(pool,inbox)=>{
+ const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:'TEST0',quantity:1},{kind:'add_item',query:'TEST1',quantity:2},{kind:'add_item',query:'unlisted request',quantity:1}]),{visualOrdering:true});
+ const s=await text(inbox,runtime,'list');const check=s.conversation.pending;if(check?.kind!=='products')throw Error('expected check');
+ const state=structuredClone(s.conversation);state.draft[0].productConfirmation={sku:state.draft[0].sku!,productVersion:1} as any;
+ const reply=visualReply({version:1,kind:'text',text:'Check',presentation:'text',outboundMessages:1},state);
+ assert.ok(buttons(reply).some(b=>b.event.type==='select_product'),'retain individual product approval');assert.ok(buttons(reply).some(b=>b.event.type==='edit_item'||b.event.type==='shopping_action'),'retain edit/list actions');
+ const rich=materializeVisualReply(reply);for(const part of rich.parts!){const rendered=renderWhatsAppReply({...rich,parts:[part]},randomUUID(),'example.test');assert.ok(['carousel','buttons'].includes(rendered.format));}
+ assert.equal(state.draft.length,3);assert.equal(s.requests.length,0);
+}));

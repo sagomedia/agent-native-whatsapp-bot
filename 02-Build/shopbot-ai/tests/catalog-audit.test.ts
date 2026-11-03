@@ -60,7 +60,7 @@ test('new candidates are progress and unrelated cart activity does not advance o
 
 test('unmatched additions describe requests and explicit corrections retain their current target',()=>{
  const state:ConversationState={version:1,draft:[{id:'a',name:'rasam',query:'rasam',quantity:1,resolution:'unavailable'}],pending:{kind:'question',id:'q',lineId:'a',version:1},lastRequestId:null,fulfillment:'pickup',replyLanguage:'en'};
- assert.match(cartChangeFeedback({draft:[],replyLanguage:'en'},state)!,/Saved request.*still needs checking/);
+ assert.match(cartChangeFeedback({draft:[],replyLanguage:'en'},state)!,/Saved request for rasam/);
  const item={ordinal:0,query:'spirit level',sourceText:'change this item to a spirit level',purchaseCount:1,unresolved:[]};
  assert.equal(existingMention(item,state).line?.id,'a');
  const extra=existingMention({...item,sourceText:'also add another spirit level',requestMode:'additional'},state);assert.equal(extra.line,undefined);

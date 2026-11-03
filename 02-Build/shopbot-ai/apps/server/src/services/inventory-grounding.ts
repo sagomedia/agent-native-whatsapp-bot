@@ -4,6 +4,37 @@ import type {ActorContext} from './context.js';
 import {productColumns,productForContext} from './catalog.js';
 import type {CatalogObservation} from './agent-assistance.js';
 import {ToolError} from './context.js';
+import {observeCatalog} from './agent-assistance.js';
+import type {RetailTools} from './tools.js';
+import {normalize} from '../../../../packages/contracts/catalog-text.js';
+
+/** The same bounded facts can ground a normal plan or its single evidence
+ * repair. Neither path needs an extra unmetered model request. */
+export async function observeInventory(client:PoolClient,ctx:ActorContext,tools:RetailTools,items:{query:string;search?:DiscoveryPlan}[],key:string):Promise<CatalogObservation[]> {
+ const found:CatalogObservation[]=[];
+ for(const [index,item] of items.slice(0,3).entries()){
+  const current=(await observeCatalog(client,ctx,tools,[item.query],`${key}:${index}`,item.search))[0];
+  if(item.search?.selectedSkus!==undefined){found.push(current);continue;}
+  if(!current.products.length){
+   const alternatives=[...new Set(item.search?.keywords??[])].filter(keyword=>normalize(keyword)!==normalize(item.search?.identityQuery??item.query)).slice(0,2);
+   for(const [hintIndex,keyword] of alternatives.entries()){
+    const extra=(await observeCatalog(client,ctx,tools,[keyword],`${key}:${index}:hint:${hintIndex}`,{...item.search,keywords:[keyword],identityQuery:keyword,allowAlternatives:false}))[0];
+    current.products=[...new Map([...current.products,...extra.products].map(p=>[p.sku,p])).values()].slice(0,10);
+    current.totalCount=Math.max(current.totalCount,extra.totalCount,current.products.length);
+   }
+  }
+  if(!['sku','name'].includes(current.discovery?.diagnostics?.identity??'none')){
+   const facts=await inventoryCandidateFacts(client,ctx,item.query,item.search);
+   if(facts.some(p=>!current.products.some(existing=>existing.sku===p.sku))){
+    current.products=[...new Map([...facts,...current.products].map(p=>[p.sku,p])).values()].slice(0,10);
+    current.totalCount=Math.max(current.totalCount,current.products.length);
+    if(current.discovery&&current.products.some(p=>!current.discovery!.products.some(d=>d.sku===p.sku)))current.discovery={...current.discovery,products:current.products};
+   }
+  }
+  found.push(current);
+ }
+ return found;
+}
 
 /** Retrieval facts for semantic review, including names filed under a wrong
  * family. These bounded rows are never customer-facing without validation. */
@@ -47,7 +78,8 @@ export function validateInventoryReplan(original:Interpretation,replanned:Interp
   const observed=observations.filter(o=>o.query===itemObservationQuery(original,before.requestedItems[index]));
   const available=new Set(observed.flatMap(o=>o.products.map(p=>p.sku)));
   if(!observed.length&&(item.query!==before.requestedItems[index].query||JSON.stringify(item.search)!==JSON.stringify(before.requestedItems[index].search)))throw new ToolError('Unobserved item searches must remain unchanged.','grounding_scope');
-  if(available.size&&item.query===before.requestedItems[index].query&&item.search?.identityQuery===before.requestedItems[index].search?.identityQuery&&item.search?.selectedSkus===undefined)throw new ToolError('Inventory grounding must explicitly select or reject the observed candidates.','grounding_evidence');
+  if(available.size&&item.query===before.requestedItems[index].query&&item.search?.identityQuery===before.requestedItems[index].search?.identityQuery&&item.search?.selectedSkus===undefined&&!item.search?.narrowing?.length&&!item.search?.browseAll)throw new ToolError('Inventory grounding must explicitly select or reject the observed candidates.','grounding_evidence');
+  if(item.search?.narrowing){const keys=new Set(observed.flatMap(o=>o.discovery?.facets.map(f=>f.key)??[]));if(item.search.selectedSkus!==undefined||item.search.narrowing.some(step=>!keys.has(step.key)))throw new ToolError('Choose narrowing attributes observed for this item only.','grounding_scope');}
   if(item.search?.selectedSkus?.some(sku=>!available.has(sku)))throw new ToolError('Choose products observed for this item only.','grounding_scope');
  }
  for(const [index,edit] of after.proposedEdits.entries()){

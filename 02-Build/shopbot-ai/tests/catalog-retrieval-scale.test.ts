@@ -49,13 +49,14 @@ test('facet pages expose late brands and independent specification keys beyond t
  await c.query(`INSERT INTO products(store_id,sku,name,unit,price_paise,family_id,brand,specifications) SELECT $1,'P-'||lpad(n::text,4,'0'),'Wall paint model '||n,'can',0,'paint','Brand '||lpad(n::text,3,'0'),jsonb_build_object('colour','Colour '||n,'finish','Finish '||n) FROM generate_series(1,180) n`,[ctx.storeId]);
  let r=await discoverProducts(c,ctx,'paint');const visited:string[]=[];
  for(let page=0;page<90;page++){
-  const facet=r.facets.find(f=>f.key==='brand')!;assert.equal(facet.totalValues,180);assert.ok(facet.values.length<=3);visited.push(...facet.values.map(v=>v.value));
+  const facet=r.facets.find(f=>f.key==='brand')!;assert.equal(facet.totalValues,180);assert.ok(facet.values.length<=9);visited.push(...facet.values.map(v=>v.value));
   assert.ok(r.facets.some(f=>f.key==='spec:colour'));assert.ok(r.facets.some(f=>f.key==='spec:finish'));
   if(facet.nextOffset===undefined)break;
   const first={...r,facets:[facet,...r.facets.filter(f=>f!==facet)]};r=await discoverProducts(c,ctx,'paint',refinementPlan(first,'brand',discoveryMoreValue));
  }
  assert.equal(new Set(visited).size,180);assert.ok(visited.includes('Brand 180'));
  const filtered=await discoverProducts(c,ctx,'paint',{keywords:['paint'],facetPage:{key:'brand',offset:0,search:'180'}});assert.equal(filtered.facets[0]?.values[0]?.value,'Brand 180');
+ const late=await discoverProducts(c,ctx,'paint',{keywords:['paint'],facetPage:{key:'brand',offset:171}});assert.equal(late.facets[0].values.find(v=>v.value==='Brand 180')?.product?.sku,'P-0180','a late brand gets its own catalog example beyond the sample');
  const narrow=await discoverProducts(c,ctx,'paint',{keywords:['paint'],brand:'Brand 180'});assert.deepEqual(narrow.products.map(p=>p.sku),['P-0180']);
  assert.throws(()=>refinementPlan(narrow,'brand',discoveryMoreValue),/not offered/);
  await c.query("UPDATE products SET specifications=specifications||(SELECT jsonb_object_agg('zz_extra'||i,sku) FROM generate_series(1,20) i) WHERE store_id=$1 AND sku IN ('P-0001','P-0002')",[ctx.storeId]);
@@ -74,16 +75,18 @@ test('taxonomy pages keep accurate department counts and make families beyond 30
 }));
 
 
-test('More choices traverses a bound current question with three native buttons and rejects replay',()=>fixture(async(c,ctx,pool)=>{
- await c.query(`INSERT INTO products(store_id,sku,name,unit,price_paise,family_id,brand) SELECT $1,'P-'||n,'Wall paint model '||n,'can',0,'paint','Brand '||n FROM generate_series(1,7) n`,[ctx.storeId]);
+test('More choices traverses nine visual values plus continuation and rejects replay',()=>fixture(async(c,ctx,pool)=>{
+ await c.query(`INSERT INTO products(store_id,sku,name,unit,price_paise,family_id,brand) SELECT $1,'P-'||n,'Wall paint model '||n,'can',0,'paint','Brand '||n FROM generate_series(1,18) n`,[ctx.storeId]);
  await c.query('INSERT INTO conversations(id,store_id,actor) VALUES($1,$2,$3)',[ctx.conversationId,ctx.storeId,ctx.actor]);
  const inbox=new SimulatorService(pool,ctx),runtime=new ConversationRuntime(pool,{name:'no-model-for-pages',mode:'mock',interpret:async()=>{throw new Error('Page action must not call a model');}});
  const send=async(event:SimulatorEvent)=>{await inbox.ingest(event);await runtime.processNext(ctx);return inbox.snapshot();};
  const last=(s:Snapshot)=>s.messages.at(-1)!.rich!;
  let state=await send({id:randomUUID(),type:'browse',query:'paint',expectedVersion:0});
- const first=last(state),more=first.buttons!.find(b=>b.event.type==='refine_discovery'&&b.event.value===discoveryMoreValue)!;assert.ok(more);assert.equal(first.buttons!.length,3);
- const before=first.buttons!.filter(b=>b!==more).map(b=>b.label);
- state=await send(more.event);assert.ok(last(state).buttons!.some(b=>!before.includes(b.label)&&b.event.type==='refine_discovery'&&b.event.value!==discoveryMoreValue));
+ const actions=(s:Snapshot)=>last(s).parts![0].cards.flatMap(c=>c.buttons??[]);
+ const brand=actions(state).find(b=>b.event.type==='refine_discovery'&&b.event.value==='brand')!;assert.ok(brand);state=await send(brand.event);
+ const first=last(state),more=actions(state).find(b=>b.event.type==='refine_discovery'&&b.event.value===discoveryMoreValue)!;assert.ok(more);assert.equal(actions(state).length,10);
+ const before=actions(state).filter(b=>b!==more).map(b=>(b.event as any).value);
+ state=await send(more.event);assert.ok(actions(state).some(b=>b.event.type==='refine_discovery'&&!before.includes(b.event.value)&&b.event.value!==discoveryMoreValue));
  assert.equal(state.conversation.draft.length,0);assert.equal(state.interpretationAttempts,0);
  state=await send({...more.event,id:randomUUID()});assert.match(last(state).text,/no longer current/);assert.equal(state.requests.length,0);
 }));
@@ -94,4 +97,9 @@ test('eligible preferred late variants survive the cap while exact identity keep
  const late=await discoverProducts(c,ctx,'paint',{keywords:['paint'],preferredSkus:['P-0300']});assert.equal(late.products[0]?.sku,'P-0300');
  const exact=await discoverProducts(c,ctx,'Wall paint model 1',{keywords:['paint'],preferredSkus:['P-0300']});assert.equal(exact.products[0]?.sku,'P-0001');
  const conflict=await discoverProducts(c,ctx,'paint',{keywords:['paint'],preferredSkus:['P-0300'],brand:'Not sold here'});assert.deepEqual(conflict.products,[]);
+}));
+
+test('constant metadata cannot consume every variable-facet slot',()=>fixture(async(c,ctx)=>{
+ await c.query(`INSERT INTO products(store_id,sku,name,unit,price_paise,family_id,specifications) SELECT $1,'META-'||n,'Wall paint model '||n,'can',0,'paint',jsonb_build_object('zz_finish',CASE WHEN n%2=0 THEN 'matte' ELSE 'gloss' END)||(SELECT jsonb_object_agg('constant_'||i,'same') FROM generate_series(1,20) i) FROM generate_series(1,24) n`,[ctx.storeId]);
+ const found=await discoverProducts(c,ctx,'paint');assert.deepEqual(found.facets.map(f=>f.key),['spec:zz_finish']);assert.equal(found.facets[0].totalValues,2);
 }));

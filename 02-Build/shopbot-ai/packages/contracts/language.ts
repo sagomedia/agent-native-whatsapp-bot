@@ -65,10 +65,11 @@ export function safeQuestion(question:string|undefined,context:LanguageContext,c
 }
 export function languageAcknowledgement(language:ReplyLanguage):string {return say(language,'I’ll reply in English. Your list is kept.','இனி தமிழில் பேசலாம். உங்கள் பட்டியல் அப்படியே உள்ளது.','Ini Tanglish-la pesalaam. Unga list appadiye irukku.');}
 export function facetLabel(key:string,label:string,context:LanguageContext):string {
- const labels:Record<string,[string,string]>={family:['பொருள் வகை','porul vagai'],brand:['பிராண்ட்','brand'],size:['அளவு','size'],length:['நீளம்','neelam'],diameter:['விட்டம்','diameter'],material:['பொருள் தயாரிப்பு','material'],volume:['கொள்ளளவு','volume']};
+ const labels:Record<string,[string,string]>={family:['பொருள் வகை','porul vagai'],brand:['பிராண்ட்','brand'],price:['விலை வரம்பு','vilai varambu'],size:['அளவு','size'],length:['நீளம்','neelam'],diameter:['விட்டம்','diameter'],material:['பொருள் தயாரிப்பு','material'],volume:['கொள்ளளவு','volume']};
  const translated=labels[key.replace(/^spec:/,'')];return translated?say(context,label,...translated):label;
 }
 export function customerError(message:string,context:LanguageContext,code?:string):string {
+ if(code==='quantity_unknown')return say(context,'How many do you want in total for this item?','இந்தப் பொருள் மொத்தம் எத்தனை வேணும்?','Intha porul moththam eththanai venum?');
  if(code?.startsWith('interpretation_'))return say(context,'I understood the speech, but could not safely apply the changes. Name the item and change again; your list is kept.','பேச்சு புரிந்தது; மாற்றத்தை உறுதி செய்ய முடியவில்லை. பொருள் பெயருடன் மீண்டும் சொல்லுங்க. பட்டியல் அப்படியே இருக்கு.','Pechchu purinthathu; maaththathai confirm panna mudiyala. Porul peyarudan marubadi sollunga. List appadiye irukku.');
  if(code==='correction_target')return say(context,'Which listed item should change? Choose its photo. Your other items are kept.','எந்தப் பொருளை மாற்றணும்? அதன் photo-வைத் தேர்வு செய்யுங்க. மற்ற பொருட்கள் அப்படியே இருக்கு.','Entha porulai maathanum? Athan photo-ai choose pannunga. Maththa porutkal appadiye irukku.');
  if(languageOf(context)==='en')return message;
@@ -77,7 +78,8 @@ export function customerError(message:string,context:LanguageContext,code?:strin
  if(code?.startsWith('stale')||/stale|earlier|no longer current|changed/i.test(message))return say(context,message,'இது முந்தைய கேள்விக்கான பதில். உங்கள் பட்டியலில் மாற்றம் செய்யவில்லை. தற்போதைய படங்கள் அல்லது கேள்விக்குப் பதில் அளியுங்கள்.','Ithu munthaya kelvikkaana bathil. Unga list-la maaththam seyyala. Ippothaiya photos illa kelvikku bathil sollunga.');
  if(/Which item is that quantity/i.test(message))return say(context,message,'இந்த எண்ணிக்கை எந்தப் பொருளுக்கு? பொருள் பெயரையும் சொல்லுங்கள் அல்லது முதலில் அதன் படத்தைத் தேர்வு செய்யுங்கள்.','Intha quantity entha porulukku? Porul peyarum sollunga illa mudhalil athan photo-ai choose pannunga.');
  if(/Choose|Which option|product for each/i.test(message))return say(context,message,'படங்களில் நீங்கள் கேட்ட சரியான பொருளைத் தேர்வு செய்யுங்கள். உங்கள் கோரிக்கை இன்னும் கடைக்கு அனுப்பப்படவில்லை.','Photos-la neenga ketta sariyana porulai choose pannunga. Unga request innum kadaikku anuppala.');
- if(/quantity|increments|unit|conversion/i.test(message))return say(context,message,'எண்ணிக்கையையும் விற்பனை அலகையும் சரிபார்க்கவும். உறுதி செய்யாத அலகு மாற்றத்தைப் பயன்படுத்த முடியாது. பொருள் பெயர், எண்ணிக்கை மற்றும் அலகைச் சொல்லுங்கள்.','Quantity-um virpanai unit-um check pannunga. Verify pannaatha unit conversion use panna mudiyathu. Porul peyar, quantity, unit sollunga.');
+ if(code==='selling_unit_required')return say(context,message,'இந்தப் பொருளை எந்த விற்பனை அலகில் வேணும்? அதன் படத்தில் உள்ள அலகைச் சரிபார்த்து சொல்லுங்க.','Intha porulai entha virpanai unit-la venum? Athan photo-la irukkura unit-ai check panni sollunga.');
+ if(code==='quantity_step')return say(context,message,'இந்தப் பொருளின் விற்பனை எண்ணிக்கைக்கு ஏற்ற அளவைத் தேர்வு செய்யுங்க.','Intha porulin virpanai count-ku etha alavai choose pannunga.');
  return say(context,message,'இந்தப் பதிலைச் சரியாகச் செயல்படுத்த முடியவில்லை. உங்கள் பட்டியல் அப்படியே உள்ளது. பொருள் பெயர், அளவு அல்லது வகையை மீண்டும் சொல்லுங்கள்; படங்களிலும் தேர்வு செய்யலாம்.','Intha bathilai sariyaaga seyalpaduththa mudiyala. Unga list appadiye irukku. Porul peyar, size illa type-ai marubadi sollunga; photos-layum choose pannalaam.');
 }
 

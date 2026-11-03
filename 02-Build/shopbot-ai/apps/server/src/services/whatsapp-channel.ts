@@ -8,7 +8,7 @@ import {catalogPhoto} from './catalog-photos.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {eventSchema,type SimulatorEvent} from '../../../../packages/contracts/index.js';
 import {say} from '../../../../packages/contracts/language.js';
-import {renderWhatsAppReply} from './whatsapp-reply.js';
+import {renderWhatsAppReply,WhatsAppRenderError} from './whatsapp-reply.js';
 import {plainReply} from './replies.js';
 import {shoppingButton} from './shopping-flow.js';
 import {z} from 'zod';
@@ -52,15 +52,19 @@ export class WhatsAppChannel {
         await client.query('UPDATE messages SET payload=$1::jsonb WHERE id=$2',[JSON.stringify(rich),messageId]);
       }
       const revision=(await client.query('SELECT operator_revision FROM conversations WHERE id=$1',[ctx.conversationId])).rows[0].operator_revision;
-      const state=await loadState(client,ctx),memory=await loadAssistantMemory(client,ctx);
+      let state=await loadState(client,ctx);const memory=await loadAssistantMemory(client,ctx);
       let rendered;
       try{rendered=renderWhatsAppReply(rich,messageId,config.hostname);}
-      catch{
+      catch(error){
+        const code=error instanceof WhatsAppRenderError?error.code:'unexpected';
+        console.error(JSON.stringify({event:'whatsapp_render_failed',messageId,code,cards:rich.parts?.map(p=>p.cards.length),buttons:rich.parts?.map(p=>p.cards.map(c=>c.buttons?.length??p.buttons?.length??0))}));
         // Do not leave consent live for a review which was never displayed.
         if(rich.kind==='order_review'||rich.parts)await client.query('UPDATE conversations SET pending=NULL WHERE id=$1',[ctx.conversationId]);
-        const fallback=plainReply(say(state,'Your list is kept, but this reply has too many details to show safely in one message. Tell me which item to edit or remove, then review the list again.','உங்கள் பட்டியல் உள்ளது. ஒரே செய்தியில் காட்ட விவரங்கள் அதிகமாக உள்ளன. மாற்ற அல்லது நீக்க வேண்டிய பொருளைச் சொல்லுங்கள்; பிறகு பட்டியலை மீண்டும் பார்க்கலாம்.','Unga list irukku. Ore message-la kaatta details adhigam. Edit illa remove panna porulai sollunga; piragu list-ai marubadi paarunga.'));
-        fallback.replyLanguage=state.replyLanguage;
-        await client.query('UPDATE messages SET text=$1,payload=$2::jsonb WHERE id=$3',[fallback.text,JSON.stringify(fallback),messageId]);
+        state=await loadState(client,ctx);
+        const fallback=plainReply(say(state,'Your list is saved. I couldn’t display this reply. Tap *Show list* to try again.','பட்டியல் சேமிக்கப்பட்டது. இந்தப் பதிலைக் காட்ட முடியவில்லை. மீண்டும் பார்க்க *பட்டியலைக் காட்டு* தட்டுங்கள்.','List save aayirukku. Intha reply-ai kaatta mudiyala. Marubadi paakka *List kaattu* tap pannunga.'));
+        fallback.replyLanguage=state.replyLanguage;fallback.stage='error';fallback.clarificationReason='render_'+code;
+        if(state.draft.length)fallback.buttons=[shoppingButton(state,'view_list',say(state,'Show list','பட்டியலைக் காட்டு','List kaattu'))];
+        await client.query('UPDATE messages SET text=$1,payload=$2::jsonb,stage=$3,clarification_reason=$4 WHERE id=$5',[fallback.text,JSON.stringify(fallback),fallback.stage,fallback.clarificationReason,messageId]);
         rendered=renderWhatsAppReply(fallback,messageId,config.hostname);
       }
       await client.query('INSERT INTO whatsapp_outbox(message_id,conversation_id,operator_revision,reply_payload,sender_kind) VALUES($1,$2,$3,$4::jsonb,$5)',[messageId,ctx.conversationId,revision,JSON.stringify(rendered.payload),rich.handoffRequested?'system':'assistant']);

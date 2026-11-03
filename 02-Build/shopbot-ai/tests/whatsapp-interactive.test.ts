@@ -158,8 +158,9 @@ test('an oversized review preserves the draft but invalidates undisplayed consen
  let bulk;
  for(let n=0;n<3;n++){bulk=await action(pool,'confirm_products');assert.ok(bulk,JSON.stringify(sent.at(-1)));await turn(channel,tap(bulk));}
  const state=(await pool.query('SELECT pending,draft FROM conversations WHERE id=$1',[bulk.conversation_id])).rows[0];
- assert.equal(state.pending,null);assert.equal(state.draft.length,9);assert.equal(sent.at(-1).type,'text');
- assert.match(sent.at(-1).text.body,/too many details/);assert.equal((await pool.query("SELECT 1 FROM whatsapp_actions WHERE event->>'type'='confirm'")).rowCount,0);
+ assert.equal(state.pending,null);assert.equal(state.draft.length,9);assert.equal(sent.at(-1).type,'interactive');
+ assert.match(sent.at(-1).interactive.body.text,/list is saved/);assert.equal((await pool.query("SELECT clarification_reason FROM messages WHERE clarification_reason LIKE 'render_%' ORDER BY sequence DESC LIMIT 1")).rows[0].clarification_reason,'render_review_text_limit');assert.equal((await pool.query("SELECT 1 FROM whatsapp_actions WHERE event->>'type'='confirm'")).rowCount,0);
+ const retry=await action(pool,'shopping_action');assert.equal(retry.event.action,'view_list');await turn(channel,tap(retry));assert.notEqual(sent.at(-1).interactive?.type,'button','retry displays the retained list instead of an error button');assert.equal((await pool.query('SELECT pending FROM conversations WHERE id=$1',[bulk.conversation_id])).rows[0].pending,null);
  await turn(channel,{type:'text',text:{body:'yes'}});assert.equal((await pool.query('SELECT * FROM order_requests')).rowCount,0);
 }));
 

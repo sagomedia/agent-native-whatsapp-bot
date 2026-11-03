@@ -12,7 +12,7 @@ import {renderWhatsAppReply} from '../apps/server/src/services/whatsapp-reply.js
 const state:ConversationState={visualOrdering:true,replyLanguage:'en',version:0,draft:[],pending:null,fulfillment:'pickup',lastRequestId:null};
 const product=(n:number,familyId='pvc'):Product=>({sku:`P${n}`,name:`Product ${n}`,unit:'piece',pricePaise:12500,stock:null,version:1,aliases:[],quantityStep:1,familyId,brand:n===1?'Alpha':'Beta',specifications:{size:n===1?'small':'large'},imageUrl:`https://images.example.test/${n}.jpg`});
 const facet=(key:string,values:{value:string;label:string;count:number}[])=>({key,label:key,values});
-const result=(products:Product[],facets:DiscoveryResult['facets']=[],totalCount=products.length):DiscoveryResult=>({query:'pipe',plan:{keywords:['pipe']},products,rankings:products.map(p=>({sku:p.sku,score:1,match:'keyword_match',reason:'match'})),totalCount,retrievedCount:products.length,facets,noExactMatch:false});
+const result=(products:Product[],facets:DiscoveryResult['facets']=[],totalCount=products.length):DiscoveryResult=>({query:'pipe',plan:{keywords:['pipe'],...(facets.length?{narrowing:facets.filter(f=>f.key!=='irrelevant').map(f=>({key:f.key,question:'Which '+f.label+'?'}))}:{})},products,rankings:products.map(p=>({sku:p.sku,score:1,match:'keyword_match',reason:'match'})),totalCount,retrievedCount:products.length,facets,noExactMatch:false});
 const memoryId=randomUUID(),batchId=randomUUID(),lineId=randomUUID();
 const cards=(reply:NonNullable<ReturnType<typeof catalogGroupReply>>)=>reply.parts![0].cards;
 
@@ -23,7 +23,7 @@ test('large family results show truthful example photos, counts and bound select
  const entries=cards(reply);assert.equal(entries.length,2);
  for(const [index,card] of entries.entries()){
   if(card.kind==='product')throw new Error('expected group');assert.equal(card.kind,'instruction');
-  assert.equal(card.imageUrl,source.products[index].imageUrl);assert.match(card.caption,/matching products/);assert.match(card.caption,/Example product photo/);
+  assert.equal(card.imageUrl,source.products[index].imageUrl);assert.match(card.caption,/products/);assert.match(card.caption,/Example photo/);
   const event=card.buttons![0].event;assert.equal(event.type,'refine_discovery');if(event.type==='refine_discovery'){assert.equal(event.memoryId,memoryId);assert.equal(event.facet,'family');}
  }
  const batch=catalogGroupReply(source,state,{batchId,lineId})!;
@@ -32,7 +32,7 @@ test('large family results show truthful example photos, counts and bound select
 
 test('missing example never borrows a different group photo',()=>{
  const source=result([product(1)],[facet('family',[{value:'pvc',label:'PVC',count:10},{value:'hose',label:'Hose',count:9}])],19);
- const entries=cards(catalogGroupReply(source,state,{memoryId})!);const missing=entries[1];assert.notEqual(missing.kind,'product');if(missing.kind!=='product'){assert.equal(missing.imageUrl,undefined);assert.doesNotMatch(missing.caption,/Example product photo/);}
+ const entries=cards(catalogGroupReply(source,state,{memoryId})!);const missing=entries[1];assert.notEqual(missing.kind,'product');if(missing.kind!=='product'){assert.equal(missing.imageUrl,undefined);assert.doesNotMatch(missing.caption,/Example photo/);}
 });
 
 test('explicit solvent groups need no candidate products and never add phantom products',()=>{
@@ -48,7 +48,7 @@ test('single actual group uses a single image; no binding yields no group reply'
  const rendered=renderWhatsAppReply(reply,randomUUID(),'shop.example.test');assert.equal(rendered.format,'buttons');
 });
 
-test('chooses useful nonfirst brand and specification facets and preserves paging',()=>{
+test('uses agent-selected nonfirst brand and specification facets and preserves paging',()=>{
  for(const key of ['brand','spec:size']){
   const values=key==='brand'?[{value:'Alpha',label:'Alpha',count:10},{value:'Beta',label:'Beta',count:9}]:[{value:'small',label:'Small',count:10},{value:'large',label:'Large',count:9}];
   const selected={...facet(key,values),nextOffset:2};const source=result([product(1),product(2)],[facet('irrelevant',values),selected],19);
@@ -77,3 +77,5 @@ test('the final single facet-page choice remains visible and actionable',()=>{
  source.plan.facetPage={key:'brand',offset:2};
  const reply=catalogGroupReply(source,state,{memoryId})!;assert.equal(cards(reply).length,1);assert.equal(cards(reply)[0].buttons![0].event.type,'refine_discovery');
 });
+
+test('without an agent strategy a broad search asks which real detail to use',()=>{const source=result([product(1)],[facet('spec:finish',[{value:'matte',label:'Matte',count:20},{value:'gloss',label:'Gloss',count:20}])],40);delete source.plan.narrowing;const reply=catalogGroupReply(source,state,{memoryId})!;assert.match(reply.text,/Which detail/);const e=cards(reply)[0].buttons![0].event;assert.equal(e.type,'refine_discovery');if(e.type==='refine_discovery'){assert.equal(e.facet,'__facet__');assert.equal(e.value,'spec:finish');}});

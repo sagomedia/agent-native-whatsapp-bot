@@ -41,6 +41,8 @@ The owner approved reuse of the existing Gemini key in private `.env.ai`, with a
 ```bash
 npm run eval:local -- --preflight
 npm run eval:local -- --fixtures tests/fixtures/local-shopping.json
+# Identity correction, retained count, five-piece change and negated removal:
+npm run eval:local -- --fixtures tests/fixtures/local-voice-corrections.json
 ```
 
 The evaluation uses the same unified understanding and inventory grounding path as WhatsApp, but no WhatsApp transport. The budget persists across runs; restarting or creating another chat does not reset it. Results and validated operations are written under ignored `artifacts/unified-evaluation/report.json`.
@@ -55,6 +57,10 @@ For new recordings, create a private fixture file with this shape and run it wit
 
 Media paths are relative to the case file. Keep private recordings under ignored `recordings/` or `data/`. Text uses `{"kind":"text","text":"..."}`; images use `{"kind":"image","path":"...","mimeType":"image/jpeg","text":"caption"}`. A test may include several messages to exercise add, change and remove behavior. Product approval and final submission remain distinct.
 
+Fixture expectations can include `minimumPhotoCandidates`, one minimum per final draft row. An optional `candidateNameIncludes` array checks a candidate name per row (`null` skips that row). Use these when actual product choices must survive a correction, so a retained name/count with no product photos cannot pass the evaluation. Saved Tamil/Tanglish conversations send Tamil and English hints to dedicated transcription; hints do not force a translation or guarantee recognition of unclear audio. Replaying a retained customer recording to the external provider requires permission for that recording; repository/public or synthetic fixtures are separate.
+
+The budget reserves the model's full allowed input/output ceiling before each call, so a small allowance can refuse a call even when actual spend is lower. For small synthetic fixtures, `EVALUATION_MAX_OUTPUT_TOKENS=2048 npm run eval:local -- --fixtures tests/fixtures/local-voice-corrections.json` lowers the actual API output limit and its reservation together. This does not reset or increase the budget. Large lists may need the default output allowance; truncated responses fail without applying partial actions.
+
 ## Actual WhatsApp and full owner dashboard locally
 
 The prepared private `.env.whatsapp` reuses the existing number, Meta connection and dashboard password. The product snapshot includes the current 343 inventory records and the photographs used by those records. The local database is independent: local orders and catalog changes do not change live shop data. Existing VPS customer history is not copied. Each database/schema retains its own inference ledger; the local WhatsApp channel and CLI evaluation each have a cumulative $0.50 ceiling.
@@ -65,11 +71,20 @@ npm run whatsapp:check
 npm run whatsapp:local
 ```
 
-The helper verifies the local database, recipient allowlist, webhook challenge and signature before opening an SSH reverse tunnel. It temporarily routes the existing public WhatsApp and owner dashboard addresses to this computer. Meta's webhook subscription and the original Cloudflare configuration remain unchanged. Send a fresh WhatsApp message from the configured test phone. Open https://shopbot-preview.sagoautomation.tech/owner and sign in with the existing password; this session's products, chats and orders are local. Old VPS buttons reference the VPS conversation state, so begin a fresh local shopping conversation.
+The helper verifies the local database, recipient allowlist, webhook challenge and signature before opening an SSH reverse tunnel. Local testing has its own addresses:
+
+| Address | Backend |
+| --- | --- |
+| https://shopbot-local.sagoautomation.tech/owner | This computer and the local database |
+| https://shopbot-local-api.sagoautomation.tech | Local product/message media and local webhook endpoint |
+| https://shopbot-preview.sagoautomation.tech/owner | VPS dashboard and VPS database, including during local testing |
+| https://demo.sagoautomation.tech | VPS media/MCP; only `/webhook` temporarily forwards to local during the test session |
+
+Meta's webhook subscription and the original Cloudflare configuration remain unchanged. The same WhatsApp number has one selected receiving backend during the session; separate dashboard names do not create a second WhatsApp connection. Send a fresh WhatsApp message from the configured test phone. Open the **local** dashboard and sign in with the existing password. Sessions are hostname-bound, so sign in separately on each address. Old VPS buttons reference VPS conversation state, so begin a fresh local shopping conversation.
 
 Backend edits restart locally while this command runs. In another terminal, `npm run dev:dashboard` watches dashboard changes. The ordinary `npm run dev` preview must be stopped first because both use port 3018. Logs are in private `data/logs/local-whatsapp.log`.
 
-Press Ctrl+C to restore the VPS route before the local backend stops. The VPS watchdog also restores after a tunnel/backend failure, and a session expires after six hours. A VPS reboot removes the runtime-only routing override. Verify recovery from another terminal if necessary:
+Press Ctrl+C to restore the VPS webhook before the local backend stops. The local-only domains then stop serving the app; they never open the VPS database as a fallback. The VPS dashboard stays on the VPS throughout. The watchdog also restores after a tunnel/backend failure, and a session expires after six hours. A VPS reboot removes the runtime-only routing override. Verify recovery from another terminal if necessary:
 
 ```bash
 npm run whatsapp:restore
@@ -77,10 +92,12 @@ npm run whatsapp:restore
 
 The VPS app stays available for the existing authenticated inventory MCP integration throughout local testing. Other WhatsApp senders are excluded by the local test-recipient list while local mode is active. The dashboard requires a fresh sign-in after switching databases. Do not deploy or change Cloudflare routing while a local session is active.
 
-The route guard is installed on the prepared VPS at `/usr/local/lib/shopbot-local-route.py`. For another VPS, inspect its ingress layout before adapting `deploy/native/local-route.py`; it deliberately refuses an unexpected layout. This computer's private profile configures the project/instance/zone/user and gcloud executable. gcloud creates a private temporary SSH key under ignored `data/`; the session starts using the already authenticated Google account.
+The route guard is installed on the prepared VPS at `/usr/local/lib/shopbot-local-route.py`. The separate-domain version supports `check-separated`; the local launcher refuses an older helper that switches both dashboards. The two local DNS names point to the existing VPS tunnel. Only its temporary session configuration forwards them through SSH to loopback port 3018. Do not run an additional connector for that same tunnel on this computer: connectors with different origin configurations can route unpredictably.
+
+For another VPS, inspect its ingress layout and provision the two DNS names before adapting `deploy/native/local-route.py`; it deliberately refuses an unexpected layout. Preserve the signed webhook's original body and rewrite only its origin Host header to the local channel host. This computer's private profile configures the project/instance/zone/user and gcloud executable. gcloud creates a private temporary SSH key under ignored `data/`; the session starts using the already authenticated Google account.
 
 To explicitly refresh the local inventory after exporting a new inventory-only snapshot, stop the local session and run `npm run local:catalog`. This overwrites local catalog/stock/price edits with snapshot facts, preserves local conversations/orders and never reads the VPS customer database. Pulling code does not refresh the snapshot automatically. Do not refresh stock while local test orders have reservations; use a fresh development database or resolve those test orders first.
 
 ## Normal change cycle
 
-Pull the verified GitHub state, create a feature branch, change code, run local fixtures/checks, and push a PR. Deploy a reviewed build to the VPS only when ready for connected acceptance. A GitHub push alone does not change the running VPS release.
+Pull the verified GitHub state, create a feature branch, change code, run local fixtures/checks, and use the local WhatsApp session for connected testing. Push a PR and deploy a reviewed build to the VPS when it is ready. A GitHub push alone does not change the running VPS release.

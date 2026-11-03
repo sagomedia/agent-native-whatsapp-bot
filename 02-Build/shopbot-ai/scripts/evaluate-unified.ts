@@ -15,9 +15,10 @@ import {SimulatorService} from '../apps/server/src/services/simulator.js';
 import {normalizeVoice,voiceUploadSchema} from '../apps/server/src/services/voice-media.js';
 import {normalizeImage,imageUploadSchema} from '../apps/server/src/services/image-media.js';
 const message=z.object({kind:z.enum(['text','audio','image']),text:z.string().max(4000).optional(),path:z.string().optional(),mimeType:z.string().optional()}).strict();
-const casesSchema=z.object({cases:z.array(z.object({id:z.string().min(1),messages:z.array(message).min(1).max(20),expected:z.object({draftCount:z.number().int().min(0).max(50).optional(),counts:z.array(z.number().nullable()).optional(),orders:z.number().int().min(0).optional()}).strict().optional()}).strict()).min(1).max(100)}).strict();
+const casesSchema=z.object({cases:z.array(z.object({id:z.string().min(1),messages:z.array(message).min(1).max(20),expected:z.object({draftCount:z.number().int().min(0).max(50).optional(),counts:z.array(z.number().nullable()).optional(),minimumPhotoCandidates:z.array(z.number().int().min(0)).optional(),candidateNameIncludes:z.array(z.string().min(1).nullable()).optional(),orders:z.number().int().min(0).optional()}).strict().optional()}).strict()).min(1).max(100)}).strict();
 async function main(){
- const settings={...readNativeSettings(),unifiedUnderstanding:true,allowImageLists:true,allowMultimodal:true};
+ const outputLimit=process.env.EVALUATION_MAX_OUTPUT_TOKENS===undefined?undefined:z.coerce.number().int().min(1024).max(16384).parse(process.env.EVALUATION_MAX_OUTPUT_TOKENS);
+ const settings={...readNativeSettings(),...(outputLimit===undefined?{}:{maxOutputTokens:outputLimit}),unifiedUnderstanding:true,allowImageLists:true,allowMultimodal:true};
  if(settings.freeQuota)throw new Error('Use an explicitly metered evaluation allowance; no free-tier spacing bypass.');
  if(process.argv.includes('--preflight')){console.log(JSON.stringify({configured:true,model:GEMINI_MODEL_ID,budgetMicrousd:settings.budgetMicrousd,networkCalls:0,unifiedUnderstanding:true,handwrittenLists:true}));return;}
  const path=process.argv[process.argv.indexOf('--fixtures')+1];if(!process.argv.includes('--fixtures')||!path)throw new Error('Provide --fixtures /absolute/path/to/cases.json');
@@ -47,7 +48,7 @@ async function main(){
     const s=await inbox.snapshot(),errors=s.messages.filter(m=>m.direction==='outbound'&&m.rich?.stage==='error');
     const attempts=(await pool.query('SELECT message_id,stage,state,response,validation_issues FROM provider_attempts WHERE conversation_id=$1 ORDER BY created_at',[id])).rows;
     const rejectedTurns=rejectedProviderTurns(attempts);
-    const checks=[!errors.length,!rejectedTurns.length,c.expected?.draftCount===undefined||s.conversation.draft.length===c.expected.draftCount,c.expected?.counts===undefined||JSON.stringify(s.conversation.draft.map(l=>l.quantity))===JSON.stringify(c.expected.counts),c.expected?.orders===undefined||s.requests.length===c.expected.orders];
+    const checks=[!errors.length,!rejectedTurns.length,c.expected?.draftCount===undefined||s.conversation.draft.length===c.expected.draftCount,c.expected?.counts===undefined||JSON.stringify(s.conversation.draft.map(l=>l.quantity))===JSON.stringify(c.expected.counts),c.expected?.minimumPhotoCandidates===undefined||c.expected.minimumPhotoCandidates.length===s.conversation.draft.length&&c.expected.minimumPhotoCandidates.every((minimum,index)=>(s.conversation.draft[index].candidates??[]).filter(product=>!!product.imageUrl).length>=minimum),c.expected?.candidateNameIncludes===undefined||c.expected.candidateNameIncludes.length===s.conversation.draft.length&&c.expected.candidateNameIncludes.every((name,index)=>name===null||s.conversation.draft[index].candidates?.some(product=>product.name.toLowerCase().includes(name.toLowerCase()))),c.expected?.orders===undefined||s.requests.length===c.expected.orders];
     const status=!checks.every(Boolean)?'failed':c.expected?'passed':'observed';if(status==='failed')failed++;
     results.push({id:c.id,status,rejectedTurns,elapsedMs:Date.now()-started,draft:s.conversation.draft,requests:s.requests,messages:s.messages,attempts});
    }catch(error){failed++;results.push({id:c.id,status:'failed',error:error instanceof Error?error.message:'Evaluation failed'});}

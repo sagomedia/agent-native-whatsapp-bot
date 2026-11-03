@@ -1,4 +1,5 @@
 import type {ConversationState,DraftLine} from '../../../../packages/contracts/index.js';
+import {normalize} from '../../../../packages/contracts/catalog-text.js';
 import {fitText} from '../../../../packages/contracts/channel-text.js';
 import {lineName,say,unitName} from '../../../../packages/contracts/language.js';
 
@@ -18,7 +19,7 @@ function amount(line:DraftLine,state:CartSnapshot):string|undefined {
 }
 
 function changed(before:DraftLine,after:DraftLine):boolean {
- return before.sku!==after.sku||before.query!==after.query||before.name!==after.name||
+ return before.sku!==after.sku||normalize(before.query??before.name)!==normalize(after.query??after.name)||
   before.quantity!==after.quantity||before.unit!==after.unit||before.requestedUnit!==after.requestedUnit||
   before.requestedQuantity!==after.requestedQuantity||before.requestedAmount?.value!==after.requestedAmount?.value||
   before.requestedAmount?.unit!==after.requestedAmount?.unit||before.amountMode!==after.amountMode;
@@ -42,7 +43,7 @@ function detail(before:DraftLine,after:DraftLine,state:CartSnapshot):string|unde
 function fragment(change:Change,state:CartSnapshot,maxNameLength=70):string {
  const name=fitText(lineName(change.line,state).replace(/\s+/g,' ').trim(),maxNameLength);
  if(change.kind==='removed')return say(state,`Removed ${name}`,`${name} நீக்கப்பட்டது`,`${name} remove panniyachu`);
- if(change.kind==='added'&&!change.line.sku&&change.line.resolution!=='matched')return say(state,`Saved request for ${name}${change.detail?` (${change.detail})`:''}; product still needs checking`,`${name} கோரிக்கை வைத்துள்ளேன்; பொருளைச் சரிபார்க்க வேண்டும்`,`${name} request vechchirukken; porulai check pannanum`);
+ if(change.kind==='added'&&!change.line.sku&&change.line.resolution!=='matched')return say(state,`Saved request for ${name}${change.detail?` (${change.detail})`:''}`,`${name} கோரிக்கை சேர்க்கப்பட்டது`,`${name} request serththaachu`);
  if(change.kind==='added')return say(state,`Added ${name}${change.detail?` (${change.detail})`:''}`,`${name} சேர்க்கப்பட்டது${change.detail?` (${change.detail})`:''}`,`${name} serththaachu${change.detail?` (${change.detail})`:''}`);
  return say(state,`Changed ${name}${change.detail?` (${change.detail})`:''}`,`${name} மாற்றப்பட்டது${change.detail?` (${change.detail})`:''}`,`${name} maaththiyaachu${change.detail?` (${change.detail})`:''}`);
 }
