@@ -36,7 +36,7 @@ npm run test:local
 npm run whatsapp:local
 ```
 
-Wait for `LOCAL_ROUTE_READY`, then send a fresh message from the configured test phone to the same WhatsApp number. The [owner dashboard](https://shopbot-preview.sagoautomation.tech/owner) also uses the local backend during this session; sign in again. The VPS stays running. Ctrl+C restores VPS routing; `npm run whatsapp:restore` is the recovery command. Other senders are excluded during local test routing. Stop local mode before deploying.
+Wait for `LOCAL_ROUTE_READY`, then send a fresh message from the configured test phone to the same WhatsApp number. Open the [local dashboard](https://shopbot-local.sagoautomation.tech/owner) and sign in with the existing password. The [VPS dashboard](https://shopbot-preview.sagoautomation.tech/owner) always stays on the VPS. Ctrl+C restores the WhatsApp webhook to the VPS and disables the local addresses; `npm run whatsapp:restore` is the recovery command. Other senders are excluded during local test routing. Stop local mode before deploying.
 
 The private `.env`, `.env.ai` and `.env.whatsapp` files are already configured here and ignored by Git. Local products/photos are a separate snapshot; orders, stock edits and test chats remain local. Git pulls do not copy credentials, refresh inventory or restore databases. `npm run dev` opens the offline preview at localhost:3018; it must be stopped before connected mode. Run `npm run dev:dashboard` separately for dashboard asset changes.
 

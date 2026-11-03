@@ -1,4 +1,4 @@
-# ShopBot coding-agent handoff — 2 November 2026
+# ShopBot coding-agent handoff — 3 November 2026
 
 Read this file, WORKING-PREFERENCES.md, CONTRIBUTING.md and LOCAL-DEVELOPMENT.md before editing. Inspect `git status`, the current branch and recent commits. This file is durable project context; chat history is not copied between agents.
 
@@ -80,11 +80,13 @@ npm run whatsapp:check
 npm run whatsapp:local
 ```
 
-Wait for `LOCAL_ROUTE_READY` before the owner tests. The ordinary `npm run dev` must be stopped first because both use port 3018. The one configured test recipient can send fresh messages to the same number. https://shopbot-preview.sagoautomation.tech/owner uses the existing password and requires a fresh sign-in when switching databases. Local catalog edits/orders remain local. Other senders are excluded by the test-recipient list while local mode is active.
+Wait for `LOCAL_ROUTE_READY` before the owner tests. The ordinary `npm run dev` must be stopped first because both use port 3018. The one configured test recipient can send fresh messages to the same number. **Local dashboard:** https://shopbot-local.sagoautomation.tech/owner. **VPS dashboard:** https://shopbot-preview.sagoautomation.tech/owner, which always stays on the VPS. Both use the existing password but independent hostname-bound sessions. Local catalog edits/orders remain local. Other senders are excluded by the test-recipient list while local mode is active.
 
-Do not stop the VPS machine or its ShopBot service. The helper uses an SSH reverse tunnel and a temporary Cloudflare routing override. Production MCP routes remain on the VPS, so inventory MCP conversation reads refer to VPS data, not local test chats. Inspect the local database/dashboard and `data/logs/local-whatsapp.log` for local tests. No agent should send customer messages to verify delivery without explicit authorization.
+Do not stop the VPS machine or its ShopBot service. The helper uses an SSH reverse tunnel and a temporary Cloudflare routing override. The separate local dashboard/channel hosts point to the existing VPS tunnel and then local loopback:3018; do not add another connector for that tunnel on this computer. `shopbot-local-api.sagoautomation.tech` serves local media. Only the existing Meta `/webhook` route temporarily forwards to local, with its origin Host rewritten to the local channel host. The older helper switched the VPS dashboard too; the new launcher requires remote `check-separated` support and refuses the old shared-domain profile. See `03-Output/local-domain-separation/README.md` for verification and recovery.
 
-Ctrl+C restores VPS routing. On a failure run `npm run whatsapp:restore`; the remote watchdog also restores after tunnel/backend loss. Sessions expire after six hours. Do not deploy or change Cloudflare ingress while local routing is active. Routing/process state is transient: verify current readiness instead of trusting a historical handoff statement. This investigation restored VPS routing before editing; start local mode again when verified changes are ready for owner testing.
+Production MCP and existing media routes remain on the VPS, so inventory MCP conversation reads refer to VPS data, not local test chats. Inspect the local database/dashboard and `data/logs/local-whatsapp.log` for local tests. No agent should send customer messages to verify delivery without explicit authorization.
+
+Ctrl+C restores the VPS webhook and takes the local domains offline; they never fall back to VPS data. On a failure run `npm run whatsapp:restore`; the remote watchdog also restores after tunnel/backend loss. Sessions expire after six hours. Do not deploy or change Cloudflare ingress while local routing is active. Routing/process state is transient: verify current readiness instead of trusting a historical handoff statement.
 
 ## VPS and publication
 
