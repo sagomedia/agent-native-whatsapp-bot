@@ -1,5 +1,9 @@
 # Voice correction and language investigation — 2 November 2026
 
+## Approved follow-up: actionable clarification
+
+The owner approved implementation after clarifying that questions must identify the actual products and the uncertain action, rather than echoing the transcript or asking a generic permission question. Clear changes should execute; ambiguous target choices should name current rows, offer valid choices and resume the saved goal. Repeating an item with an explicit quantity sets its requested total unless a separately evidenced increase is stated. Represent every item in a multi-item request, including an unchanged existing item. Preserve unknown quantities and ask specifically for the affected item's total. Generate recovery copy from typed failures rather than matching English error-message words. Verify the reported unfinished Allen-key/pipe cart, unfamiliar inventory, selection answers, stale callbacks, negation and unchanged order-consent boundaries. Continue PR #91; do not deploy this follow-up to the VPS.
+
 ## Accepted scope
 
 Investigate the owner's VPS voice-edit failure and Tamil recordings saved in other scripts through read-only inventory MCP conversation evidence and retained provider diagnostics. Repair and verify locally against inventory-driven shopping behavior. Update the root README and agent handoff so another coding agent can continue in the prepared local checkout. Keep production conversations, orders and catalog unchanged. Do not send test messages on the owner's behalf or deploy this stage to the VPS.
