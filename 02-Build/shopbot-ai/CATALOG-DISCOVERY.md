@@ -1,4 +1,26 @@
-# Catalog mind map and recorded voice
+# Inventory-grounded visual shopping
+
+## Current flow — 3 November 2026
+
+The agent interprets product meaning and chooses the next useful distinction. PostgreSQL supplies current store facts; services enforce IDs, dimensions, selling units, counts, versions, consent and arithmetic. There is no category-specific brand → pack → price decision tree.
+
+The inventory-grounding pass can supply `narrowing: [{key, question}, …]`, an ordered strategy over useful observed attributes in the saved customer language. Actual brands, arbitrary recorded specifications and numeric price bands are facts available to the agent, not a required order. A strategy and sampled SKU selection are exclusive. The agent must not invent tiers or restrict a broad result to its small SKU sample. Compact observed selections support up to ten SKUs.
+
+Each tap queries current inventory, retains explicit filters and skips attributes with no remaining choice. Continuation stays on the same attribute. When no valid planned step remains, the customer can choose among the remaining real details visually; a new text/voice request can create a new metered semantic plan. Deterministic browse without an agent strategy uses the same honest detail chooser. Buttons add no inference calls.
+
+Facets aggregate the full matched SQL scope: up to twelve attribute keys and nine values per page. The chosen page fetches genuine example products from the full scope, including beyond the 120-row ranker sample. Price bands use distinct positive known prices, verified selling units and a common selling unit. Unknown/confirm prices do not form price choices. A price band is not evidence of quality and never changes purchase count.
+
+Nine visual choices plus continuation fit one carousel. Pack sizes are large text when no actual example photo is available; example photographs are labelled. A group click filters inventory, a product click selects that observed SKU, and purchase count remains separate from pack size. `browseAll` pages actual products when useful distinguishing metadata is absent. SQL cursors advance beyond the 120-candidate sample. Missing photos use descriptive cards, without unrelated or invented filler.
+
+Cart reviews split into ordered groups of at most ten cards. Native carousel buttons have uniform counts while retaining item approval/edit controls. Every required part must be delivered before approval. Typed renderer errors persist `render_<code>` diagnostics and offer a read-only saved-list recovery. Undisplayed consent is invalidated; retrying cannot approve or submit.
+
+Aliases and taxonomy may be wrong. Grounding compares actual names/specifications. Verified SKU selections cannot be intersected with an unrelated family inferred from a size-stripped alias. Dimensions and explicit filters still constrain those SKUs. Empty retrieval preserves the description and does not establish shop unavailability.
+
+Current provider IDs and prompt revision live in `packages/contracts/model-policy.ts`. Read the root `AGENT-HANDOFF.md` and `LOCAL-DEVELOPMENT.md` for current allowances and local operation. Dedicated speech recognition receives language hints and audio without cart/catalog history; semantic grounding uses the transcript and current inventory. Keep private recordings ignored and respect their replay authorization. Controlled tests verify runtime behavior, while actual model decisions and native phone rendering remain owner acceptance in issue #88.
+
+## Historical prototype notes
+
+The remainder records the earlier prototype and its then-current limits/provider setup. The current flow above supersedes its product counts, one-reply/free-only assumptions and unimplemented-WhatsApp milestone descriptions.
 
 The reusable runtime uses store identity/type → departments → product families → brands/specifications → actual SKUs. The hardware demo map is data in `resources/catalog/ksmc-demo/catalog-map.json`; the retrieval engine contains no hardware category or fixture-store IDs.
 

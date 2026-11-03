@@ -1,3 +1,7 @@
+## 3 November 2026 — dynamic visual inventory discovery
+
+Implemented agent-authored narrowing over observed catalog attributes, nine visual values plus continuation, actual price bands and real-product pagination beyond the ranker sample. Fixed mixed review-button layouts and alias-family overrides of verified selections. Replies keep specific short questions; saved-list recovery records the actual rendering error. See [scope and verification](../../03-Output/dynamic-visual-discovery/README.md). Local/hosted verification and owner phone acceptance are tracked separately; VPS application activation is not included.
+
 ## 26 October 2026 — rupee usage and advisory price reviews
 
 Removed the calendar-expiry AI admission stop while retaining malformed-rate checks, existing monetary budgets, token admission and unknown reservations. Both owner dashboards show rupee estimates with an editable browser-local conversion rate and Google spending link. See [change evidence](../../03-Output/rupee-usage-20261026/README.md). All 1,002 regressions, build/typecheck, four catalog checks and phone/desktop conversion checks pass. VPS activation pending.
