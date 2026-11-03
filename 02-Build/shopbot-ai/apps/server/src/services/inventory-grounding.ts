@@ -4,6 +4,37 @@ import type {ActorContext} from './context.js';
 import {productColumns,productForContext} from './catalog.js';
 import type {CatalogObservation} from './agent-assistance.js';
 import {ToolError} from './context.js';
+import {observeCatalog} from './agent-assistance.js';
+import type {RetailTools} from './tools.js';
+import {normalize} from '../../../../packages/contracts/catalog-text.js';
+
+/** The same bounded facts can ground a normal plan or its single evidence
+ * repair. Neither path needs an extra unmetered model request. */
+export async function observeInventory(client:PoolClient,ctx:ActorContext,tools:RetailTools,items:{query:string;search?:DiscoveryPlan}[],key:string):Promise<CatalogObservation[]> {
+ const found:CatalogObservation[]=[];
+ for(const [index,item] of items.slice(0,3).entries()){
+  const current=(await observeCatalog(client,ctx,tools,[item.query],`${key}:${index}`,item.search))[0];
+  if(item.search?.selectedSkus!==undefined){found.push(current);continue;}
+  if(!current.products.length){
+   const alternatives=[...new Set(item.search?.keywords??[])].filter(keyword=>normalize(keyword)!==normalize(item.search?.identityQuery??item.query)).slice(0,2);
+   for(const [hintIndex,keyword] of alternatives.entries()){
+    const extra=(await observeCatalog(client,ctx,tools,[keyword],`${key}:${index}:hint:${hintIndex}`,{...item.search,keywords:[keyword],identityQuery:keyword,allowAlternatives:false}))[0];
+    current.products=[...new Map([...current.products,...extra.products].map(p=>[p.sku,p])).values()].slice(0,10);
+    current.totalCount=Math.max(current.totalCount,extra.totalCount,current.products.length);
+   }
+  }
+  if(!['sku','name'].includes(current.discovery?.diagnostics?.identity??'none')){
+   const facts=await inventoryCandidateFacts(client,ctx,item.query,item.search);
+   if(facts.some(p=>!current.products.some(existing=>existing.sku===p.sku))){
+    current.products=[...new Map([...facts,...current.products].map(p=>[p.sku,p])).values()].slice(0,10);
+    current.totalCount=Math.max(current.totalCount,current.products.length);
+    current.discovery=undefined;
+   }
+  }
+  found.push(current);
+ }
+ return found;
+}
 
 /** Retrieval facts for semantic review, including names filed under a wrong
  * family. These bounded rows are never customer-facing without validation. */

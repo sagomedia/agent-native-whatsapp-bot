@@ -1,5 +1,6 @@
 import {readStoreHours,hoursAnswer,appendClosedShopNotice} from '../services/store-hours.js';
-import {inventoryItems,validateInventoryReplan,retainUngroundedItems,inventoryCandidateFacts} from '../services/inventory-grounding.js';
+import {inventoryItems,validateInventoryReplan,retainUngroundedItems,observeInventory} from '../services/inventory-grounding.js';
+import {understandingSearch} from '../services/catalog-request.js';
 import {recordConversationAudit} from '../services/catalog-audit.js';
 import {trackItemClarification} from '../services/item-clarification.js';
 import {cartChangeFeedback} from '../services/cart-change-feedback.js';
@@ -870,14 +871,23 @@ export class ConversationRuntime {
     const observations=image?[]:await withConversation(this.pool,ctx,async client=>observeCatalog(client,ctx,this.tools,observationQueries(text,claim.state,claim.memory),`${claim.id}:observe`));
     const input={inventoryGrounding:!!this.options.inventoryGrounding,history:recent,text,audio:this.provider.unifiedUnderstanding&&!separateRecognition?audio:undefined,image:photo,state:claim.state,catalog:claim.catalog,catalogMap:claim.catalogMap,assistantMemory:claim.memory,observations};
     let identified=await this.callProvider(ctx,claim,input,'identify');
+    const evidenceInventorySelections=new Set<string>();
     if(voice){transcript=this.provider.unifiedUnderstanding&&!separateRecognition?identified.transcript:transcript;if(!transcript)throw new ToolError('No clear speech was recognized. Record again or type your request.','voice_unreadable');identified={...identified,transcript};text=transcript;}
     if(image&&identified.understanding?.inputKind==='handwritten_list')text=identified.understanding.observedText??text;
     const evidenceRepair=!image&&identified.understanding?.unresolved.includes('validation_recovery')?claim.evidenceRepair:undefined;
     if(evidenceRepair){
       const repair=evidenceRepair;delete claim.evidenceRepair;
+      const repairItems=[...repair.understanding.requestedItems.filter(item=>item.query).map(item=>({query:item.query!,search:understandingSearch(item)})),...repair.understanding.proposedEdits.filter(edit=>edit.kind==='replace'&&edit.query).map(edit=>({query:edit.query!,search:understandingSearch(edit)}))].map(item=>({...item,search:item.search?{...item.search,selectedSkus:undefined}:undefined}));
+      const repairFacts=this.options.inventoryGrounding&&repairItems.length?await withConversation(this.pool,ctx,client=>observeInventory(client,ctx,this.tools,repairItems,`${claim.id}:evidence-inventory`)):input.observations;
       // Preserve the faithful current transcript and reserve a separate repair
-      // attempt. Rejected actions never reach tools; a second rejection stops.
-      try{identified={...await this.callProvider(ctx,claim,{...input,audio:undefined,text,repairSourceKind:voice?'audio':'text',planningFeedback:repair.feedback,proposal:{...identified,understanding:repair.understanding}},'repair'),...(voice?{transcript}:{})};}
+      // attempt. Ground repaired identities in that same second call, so a
+      // repaired cart action does not consume the product-review allowance.
+      try{
+        identified={...await this.callProvider(ctx,claim,{...input,audio:undefined,text,observations:repairFacts,repairSourceKind:voice?'audio':'text',planningFeedback:repair.feedback+(this.options.inventoryGrounding?' Also assess the supplied catalogObservations in this same repair. Keep each observed query as the item/replacement query, choose only genuinely matching observed search.selectedSkus (or []), omit familyIds when selecting SKUs, and preserve current counts. Do not ask for a count already saved on the target.':''),proposal:{...identified,understanding:repair.understanding}},'repair'),...(voice?{transcript}:{})};
+        // Only a validated, scoped semantic repair has already assessed these
+        // facts. An initial model selection still needs ordinary grounding.
+        for(const item of inventoryItems(identified))if(item.search?.selectedSkus!==undefined&&repairFacts?.some(observation=>observation.query===item.query))evidenceInventorySelections.add(item.query!);
+      }
       catch{/* A denied or failed repair retains the original grounded no-op. */}
     }
     if(identified.understanding?.cartTargetAnswer){
@@ -934,37 +944,11 @@ export class ConversationRuntime {
     }
     if(this.options.inventoryGrounding&&this.provider.unifiedUnderstanding&&identified.understanding&&inventoryItems(identified).length){
       const items=inventoryItems(identified).slice(0,3);
-      const fresh=await withConversation(this.pool,ctx,async client=>{
-        const found:CatalogObservation[]=[];
-        for(const [index,item] of items.entries()){
-          const current=(await observeCatalog(client,ctx,this.tools,[item.query!],`${claim.id}:inventory:${index}`,item.search))[0];
-          // Search hypotheses may recover candidates rejected by the literal
-          // transcription. These facts go only to semantic review, not the UI.
-          if(!current.products.length&&item.search?.selectedSkus===undefined){
-            const alternatives=[...new Set(item.search?.keywords??[])].filter(keyword=>normalize(keyword)!==normalize(item.search?.identityQuery??item.query!)).slice(0,2);
-            for(const [hintIndex,keyword] of alternatives.entries()){
-              const extra=(await observeCatalog(client,ctx,this.tools,[keyword],`${claim.id}:inventory:${index}:hint:${hintIndex}`,{...item.search,keywords:[keyword],identityQuery:keyword,allowAlternatives:false}))[0];
-              current.products=[...new Map([...current.products,...extra.products].map(p=>[p.sku,p])).values()].slice(0,10);
-              current.totalCount=Math.max(current.totalCount,extra.totalCount,current.products.length);
-            }
-          }
-          if(!['sku','name'].includes(current.discovery?.diagnostics?.identity??'none')){
-            const facts=await inventoryCandidateFacts(client,ctx,item.query!,item.search);
-            if(facts.some(p=>!current.products.some(existing=>existing.sku===p.sku))){
-              current.products=[...new Map([...facts,...current.products].map(p=>[p.sku,p])).values()].slice(0,10);
-              current.totalCount=Math.max(current.totalCount,current.products.length);
-              // Family labels are hypotheses; widened facts require semantic review.
-              current.discovery=undefined;
-            }
-          }
-          found.push(current);
-        }
-        return found;
-      });
+      const fresh=await withConversation(this.pool,ctx,client=>observeInventory(client,ctx,this.tools,items.map(item=>({query:item.query!,search:item.search})),`${claim.id}:inventory`));
       // Exact names/SKUs already have hard-filtered current facts. Other
       // candidates get one metered semantic grounding pass, including empty
       // results, coarse families and exact aliases that may be incorrect.
-      if(fresh.some(o=>!o.products.length||!['sku','name'].includes(o.discovery?.diagnostics?.identity??'none'))){
+      if(fresh.some(o=>!evidenceInventorySelections.has(o.query)&&(!o.products.length||!['sku','name'].includes(o.discovery?.diagnostics?.identity??'none')))){
         const calls=Number((await this.pool.query("SELECT count(*)::int AS calls FROM provider_attempts WHERE message_id=$1 AND stage<>'recognize'",[claim.id])).rows[0].calls);
         if(calls>=2)return retainUngroundedItems(identified,fresh);
         try{

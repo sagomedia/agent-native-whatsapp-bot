@@ -67,6 +67,37 @@ async function fixture(run:(pool:pg.Pool,inbox:SimulatorService)=>Promise<void>)
 }
 async function turn(inbox:SimulatorService,runtime:ConversationRuntime,event:SimulatorEvent){await inbox.ingest(event);await runtime.processNext(inbox.context);return inbox.snapshot();}
 
+test('multiple observed semantic choices do not inherit the first alias match pack size',()=>fixture(async(pool,inbox)=>{
+ await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases,specifications,image_path,selling_unit_verified) VALUES($1,'OAT-SMALL','Other Oat Beverage 500ml','can',5000,10,'plant-drinks','[]','{\"pack_size\":\"500 ml\"}','/fixtures/OAT-SMALL.jpg',true)",[inbox.context.storeId]);
+ const c=await pool.connect();try{
+  const search={keywords:['oat drink'],selectedSkus:['OAT','OAT-SMALL']};
+  const choices=await discoverProducts(c,inbox.context,'oat drink',search);assert.deepEqual(new Set(choices.products.map(p=>p.sku)),new Set(search.selectedSkus));
+  const limited=await discoverProducts(c,inbox.context,'oat drink',{...search,specifications:{pack_size:'1 litre'}});assert.deepEqual(limited.products.map(p=>p.sku),['OAT']);
+ }finally{c.release();}
+}));
+
+test('the single evidence repair also grounds replacement photos without a third model call',()=>fixture(async(pool,inbox)=>{
+ const old=randomUUID(),untouched=randomUUID();
+ await pool.query('UPDATE conversations SET draft=$1::jsonb WHERE id=$2',[JSON.stringify([{id:old,name:'Dairy milk',query:'dairy milk',quantity:3,resolution:'needs_choice'},{id:untouched,name:'Rice flour',query:'rice flour',quantity:7,resolution:'unavailable'}]),inbox.context.conversationId]);
+ const source='The dairy milk is wrong; I meant oat drink';
+ const rejected={...base(),intents:['edit','add'],requestedItems:[{ordinal:0,sourceText:'oat drink',query:'oat drink',purchaseCount:null,unresolved:['quantity'],search:{keywords:['oat drink']}}],proposedEdits:[{kind:'remove_item',targetLineId:old,targetQuery:'dairy milk',sourceText:'dairy milk'}]};
+ let calls=0;
+ const provider:Interpreter={name:'controlled-repair-with-inventory',mode:'mock',unifiedUnderstanding:true,interpret:async input=>{
+  if(++calls===1)return {output:{operations:[],next:'continue',understanding:{...base(),unresolved:['validation_recovery']}},evidenceRepair:{understanding:rejected as any,feedback:'Use one complete replacement.'},usage:null,truncated:false};
+  assert.equal(calls,2);assert.ok(input.planningFeedback?.includes('same repair'));
+  assert.equal(input.observations?.[0].query,'oat drink');assert.ok(input.observations?.[0].products.some(p=>p.sku==='OAT'));
+  const repaired={...base(),proposedEdits:[{kind:'replace',targetLineId:old,targetQuery:'dairy milk',query:'oat drink',sourceText:source,search:{keywords:['oat drink'],selectedSkus:['OAT']}}]};
+  return {output:understandingToInterpretation(repaired,input,false),usage:null,truncated:false};
+ }};
+ const snapshot=await turn(inbox,new ConversationRuntime(pool,provider,{inventoryGrounding:true,visualOrdering:true}),{id:randomUUID(),type:'text',text:source});
+ assert.equal(calls,2);assert.equal(snapshot.requests.length,0);assert.equal(snapshot.conversation.draft.length,2);
+ const line=snapshot.conversation.draft[0];assert.equal(line.id,old);assert.equal(line.quantity,3);assert.deepEqual(line.candidates?.map(p=>p.sku),['OAT']);assert.ok(!line.productConfirmation);
+ assert.equal(snapshot.conversation.draft[1].id,untouched);assert.equal(snapshot.conversation.draft[1].quantity,7);
+ assert.ok(snapshot.messages.at(-1)?.rich?.parts?.some(part=>part.cards.some(card=>card.kind==='product'&&card.product.imageUrl==='/fixtures/OAT.jpg')));
+ const attempts=(await pool.query('SELECT stage,state FROM provider_attempts WHERE conversation_id=$1 ORDER BY created_at',[inbox.context.conversationId])).rows;
+ assert.deepEqual(attempts.map(a=>[a.stage,a.state]),[['identify','failed'],['repair','succeeded']]);
+}));
+
 test('a noisy per-item query is replanned against an unrelated shop inventory and shows real product photos',()=>fixture(async(pool,inbox)=>{
  let calls=0;const source='two oat letter milk';
  const original={...base(),intents:['add'],requestedItems:[{ordinal:0,sourceText:source,query:'oat letter milk',purchaseCount:2,unresolved:[],search:{keywords:['oat milk','oat drink']}}]};
@@ -169,6 +200,8 @@ test('a replacement cannot select a SKU observed for a different requested repla
  const raw={...base(),proposedEdits:[edit]},original=understandingToInterpretation(raw,{text:source,state:cart,inventoryGrounding:true},false);
  const product={sku:'DAIRY',name:'Dairy milk',unit:'can',pricePaise:100,stock:1,version:1,aliases:[],quantityStep:1};
  const observations=[{tool:'discover_products' as const,query:'oat drink',products:[],totalCount:0},{tool:'discover_products' as const,query:'dairy milk',products:[product],totalCount:1}];
+ const prompt=JSON.parse(understandingPrompt({text:source,state:cart,inventoryGrounding:true,inventoryReplan:true,proposal:original,observations}));
+ assert.deepEqual(prompt.groundingTargets,{items:[],replacements:[{index:0,query:'oat drink'}]});
  assert.throws(()=>understandingToInterpretation({...raw,proposedEdits:[{...edit,search:{...edit.search,selectedSkus:['DAIRY']}}]},{text:source,state:cart,inventoryGrounding:true,proposal:original,observations},false),/this item’s fresh inventory/);
 });
 

@@ -218,7 +218,8 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
   if(aliasFamilies.length)requestedFamilies=unique([...requestedFamilies,...aliasFamilies]);
  }
  if(plan.clarifyType&&!namedCatalogProduct)return inventoryGroups(client,ctx,query,plan,nodes);
- const root=candidate&&(normalize(query)===normalize(candidate.sku)||normalize(query)===normalize(candidate.name)||supportsCustomerIdentity(query,candidate,nodes,requestedFamilies))&&matchesPackMeasures(query,candidate)&&(!plan.selectedSkus||plan.selectedSkus.includes(candidate.sku))&&(!plan.familyId||candidate.familyId===plan.familyId)&&(!plan.familyIds||plan.familyIds.includes(candidate.familyId??''))&&(!plan.departmentId||nodes.some(n=>n.id===candidate.familyId&&n.parent_id===plan.departmentId))&&(!plan.brand||normalize(candidate.brand??'')===normalize(plan.brand))&&Object.entries(plan.specifications??{}).every(([key,value])=>specMatches(candidate,key,value))?candidate:undefined;
+ const explicitIdentity=!!candidate&&(normalize(query)===normalize(candidate.sku)||normalize(query)===normalize(candidate.name));
+ const root=candidate&&(explicitIdentity||supportsCustomerIdentity(query,candidate,nodes,requestedFamilies))&&(!plan.selectedSkus||plan.selectedSkus.length<=1||explicitIdentity)&&matchesPackMeasures(query,candidate)&&(!plan.selectedSkus||plan.selectedSkus.includes(candidate.sku))&&(!plan.familyId||candidate.familyId===plan.familyId)&&(!plan.familyIds||plan.familyIds.includes(candidate.familyId??''))&&(!plan.departmentId||nodes.some(n=>n.id===candidate.familyId&&n.parent_id===plan.departmentId))&&(!plan.brand||normalize(candidate.brand??'')===normalize(plan.brand))&&Object.entries(plan.specifications??{}).every(([key,value])=>specMatches(candidate,key,value))?candidate:undefined;
  // A validated unique catalog identity outranks an inferred taxonomy label.
  // Its returned plan must remain valid when the same search is refreshed.
  if(root)requestedFamilies=[];
@@ -230,7 +231,10 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
  }
  // An identified product still gets meaningful peers, constrained to its family,
  // catalog unit and exact stored specifications. No arbitrary filler images.
- const effective:DiscoveryPlan=root?{...plan,keywords:unique([root.name,...plan.keywords].map(naturalCatalogQuery)).slice(0,8),familyId:root.familyId??plan.familyId,specifications:root.specifications??plan.specifications}:objectPhrase!==query?{...plan,keywords:unique([objectPhrase,...plan.keywords]).slice(0,8)}:plan;
+ const effective:DiscoveryPlan=root?{...plan,keywords:unique([root.name,...plan.keywords].map(word=>naturalCatalogQuery(word).slice(0,120))).slice(0,8),familyId:root.familyId??plan.familyId}:objectPhrase!==query?{...plan,keywords:unique([objectPhrase,...plan.keywords]).slice(0,8)}:plan;
+ // Catalog metadata can exceed the bounded customer-filter contract. Keep
+ // exact peer constraints internal, so a saved plan can be parsed on refresh.
+ const peerSpecifications={...root?.specifications,...effective.specifications};
  const hints=unique([root?.name??query,...effective.keywords].flatMap(h=>[h,withoutPackMeasures(h)])).slice(0,12),parameters:unknown[]=[ctx.storeId];
  const add=(v:unknown)=>{parameters.push(v);return '$'+parameters.length;};
  const constraints=['p.store_id=$1','p.active=true'];
@@ -245,7 +249,7 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
  else if(effective.familyIds)constraints.push('p.family_id=ANY('+add(effective.familyIds)+'::text[])');
  else if(effective.departmentId)constraints.push(`p.family_id IN (SELECT id FROM catalog_nodes WHERE store_id=$1 AND parent_id=${add(effective.departmentId)})`);
  if(effective.brand)constraints.push('lower(p.brand)=lower('+add(effective.brand)+')');
- for(const [key,value] of Object.entries(effective.specifications??{})){
+ for(const [key,value] of Object.entries(peerSpecifications)){
   if(['colour','color','material'].includes(key)){
    const pattern=add('(^|[^[:alnum:]])'+value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'([^[:alnum:]]|$)');
    const fields=specificationKeys(key).map(k=>`nullif(p.specifications->>${add(k)},'')`);

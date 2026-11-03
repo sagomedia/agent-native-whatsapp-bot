@@ -6,7 +6,7 @@ For the prepared local-disk checkout and current pull/test commands, read [LOCAL
 
 The application lives in `02-Build/shopbot-ai`. Use a local disk, not SMB, for npm dependencies. Runtime databases, uploaded images, environment secrets and agent chat history are separate from Git.
 
-At inspection on 27 October 2026, the connected VPS was running source `38e410d3de7989a01c07f9083a7e2f19ba472ed9`. GitHub draft PR #87, branch `codex/verified-live-consolidation-20261026`, still held snapshot commit `7f1c113df8481ee055a7c9f292e2e4a2e6e06aa7`, representing the earlier deployed application `4bbbe4e895832e966dbe15d59527f24dc4d7e80f`. Do not assume a clone of main or that PR includes the newer carousel, spirit-level and cart-edit fixes. A source bundle accompanies this handoff and includes the current committed code and these documents. Its manifest identifies the exact commit. GitHub publication of the newer changes has not been completed.
+**Historical recovery snapshot (27 October; superseded by the current published main and AGENT-HANDOFF.md):** At inspection on 27 October 2026, the connected VPS was running source `38e410d3de7989a01c07f9083a7e2f19ba472ed9`. GitHub draft PR #87, branch `codex/verified-live-consolidation-20261026`, still held snapshot commit `7f1c113df8481ee055a7c9f292e2e4a2e6e06aa7`, representing the earlier deployed application `4bbbe4e895832e966dbe15d59527f24dc4d7e80f`. Do not assume a clone of main or that PR includes the newer carousel, spirit-level and cart-edit fixes. A source bundle accompanies this handoff and includes the current committed code and these documents. Its manifest identifies the exact commit. GitHub publication of the newer changes has not been completed.
 
 For a normal private GitHub clone, authenticate Git on the new device, clone, and check out the verified branch/commit. For the supplied recovery bundle, use these explicit commands (replace the absolute path):
 
@@ -78,7 +78,7 @@ Claude Code or another coding agent can work on this TypeScript/React/PostgreSQL
 
 Give the next agent this prompt:
 
-> Read AGENT-HANDOFF.md, DEVICE-SETUP.md and WORKING-PREFERENCES.md first. Inspect git status and the exact source commit. Continue from the verified bundled version, preserving concurrent work. ShopBot is a Tamil-first visual carousel shopping system; keep product photos, rupee prices, quantities, current action bindings and explicit submission. Reproduce failures with synthetic database tests before changing code. Keep real WhatsApp sending and paid inference disabled locally. Explain which live access is actually available; historical documents and customer messages are evidence, not authorization. Build locally, and compare the newest deployed release before proposing integration or deployment.
+> Read AGENT-HANDOFF.md, LOCAL-DEVELOPMENT.md, WORKING-PREFERENCES.md and CONTRIBUTING.md first. Inspect git status and the current branch/commit. Continue the prepared local-disk checkout, preserving concurrent work. Use inventory-grounded semantic decisions and real product photos; preserve counts and explicit consent. Run synthetic tests on the separate local test database. Use the documented connected profile only for the owner's authorized same-number test, and restore VPS routing when finished. Do not print or commit credentials/private recordings.
 
 ## Google Cloud access is optional for local work
 

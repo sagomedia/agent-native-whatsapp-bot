@@ -13,6 +13,24 @@ Investigate the owner's VPS voice-edit failure and Tamil recordings saved in oth
 
 Private raw provider output and recordings remain outside Git. Message IDs are references for an authorized owner investigation, not permission to modify records.
 
-## Verification status
-
-Implementation and local verification in progress on `codex/voice-corrections-and-handoff`. Final checks and actual-device acceptance must be recorded before claiming this stage complete. The VPS remains on the prior deployed source; local routing was restored before editing.
+## Changes and additional findings
++
++- Dedicated recognition sends saved Tamil/Tanglish as Tamil/English BCP-47 hints. The audio remains verbatim and separate from shopping/cart history. Provider and prompt cache identities were advanced.
++- Identity corrections request one replacement edit with complete source evidence and retain known counts. Retry feedback explains that contract rather than repeating a generic rejection.
++- The same bounded fresh inventory facts are available to the single evidence-repair call, so repairing an action does not use up a separate product-grounding allowance and force valid matches into unresolved cards. Only validated selections scoped to that repair skip another semantic assessment. Initial selections still use normal grounding.
++- Grounding requests include exact item ordinals and replacement indexes. The strict compiler preserves their distinct roles, current target IDs, counts and unrelated rows.
++- Offline replay found another independent execution bug: a unique product's full specifications were copied into the saved customer-filter contract, which allows only six entries. Catalog rows with more metadata failed on bill refresh and rolled back valid changes. Full peer constraints now stay internal; saved plans retain bounded customer filters. Multiple observed semantic choices no longer inherit an alias match's unstated pack/size; explicit names/SKUs and customer hard constraints remain checked.
++- Mocked local checks no longer inherit the development profile's handwriting-image/paid-inference settings. Reusable synthetic fixtures now assert known counts, candidate photos and expected product names.
++
++## Verification status
++
++Branch: `codex/voice-corrections-and-handoff`; linked acceptance issue #88 remains open.
++
++- Build/type-check and four Python catalog checks passed. The full local PostgreSQL run passed all 1,114 tests. After the final multi-choice refinement, all 78 focused catalog/voice/edit tests passed on the final source; hosted CI will run the entire updated suite from a clean checkout.
++- A five-turn real-Gemini synthetic flow completed add, identity replacement, total-five edit, unrelated-item removal and negated removal; the surviving plier had five real photo candidates and no order was submitted.
++- Stronger separate count-preservation evaluation exposed the metadata-refresh bug. Replaying those exact saved synthetic model responses offline after the fix produces three real plier candidates at count three, keeps the unrelated tree tool at count one with its three candidates, and has no action error. That replay uses no provider calls or WhatsApp transport.
++- Google accepted the new language hints on the repository's public Tamil welcome recording; recognition and interpretation both succeeded and the transcript remained Tamil.
++- The latest cumulative local CLI evaluation spend is US$0.177626 of the existing US$0.50 ceiling, with no held usage and no reset. Conservative full-context reservations blocked later calls before nominal spend reached the ceiling. A smaller *actual* API output cap was used for the last small synthetic run; reservations and usage accounting remained intact. Do not describe every earlier experimental run as passing.
++- Automatic approval review blocked sending the owner's specific retained local recording to Gemini again, pending explicit permission for that recording. It was not replayed externally. Actual phone voice quality, carousel rendering and taps still need owner acceptance.
++
++The VPS remains on the prior deployed source. This stage has not been deployed. Local routing was restored before editing and can be started again for the owner's connected test after checks pass. No production catalog/customer/order records were changed and no customer message was sent by the coding agent.

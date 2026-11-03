@@ -96,6 +96,33 @@ for(const repaired of [true,false])test(`evidence repair is metered, transcript-
  assert.ok(after.messages.find(m=>m.direction==='inbound'&&m.text===latin),'the original transcript remains stored');
 },(s,n)=>{const u=proposal(s);if(n===1||!repaired)u.proposedEdits[0].sourceText='Fevicol dappa Fevicol';if(n>1){u.inputKind='text';delete u.transcript;}return u;}));
 
+test('recorded identity correction repairs a split removal/add into one replacement while keeping counts and unrelated rows',()=>fixture(async(pool,inbox,runtime,s,requests)=>{
+ s.draft[0].quantity=2;
+ await pool.query('UPDATE conversations SET draft=$1::jsonb WHERE id=$2',[JSON.stringify(s.draft),inbox.context.conversationId]);
+ const before=(await inbox.snapshot()).conversation.draft,after=await voice(inbox,runtime);
+ assert.equal(requests.length,2);assert.match(JSON.stringify(requests[1]),/use one replace edit/);
+ assert.equal(after.conversation.draft.length,before.length);
+ assert.equal(after.conversation.draft[0].id,before[0].id);assert.equal(after.conversation.draft[0].query,'wire cutting plier');assert.equal(after.conversation.draft[0].quantity,2);
+ const comparable=(line:DraftLine)=>({...line,candidates:line.candidates??[]});
+ assert.deepEqual(after.conversation.draft.slice(1).map(comparable),before.slice(1).map(comparable));assert.equal(after.requests.length,0);
+ const attempts=(await pool.query('SELECT stage,state,response FROM provider_attempts WHERE conversation_id=$1 ORDER BY created_at',[inbox.context.conversationId])).rows;
+ assert.deepEqual(attempts.map(a=>[a.stage,a.state]),[['identify','failed'],['repair','succeeded']]);
+ assert.deepEqual(attempts[1].response.operations.map((op:any)=>op.kind),['resolve_line']);
+},(s,n)=>{
+ const transcript='இது கட்டிங் இது இல்ல கட்டிங் பிளேட் இல்ல இது கட்டிங் பிளேயர் வேணும் வயர வெட்டுற கட்டிங் பிளேயர்.';
+ return {...empty,inputKind:n===1?'audio':'text',...(n===1?{transcript}:{}),intents:['edit','add'],
+  requestedItems:n===1?[{ordinal:1,sourceText:'கட்டிங் பிளேயர் வேணும் வயர வெட்டுற கட்டிங் பிளேயர்',query:'wire cutting plier',purchaseCount:null,unresolved:['quantity']}]:[],
+  proposedEdits:[n===1?{kind:'remove_item',targetLineId:s.draft[0].id,targetQuery:'cutting blade',sourceText:'கட்டிங் பிளேட் இல்ல'}:{kind:'replace',targetLineId:s.draft[0].id,targetQuery:'cutting blade',query:'wire cutting plier',sourceText:transcript}]};
+}));
+
+test('replacement semantics also bind an unfamiliar inventory identity without a product keyword rule',()=>{
+ const target=row('oat beverage'),other=row('rice flour'),s={...state(),draft:[target,other]};
+ const source='The oat beverage is wrong; I meant almond beverage';
+ const result=understandingToInterpretation({...empty,proposedEdits:[{kind:'replace',targetLineId:target.id,targetQuery:'oat beverage',query:'almond beverage',sourceText:source}]},{text:source,state:s,inventoryGrounding:true},false);
+ assert.deepEqual(result.operations,[{kind:'resolve_line',lineId:target.id,query:'almond beverage',supportingPhrase:source}]);
+ assert.equal(result.deferredCartTargets,undefined);assert.equal(s.draft[1].id,other.id);
+});
+
 test('malformed provider JSON keeps safe failure handling',async()=>{
  const provider=new GoogleInterpreter(settings,{generateContent:async()=>response('{invalid json')});
  const result=await provider.interpret({text:'remove screw box',state:state()},new AbortController().signal);assert.equal(result.output,null);assert.equal(result.evidenceRepair,undefined);assert.equal(result.validationIssues?.[0].code,'invalid_evidence');

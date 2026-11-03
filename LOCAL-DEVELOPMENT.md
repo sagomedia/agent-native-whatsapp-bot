@@ -41,6 +41,8 @@ The owner approved reuse of the existing Gemini key in private `.env.ai`, with a
 ```bash
 npm run eval:local -- --preflight
 npm run eval:local -- --fixtures tests/fixtures/local-shopping.json
+# Identity correction, retained count, five-piece change and negated removal:
+npm run eval:local -- --fixtures tests/fixtures/local-voice-corrections.json
 ```
 
 The evaluation uses the same unified understanding and inventory grounding path as WhatsApp, but no WhatsApp transport. The budget persists across runs; restarting or creating another chat does not reset it. Results and validated operations are written under ignored `artifacts/unified-evaluation/report.json`.
@@ -54,6 +56,10 @@ For new recordings, create a private fixture file with this shape and run it wit
 ```
 
 Media paths are relative to the case file. Keep private recordings under ignored `recordings/` or `data/`. Text uses `{"kind":"text","text":"..."}`; images use `{"kind":"image","path":"...","mimeType":"image/jpeg","text":"caption"}`. A test may include several messages to exercise add, change and remove behavior. Product approval and final submission remain distinct.
+
+Fixture expectations can include `minimumPhotoCandidates`, one minimum per final draft row. An optional `candidateNameIncludes` array checks a candidate name per row (`null` skips that row). Use these when actual product choices must survive a correction, so a retained name/count with no product photos cannot pass the evaluation. Saved Tamil/Tanglish conversations send Tamil and English hints to dedicated transcription; hints do not force a translation or guarantee recognition of unclear audio. Replaying a retained customer recording to the external provider requires permission for that recording; repository/public or synthetic fixtures are separate.
+
+The budget reserves the model's full allowed input/output ceiling before each call, so a small allowance can refuse a call even when actual spend is lower. For small synthetic fixtures, `EVALUATION_MAX_OUTPUT_TOKENS=2048 npm run eval:local -- --fixtures tests/fixtures/local-voice-corrections.json` lowers the actual API output limit and its reservation together. This does not reset or increase the budget. Large lists may need the default output allowance; truncated responses fail without applying partial actions.
 
 ## Actual WhatsApp and full owner dashboard locally
 

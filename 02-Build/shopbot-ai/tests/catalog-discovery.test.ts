@@ -4,6 +4,22 @@ async function fixture(run:(pool:pg.Pool,inbox:SimulatorService)=>Promise<void>)
 async function event(inbox:SimulatorService,runtime:ConversationRuntime,e:SimulatorEvent){await inbox.ingest(e);await runtime.processNext(inbox.context);return inbox.snapshot();}async function text(inbox:SimulatorService,runtime:ConversationRuntime,value:string){return event(inbox,runtime,{id:randomUUID(),type:'text',text:value});}function last(s:Snapshot){return s.messages.at(-1)!.rich!;}
 const never:Interpreter={name:'no-ai-for-choices',mode:'mock',interpret:async()=>{throw new Error('Unexpected AI call');}};
 
+test('a catalog identity with more metadata than customer filters still survives discovery and bill refresh',async()=>fixture(async(pool,inbox)=>{
+ const metadata=Object.fromEntries(Array.from({length:9},(_,index)=>['catalog_field_'+index,'value '+index]));
+ await pool.query('UPDATE products SET specifications=$1::jsonb WHERE store_id=$2 AND sku=$3',[JSON.stringify(metadata),inbox.context.storeId,'H14']);
+ const c=await pool.connect();try{
+  const first=await discoverProducts(c,inbox.context,'H14',{keywords:['H14']});
+  assert.equal(first.products[0].sku,'H14');assert.deepEqual(first.plan.specifications,{});
+  const refreshed=await discoverProducts(c,inbox.context,'H14',first.plan);assert.equal(refreshed.products[0].sku,'H14');
+  assert.ok(refreshed.products.every(product=>Object.entries(metadata).every(([key,value])=>product.specifications?.[key]===value)));
+ }finally{c.release();}
+ const tools=new RetailTools(pool);
+ await tools.invoke(inbox.context,{name:'apply_draft_changes',args:{expectedVersion:0,operations:[{kind:'add_item',query:'H14',quantity:3}]}},'metadata-add');
+ const state=(await inbox.snapshot()).conversation;
+ await tools.invoke(inbox.context,{name:'preview_order',args:{expectedVersion:state.version}},'metadata-preview');
+ assert.equal((await inbox.snapshot()).conversation.draft[0].quantity,3);
+}));
+
 test('white cement is not confused with white-cement-based putty or solvent cement',async()=>fixture(async(pool,inbox)=>{
  await pool.query(`UPDATE products SET name='Birla White Wall Putty 1kg',aliases='["white cement"]'::jsonb,keywords='["white cement"]'::jsonb,specifications='{"form":"white cement based powder","colour":"white"}'::jsonb WHERE store_id=$1 AND sku='H07'`,[inbox.context.storeId]);
  await pool.query(`UPDATE products SET name='Finolex PVC Solution 100ml',aliases='["white cement"]'::jsonb,keywords='["white cement"]'::jsonb,specifications='{"colour":"white"}'::jsonb WHERE store_id=$1 AND sku='H01'`,[inbox.context.storeId]);

@@ -22,7 +22,10 @@ async function main(){
  if(!['test','eval'].includes(command))throw new Error('Use test or eval.');
  const databaseUrl=localTestDatabase(process.env.TEST_DATABASE_URL),root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
  const tests=command==='test'?(await readdir(resolve(root,'tests'))).filter(name=>name.endsWith('.test.ts')).sort().map(name=>'tests/'+name):[];
- const child=spawn(process.execPath,['--import','tsx',...(command==='test'?['--test','--test-concurrency=4',...tests,...args]:['scripts/evaluate-unified.ts',...args])],{cwd:root,stdio:'inherit',env:{...process.env,APP_MODE:'mock',DATABASE_URL:databaseUrl,WHATSAPP_ENABLED:'false',WHATSAPP_PROCESS_ENABLED:'false',WHATSAPP_SEND_ENABLED:'false'}});
+ // Private development profiles can opt into larger handwriting images and
+ // paid models. Mocked checks need the same defaults as clean CI instead.
+ const testDefaults=command==='test'?{GEMINI_HANDWRITTEN_LISTS_ENABLED:'false',ALLOW_PAID_INFERENCE:'false',ALLOW_FREE_INFERENCE:'false'}:{};
+ const child=spawn(process.execPath,['--import','tsx',...(command==='test'?['--test','--test-concurrency=4',...tests,...args]:['scripts/evaluate-unified.ts',...args])],{cwd:root,stdio:'inherit',env:{...process.env,...testDefaults,APP_MODE:'mock',DATABASE_URL:databaseUrl,WHATSAPP_ENABLED:'false',WHATSAPP_PROCESS_ENABLED:'false',WHATSAPP_SEND_ENABLED:'false'}});
  child.on('error',()=>{console.error('Could not start the local command.');process.exitCode=1;});
  child.on('exit',code=>{process.exitCode=code??1;});
 }
