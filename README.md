@@ -23,7 +23,9 @@ Local Git history and rollback/export: `GIT-WORKFLOW.md`. Catalog and voice desi
 
 ## Prepared checkout and daily workflow
 
-On the prepared computer, open `/home/gk-pc/projects/shopbot-inventory-dev`. The application is in `02-Build/shopbot-ai/`. Source is published on GitHub through PRs #89 and #90; the current voice-correction follow-up is documented in [verification notes](03-Output/voice-corrections/README.md). Do not use an older SMB/recovery copy as the development baseline.
+On the prepared computer, open `/home/gk-pc/projects/shopbot-inventory-dev`. The application is in `02-Build/shopbot-ai/`. Source is published on GitHub through PRs #89 and #90; [PR #91](https://github.com/sagomedia/agent-native-whatsapp-bot/pull/91) contains the voice-correction and actionable-clarification follow-up, documented in [verification notes](03-Output/voice-corrections/README.md). Do not use an older SMB/recovery copy as the development baseline.
+
+Clear add/remove/change requests execute against current inventory and cart rows. Ambiguous changes ask about named items, with photos and current choices; a removal question can offer “remove all shown” for exactly those rows. Repeated named quantities set totals; a genuine increase needs separate source evidence. An unknown total gets an item-specific quantity question. Questions retain the pending action, and selecting a current choice resumes it without another model call.
 
 ```bash
 cd /home/gk-pc/projects/shopbot-inventory-dev/02-Build/shopbot-ai

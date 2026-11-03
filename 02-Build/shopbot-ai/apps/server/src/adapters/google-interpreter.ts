@@ -9,6 +9,7 @@ import {turnUnderstandingSchema,normalizeUnderstandingAbsence} from '../../../..
 import {UNDERSTANDING_PROMPT_VERSION} from '../../../../packages/contracts/model-policy.js';
 import {understandingInstruction,understandingResponseSchema,understandingPrompt,understandingToInterpretation,inventoryGroundingSchema,inventoryGroundingInstruction,inventoryGroundingToInterpretation} from './turn-understanding.js';
 import {languageOf,say} from '../../../../packages/contracts/language.js';
+import {rejectedPlanQuestion} from '../services/cart-clarification.js';
 import {GoogleGenAI,ThinkingLevel,ServiceTier,type GenerateContentParameters,type GenerateContentResponse} from '@google/genai';
 import {z} from 'zod';
 import {interpretationSchema,operationSchema} from '../../../../packages/contracts/index.js';
@@ -217,7 +218,8 @@ export class GoogleInterpreter implements Interpreter {
       // clear command, but execute none of the rejected shopping proposals.
       try{const understood=perceptionEnvelope(JSON.parse(text));
         if(!input.inventoryReplan&&understood&&(input.audio?understood.inputKind==='audio'&&!!understood.transcript:input.image?['handwritten_list','product_photo','unknown_image'].includes(understood.inputKind)&&understood.observedText!==undefined:understood.inputKind==='text')){
-          const invalid=observation?.rows.find(row=>!row.valid),question=invalid?say(input.state,`Item ${invalid.position+1} needs correction. I have not added this list. Please resend the complete corrected list.`,`பொருள் ${invalid.position+1}-ஐ திருத்த வேண்டும். இந்தப் பட்டியலைச் சேர்க்கவில்லை. முழுப் பட்டியலையும் திருத்தி மீண்டும் அனுப்புங்கள்.`,`Porul ${invalid.position+1}-ai thiruthanum. Intha list-ai serkkala. Muzhu corrected list-ai marubadi anuppunga.`):say(input.state,'I heard your request, but could not safely update it. Your list is unchanged. Which item should I check for product and pack?','நீங்க சொன்னது கேட்டது. பாதுகாப்பாக மாற்ற முடியல; பட்டியல் அப்படியே இருக்கு. பொருளையும் பேக் அளவையும் சரிபார்க்க எந்தப் பொருளைத் தேர்வு செய்யணும்?','Neenga sonnadhu kettadhu. Safe-a maatha mudiyala; list appadiye irukku. Product-um pack size-um check panna entha item-ai choose pannanum?');
+          const parsed=turnUnderstandingSchema.safeParse(normalizeUnderstandingAbsence(JSON.parse(text)));
+          const invalid=observation?.rows.find(row=>!row.valid),question=invalid?say(input.state,`Item ${invalid.position+1} needs correction. I have not added this list. Please resend the complete corrected list.`,`பொருள் ${invalid.position+1}-ஐ திருத்த வேண்டும். இந்தப் பட்டியலைச் சேர்க்கவில்லை. முழுப் பட்டியலையும் திருத்தி மீண்டும் அனுப்புங்கள்.`,`Porul ${invalid.position+1}-ai thiruthanum. Intha list-ai serkkala. Muzhu corrected list-ai marubadi anuppunga.`):rejectedPlanQuestion(input.state,parsed.success?parsed.data:undefined).slice(0,180);
           // The transcript is evidence for a warning, not authority to replace
           // a selected SKU or to convert a sack into a packet. This also helps
           // customers whose older list already contains the wrong putty.

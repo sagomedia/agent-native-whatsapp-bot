@@ -28,7 +28,7 @@ for(const source of ['take the hammer off my list','exclude the hammer from my l
 
 test('count evidence supports paraphrased additions and quantities without a number-word allowlist',()=>{
  for(const [source,kind,mode,countPhrase] of [['increase the hammers by two','increment_quantity','additional','two'],['make the hammer count a couple','set_quantity','total','a couple']] as const){
-  const plan=understandingToInterpretation({...base(),proposedEdits:[{kind,sourceText:source,targetLineId:id,targetQuery:'hammer',quantity:2,countEvidence:{sourceText:countPhrase,value:2,mode}}]},{text:source,state:cart,inventoryGrounding:true},false);
+  const plan=understandingToInterpretation({...base(),proposedEdits:[{kind,sourceText:source,targetLineId:id,targetQuery:'hammer',quantity:2,countEvidence:{sourceText:countPhrase,value:2,mode},...(kind==='increment_quantity'?{additionalEvidence:'increase'}:{})}]},{text:source,state:cart,inventoryGrounding:true},false);
   assert.equal(plan.operations[0].kind,kind);assert.equal(validateCurrentTurn(plan.operations,source,cart).length,1);
  }
 });

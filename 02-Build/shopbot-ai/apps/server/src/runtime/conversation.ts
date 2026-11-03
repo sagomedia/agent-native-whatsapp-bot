@@ -1,6 +1,7 @@
 import {readStoreHours,hoursAnswer,appendClosedShopNotice} from '../services/store-hours.js';
 import {inventoryItems,validateInventoryReplan,retainUngroundedItems,observeInventory} from '../services/inventory-grounding.js';
 import {understandingSearch} from '../services/catalog-request.js';
+import {cartTargetQuestion,totalQuantityQuestion,offeredRemovalGroup} from '../services/cart-clarification.js';
 import {recordConversationAudit} from '../services/catalog-audit.js';
 import {trackItemClarification} from '../services/item-clarification.js';
 import {cartChangeFeedback} from '../services/cart-change-feedback.js';
@@ -70,6 +71,14 @@ function resumeCartTarget(claim:Claimed,selection?:{kind:'edit'|'item';index:num
  const result=understandingToInterpretation(understanding,{text:goal.description,state:claim.state,cartTargetSelections:selections},false);
  goal.selections=selections;claim.cartEditResumed=true;
  return result;
+}
+function resumeCartGroup(claim:Claimed,lineIds:string[]):Interpretation {
+ const offered=offeredRemovalGroup(claim.memory,claim.state),goal=claim.memory?.cartEdit;
+ if(!goal||offered.length<2||claim.state.lastRequestId||lineIds.length!==offered.length||new Set(lineIds).size!==lineIds.length||lineIds.some(id=>!offered.includes(id)))throw new ToolError('Choose the current offered items.','stale_question');
+ claim.cartEditResumed=true;
+ const original=goal.understanding.proposedEdits[0];
+ const understanding={...goal.understanding,cartTargetAnswer:undefined,cartGroupAnswer:undefined,clarifyQuestion:undefined,unresolved:[],proposedEdits:lineIds.map(id=>({...original,targetLineId:id,targetQuery:claim.state.draft.find(line=>line.id===id)!.query??claim.state.draft.find(line=>line.id===id)!.name}))};
+ return {operations:lineIds.map(reference=>({kind:'remove_item',reference,supportingPhrase:original.sourceText})),next:'review',understanding};
 }
 function resumeKeepCorrection(claim:Claimed,selection?:{targetIndex:number;lineId:string}):Interpretation {
  const memory=claim.memory,goal=memory?.correction;
@@ -174,6 +183,10 @@ export class ConversationRuntime {
         const target=goal?.targets.find(target=>target.kind===event.targetKind&&target.index===event.targetIndex);
         if(event.expectedVersion!==claimed.state.version||claimed.state.lastRequestId||memory?.purpose!=='cart_edit'||memory.sourceVersion!==claimed.state.version||memory.id!==event.memoryId||claimed.bindingId!==memory.id||!target?.candidateLineIds.includes(event.lineId)||!claimed.displayedActions.some(action=>digest(action)===digest(event)))throw new ToolError('Use the latest item choices. Your list is kept.','stale_question');
         interpretation=resumeCartTarget(claimed,{kind:event.targetKind,index:event.targetIndex,lineId:event.lineId});
+      }else if(claimed.event.type==='resolve_cart_group'){
+        const event=claimed.event;
+        if(event.expectedVersion!==claimed.state.version||claimed.memory?.id!==event.memoryId||claimed.bindingId!==event.memoryId||!claimed.displayedActions.some(action=>digest(action)===digest(event)))throw new ToolError('Use the latest item choices.','stale_question');
+        interpretation=resumeCartGroup(claimed,event.lineIds);
       }else if(claimed.event.type==='resolve_keep_target'){
         const event=claimed.event;
         if(event.expectedVersion!==claimed.state.version||claimed.memory?.purpose!=='cart_correction'||claimed.memory.id!==event.memoryId||claimed.bindingId!==claimed.memory.id||!claimed.displayedActions.some(action=>digest(action)===digest(event)))throw new ToolError('Use the latest keep-item choices. Your list is kept.','stale_question');
@@ -606,8 +619,10 @@ export class ConversationRuntime {
           const selections=claimed.cartEditResumed?claimed.memory?.cartEdit?.selections??[]:[];
           const memoryId=await saveAssistantMemory(client,ctx,{purpose:'cart_edit',queries:[original.proposedEdits[target.index]?.targetQuery??original.requestedItems.find(item=>item.ordinal===target.index)?.query??'cart item'],lineId:null,sourceVersion:finalState.version,observations:[],cartEdit:{description,understanding:goalUnderstanding,targets:deferred,selections}});
           const edit=target.kind==='edit'?original.proposedEdits[target.index]:undefined;
-          const question=edit?.kind==='remove_item'?say(finalState,'Which item should I remove?','எந்த item-ஐ remove பண்ணணும்?','Entha item-ai remove pannanum?'):say(finalState,'Which item should I change?','எந்த item-ஐ மாற்றணும்?','Entha item-ai maathanum?');
+          const question=cartTargetQuestion(finalState,lines,edit);
           rich={...plainReply(question),stage:'identify',clarificationReason:'cart_edit_target',buttons:lines.slice(0,10).map(line=>({label:`${finalState.draft.findIndex(item=>item.id===line.id)+1}. ${lineName(line,finalState)}`,event:{id:randomUUID(),type:'resolve_cart_target' as const,memoryId:memoryId!,targetKind:target.kind,targetIndex:target.index,lineId:line.id,expectedVersion:finalState.version}}))};
+          const group=offeredRemovalGroup(await loadAssistantMemory(client,ctx),finalState);
+          if(group.length)rich.buttons!.push({label:say(finalState,'Remove all shown','காட்டியவற்றை நீக்கு','Kaattiyathai neekku'),event:{id:randomUUID(),type:'resolve_cart_group',memoryId:memoryId!,lineIds:group,expectedVersion:finalState.version}});
         }else{
         const requested=interpretation!.understanding!.requestedItems.find(item=>item.query)?.query??'';
         const words=tokens(requested).filter(word=>!/^(?:one|two|three|1|2)$/.test(word));
@@ -624,9 +639,14 @@ export class ConversationRuntime {
         rich={...plainReply((digest(finalState.draft)!==digest(claimed.state.draft)?say(finalState,'Other clear changes are saved. ','மற்ற தெளிவான மாற்றங்கள் சேமிக்கப்பட்டன. ','Maththa thelivaana maaththangal save aachu. '):'')+question+' '+say(finalState,'Choose the item below or describe its type. Your list is kept.','கீழே தேர்வு செய்யுங்கள் அல்லது பொருளின் வகையைச் சொல்லுங்கள். பட்டியல் அப்படியே உள்ளது.','Keezhe choose pannunga illa type sollunga. List appadiye irukku.')),stage:'identify',clarificationReason:'intent_clarification',buttons:choices};
         }
       }
-      rich=unclearKeep||unclearTarget||clearConfirmation?{...rich,replyLanguage:finalState.replyLanguage??'en'}:shoppingActions({...rich,replyLanguage:finalState.replyLanguage??'en'},finalState,claimed.catalogMap);
+      const quantityLine=!failure&&interpretation?.quantityQuestion?finalState.draft.find(line=>line.id===interpretation!.quantityQuestion!.lineId):undefined;
+      if(quantityLine){
+        finalState.version++;finalState.pending={kind:'question',id:randomUUID(),lineId:quantityLine.id,version:finalState.version};finalState.editingLineId=quantityLine.id;finalState.productReview=null;
+        await client.query('UPDATE conversations SET version=$1,pending=$2::jsonb,editing_line_id=$3,product_review=NULL,assistant_memory=NULL WHERE id=$4',[finalState.version,JSON.stringify(finalState.pending),quantityLine.id,ctx.conversationId]);
+        rich={...plainReply(totalQuantityQuestion(finalState,quantityLine)),stage:'quantity',clarificationReason:'purchase_total'};
+      }
+      rich=unclearKeep||unclearTarget||clearConfirmation||quantityLine?{...rich,replyLanguage:finalState.replyLanguage??'en'}:shoppingActions({...rich,replyLanguage:finalState.replyLanguage??'en'},finalState,claimed.catalogMap);
       if(claimed.catalogMap)rich={...rich,storeName:claimed.catalogMap.store.name};
-      if(interpretation?.understanding?.unresolved.includes('validation_recovery')&&interpretation.transcript)rich.contextLines=[say(finalState,`Heard: ${interpretation.transcript.slice(0,250)}`,`கேட்டது: ${interpretation.transcript.slice(0,250)}`,`Kettathu: ${interpretation.transcript.slice(0,250)}`),...rich.contextLines??[]];
       if(replyRequest?.advanceRequired&&this.options.advance&&!rich.readOnly)rich=await upiAdvanceReply(client,ctx,finalState,this.options.advance.hostname,{demoPayAtShop:this.options.advance.demoPayAtShop,onlyOnce:true})??rich;
       const alreadySeen=finalState.draft.length>0&&finalState.draft.every(line=>{const product=line.candidates?.find(p=>p.sku===line.sku);return product&&claimed.displayedProducts.some(p=>p.delivered&&p.event.type==='edit_item'&&p.event.lineId===line.id&&productIdentity(p.product)===productIdentity(product));});
       const editVisual=finalState.visualOrdering&&cartMutated&&!failure&&rich.stage!=='error'&&!rich.readOnly&&finalState.pending?.kind==='products'&&!['cart_edit_target','keep_only_target','intent_clarification'].includes(rich.clarificationReason??'')?visualCartMutation(cartBefore,finalState,{contextLines:rich.contextLines,fullList:interpretation?.understanding?.intents.includes('view_list')}):undefined;
@@ -889,6 +909,15 @@ export class ConversationRuntime {
         for(const item of inventoryItems(identified))if(item.search?.selectedSkus!==undefined&&repairFacts?.some(observation=>observation.query===item.query))evidenceInventorySelections.add(item.query!);
       }
       catch{/* A denied or failed repair retains the original grounded no-op. */}
+      if(text.length<=500&&identified.understanding?.unresolved.includes('validation_recovery')&&repair.understanding.proposedEdits.length&&repair.understanding.proposedEdits.every(edit=>edit.kind==='remove_item')&&!repair.understanding.requestedItems.length&&!repair.understanding.keepOnly&&!repair.understanding.keepOnlyAnswer&&!repair.understanding.cartTargetAnswer&&!repair.understanding.cartGroupAnswer){
+        // Rejected evidence cannot execute. Offer current named rows as a new,
+        // version-bound customer decision instead of echoing the transcript.
+        const ids=[...new Set(repair.understanding.proposedEdits.map(edit=>edit.targetLineId))].filter(id=>claim.state.draft.some(line=>line.id===id));
+        if(ids.length)identified={operations:[],next:'continue',...(voice?{transcript}:{}),understanding:{...repair.understanding,requestedItems:[],proposedEdits:[{kind:'remove_item',targetLineId:ids[0],sourceText:text}],unresolved:['cart_target']},deferredCartTargets:[{kind:'edit',index:0,candidateLineIds:ids}]};
+      }
+    }
+    if(identified.understanding?.cartGroupAnswer){
+      identified={...resumeCartGroup(claim,offeredRemovalGroup(claim.memory,claim.state)),...(voice?{transcript}:{})};
     }
     if(identified.understanding?.cartTargetAnswer){
       const memory=claim.memory,goal=memory?.cartEdit,answer=identified.understanding.cartTargetAnswer;

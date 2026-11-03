@@ -171,7 +171,7 @@ test('ambiguous existing variants ask for a target instead of appending or editi
 });
 test('extra counts require explicit evidence and images cannot target an existing cart',()=>{
  const id=randomUUID(),draft={...state,draft:[{id,name:'H07',query:'H07',quantity:1,resolution:'matched' as const}]};
- assert.throws(()=>understandingToInterpretation({...base(),requestedItems:[{...item('two H07','H07',2),targetLineId:id,requestMode:'additional'}]},{text:'two H07',state:draft},true),/explicit current evidence/);
+ assert.throws(()=>understandingToInterpretation({...base(),requestedItems:[{...item('two H07','H07',2),targetLineId:id,requestMode:'additional'}]},{text:'two H07',state:draft},true),/separate current action evidence/);
  assert.throws(()=>understandingToInterpretation({...base('handwritten_list'),observedText:'H07',requestedItems:[{...item('H07','H07'),targetLineId:id}]},{text:'',image:{mimeType:'image/jpeg',data:'AAAA'},state:draft},true),/Images cannot edit/);
 });
 test('three linked descriptions retain one item and an explicit correction uses its final count',()=>{

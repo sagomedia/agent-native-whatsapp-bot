@@ -23,10 +23,10 @@ export const understandingItemSchema=z.object({
  requestedAmount:measure.optional(),amountMode:z.enum(['total','continuous']).optional(),
  requestedBudgetPaise:z.number().int().positive().max(100000000).optional(),
  unresolved:z.array(uncertainty).max(7),crossedOut:z.boolean().optional(),
- search:itemSearchSchema.optional(),countEvidence:countEvidence.optional(),
+ search:itemSearchSchema.optional(),countEvidence:countEvidence.optional(),additionalEvidence:phrase.optional(),
  attributeEvidence:z.array(z.object({field:z.enum(['brand','colour','material']),value:text,sourceText:phrase}).strict()).max(3).optional(),
 }).strict();
-const edit=z.object({kind:z.enum(['set_quantity','increment_quantity','decrement_quantity','remove_item','replace','set_amount','increment_amount']),targetLineId:z.uuid(),sourceText:phrase,targetQuery:text.optional(),quantity:quantity.optional(),query:text.optional(),amount:measure.optional(),mode:z.enum(['total','continuous']).optional(),search:itemSearchSchema.optional(),countEvidence:countEvidence.optional()}).strict();
+const edit=z.object({kind:z.enum(['set_quantity','increment_quantity','decrement_quantity','remove_item','replace','set_amount','increment_amount']),targetLineId:z.uuid(),sourceText:phrase,targetQuery:text.optional(),quantity:quantity.optional(),query:text.optional(),amount:measure.optional(),mode:z.enum(['total','continuous']).optional(),search:itemSearchSchema.optional(),countEvidence:countEvidence.optional(),additionalEvidence:phrase.optional()}).strict();
 const keepTarget=z.object({sourceText:phrase,query:text,targetLineId:z.uuid().optional(),duplicateSourceText:phrase.optional()}).strict();
 export const keepOnlySchema=z.object({sourceText:phrase,complete:z.boolean(),targets:z.array(keepTarget).min(1).max(50)}).strict();
 export const turnUnderstandingSchema=z.object({
@@ -37,6 +37,7 @@ export const turnUnderstandingSchema=z.object({
  keepOnly:keepOnlySchema.optional(),
  keepOnlyAnswer:keepTarget.optional(),
  cartTargetAnswer:keepTarget.optional(),
+ cartGroupAnswer:z.object({sourceText:phrase,scope:z.literal('all_offered')}).strict().optional(),
  shopQuestions:z.array(z.enum(['delivery','discount','hours','technical','availability','location'])).max(6),
  unresolved:z.array(z.string().trim().min(1).max(180)).max(10),
  clarifyQuestion:z.string().trim().min(1).max(180).optional(),explicitLanguageRequest:z.enum(['ta','ta-Latn','en']).optional(),
@@ -58,7 +59,7 @@ export function normalizeSearchAbsence(value:unknown):unknown {
 export function normalizeUnderstandingAbsence(value:unknown):unknown {
  if(!value||typeof value!=='object'||Array.isArray(value))return value;
  const clean=(v:Record<string,unknown>,fields:string[])=>{const next={...v};for(const field of fields)if(next[field]===null||next[field]==='')delete next[field];return next;};
- const result=clean(value as Record<string,unknown>,['transcript','observedText','clarifyQuestion','explicitLanguageRequest','keepOnly','keepOnlyAnswer','cartTargetAnswer']);
+ const result=clean(value as Record<string,unknown>,['transcript','observedText','clarifyQuestion','explicitLanguageRequest','keepOnly','keepOnlyAnswer','cartTargetAnswer','cartGroupAnswer']);
  if(result.cartTargetAnswer&&typeof result.cartTargetAnswer==='object'&&!Array.isArray(result.cartTargetAnswer))result.cartTargetAnswer=clean(result.cartTargetAnswer as Record<string,unknown>,['targetLineId']);
  if(result.keepOnlyAnswer&&typeof result.keepOnlyAnswer==='object'&&!Array.isArray(result.keepOnlyAnswer))result.keepOnlyAnswer=clean(result.keepOnlyAnswer as Record<string,unknown>,['targetLineId']);
  if(result.keepOnly&&typeof result.keepOnly==='object'&&!Array.isArray(result.keepOnly)){
@@ -68,7 +69,7 @@ export function normalizeUnderstandingAbsence(value:unknown):unknown {
  }
  if(Array.isArray(result.requestedItems))result.requestedItems=result.requestedItems.map(v=>{
   if(!v||typeof v!=='object'||Array.isArray(v))return v;
-  const item=clean(v,['targetLineId','sameItemOrdinal','requestMode','requestedContainer','brand','colour','material','packSize','dimensions','requestedAmount','amountMode','requestedBudgetPaise','crossedOut','search','countEvidence','attributeEvidence']);
+  const item=clean(v,['targetLineId','sameItemOrdinal','requestMode','requestedContainer','brand','colour','material','packSize','dimensions','requestedAmount','amountMode','requestedBudgetPaise','crossedOut','search','countEvidence','attributeEvidence','additionalEvidence']);
   if(item.targetLineId==='00000000-0000-0000-0000-000000000000')delete item.targetLineId;
   if(item.requestedBudgetPaise===0)delete item.requestedBudgetPaise;
   if(item.purchaseCount===null)delete item.countEvidence;
@@ -78,7 +79,7 @@ export function normalizeUnderstandingAbsence(value:unknown):unknown {
  });
  if(Array.isArray(result.proposedEdits))result.proposedEdits=result.proposedEdits.map(v=>{
   if(!v||typeof v!=='object'||Array.isArray(v))return v;
-  const edit=clean(v,['targetQuery','quantity','query','amount','mode','search','countEvidence']);
+  const edit=clean(v,['targetQuery','quantity','query','amount','mode','search','countEvidence','additionalEvidence']);
   if(edit.search!==undefined)edit.search=normalizeSearchAbsence(edit.search);
   return edit;
  });

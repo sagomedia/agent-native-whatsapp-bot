@@ -130,6 +130,6 @@ test('malformed provider JSON keeps safe failure handling',async()=>{
 
 test('a failed repair preserves the original transcript and safe clarification',()=>fixture(async(pool,inbox,runtime,s,requests)=>{
  const after=await voice(inbox,runtime);assert.equal(requests.length,2);assert.deepEqual(after.conversation.draft.map(line=>line.id),s.draft.map(line=>line.id));assert.equal(after.requests.length,0);
- const reply=after.messages.filter(m=>m.direction==='outbound').at(-1)!;assert.notEqual(reply.rich?.stage,'error');assert.match(reply.text,/Fevicol dappa/);
+ const reply=after.messages.filter(m=>m.direction==='outbound').at(-1)!;assert.notEqual(reply.rich?.stage,'error');assert.match(reply.text,/Fevicol adhesive/);assert.doesNotMatch(reply.text,/கேட்டது:|Fevicol dappa/);assert.ok(reply.rich?.buttons?.length);
  const attempts=(await pool.query('SELECT state FROM provider_attempts WHERE conversation_id=$1 ORDER BY created_at',[inbox.context.conversationId])).rows;assert.deepEqual(attempts.map(a=>a.state),['failed','failed']);
 },(s,n)=>{if(n>1)throw new Error('synthetic provider failure');const u=proposal(s);u.proposedEdits[0].sourceText='Fevicol dappa Fevicol';return u;}));
