@@ -1,0 +1,7 @@
+# Separate local testing from the VPS — 3 November 2026
+
+The owner requested the local project and clarified that the same public domain switching between local and VPS causes confusion. Local and VPS databases are already separate. Give the local dashboard and its media fixed local-only hostnames, while the existing VPS dashboard and media keep their VPS destinations. Continue using the approved WhatsApp number, credentials, test-recipient restriction, local database and cumulative allowance.
+
+Planned addresses are `shopbot-local.sagoautomation.tech/owner` for the local dashboard and `shopbot-local-api.sagoautomation.tech` for local WhatsApp media. The existing `shopbot-preview.sagoautomation.tech/owner` stays on the VPS. Only the existing Meta webhook path temporarily forwards to local during a connected test session; restore it on shutdown or watchdog failure. New local hosts must never fall back to the VPS database when the computer is unavailable.
+
+Use the existing VPS tunnel and SSH bridge; do not add another connector for the same tunnel on a second computer. Preserve dashboard authentication, origin checks, signed webhooks, production MCP, original tunnel configuration and VPS application/database. Validate the generated routing against the expected layout, test restoration and publish the helper/doc changes separately from application deployment. Real WhatsApp message delivery remains an owner test.
