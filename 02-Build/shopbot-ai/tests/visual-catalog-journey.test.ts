@@ -27,7 +27,7 @@ async function fixture(run:(pool:pg.Pool,inbox:SimulatorService,runtime:Conversa
   await pool.query("INSERT INTO products(store_id,sku,name,family_id,brand,aliases,unit,price_paise,stock,selling_unit_verified,image_path) VALUES($1,'THINNER','Paint thinner','paint-thinners','Paint Brand','[\"solvent\"]','can',9000,30,true,NULL)",[storeId]);
   await pool.query("INSERT INTO conversations(id,store_id,actor,visual_ordering,reply_language,reply_language_explicit) VALUES($1,$2,$3,true,'en',true)",[conversationId,storeId,actor]);
   let calls=0;
-  const runtime=new ConversationRuntime(pool,{name:'offline-visual-catalog',mode:'mock',interpret:async()=>{calls++;return {output:{operations:[{kind:'add_item',query:'solvent',quantity:2,search:{keywords:['solvent'],clarifyType:true,familyIds:['solvent-cements','paint-thinners']}},...(extras?[{kind:'add_item' as const,query:'C18',quantity:1},{kind:'add_item' as const,query:'C19',quantity:1}]:[])],next:'review'},usage:null,truncated:false};}},{visualOrdering:true});
+  const runtime=new ConversationRuntime(pool,{name:'offline-visual-catalog',mode:'mock',interpret:async()=>{calls++;return {output:{operations:[{kind:'add_item',query:'solvent',quantity:2,search:{keywords:['solvent'],clarifyType:true,narrowing:[{key:'brand',question:'Which brand?'}],familyIds:['solvent-cements','paint-thinners']}},...(extras?[{kind:'add_item' as const,query:'C18',quantity:1},{kind:'add_item' as const,query:'C19',quantity:1}]:[])],next:'review'},usage:null,truncated:false};}},{visualOrdering:true});
   const inbox=new SimulatorService(pool,{storeId,conversationId,actor,role:'customer'});
   await run(pool,inbox,runtime,()=>calls);
  }finally{await pool.end();await admin.query(`DROP SCHEMA ${schema} CASCADE`);await admin.end();}
@@ -62,16 +62,16 @@ for(const extras of [false,true])test(`solvent and ${extras?'two additional prod
 
 test('browse and brand taps use only saved catalog scope and reject stale groups',()=>fixture(async(_pool,i,r,calls)=>{
  let s=await send(i,r,{id:randomUUID(),type:'browse',query:'solvent-cements',expectedVersion:0});
- assertCarousel(s,2);const old=actions(s).find(e=>e.type==='refine_discovery'&&e.value==='Brand A');assert.ok(old);
+ const detail=actions(s).find(e=>e.type==='refine_discovery'&&e.facet==='__facet__'&&e.value==='brand');assert.ok(detail);s=await send(i,r,detail!);assertCarousel(s,2);const old=actions(s).find(e=>e.type==='refine_discovery'&&e.value==='Brand A');assert.ok(old);
  s=await send(i,r,old!);assertCarousel(s,10);assert.equal(s.conversation.draft.length,0);assert.equal(calls(),0);
  s=await send(i,r,{...old!,id:randomUUID()});assert.equal(s.conversation.draft.length,0);assert.equal(s.requests.length,0);assert.equal(calls(),0);assert.equal(reply(s).stage,'error');
 }));
 
 
 test('a 3000-product catalog keeps counts scoped and visual brand paging bounded',()=>fixture(async(pool,inbox,_runtime,calls)=>{
- await pool.query("INSERT INTO products(store_id,sku,name,family_id,brand,aliases,unit,price_paise,stock,selling_unit_verified,image_path) SELECT $1,'SCALE-'||n,'PVC solvent cement scale '||n,'solvent-cements','Scale brand '||(n%5),'[\"PVC solvent cement\"]'::jsonb,'can',16000,30,true,'/demo-images/H07.jpg' FROM generate_series(1,3000) n",[inbox.context.storeId]);
+ await pool.query("INSERT INTO products(store_id,sku,name,family_id,brand,aliases,unit,price_paise,stock,selling_unit_verified,image_path) SELECT $1,'SCALE-'||n,'PVC solvent cement scale '||n,'solvent-cements','Scale brand '||(n%15),'[\"PVC solvent cement\"]'::jsonb,'can',16000,30,true,'/demo-images/H07.jpg' FROM generate_series(1,3000) n",[inbox.context.storeId]);
  const c=await pool.connect();try{
-  const found=await discoverProducts(c,inbox.context,'PVC solvent cements',{keywords:['PVC solvent cements'],familyId:'solvent-cements'});
+  const found=await discoverProducts(c,inbox.context,'PVC solvent cements',{keywords:['PVC solvent cements'],familyId:'solvent-cements',narrowing:[{key:'brand',question:'Which brand?'}]});
   assert.equal(found.totalCount,3019);assert.ok(found.products.length<=10);
   const snap=await inbox.snapshot(),rich=discoveryPresentation(found,snap.conversation,randomUUID());
   assert.equal(rich.clarificationReason,'catalog_group');assert.ok(rich.parts![0].cards.length<=10);

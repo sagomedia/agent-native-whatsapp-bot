@@ -1,36 +1,36 @@
 [
   {
     "stage": "identify",
-    "text": "1 inch pipe — Choose a category",
+    "text": "1 inch pipe\nWhich *product type*?",
     "cards": [
       {
         "kind": "instruction",
-        "caption": "Garden hoses\n1 matching products\nExample product photo",
+        "caption": "Garden hoses\n1 product\nExample photo",
         "title": "Garden hoses",
         "lines": [
-          "1 matching products",
-          "Example product photo"
+          "1 product",
+          "Example photo"
         ]
       },
       {
         "kind": "instruction",
-        "caption": "PVC pipes\n4 matching products\nExample product photo",
+        "caption": "PVC pipes\n4 products\nExample photo",
         "title": "PVC pipes",
         "lines": [
-          "4 matching products",
-          "Example product photo"
+          "4 products",
+          "Example photo"
         ]
       }
     ],
     "actions": [
       {
-        "label": "Show products",
+        "label": "Choose",
         "type": "refine_search",
         "facet": "family",
         "value": "hose"
       },
       {
-        "label": "Show products",
+        "label": "Choose",
         "type": "refine_search",
         "facet": "family",
         "value": "pvc-pipes"
@@ -74,36 +74,36 @@
   },
   {
     "stage": "identify",
-    "text": "0.75 inch pipe — Choose a category",
+    "text": "0.75 inch pipe\nWhich *product type*?",
     "cards": [
       {
         "kind": "instruction",
-        "caption": "Garden hoses\n1 matching products\nExample product photo",
+        "caption": "Garden hoses\n1 product\nExample photo",
         "title": "Garden hoses",
         "lines": [
-          "1 matching products",
-          "Example product photo"
+          "1 product",
+          "Example photo"
         ]
       },
       {
         "kind": "instruction",
-        "caption": "PVC pipes\n4 matching products\nExample product photo",
+        "caption": "PVC pipes\n4 products\nExample photo",
         "title": "PVC pipes",
         "lines": [
-          "4 matching products",
-          "Example product photo"
+          "4 products",
+          "Example photo"
         ]
       }
     ],
     "actions": [
       {
-        "label": "Show products",
+        "label": "Choose",
         "type": "refine_search",
         "facet": "family",
         "value": "hose"
       },
       {
-        "label": "Show products",
+        "label": "Choose",
         "type": "refine_search",
         "facet": "family",
         "value": "pvc-pipes"

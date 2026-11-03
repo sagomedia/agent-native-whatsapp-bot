@@ -65,7 +65,7 @@ export function safeQuestion(question:string|undefined,context:LanguageContext,c
 }
 export function languageAcknowledgement(language:ReplyLanguage):string {return say(language,'I’ll reply in English. Your list is kept.','இனி தமிழில் பேசலாம். உங்கள் பட்டியல் அப்படியே உள்ளது.','Ini Tanglish-la pesalaam. Unga list appadiye irukku.');}
 export function facetLabel(key:string,label:string,context:LanguageContext):string {
- const labels:Record<string,[string,string]>={family:['பொருள் வகை','porul vagai'],brand:['பிராண்ட்','brand'],size:['அளவு','size'],length:['நீளம்','neelam'],diameter:['விட்டம்','diameter'],material:['பொருள் தயாரிப்பு','material'],volume:['கொள்ளளவு','volume']};
+ const labels:Record<string,[string,string]>={family:['பொருள் வகை','porul vagai'],brand:['பிராண்ட்','brand'],price:['விலை வரம்பு','vilai varambu'],size:['அளவு','size'],length:['நீளம்','neelam'],diameter:['விட்டம்','diameter'],material:['பொருள் தயாரிப்பு','material'],volume:['கொள்ளளவு','volume']};
  const translated=labels[key.replace(/^spec:/,'')];return translated?say(context,label,...translated):label;
 }
 export function customerError(message:string,context:LanguageContext,code?:string):string {

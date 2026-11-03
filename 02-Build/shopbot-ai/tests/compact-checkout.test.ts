@@ -64,7 +64,7 @@ test('inventory category clarification asks one question with actual bound choic
  const l:DraftLine={id:randomUUID(),name:'pipe',query:'pipe',quantity:2,resolution:'unavailable'},s=categoryState(state([l]));
  const questionId=s.pending!.id;
  const reply=visualReply({version:1,kind:'text',text:'Choose category',presentation:'text',outboundMessages:1},s);
- assert.match(reply.text,/வகையைத் தேர்வு செய்யுங்கள்/);assert.equal(reply.parts?.[0].cards.length,2);
+ assert.match(reply.text,/பொருள் வகை/);assert.equal(reply.parts?.[0].cards.length,2);
  const choices=reply.parts![0].cards.flatMap(card=>card.buttons??[]);assert.equal(choices.length,2);
  for(const button of choices){assert.equal(button.event.type,'refine_search');if(button.event.type==='refine_search'){assert.equal(button.event.lineId,l.id);assert.equal(button.event.batchId,questionId);}}
  assert.deepEqual(choices.map(b=>b.event.type==='refine_search'?b.event.value:undefined),['pvc-pipes','hose']);

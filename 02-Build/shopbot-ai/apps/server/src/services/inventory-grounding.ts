@@ -28,7 +28,7 @@ export async function observeInventory(client:PoolClient,ctx:ActorContext,tools:
    if(facts.some(p=>!current.products.some(existing=>existing.sku===p.sku))){
     current.products=[...new Map([...facts,...current.products].map(p=>[p.sku,p])).values()].slice(0,10);
     current.totalCount=Math.max(current.totalCount,current.products.length);
-    current.discovery=undefined;
+    if(current.discovery&&current.products.some(p=>!current.discovery!.products.some(d=>d.sku===p.sku)))current.discovery={...current.discovery,products:current.products};
    }
   }
   found.push(current);
@@ -78,7 +78,8 @@ export function validateInventoryReplan(original:Interpretation,replanned:Interp
   const observed=observations.filter(o=>o.query===itemObservationQuery(original,before.requestedItems[index]));
   const available=new Set(observed.flatMap(o=>o.products.map(p=>p.sku)));
   if(!observed.length&&(item.query!==before.requestedItems[index].query||JSON.stringify(item.search)!==JSON.stringify(before.requestedItems[index].search)))throw new ToolError('Unobserved item searches must remain unchanged.','grounding_scope');
-  if(available.size&&item.query===before.requestedItems[index].query&&item.search?.identityQuery===before.requestedItems[index].search?.identityQuery&&item.search?.selectedSkus===undefined)throw new ToolError('Inventory grounding must explicitly select or reject the observed candidates.','grounding_evidence');
+  if(available.size&&item.query===before.requestedItems[index].query&&item.search?.identityQuery===before.requestedItems[index].search?.identityQuery&&item.search?.selectedSkus===undefined&&!item.search?.narrowing?.length&&!item.search?.browseAll)throw new ToolError('Inventory grounding must explicitly select or reject the observed candidates.','grounding_evidence');
+  if(item.search?.narrowing){const keys=new Set(observed.flatMap(o=>o.discovery?.facets.map(f=>f.key)??[]));if(item.search.selectedSkus!==undefined||item.search.narrowing.some(step=>!keys.has(step.key)))throw new ToolError('Choose narrowing attributes observed for this item only.','grounding_scope');}
   if(item.search?.selectedSkus?.some(sku=>!available.has(sku)))throw new ToolError('Choose products observed for this item only.','grounding_scope');
  }
  for(const [index,edit] of after.proposedEdits.entries()){

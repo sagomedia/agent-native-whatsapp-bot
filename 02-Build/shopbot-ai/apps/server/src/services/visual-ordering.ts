@@ -151,6 +151,9 @@ export function visualProductReview(state:ConversationState,compact=false,clarif
  for(let offset=0;offset<reviewCards.length;offset+=10){
   const final=offset+10>=reviewCards.length;
   const group=reviewCards.slice(offset,offset+10).map(card=>({...card,buttons:final&&primary?[primary,...(card.buttons??[change(state)]).slice(0,1)]:card.buttons?.slice(0,2)??[change(state)]}));
+  // Native carousels require a uniform button count. Keep item approval and
+  // edit controls; fill shorter cards with a read-only list action.
+  if(group.length>1&&group.some(card=>card.buttons.length===2))for(const card of group)if(card.buttons.length===1)card.buttons.push(action(state,'view_products',say(state,'Show list','பட்டியலைக் காட்டு','List kaattu')));
   const question=catalogQuestion(clarifyQuestion,state,check.groups.flatMap(g=>g.products));
   const missingCount=noListings&&state.draft.length===1&&state.draft[0].quantity===null&&state.draft[0].discovery?.matchStatus!=='needs_detail';
   const countAction=missingCount?say(state,'How many do you need? Reply with a number.','எத்தனை வேணும்? எண்ணிக்கையை reply பண்ணுங்க.','Eththanai venum? Count-ai reply pannunga.'):undefined;

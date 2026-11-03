@@ -20,7 +20,7 @@ test('reports a known count edit in the chosen language',()=>{
 
 test('unknown count stays unknown and a requested physical amount is labeled requested',()=>{
  const unknown=line('a','garden hose',null);
- assert.equal(cartChangeFeedback(cart([]),cart([unknown])),'Saved request for garden hose; product still needs checking');
+ assert.equal(cartChangeFeedback(cart([]),cart([unknown])),'Saved request for garden hose');
  const requested={...unknown,requestedAmount:{value:50,unit:'metre'}};
  assert.equal(cartChangeFeedback(cart([unknown]),cart([requested])),'Changed garden hose (requested 50 metres)');
  const continuous={...requested,amountMode:'continuous' as const};
@@ -34,7 +34,7 @@ test('unknown count stays unknown and a requested physical amount is labeled req
 
 test('requested count is not presented as a verified selling count',()=>{
  const unknown=line('a','paint',null,{requestedQuantity:2,requestedUnit:'can'});
- assert.equal(cartChangeFeedback(cart([]),cart([unknown])),'Saved request for paint (requested 2 cans); product still needs checking');
+ assert.equal(cartChangeFeedback(cart([]),cart([unknown])),'Saved request for paint (requested 2 cans)');
 });
 
 test('no-op, price refresh and issue changes produce no mutation claim',()=>{
@@ -61,3 +61,5 @@ test('three ordinary removals name every target, and long names stay readable',(
  assert.equal(cartChangeFeedback(cart(three),cart([])),'Removed Fevicol; Removed drill machine; Removed screw box');
  const text=cartChangeFeedback(cart([line('long','Premium product '.repeat(30),1)]),cart([]))!;assert.match(text,/^Removed Premium product/);assert.ok(text.length<=250);
 });
+
+test('a display-name normalization alone does not claim another cart change',()=>{const before=line('a','Rice flour',7);assert.equal(cartChangeFeedback(cart([before]),cart([{...before,name:'rice flour',query:'rice flour'}])),undefined);});

@@ -131,3 +131,13 @@ test('measured alias recovery in a general family cannot show or count unrelated
   assert.ok(!r.products.some(p=>p.sku==='PIPE-12'));
  }finally{c.release();}
 }));
+
+test('bad broad measured aliases cannot override observed pipe or unfamiliar product selections',()=>fixture(async(pool,inbox)=>{
+ await pool.query(`UPDATE products SET aliases=aliases||'["pipe","spindle"]'::jsonb WHERE store_id=$1 AND sku='H10'`,[inbox.context.storeId]);
+ const c=await pool.connect();try{
+  const r=await discoverProducts(c,inbox.context,'0.75 inch PVC pipe',{keywords:['pipe'],selectedSkus:['H03']});assert.deepEqual(r.products.map(p=>p.sku),['H03']);assert.ok(!r.diagnostics!.appliedConstraints.familyIds.includes('taps-faucets'));
+  await pool.query(`INSERT INTO products(store_id,sku,name,unit,price_paise,specifications) VALUES($1,'SPINDLE-X','Laboratory spindle 7 mm','piece',1000,'{"diameter":"7 mm"}')`,[inbox.context.storeId]);
+  const unfamiliar=await discoverProducts(c,inbox.context,'7 mm spindle',{keywords:['spindle'],selectedSkus:['SPINDLE-X']});assert.deepEqual(unfamiliar.products.map(p=>p.sku),['SPINDLE-X']);
+  const wrongSize=await discoverProducts(c,inbox.context,'9 mm spindle',{keywords:['spindle'],selectedSkus:['SPINDLE-X']});assert.equal(wrongSize.products.length,0,'explicit SKU selection cannot override the customer dimension');
+ }finally{c.release();}
+}));

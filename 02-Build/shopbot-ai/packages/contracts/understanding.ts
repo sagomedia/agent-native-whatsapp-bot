@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {narrowingSchema} from './discovery.js';
 const quantity=z.number().positive().max(100).refine(n=>Math.abs(n*1000-Math.round(n*1000))<1e-7);
 const text=z.string().trim().min(1).max(200);
 const phrase=z.string().trim().min(1).max(500);
@@ -7,9 +8,10 @@ const uncertainty=z.enum(['identity','brand','variant','quantity','unit','budget
 // Search language is a hypothesis grounded in this item, separate from the
 // verbatim evidence. Store IDs are validated against the current inventory.
 export const itemSearchSchema=z.object({
+ browseAll:z.boolean().optional(),narrowing:narrowingSchema.optional(),
  keywords:z.array(z.string().trim().min(1).max(120)).min(1).max(8),
  identityQuery:text.optional(),familyIds:z.array(z.string().trim().min(1).max(120)).min(1).max(6).optional(),
- selectedSkus:z.array(z.string().trim().min(1).max(120)).max(6).optional(),
+ selectedSkus:z.array(z.string().trim().min(1).max(120)).max(10).optional(),
  useCase:text.optional(),
  clarifyType:z.boolean().optional(),
 }).strict();
@@ -49,7 +51,7 @@ export type TurnUnderstanding=z.infer<typeof turnUnderstandingSchema>;
 export function normalizeSearchAbsence(value:unknown):unknown {
  if(!value||typeof value!=='object'||Array.isArray(value))return value;
  const next={...value} as Record<string,unknown>;
- for(const field of ['identityQuery','familyIds','selectedSkus','useCase','clarifyType'])if(next[field]===null||next[field]==='')delete next[field];
+ for(const field of ['identityQuery','familyIds','selectedSkus','useCase','clarifyType','narrowing','browseAll'])if(next[field]===null||next[field]==='')delete next[field];
  if(Array.isArray(next.familyIds)&&next.familyIds.length===0)delete next.familyIds;
  return next;
 }

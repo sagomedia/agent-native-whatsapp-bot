@@ -267,3 +267,61 @@ test('replacement searches normalize absent family hints and still reject unknow
  assert.equal((plan.operations[0] as any).search.familyIds,undefined);
  assert.throws(()=>understandingToInterpretation({...base(),proposedEdits:[{...edit,search:{...edit.search,unknownHint:'injected'}}]},{text:source,state:cart,inventoryGrounding:true},false));
 });
+
+for(const first of ['brand','spec:pack_size'])test(`144 products narrow using the agent's ${first} strategy, preserving counts and other cart rows`,()=>fixture(async(pool,inbox)=>{
+ await pool.query('UPDATE products SET active=false WHERE store_id=$1',[inbox.context.storeId]);
+ for(let b=0;b<3;b++)for(let p=0;p<4;p++)for(let f=0;f<4;f++)for(let tier=0;tier<3;tier++)await pool.query(`INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,brand,specifications,image_path,selling_unit_verified,aliases) VALUES($1,$2,$3,'can',$4,100,'plant-drinks',$5,$6::jsonb,'https://images.example.test/catalog.jpg',true,'["oat drink"]')`,[inbox.context.storeId,`DRINK-${b}${p}${f}${tier}`,`Field Oat Drink ${b}${p}${f}${tier}`,10000+tier*5000,`Farm ${b}`,JSON.stringify({pack_size:`${p+1} litre`,process:`Process ${f}`})]);
+ const kept=randomUUID();await pool.query('UPDATE conversations SET draft=$1::jsonb WHERE id=$2',[JSON.stringify([{id:kept,query:'rice flour',name:'Rice flour',quantity:7,resolution:'unavailable'}]),inbox.context.conversationId]);
+ const source='two oat drinks',steps=[first,...['brand','spec:pack_size','spec:process','price'].filter(k=>k!==first)];let calls=0;
+ const provider:Interpreter={name:'synthetic-dynamic-narrowing',mode:'mock',unifiedUnderstanding:true,interpret:async input=>{
+  calls++;let output:Interpretation;
+  if(input.inventoryReplan){
+   const facts=input.observations![0];assert.equal(facts.totalCount,144);assert.ok(facts.discovery!.facets.some(f=>f.key==='price'));assert.ok(JSON.parse(understandingPrompt(input)).catalogObservations[0].facets.some((f:any)=>f.key==='spec:process'));
+   output=inventoryGroundingToInterpretation({items:[{ordinal:0,query:'oat drink',search:{keywords:['oat drink'],narrowing:steps.map(key=>({key,question:`Which ${key==='brand'?'farm':key==='spec:pack_size'?'pack size':key==='price'?'price range':'process'}?`}))}}],replacements:[]},input,false);
+  }else output=understandingToInterpretation({...base(),intents:['add'],requestedItems:[{ordinal:0,sourceText:source,query:'oat drink',purchaseCount:2,countEvidence:{sourceText:'two',value:2,mode:'total'},unresolved:[],search:{keywords:['oat drink']}}]},input,false);
+  return {output,usage:null,truncated:false};
+ }};
+ const runtime=new ConversationRuntime(pool,provider,{inventoryGrounding:true,visualOrdering:true});let s=await turn(inbox,runtime,{id:randomUUID(),type:'text',text:source});
+ const id=s.conversation.draft.find(l=>l.id!==kept)!.id;
+ const entries=()=>s.messages.at(-1)!.rich!.parts![0].cards;
+ const e=entries()[0].buttons![0].event;assert.equal(e.type,'refine_search');if(e.type==='refine_search')assert.equal(e.facet,first);assert.equal(calls,2);
+ const initial=s,forged={...e,id:randomUUID(),facet:'spec:process',value:'Process 3'} as SimulatorEvent;const version=s.conversation.version;s=await turn(inbox,runtime,forged);assert.equal(s.conversation.version,version);
+ for(let level=0;level<3;level++){
+  const next:SimulatorEvent=level===0?e:entries()[0].buttons![0].event;assert.equal(next.type,'refine_search');if(next.type==='refine_search')assert.equal(next.facet,steps[level]);
+  const rich=(level===0?initial:s).messages.at(-1)!.rich!;assert.ok(rich.text.length<100,JSON.stringify({level,text:rich.text}));assert.ok(rich.parts![0].cards.length<=10);
+  s=await turn(inbox,runtime,next);assert.equal(s.conversation.draft.find(l=>l.id===id)!.quantity,2);assert.equal(s.conversation.draft.find(l=>l.id===kept)!.quantity,7);assert.equal(s.conversation.draft.find(l=>l.id===id)!.sku,undefined,'group examples are not selected products');
+ }
+ assert.equal(calls,2,'facet taps reuse the validated strategy');assert.equal(s.requests.length,0);assert.equal(s.conversation.draft.find(l=>l.id===id)!.candidates!.length,3);assert.ok(s.messages.at(-1)!.rich!.parts![0].cards.every(c=>c.kind==='product'));
+}));
+
+test('grounding rejects invented narrowing keys and a strategy combined with sampled SKUs',()=>{
+ const source='oat drink',prior=understandingToInterpretation({...base(),intents:['lookup'],requestedItems:[{ordinal:0,sourceText:source,query:source,purchaseCount:null,unresolved:[],search:{keywords:[source]}}]},{text:source,state:empty},false);
+ const input={text:source,state:empty,proposal:prior,inventoryReplan:true,observations:[{tool:'discover_products' as const,query:source,totalCount:100,products:[],discovery:{query:source,plan:{keywords:[source]},products:[],rankings:[],totalCount:100,retrievedCount:0,noExactMatch:false,facets:[{key:'brand',label:'Brand',values:[{value:'A',label:'A',count:50},{value:'B',label:'B',count:50}]}]}}]};
+ for(const search of [{keywords:[source],narrowing:[{key:'spec:invented_premium',question:'Premium?'}]},{keywords:[source],selectedSkus:[],narrowing:[{key:'brand',question:'Which brand?'}]}])assert.throws(()=>inventoryGroundingToInterpretation({items:[{ordinal:0,query:source,search}],replacements:[]},input,false),/observed|strategy|selection/i);
+});
+
+test('metadata-poor inventory pages through all 203 actual products beyond the retrieval sample',()=>fixture(async(pool,inbox)=>{
+ await pool.query('UPDATE products SET active=false WHERE store_id=$1',[inbox.context.storeId]);
+ await pool.query(`INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases) SELECT $1,'DRINK-'||lpad(n::text,4,'0'),'Field Oat Drink model '||n,'can',0,100,'plant-drinks','["oat drink"]' FROM generate_series(1,203) n`,[inbox.context.storeId]);
+ const c=await pool.connect();try{
+  let result=await discoverProducts(c,inbox.context,'oat drink',{keywords:['oat drink'],browseAll:true});const seen:string[]=[];
+  for(let page=0;page<30;page++){
+   assert.equal(result.facets.length,0);assert.ok(result.products.length<=10);seen.push(...result.products.map(p=>p.sku));
+   const reply=catalogGroupReply(result,empty,{memoryId:randomUUID()})!;assert.ok(reply.parts![0].cards.length<=10);
+   if(result.nextProductOffset===undefined)break;
+   result=await discoverProducts(c,inbox.context,'oat drink',refinementPlan(result,'__products__','__more__'));
+  }
+  assert.equal(seen.length,203);assert.equal(new Set(seen).size,203);assert.ok(seen.includes('DRINK-0203'));
+ }finally{c.release();}
+}));
+
+test('actual price bands filter known prices without inventing quality or treating price as count',()=>fixture(async(pool,inbox)=>{
+ await pool.query('UPDATE products SET active=false WHERE store_id=$1',[inbox.context.storeId]);
+ await pool.query(`INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,selling_unit_verified) SELECT $1,'OAT-'||n,'Field Oat Drink model '||n,'can',n*1000,100,'plant-drinks',true FROM generate_series(1,18) n`,[inbox.context.storeId]);
+ await pool.query(`UPDATE products SET price_status='confirm' WHERE store_id=$1 AND sku='OAT-18'`,[inbox.context.storeId]);
+ const c=await pool.connect();try{
+  const result=await discoverProducts(c,inbox.context,'oat drink',{keywords:['oat drink'],narrowing:[{key:'price',question:'Which price range?'}]});
+  const bands=result.facets.find(f=>f.key==='price')!;assert.equal(bands.values.length,3);assert.equal(bands.values.reduce((sum,v)=>sum+v.count,0),17);
+  for(const value of bands.values){const [low,high]=value.value.split(':').map(Number);assert.doesNotMatch(value.label,/premium|budget|quality/i);const refined=await discoverProducts(c,inbox.context,'oat drink',refinementPlan(result,'price',value.value));assert.ok(refined.products.length);assert.ok(refined.products.every(p=>p.priceStatus==='priced'&&p.pricePaise>=low&&p.pricePaise<=high));assert.equal(refined.plan.specifications?.pack_size,undefined);assert.equal(refined.plan.selectedSkus,undefined);}
+ }finally{c.release();}
+}));

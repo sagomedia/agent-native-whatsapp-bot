@@ -1,3 +1,4 @@
+import {catalogGroupReply} from './catalog-group-replies.js';
 import {discoveryFacetChoices} from './discovery-facet-actions.js';
 import {requestStoreAssistance} from './store-assistance.js';
 import {orderReference,visualProductReview} from './visual-ordering.js';
@@ -38,11 +39,15 @@ export async function handleShoppingAction(client:PoolClient,ctx:ActorContext,st
   }
   if(event.type==='shopping_action'&&event.action==='options'){
     const memory=await loadAssistantMemory(client,ctx),facet=memory?.sourceVersion===state.version&&memory.purpose==='discovery'&&!state.pending?memory.observations[0]?.discovery?.facets[0]:undefined;
+    const discovered=memory?.observations[0]?.discovery;
+    if(discovered&&memory?.sourceVersion===state.version&&!state.pending){const grouped=catalogGroupReply(discovered,state,{memoryId:memory.id});if(grouped)return grouped;}
+    if(state.pending?.kind==='products')for(const group of state.pending.groups){if(group.discovery){const grouped=catalogGroupReply(group.discovery,state,{batchId:state.pending.id,lineId:group.lineId});if(grouped)return grouped;}}
     const filters:NonNullable<RichReply['buttons']>=facet&&memory?discoveryFacetChoices(facet,state).map(v=>({label:v.label,event:{id:randomUUID(),type:'refine_discovery' as const,memoryId:memory.id,facet:facet.key,value:v.value}})):[];
     if(state.pending?.kind==='products'){
       const batch=state.pending,group=batch.groups.find(g=>g.discovery?.facets.length),offered=group?.discovery?.facets[0];
       if(group&&offered)filters.push(...discoveryFacetChoices(offered,state).map(v=>({label:v.label,event:{id:randomUUID(),type:'refine_search' as const,batchId:batch.id,lineId:group.lineId,facet:offered.key,value:v.value}})));
     }
+    if(filters.length>7)return {...reply(say(state,'Choose a detail','விவரத்தைத் தேர்வு செய்யுங்கள்','Detail choose pannunga')),presentation:'list',buttons:filters};
     return {...reply(say(state,'What would you like to do?','அடுத்து என்ன செய்ய வேண்டும்?','Aduthu enna pannanum?')),presentation:'list',buttons:[...filters,...(state.draft.length&&!state.lastRequestId?[shoppingButton(state,'edit_list',say(state,'Change an item','மாற்றணும்','Porulai maathu'))]:[]),...(state.lastRequestId?[shoppingButton(state,'new_list',say(state,'New list','புதிய பட்டியல்','Pudhu list'))]:[]),shoppingButton(state,'browse',say(state,'Browse items','பொருட்களைப் பார்','Porutkal paaru')),shoppingButton(state,'handoff',say(state,'Talk to shop','உதவி வேணும்','Kadaiyila pesu'))]};
   }
   if(event.type==='edit_item'){
