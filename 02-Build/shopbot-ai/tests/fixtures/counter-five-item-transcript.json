@@ -112,19 +112,13 @@
   },
   {
     "stage": "products",
-    "text": "Changed 0.75 inch PVC Pipe Local (1 piece)\n5 items",
+    "text": "Changed 0.75 inch PVC Pipe Local (1 piece)\n5 items\nSend a message or voice note to add, remove or change items.\nIf the photos are right, tap Show bill.",
     "cards": [
       {
         "kind": "instruction",
-        "caption": "Swipe to check → Then tap Show bill.",
-        "title": "5 items",
+        "caption": "If the photos are right, tap Show bill.",
+        "title": "Show bill",
         "lines": [
-          "Check one item at a time",
-          "1. 1 inch PVC Heavy Pipe Local",
-          "2. 0.75 inch PVC Pipe Local",
-          "3. Wall scraper 4 inch",
-          "4. Ratchet PVC Pipe Cutter 42 mm",
-          "5. White paint 10 litre",
           "Estimated total: ₹2,040.00"
         ]
       },
@@ -161,16 +155,7 @@
     ],
     "actions": [
       {
-        "label": "Correct, show bill",
-        "type": "confirm_products"
-      },
-      {
-        "label": "Change items",
-        "type": "shopping_action",
-        "action": "edit_list"
-      },
-      {
-        "label": "Correct, show bill",
+        "label": "Show bill",
         "type": "confirm_products"
       },
       {
@@ -178,32 +163,16 @@
         "type": "edit_item"
       },
       {
-        "label": "Correct, show bill",
-        "type": "confirm_products"
+        "label": "Change this",
+        "type": "edit_item"
       },
       {
         "label": "Change this",
         "type": "edit_item"
       },
       {
-        "label": "Correct, show bill",
-        "type": "confirm_products"
-      },
-      {
         "label": "Change this",
         "type": "edit_item"
-      },
-      {
-        "label": "Correct, show bill",
-        "type": "confirm_products"
-      },
-      {
-        "label": "Change this",
-        "type": "edit_item"
-      },
-      {
-        "label": "Correct, show bill",
-        "type": "confirm_products"
       },
       {
         "label": "Change this",
@@ -213,7 +182,7 @@
   },
   {
     "stage": "bill",
-    "text": "Estimated total: ₹2,040.00",
+    "text": "Estimated total: ₹2,040.00\nSend a message or voice note to add, remove or change items.\nTap Send to store when you’re ready.",
     "cards": [
       {
         "kind": "bill",
@@ -264,7 +233,7 @@
     ],
     "actions": [
       {
-        "label": "Send order to shop",
+        "label": "Send to store",
         "type": "confirm"
       },
       {

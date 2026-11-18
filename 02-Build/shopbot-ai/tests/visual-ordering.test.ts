@@ -31,12 +31,17 @@ const approve=(s:Snapshot)=>buttons(last(s)).find(b=>b.event.type==='confirm_pro
 const invoiceCards=(s:Snapshot)=>s.messages.filter(m=>m.rich?.groupId===last(s).groupId).flatMap(m=>m.rich?.parts?.flatMap(p=>p.cards)??[]);
 const submit=(s:Snapshot)=>buttons(last(s)).find(b=>b.event.type==='confirm')!.event;
 
-for(const count of [1,5,8,9,10,18,20,50])test(`${count} products: complete ordered carousel review and separate invoice consent`,()=>fixture(async(pool,inbox)=>{
+for(const count of [1,5,8,9,10,12,18,19,20,50])test(`${count} products: complete ordered carousel review and separate invoice consent`,()=>fixture(async(pool,inbox)=>{
  const ops:Operation[]=Array.from({length:count},(_,i)=>({kind:'add_item',query:'TEST'+i,quantity:1}));const runtime=new ConversationRuntime(pool,planner(ops),{visualOrdering:true});
  let s=await text(inbox,runtime,'shopping list');const rows=s.messages.filter(m=>m.direction==='outbound');assert.equal(rows.length,Math.ceil((count+1)/10));assert.equal(s.conversation.pending?.kind,'products');
  const cards=rows.flatMap(m=>m.rich!.parts!.flatMap(p=>p.cards));assert.equal(cards.filter(c=>c.kind==='product').length,count);assert.equal(new Set(cards.filter(c=>c.kind==='product').map(c=>c.lineId)).size,count);
  for(const [i,m] of rows.entries()){assert.equal(m.rich!.partIndex,i);const page=m.rich!.parts![0];assert.ok(page.cards.every(c=>c.kind==='product'||c.kind==='instruction'));assert.ok(page.cards.length<=10);const rendered=renderWhatsAppReply(m.rich!,m.id,'example.test');if(page.cards.length>1)assert.equal(rendered.format,'carousel');if(!page.cards.length)assert.ok(['text','buttons'].includes(rendered.format));if(i<rows.length-1)assert.ok(!rendered.actions.some(a=>a.event.type==='confirm_products'));}
- assert.equal(cards.filter(c=>c.kind==='instruction').length,count>1?1:0,'a swipe guide accompanies multiple products; one product uses one image');assert.ok(rows.at(-1)!.rich!.parts![0].cards.length>0,'approval travels inside the final image group');
+ assert.match(rows[0].text,/message or voice note to add, remove or change/i);
+ const finalCard=rows.at(-1)!.rich!.parts![0].cards[0];
+ assert.equal(finalCard.kind,count===1?'product':'instruction');
+ assert.ok(finalCard.buttons?.some(b=>b.event.type==='confirm_products'&&b.label==='Show bill'));
+ assert.ok(!cards.some(c=>c.buttons?.some(b=>b.event.type==='shopping_action'&&b.event.action==='view_products')));
+ assert.equal(cards.filter(c=>c.kind==='instruction').length,count===1?0:count>9&&count%10!==9?2:1);
  s=await event(inbox,runtime,approve(s));assert.equal(s.requests.length,0);assert.equal(s.conversation.pending?.kind,'review');assert.equal(last(s).stage,'bill');const bill=invoiceCards(s);assert.ok(bill.every(c=>c.kind!=='product'&&(c.billRows?.length??0)<=INVOICE_ROWS_PER_PAGE));
  const final=submit(s);s=await event(inbox,runtime,final);assert.equal(s.requests.length,1);assert.equal(last(s).stage,'submitted');assert.ok(s.messages.filter(m=>m.rich?.stage==='submitted').flatMap(m=>m.rich!.parts?.flatMap(p=>p.cards)??[]).some(c=>c.kind==='status'&&c.billRows?.length));await inbox.ingest(final);assert.equal(await runtime.processNext(inbox.context),false);assert.equal((await inbox.snapshot()).requests.length,1);
 }));
@@ -102,8 +107,101 @@ test('select the photographed product before a missing count; quantity has its p
  if(s.conversation.pending?.kind==='products')s=await event(inbox,runtime,approve(s));assert.equal(last(s).stage,'bill');assert.ok(buttons(last(s)).some(b=>b.event.type==='confirm'));assert.equal(s.requests.length,0);
 }));
 
-test('targeted correction shows its affected photo and requires fresh consent; clear all actually resets',()=>fixture(async(pool,inbox)=>{
- const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:'TEST0',quantity:1},{kind:'add_item',query:'TEST1',quantity:2}]),{visualOrdering:true});let s=await text(inbox,runtime,'two items');const ids=s.conversation.draft.map(l=>l.id);s=await event(inbox,runtime,approve(s));const old=submit(s);s=await event(inbox,runtime,{id:randomUUID(),type:'set_quantity',lineId:ids[1],quantity:4,expectedVersion:s.conversation.version});assert.deepEqual(s.conversation.draft.map(l=>l.id),ids);assert.deepEqual(s.conversation.draft.map(l=>l.quantity),[1,4]);assert.equal(last(s).stage,'products');assert.equal(invoiceCards(s).filter(c=>c.kind==='product').length,1);assert.ok(invoiceCards(s).some(c=>c.kind==='product'&&c.lineId===ids[1]));const photos=buttons(last(s)).find(b=>b.event.type==='shopping_action'&&b.event.action==='view_products')!;assert.ok(photos);const kept=structuredClone(s.conversation);s=await event(inbox,runtime,photos.event);assert.deepEqual(s.conversation,kept);assert.equal(invoiceCards(s).filter(c=>c.kind==='product').length,2);s=await event(inbox,runtime,{...old,id:randomUUID()});assert.equal(s.requests.length,0);s=await text(inbox,runtime,'clear all');assert.deepEqual(s.conversation.draft,[]);assert.equal(s.conversation.pending,null);assert.equal(s.conversation.productReview,null);
+test('text and voice can update a shown bill without approving identical photos again',()=>fixture(async(pool,inbox)=>{
+ const startOps:Operation[]=[
+  {kind:'add_item',query:'TEST0',quantity:1},
+  {kind:'add_item',query:'TEST1',quantity:2},
+ ];
+ const spoken='Change TEST0 to four cans';
+ const provider:Interpreter={name:'bill-corrections',mode:'mock',supportsAudio:true,interpret:async input=>{
+  if(input.stage==='recognize')return {output:{transcript:spoken,operations:[],next:'continue'},usage:null,truncated:false};
+  const change:Operation[]=
+   input.text==='Change TEST1 to three cans'?[{kind:'set_quantity',reference:input.state.draft.find(l=>l.sku==='TEST1')!.id,quantity:3,supportingPhrase:input.text}]:
+   input.text===spoken?[{kind:'set_quantity',reference:input.state.draft.find(l=>l.sku==='TEST0')!.id,quantity:4,supportingPhrase:input.text}]:startOps;
+  return {output:{operations:change,next:'review'},usage:null,truncated:false};
+ }};
+ const runtime=new ConversationRuntime(pool,provider,{visualOrdering:true});
+ let s=await text(inbox,runtime,'one TEST0 and two TEST1');
+ const ids=s.conversation.draft.map(l=>l.id);
+ s=await event(inbox,runtime,approve(s));
+ const old=submit(s);
+ assert.match(last(s).text,/message or voice note to add, remove or change/i);
+ s=await text(inbox,runtime,'Change TEST1 to three cans');
+ assert.equal(last(s).stage,'bill');
+ assert.deepEqual(s.conversation.draft.map(l=>l.quantity),[1,3]);
+ const afterText=submit(s);
+ assert.notEqual(afterText.type==='confirm'&&afterText.reviewId,old.type==='confirm'&&old.reviewId);
+ const mediaId=randomUUID(),pcm=Buffer.alloc(32000);
+ for(let i=0;i<pcm.length/2;i++)pcm.writeInt16LE(Math.round(Math.sin(i*.17)*1200),i*2);
+ const media=await normalizeVoice({id:mediaId,mimeType:'audio/wav',data:pcmWav(pcm).toString('base64')});
+ await inbox.ingest({id:mediaId,type:'voice',mediaId},media);
+ await runtime.processNext(inbox.context);
+ s=await inbox.snapshot();
+ assert.equal(last(s).stage,'bill');
+ assert.deepEqual(s.conversation.draft.map(l=>l.id),ids);
+ assert.deepEqual(s.conversation.draft.map(l=>l.quantity),[4,3]);
+ assert.equal(s.requests.length,0);
+ s=await event(inbox,runtime,{...old,id:randomUUID()});
+ assert.equal(s.requests.length,0);
+ s=await event(inbox,runtime,submit(s));
+ assert.equal(s.requests.length,1);
+ assert.deepEqual(s.requests[0].lines.map(l=>l.quantity),[4,3]);
+ assert.equal(last(s).stage,'submitted');
+}));
+
+test('the mixed 12-item review shows a bill even when partial submission is off',()=>fixture(async(pool,inbox)=>{
+ const initial:Operation[]=[{kind:'add_item',query:'unlisted plumb bob',quantity:1},
+  ...Array.from({length:11},(_,i)=>({kind:'add_item' as const,query:'TEST'+i,quantity:1})),
+ ];
+ const provider:Interpreter={name:'mixed-list-review',mode:'mock',interpret:async input=>{
+  const actions:Operation[]=input.text==='remove the unlisted plumb bob'?
+   [{kind:'remove_item',reference:input.state.draft[0].id,supportingPhrase:input.text}]:
+   input.text==='Add one TEST11'? [{kind:'add_item',query:'TEST11',quantity:1,supportingPhrase:input.text}]:
+   input.text==='Remove TEST10'? [{kind:'remove_item',reference:input.state.draft.find(l=>l.sku==='TEST10')!.id,supportingPhrase:input.text}]:initial;
+  return {output:{operations:actions,next:'review'},usage:null,truncated:false};
+ }};
+ const runtime=new ConversationRuntime(pool,provider,{visualOrdering:true,partialReviews:false});
+ let s=await text(inbox,runtime,'shopping list');
+ let cards=invoiceCards(s);
+ assert.equal(cards.filter(c=>c.kind==='product').length,11);
+ assert.equal(last(s).partIndex,1);
+ const guide=last(s).parts![0].cards[0];
+ assert.equal(guide.kind,'instruction');
+ const view=guide.buttons?.find(b=>b.event.type==='show_bill');
+ assert.equal(view?.label,'Show bill');
+ assert.ok(view);
+ assert.ok(!cards.some(c=>c.buttons?.some(b=>b.event.type==='confirm'||b.event.type==='confirm_products')));
+ for(const message of s.messages.filter(m=>m.rich?.groupId===last(s).groupId)){
+  assert.equal(renderWhatsAppReply(message.rich!,message.id,'example.test').format,'carousel');
+ }
+ const original=s.conversation.draft.map(l=>l.id);
+ s=await event(inbox,runtime,view.event);
+ assert.equal(last(s).stage,'bill');
+ assert.deepEqual(s.conversation.draft.map(l=>l.id),original);
+ assert.equal(invoiceCards(s).flatMap(c=>c.kind==='bill'?c.billRows??[]:[]).length,12);
+ assert.ok(!buttons(last(s)).some(b=>b.event.type==='confirm'));
+ assert.equal(s.requests.length,0);
+ s=await text(inbox,runtime,'remove the unlisted plumb bob');
+ assert.deepEqual(s.conversation.draft.map(l=>l.id),original.slice(1));
+ cards=invoiceCards(s);
+ assert.equal(cards.filter(c=>c.kind==='product').length,11);
+ s=await event(inbox,runtime,approve(s));
+ assert.equal(last(s).stage,'bill');
+ assert.equal(s.requests.length,0);
+ assert.equal(buttons(last(s)).find(b=>b.event.type==='confirm')?.label,'Send to store');
+ s=await text(inbox,runtime,'Add one TEST11');
+ assert.equal(s.requests.length,0);
+ assert.equal(s.conversation.draft.at(-1)?.sku,'TEST11');
+ assert.equal(last(s).stage,'products');
+ s=await event(inbox,runtime,approve(s));
+ assert.equal(last(s).stage,'bill');
+ s=await text(inbox,runtime,'Remove TEST10');
+ assert.equal(s.requests.length,0);
+ assert.ok(!s.conversation.draft.some(l=>l.sku==='TEST10'));
+ s=await event(inbox,runtime,approve(s));
+ s=await event(inbox,runtime,submit(s));
+ assert.equal(s.requests.length,1);
+ assert.deepEqual(s.requests[0].lines.map(l=>l.sku),[...Array.from({length:10},(_,i)=>'TEST'+i),'TEST11']);
 }));
 
 test('missing catalog requests survive and block global approval; returning greeting offers continue/new',()=>fixture(async(pool,inbox)=>{

@@ -657,7 +657,7 @@ export class ConversationRuntime {
       if(claimed.catalogMap)rich={...rich,storeName:claimed.catalogMap.store.name};
       if(replyRequest?.advanceRequired&&this.options.advance&&!rich.readOnly)rich=await upiAdvanceReply(client,ctx,finalState,this.options.advance.hostname,{demoPayAtShop:this.options.advance.demoPayAtShop,onlyOnce:true})??rich;
       const alreadySeen=finalState.draft.length>0&&finalState.draft.every(line=>{const product=line.candidates?.find(p=>p.sku===line.sku);return product&&claimed.displayedProducts.some(p=>p.delivered&&p.event.type==='edit_item'&&p.event.lineId===line.id&&productIdentity(p.product)===productIdentity(product));});
-      const editVisual=finalState.visualOrdering&&cartMutated&&!failure&&rich.stage!=='error'&&!rich.readOnly&&finalState.pending?.kind==='products'&&!['cart_edit_target','keep_only_target','intent_clarification'].includes(rich.clarificationReason??'')?visualCartMutation(cartBefore,finalState,{contextLines:rich.contextLines,fullList:interpretation?.understanding?.intents.includes('view_list')}):undefined;
+      const editVisual=finalState.visualOrdering&&cartBefore.pending?.kind!=='review'&&cartMutated&&!failure&&rich.stage!=='error'&&!rich.readOnly&&finalState.pending?.kind==='products'&&!['cart_edit_target','keep_only_target','intent_clarification'].includes(rich.clarificationReason??'')?visualCartMutation(cartBefore,finalState,{contextLines:rich.contextLines,fullList:interpretation?.understanding?.intents.includes('view_list')}):undefined;
       const wantsHours=interpretation?.shopQuestions?.includes('hours'),billStage=rich.stage==='bill'||rich.stage==='submitted'||finalState.pending?.kind==='review'&&rich.kind==='order_review';
       const shopHours=wantsHours||billStage?await readStoreHours(client,ctx.storeId):undefined;
       if(wantsHours&&shopHours){const oldAnswer=shopAnswers(finalState,['hours']),answer=hoursAnswer(shopHours,finalState);rich={...rich,text:rich.text.replaceAll(oldAnswer,answer),contextLines:rich.contextLines?.map(v=>v.replaceAll(oldAnswer,answer)),parts:rich.parts?.map(part=>({...part,text:part.text.replaceAll(oldAnswer,answer)}))};}
@@ -708,6 +708,7 @@ export class ConversationRuntime {
   }
   private knownAction(claim:Claimed):ToolCall|undefined {
     const e=claim.event,s=claim.state;
+    if(e.type==='show_bill')return {name:'estimate_order',args:{expectedVersion:e.expectedVersion}};
     if(e.type==='review_partial')return {name:'preview_order',args:{expectedVersion:e.expectedVersion,allowPartial:true}};
     if(e.type==='shopping_action'&&e.action==='finish_order'){if(e.expectedVersion!==s.version)throw new ToolError('Use the latest list before sending.','stale_version');return this.knownAction({...claim,event:{id:e.id,type:'text',text:'send it'}});}
     if(e.type==='shopping_action'&&e.action==='handoff')return {name:'request_store_assistance',args:{expectedVersion:e.expectedVersion}};

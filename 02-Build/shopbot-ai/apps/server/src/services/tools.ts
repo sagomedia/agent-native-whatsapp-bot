@@ -345,7 +345,14 @@ export class RetailTools {
       }
       const limit=state.visualOrdering?(this.options.maxDraftLines??50):state.requireProductConfirmation?20:10;
       if(state.draft.length>limit) throw new ToolError(`Maximum ${limit} distinct lines. Split the request; no partial list was applied.`);
-      if(state.visualOrdering){const questionLineId=state.pending?.kind==='question'?state.pending.lineId:undefined;const answeringCount=!!questionLineId&&call.args.operations.every(op=>(op.kind==='resolve_line'&&!op.query&&op.lineId===questionLineId)||(op.kind==='set_quantity'&&op.reference===questionLineId));if(!answeringCount)state.productReview=null;}
+      if(state.visualOrdering){
+        const questionLineId=state.pending?.kind==='question'?state.pending.lineId:undefined;
+        const answeringCount=!!questionLineId&&call.args.operations.every(op=>(op.kind==='resolve_line'&&!op.query&&op.lineId===questionLineId)||(op.kind==='set_quantity'&&op.reference===questionLineId));
+        // Counts can change after the invoice without reapproving identical photos.
+        // A new invoice still needs its own send action and delivery proof.
+        const sameReviewedProducts=state.pending?.kind==='review'&&state.productReview?.hash===productListHash(state);
+        if(!answeringCount&&!sameReviewedProducts)state.productReview=null;
+      }
       if(state.visualOrdering){
         const explicit=call.args.operations.flatMap(op=>'lineId' in op?[op.lineId]:'reference' in op?state.draft.filter(line=>line.id===op.reference||line.sku===op.reference).map(line=>line.id):[]);
         const added=state.draft.find(line=>!previousLines.some(old=>old.id===line.id));
