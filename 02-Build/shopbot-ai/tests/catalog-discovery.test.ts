@@ -91,13 +91,13 @@ test('an absent brush is never a bush or unrelated pipe fitting; publishing a br
 test('an exact alias in an owner family survives its returned plan and remains visible during checkout refresh',()=>fixture(async(pool,inbox)=>{
  const store=inbox.context.storeId;
  await pool.query("INSERT INTO catalog_nodes(store_id,id,parent_id,kind,label,aliases) VALUES($1,'levels','tools','family','Spirit levels','[\"spirit level\"]'),($1,'owner-other','tools','family','Other products','[]')",[store]);
- await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases,specifications,image_path,selling_unit_verified) VALUES($1,'LEVEL-12','Aluminium Spirit Level 12in','piece',45000,10,'owner-other','[\"spirit level\",\"ரசமட்டம்\"]','{\"length\":\"12 inch (300mm)\",\"vials\":\"3 vials\"}','/fixture/level.jpg',true)",[store]);
+ await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases,specifications,image_path,selling_unit_verified) VALUES($1,'LEVEL-12','Aluminium Spirit Level 12in','piece',45000,10,'owner-other','[\"spirit level\",\"ரசமட்டம்\"]','{\"length\":\"12 inch (300mm)\",\"vials\":\"3 vials\"}','https://catalog.example/level.jpg',true)",[store]);
  const client=await pool.connect();try{
   const first=await discoverProducts(client,inbox.context,'spirit level');assert.deepEqual(first.products.map(p=>p.sku),['LEVEL-12']);
-  const sized=await discoverProducts(client,inbox.context,'spirit level 12 inch');assert.deepEqual(sized.products.map(p=>p.sku),['LEVEL-12']);assert.equal(sized.products[0].imageUrl,'/fixture/level.jpg');
+  const sized=await discoverProducts(client,inbox.context,'spirit level 12 inch');assert.deepEqual(sized.products.map(p=>p.sku),['LEVEL-12']);assert.equal(sized.products[0].imageUrl,'https://catalog.example/level.jpg');
   assert.equal((await discoverProducts(client,inbox.context,'spirit level 24 inch')).products.length,0);
   for(const query of ['spirit level','ரசமட்டம்']){
-   const again=await discoverProducts(client,inbox.context,query,first.plan);assert.deepEqual(again.products.map(p=>p.sku),['LEVEL-12']);assert.equal(again.products[0].imageUrl,'/fixture/level.jpg');
+   const again=await discoverProducts(client,inbox.context,query,first.plan);assert.deepEqual(again.products.map(p=>p.sku),['LEVEL-12']);assert.equal(again.products[0].imageUrl,'https://catalog.example/level.jpg');
   }
   assert.equal((await discoverProducts(client,inbox.context,'spirit level',{...first.plan,familyId:'levels'})).products.length,0,'an explicit conflicting family is still enforced');
   assert.equal((await discoverProducts(client,inbox.context,'spirit level',{...first.plan,specifications:{length:'24 inch'}})).products.length,0,'a conflicting dimension is still enforced');
@@ -107,7 +107,7 @@ test('an exact alias in an owner family survives its returned plan and remains v
   await pool.query('UPDATE conversations SET draft=$2::jsonb WHERE id=$1',[inbox.context.conversationId,JSON.stringify([stale,{id:randomUUID(),name:'stainless steel tap',query:'stainless steel tap',quantity:null,resolution:'unavailable',candidates:[]}])]);
   const runtime=new ConversationRuntime(pool,never,{visualOrdering:true});let s=await event(inbox,runtime,{id:randomUUID(),type:'review_partial',expectedVersion:0});
   assert.equal(s.requests.length,0);assert.equal(s.conversation.pending?.kind,'products');
-  const cards=last(s).parts!.flatMap(p=>p.cards);assert.ok(cards.some(c=>c.kind==='product'&&c.product.sku==='LEVEL-12'&&c.product.imageUrl==='/fixture/level.jpg'),'known spirit level is shown for explicit photo confirmation');
+  const cards=last(s).parts!.flatMap(p=>p.cards);assert.ok(cards.some(c=>c.kind==='product'&&c.product.sku==='LEVEL-12'&&c.product.imageUrl==='https://catalog.example/level.jpg'),'known spirit level is shown for explicit photo confirmation');
   assert.equal(s.conversation.draft[0].quantity,1);assert.ok(!s.conversation.draft[0].productConfirmation);
   const actions=(snapshot:Snapshot)=>last(snapshot).parts!.flatMap(p=>p.cards.flatMap(c=>c.buttons??[])).map(b=>b.event);
   const checked=actions(s).find(a=>a.type==='confirm_products');assert.ok(checked);s=await event(inbox,runtime,checked!);

@@ -8,14 +8,16 @@ import {discoverProducts,refinementPlan} from '../apps/server/src/services/catal
 import {validateCurrentTurn} from '../apps/server/src/services/current-turn.js';
 import {ConversationRuntime} from '../apps/server/src/runtime/conversation.js';
 import {SimulatorService} from '../apps/server/src/services/simulator.js';
-import {validateInventoryReplan,inventoryCandidateFacts} from '../apps/server/src/services/inventory-grounding.js';
+import {validateInventoryReplan,inventoryCandidateFacts,observeInventory} from '../apps/server/src/services/inventory-grounding.js';
 import {catalogGroupReply} from '../apps/server/src/services/catalog-group-replies.js';
 import {RetailTools} from '../apps/server/src/services/tools.js';
+import {normalizeVoice,pcmWav} from '../apps/server/src/services/voice-media.js';
 import type {ConversationState,Interpretation,SimulatorEvent} from '../packages/contracts/index.js';
 import type {Interpreter,InterpretationInput} from '../apps/server/src/adapters/interpreter.js';
 
 const base=()=>({schemaVersion:2,inputKind:'text',intents:['edit'],requestedItems:[],proposedEdits:[],shopQuestions:[],unresolved:[]});
 const empty:ConversationState={version:0,draft:[],pending:null,lastRequestId:null,fulfillment:'pickup',replyLanguage:'en'};
+const fixturePhoto=(sku:string)=>`https://catalog.example.test/fixtures/${sku}.jpg`;
 const id=randomUUID(),other=randomUUID();
 const cart:ConversationState={...empty,editingLineId:id,draft:[{id,query:'hammer',name:'Hammer',quantity:2,resolution:'unavailable'},{id:other,query:'brush',name:'Brush',quantity:4,resolution:'unavailable'}]};
 
@@ -58,7 +60,7 @@ async function fixture(run:(pool:pg.Pool,inbox:SimulatorService)=>Promise<void>)
   await pool.query("INSERT INTO catalog_profiles(store_id,store_type) VALUES($1,'grocery')",[storeId]);
   await pool.query("INSERT INTO catalog_nodes(store_id,id,parent_id,kind,label,aliases) VALUES($1,'food',NULL,'department','Food','[]'),($1,'plant-drinks','food','family','Plant drinks','[\"oat milk\",\"oat drink\"]'),($1,'dairy-drinks','food','family','Dairy drinks','[\"milk\",\"dairy milk\"]')",[storeId]);
   for(const [sku,name,family,aliases] of [['OAT','Field Oat Drink 1L','plant-drinks',['oat milk','oat drink']],['DAIRY','Farm Dairy Milk 1L','dairy-drinks',['milk','dairy milk']]] as const){
-   await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases,specifications,image_path,selling_unit_verified) VALUES($1,$2,$3,'can',10000,10,$4,$5::jsonb,'{\"pack_size\":\"1 litre\"}',$6,true)",[storeId,sku,name,family,JSON.stringify(aliases),'/fixtures/'+sku+'.jpg']);
+   await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases,specifications,image_path,selling_unit_verified) VALUES($1,$2,$3,'can',10000,10,$4,$5::jsonb,'{\"pack_size\":\"1 litre\"}',$6,true)",[storeId,sku,name,family,JSON.stringify(aliases),fixturePhoto(sku)]);
   }
   await pool.query("INSERT INTO conversations(id,store_id,actor,visual_ordering,reply_language) VALUES($1,$2,'dynamic-test',true,'en')",[conversationId,storeId]);
   await pool.query('INSERT INTO store_policies(store_id,require_product_confirmation) VALUES($1,true)',[storeId]);
@@ -68,7 +70,7 @@ async function fixture(run:(pool:pg.Pool,inbox:SimulatorService)=>Promise<void>)
 async function turn(inbox:SimulatorService,runtime:ConversationRuntime,event:SimulatorEvent){await inbox.ingest(event);await runtime.processNext(inbox.context);return inbox.snapshot();}
 
 test('multiple observed semantic choices do not inherit the first alias match pack size',()=>fixture(async(pool,inbox)=>{
- await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases,specifications,image_path,selling_unit_verified) VALUES($1,'OAT-SMALL','Other Oat Beverage 500ml','can',5000,10,'plant-drinks','[]','{\"pack_size\":\"500 ml\"}','/fixtures/OAT-SMALL.jpg',true)",[inbox.context.storeId]);
+ await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases,specifications,image_path,selling_unit_verified) VALUES($1,'OAT-SMALL','Other Oat Beverage 500ml','can',5000,10,'plant-drinks','[]','{\"pack_size\":\"500 ml\"}',$2,true)",[inbox.context.storeId,fixturePhoto('OAT-SMALL')]);
  const c=await pool.connect();try{
   const search={keywords:['oat drink'],selectedSkus:['OAT','OAT-SMALL']};
   const choices=await discoverProducts(c,inbox.context,'oat drink',search);assert.deepEqual(new Set(choices.products.map(p=>p.sku)),new Set(search.selectedSkus));
@@ -93,7 +95,7 @@ test('the single evidence repair also grounds replacement photos without a third
  assert.equal(calls,2);assert.equal(snapshot.requests.length,0);assert.equal(snapshot.conversation.draft.length,2);
  const line=snapshot.conversation.draft[0];assert.equal(line.id,old);assert.equal(line.quantity,3);assert.deepEqual(line.candidates?.map(p=>p.sku),['OAT']);assert.ok(!line.productConfirmation);
  assert.equal(snapshot.conversation.draft[1].id,untouched);assert.equal(snapshot.conversation.draft[1].quantity,7);
- assert.ok(snapshot.messages.at(-1)?.rich?.parts?.some(part=>part.cards.some(card=>card.kind==='product'&&card.product.imageUrl==='/fixtures/OAT.jpg')));
+ assert.ok(snapshot.messages.at(-1)?.rich?.parts?.some(part=>part.cards.some(card=>card.kind==='product'&&card.product.imageUrl===fixturePhoto('OAT'))));
  const attempts=(await pool.query('SELECT stage,state FROM provider_attempts WHERE conversation_id=$1 ORDER BY created_at',[inbox.context.conversationId])).rows;
  assert.deepEqual(attempts.map(a=>[a.stage,a.state]),[['identify','failed'],['repair','succeeded']]);
 }));
@@ -112,7 +114,103 @@ test('a noisy per-item query is replanned against an unrelated shop inventory an
  const snapshot=await turn(inbox,runtime,{id:randomUUID(),type:'text',text:source});
  assert.equal(calls,2);assert.equal(snapshot.conversation.draft.length,1);assert.equal(snapshot.conversation.draft[0].quantity,2);
  assert.deepEqual(snapshot.conversation.draft[0].candidates?.map(p=>p.sku),['OAT']);
- assert.ok(snapshot.messages.at(-1)?.rich?.parts?.some(part=>part.cards.some(card=>card.kind==='product'&&card.product.imageUrl==='/fixtures/OAT.jpg')));
+ assert.ok(snapshot.messages.at(-1)?.rich?.parts?.some(part=>part.cards.some(card=>card.kind==='product'&&card.product.imageUrl===fixturePhoto('OAT'))));
+ assert.equal(snapshot.requests.length,0);
+}));
+
+for(const failure of ['provider failure','truncated response','changed count'] as const)test(`inventory grounding ${failure} keeps the draft and a customer retry can succeed`,()=>fixture(async(pool,inbox)=>{
+ const existing={id:randomUUID(),name:'Rice flour',query:'rice flour',quantity:7,resolution:'unavailable'};
+ await pool.query('UPDATE conversations SET draft=$1::jsonb WHERE id=$2',[JSON.stringify([existing]),inbox.context.conversationId]);
+ const source='two oat milk';
+ const original={...base(),intents:['add'],requestedItems:[{ordinal:0,sourceText:source,query:'oat milk',purchaseCount:2,unresolved:[],search:{keywords:['oat milk']}}]};
+ let first=true;
+ const provider:Interpreter={name:'controlled-inventory-failure',mode:'mock',unifiedUnderstanding:true,interpret:async input=>{
+  if(!input.inventoryReplan)return {output:understandingToInterpretation(original,input,false),usage:null,truncated:false};
+  assert.ok(input.observations?.[0].products.some(p=>p.sku==='OAT'));
+  const output=inventoryGroundingToInterpretation({items:[{ordinal:0,query:'oat milk',search:{keywords:['oat milk'],selectedSkus:['OAT']}}],replacements:[]},input,false);
+  if(!first)return {output,usage:null,truncated:false};
+  first=false;
+  if(failure==='provider failure')throw new Error('private provider failure');
+  if(failure==='changed count')output.understanding!.requestedItems[0].purchaseCount=8;
+  return {output,usage:null,truncated:failure==='truncated response'};
+ }};
+ const runtime=new ConversationRuntime(pool,provider,{inventoryGrounding:true,visualOrdering:true});
+ const inbound={id:randomUUID(),type:'text' as const,text:source};
+ const failed=await turn(inbox,runtime,inbound);
+ const reply=failed.messages.at(-1)!;
+ assert.equal(reply.rich?.stage,'error');
+ assert.equal(reply.rich?.clarificationReason,'inventory_check_incomplete');
+ assert.match(reply.text,/couldn’t finish checking the catalog.*sending your request again/i);
+ assert.doesNotMatch(reply.text,/no matching listing|not in this catalog|private provider failure/i);
+ assert.deepEqual(failed.conversation.draft,[existing]);
+ assert.equal(failed.conversation.version,0);
+ assert.equal(failed.requests.length,0);
+ assert.ok(failed.messages.some(message=>message.id===inbound.id&&message.text===source));
+ const retried=await turn(inbox,runtime,{...inbound,id:randomUUID()});
+ const item=retried.conversation.draft.find(line=>line.id!==existing.id);
+ assert.ok(item);
+ assert.equal(item.quantity,2);
+ assert.deepEqual(item.candidates?.map(product=>product.sku),['OAT']);
+ assert.ok(!item.productConfirmation);
+ assert.equal(retried.requests.length,0);
+}));
+
+test('a spoken inventory failure can retry the saved recording without applying half a mixed cart edit',()=>fixture(async(pool,inbox)=>{
+ const removed={id:randomUUID(),name:'Rice flour',query:'rice flour',quantity:7,resolution:'unavailable'};
+ const retained={id:randomUUID(),name:'Vanilla',query:'vanilla',quantity:1,resolution:'unavailable'};
+ const draft=[removed,retained];
+ await pool.query('UPDATE conversations SET draft=$1::jsonb WHERE id=$2',[JSON.stringify(draft),inbox.context.conversationId]);
+ const source='Remove the rice flour and add two oat milk';
+ const original={...base(),inputKind:'audio',transcript:source,intents:['edit','add'],requestedItems:[{ordinal:0,sourceText:'add two oat milk',query:'oat milk',purchaseCount:2,unresolved:[],search:{keywords:['oat milk']}}],proposedEdits:[{kind:'remove_item',targetLineId:removed.id,targetQuery:'rice flour',sourceText:'Remove the rice flour'}]};
+ let groundingCalls=0;
+ const provider:Interpreter={name:'controlled-spoken-grounding-failure',mode:'mock',supportsAudio:true,unifiedUnderstanding:true,interpret:async input=>{
+  if(!input.inventoryReplan)return {output:understandingToInterpretation(original,input,false),usage:null,truncated:false};
+  if(++groundingCalls===1)throw new Error('Temporary lookup failure');
+  return {output:inventoryGroundingToInterpretation({items:[{ordinal:0,query:'oat milk',search:{keywords:['oat milk'],selectedSkus:['OAT']}}],replacements:[]},input,false),usage:null,truncated:false};
+ }};
+ const runtime=new ConversationRuntime(pool,provider,{inventoryGrounding:true,visualOrdering:true});
+ const mediaId=randomUUID(),pcm=Buffer.alloc(32000);
+ for(let i=0;i<pcm.length/2;i++)pcm.writeInt16LE(Math.round(Math.sin(i*0.17)*1200),i*2);
+ const media=await normalizeVoice({id:mediaId,mimeType:'audio/wav',data:pcmWav(pcm).toString('base64')});
+ await inbox.ingest({id:mediaId,type:'voice',mediaId},media);
+ await runtime.processNext(inbox.context);
+ const failed=await inbox.snapshot();
+ assert.deepEqual(failed.conversation.draft,draft);
+ assert.equal(failed.conversation.version,0);
+ assert.equal(failed.requests.length,0);
+ assert.equal(failed.messages.find(message=>message.id===mediaId)?.text,source);
+ const error=failed.messages.at(-1)?.rich;
+ assert.equal(error?.clarificationReason,'inventory_check_incomplete');
+ const retry=error?.buttons?.find(button=>button.event.type==='retry_voice');
+ assert.ok(retry);
+ const retried=await turn(inbox,runtime,retry.event);
+ assert.ok(!retried.conversation.draft.some(line=>line.id===removed.id));
+ const preserved=retried.conversation.draft.find(line=>line.id===retained.id);
+ assert.equal(preserved?.query,retained.query);
+ assert.equal(preserved?.quantity,retained.quantity);
+ assert.equal(preserved?.resolution,retained.resolution);
+ const added=retried.conversation.draft.find(line=>line.id!==retained.id);
+ assert.equal(added?.quantity,2);
+ assert.deepEqual(added?.candidates?.map(product=>product.sku),['OAT']);
+ assert.equal(retried.requests.length,0);
+}));
+
+test('a completed inventory grounding pass can report a genuine catalog miss',()=>fixture(async(pool,inbox)=>{
+ const source='two hibiscus concentrates',query='hibiscus concentrate';
+ const original={...base(),intents:['add'],requestedItems:[{ordinal:0,sourceText:source,query,purchaseCount:2,unresolved:[],search:{keywords:[query]}}]};
+ const provider:Interpreter={name:'controlled-inventory-miss',mode:'mock',unifiedUnderstanding:true,interpret:async input=>{
+  if(input.inventoryReplan)assert.equal(input.observations?.[0].products.length,0);
+  const output=input.inventoryReplan
+   ?inventoryGroundingToInterpretation({items:[{ordinal:0,query,search:{keywords:[query],selectedSkus:[]}}],replacements:[]},input,false)
+   :understandingToInterpretation(original,input,false);
+  return {output,usage:null,truncated:false};
+ }};
+ const snapshot=await turn(inbox,new ConversationRuntime(pool,provider,{inventoryGrounding:true,visualOrdering:true}),{id:randomUUID(),type:'text',text:source});
+ assert.notEqual(snapshot.messages.at(-1)?.rich?.stage,'error');
+ assert.match(snapshot.messages.at(-1)!.text,/no matching catalog listing/i);
+ assert.equal(snapshot.conversation.draft[0].resolution,'unavailable');
+ assert.equal(snapshot.conversation.draft[0].quantity,2);
+ assert.equal(snapshot.conversation.draft[0].sku,undefined);
  assert.equal(snapshot.requests.length,0);
 }));
 
@@ -121,7 +219,7 @@ test('category cards and their refinement use only types present in this store',
   const found=await discoverProducts(c,inbox.context,'drink',{keywords:['drink','milk'],familyIds:['plant-drinks','dairy-drinks'],clarifyType:true});
   assert.equal(found.matchStatus,'needs_detail');assert.deepEqual(found.groups?.map(g=>g.value),['dairy-drinks','plant-drinks']);
   const reply=catalogGroupReply(found,empty,{memoryId:randomUUID()})!;
-  assert.ok(reply.parts![0].cards.every(card=>card.kind==='instruction'&&card.imageUrl?.startsWith('/fixtures/')));
+  assert.deepEqual(reply.parts![0].cards.map(card=>card.kind==='instruction'&&card.imageUrl),[fixturePhoto('DAIRY'),fixturePhoto('OAT')]);
   assert.ok(reply.parts![0].cards.every(card=>card.buttons?.every(b=>b.event.type==='refine_discovery')));
   const refined=await discoverProducts(c,inbox.context,'Plant drinks',refinementPlan(found,'family','plant-drinks'));
   assert.equal(refined.plan.clarifyType,false);assert.deepEqual(refined.products.map(p=>p.sku),['OAT']);
@@ -235,6 +333,69 @@ test('grounding search patches preserve all source fields and cannot invent a pa
  assert.throws(()=>inventoryGroundingToInterpretation({...patch,items:[]},input,false),/observed items/);
 });
 
+const fanSource='I need one Ottenburger fan';
+const heardFan={
+ ordinal:0,sourceText:'one Ottenburger fan',query:'Attomberg fan',brand:'Attomberg',purchaseCount:1,
+ countEvidence:{sourceText:'one',value:1,mode:'total'},
+ attributeEvidence:[{field:'brand',value:'Attomberg',sourceText:'Ottenburger'}],
+ unresolved:[],search:{keywords:['table fan','Attomberg fan']},
+};
+const fanSku='ATOM-TABLE';
+const fanGrounding={items:[{ordinal:0,query:'Atomberg table fan',search:{identityQuery:'Atomberg table fan',keywords:['table fan'],selectedSkus:[fanSku]}}],replacements:[]};
+const fanProduct={sku:fanSku,name:'Atomberg Renesa Table Fan',brand:'Atomberg',unit:'piece',pricePaise:10000,stock:10,version:1,aliases:['table fan'],quantityStep:1};
+
+test('only an unambiguous same-item catalog match can correct a near spelling from voice',()=>{
+ const compile=(sourceKind:'text'|'audio',brand='Attomberg',exactRequestedBrand?:string,wording='Atomberg table fan',extraProducts:typeof fanProduct[]=[])=>{
+  const source=fanSource.replace('Ottenburger',brand);
+  const item={...heardFan,sourceText:heardFan.sourceText.replace('Ottenburger',brand),query:brand+' fan',brand,attributeEvidence:[]};
+  const original=understandingToInterpretation({...base(),intents:['add'],requestedItems:[item]},{text:source,state:empty},false);
+  const observation={tool:'discover_products' as const,query:item.query,products:[fanProduct,...extraProducts],totalCount:1+extraProducts.length,exactRequestedBrand};
+  const patch={...fanGrounding,items:[{...fanGrounding.items[0],query:wording,search:{...fanGrounding.items[0].search,identityQuery:wording}}]};
+  const grounded=inventoryGroundingToInterpretation(patch,{text:source,state:empty,proposal:original,observations:[observation],inventoryReplan:true,repairSourceKind:sourceKind},false);
+  const plan=validateInventoryReplan(original,grounded,[observation]);
+  assert.equal(plan.understanding!.requestedItems[0].brand,brand);
+  const operation=plan.operations[0];
+  assert.ok(operation.kind==='add_item');
+  return operation.search?.brand;
+ };
+ assert.equal(compile('audio'),'Atomberg');
+ assert.equal(compile('text'),'Attomberg');
+ assert.equal(compile('audio','Crompton'),'Crompton');
+ assert.equal(compile('audio','Attomberg','Attomberg'),'Attomberg');
+ assert.equal(compile('audio','Attomberg',undefined,'table fan'),'Attomberg');
+ assert.equal(compile('audio','Attomberg',undefined,'Atomberg table fan',[{...fanProduct,sku:'OTHER',brand:'Attamberg'}]),'Attomberg');
+});
+
+test('a grounded voice brand spelling reaches SQL as the catalog brand and still needs product confirmation',()=>fixture(async(pool,inbox)=>{
+ await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,brand,aliases,image_path,selling_unit_verified) VALUES($1,$2,$3,'piece',10000,10,'Atomberg','[\"table fan\"]',$4,true)",[inbox.context.storeId,fanSku,fanProduct.name,fixturePhoto(fanSku)]);
+ const provider:Interpreter={name:'controlled-voice-brand',mode:'mock',unifiedUnderstanding:true,supportsAudio:true,interpret:async input=>{
+  const output=input.inventoryReplan
+   ?inventoryGroundingToInterpretation(fanGrounding,input,false)
+   :understandingToInterpretation({...base(),inputKind:'audio',transcript:fanSource,intents:['add'],requestedItems:[heardFan]},input,false);
+  if(input.inventoryReplan){
+   assert.equal(input.repairSourceKind,'audio');
+   // Cached provider results are read from JSONB, which reorders object keys.
+   const stored=await pool.query('SELECT $1::jsonb AS proposal',[JSON.stringify(input.proposal)]);
+   validateInventoryReplan(stored.rows[0].proposal,output,input.observations!);
+   assert.ok(input.observations?.some(observation=>observation.products.some(product=>product.sku===fanSku)));
+   assert.deepEqual(output.understanding!.requestedItems[0].attributeEvidence,heardFan.attributeEvidence);
+   assert.equal(output.understanding!.requestedItems[0].sourceText,heardFan.sourceText);
+  }
+  return {output,usage:null,truncated:false};
+ }};
+ const runtime=new ConversationRuntime(pool,provider,{inventoryGrounding:true,visualOrdering:true});
+ const id=randomUUID(),pcm=Buffer.alloc(32000);
+ for(let n=0;n<16000;n++)pcm.writeInt16LE(Math.round(Math.sin(n*.17)*1500),n*2);
+ await inbox.ingest({id,type:'voice',mediaId:id},await normalizeVoice({id,mimeType:'audio/wav',data:pcmWav(pcm).toString('base64')}));
+ await runtime.processNext(inbox.context);
+ const snapshot=await inbox.snapshot(),line=snapshot.conversation.draft[0];
+ assert.equal(line.quantity,1);
+ assert.deepEqual(line.candidates?.map(product=>product.sku),[fanSku]);
+ assert.ok(!line.productConfirmation);
+ assert.ok(snapshot.messages.at(-1)?.rich?.parts?.some(part=>part.cards.some(card=>card.kind==='product'&&card.product.sku===fanSku)));
+ assert.equal(snapshot.requests.length,0);
+}));
+
 test('semantic retrieval finds actual names across wrong family labels and remains store scoped',()=>fixture(async(pool,inbox)=>{
  await pool.query("UPDATE products SET family_id='dairy-drinks' WHERE store_id=$1 AND sku='OAT'",[inbox.context.storeId]);
  const c=await pool.connect();try{
@@ -242,6 +403,45 @@ test('semantic retrieval finds actual names across wrong family labels and remai
   assert.equal(products[0].sku,'OAT');assert.equal(products[0].familyId,'dairy-drinks');
   assert.deepEqual(await inventoryCandidateFacts(c,{...inbox.context,storeId:randomUUID()},'oat drink',{keywords:['oat drink']}),[]);
  }finally{c.release();}
+}));
+
+test('generic identity hints preserve stated pipe type, material and dimension in SQL and grounding',()=>fixture(async(pool,inbox)=>{
+ const ctx=inbox.context;
+ await pool.query(`INSERT INTO catalog_nodes(store_id,id,parent_id,kind,label,aliases) VALUES
+  ($1,'hardware',NULL,'department','Hardware','[]'),
+  ($1,'pvc-pipes','hardware','family','PVC pipe','["pipe"]'),
+  ($1,'garden-hoses','hardware','family','Garden hose','[]')`,[ctx.storeId]);
+ for(const [sku,name,family,size,material,stock] of [
+  ['PIPE-075','PVC pipe SDR 13','pvc-pipes','3/4 inch','PVC',8],
+  ['PIPE-100','PVC pipe SDR 26','pvc-pipes','1 inch','PVC',0],
+  ['HOSE-075','Garden hose 3/4 inch','garden-hoses','3/4 inch','rubber',15],
+  ['HOSE-100','Garden hose 1 inch','garden-hoses','1 inch','rubber',15],
+ ] as const){
+  await pool.query(`INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases,specifications,selling_unit_verified)
+   VALUES($1,$2,$3,'piece',10000,$4,$5,'["PVC pipe","water pipe", "pipe"]',$6::jsonb,true)`,[ctx.storeId,sku,name,stock,family,JSON.stringify({size,material})]);
+ }
+ const search={identityQuery:'pipe',keywords:['pipe','PVC pipe','water pipe']};
+ const client=await pool.connect();try{
+  const queries=['3/4 inch PVC pipe','1 inch PVC pipe'];
+  for(const [index,sku] of ['PIPE-075','PIPE-100'].entries()){
+   const query=queries[index],result=await discoverProducts(client,ctx,query,search);
+   assert.deepEqual(result.products.map(p=>p.sku),[sku]);
+   assert.equal(result.products[0].stock,index===0?8:0);
+   const facts=await inventoryCandidateFacts(client,ctx,query,{...search,specifications:{material:'PVC'}});
+   assert.deepEqual(facts.map(p=>p.sku),[sku]);
+  }
+  const observed=await observeInventory(client,ctx,new RetailTools(pool),queries.map(query=>({query,search})),randomUUID());
+  assert.deepEqual(observed.map(o=>o.products.map(p=>p.sku)),[['PIPE-075'],['PIPE-100']]);
+  assert.deepEqual((await discoverProducts(client,ctx,'¾-inch PVC pipe',search)).products.map(p=>p.sku),['PIPE-075']);
+  const source='Do you have 3/4 inch PVC pipe?';
+  for(const intent of ['add','lookup','price']){
+   const raw={...base(),intents:[intent],requestedItems:[{ordinal:0,sourceText:source,query:'PVC pipe',purchaseCount:null,dimensions:[{role:'diameter',value:.75,unit:'inch'}],unresolved:[],search}]};
+   const plan=understandingToInterpretation(raw,{text:source,state:empty},false);
+   const searchPlan=plan.next==='assist'?plan.assistance!.search:plan.next==='price'?plan.priceSearch:plan.operations[0].kind==='add_item'?plan.operations[0].search:undefined;
+   assert.ok(searchPlan);
+   assert.deepEqual((await discoverProducts(client,ctx,'PVC pipe',searchPlan)).products.map(p=>p.sku),['PIPE-075'],intent);
+  }
+ }finally{client.release();}
 }));
 
 test('a count expression that belongs only to a measurement cannot count packages',()=>{

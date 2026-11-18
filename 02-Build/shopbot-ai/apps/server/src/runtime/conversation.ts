@@ -1,5 +1,5 @@
 import {readStoreHours,hoursAnswer,appendClosedShopNotice} from '../services/store-hours.js';
-import {inventoryItems,validateInventoryReplan,retainUngroundedItems,observeInventory} from '../services/inventory-grounding.js';
+import {inventoryItems,validateInventoryReplan,observeInventory} from '../services/inventory-grounding.js';
 import {understandingSearch} from '../services/catalog-request.js';
 import {cartTargetQuestion,totalQuantityQuestion,offeredRemovalGroup} from '../services/cart-clarification.js';
 import {recordConversationAudit} from '../services/catalog-audit.js';
@@ -57,6 +57,11 @@ function quantityAnswer(state:ConversationState,lineId:string,amount:{quantity:n
 }
 type Claimed = { lastReplyWasListView?:boolean;evidenceRepair?:import('../adapters/interpreter.js').EvidenceRepair;cartEditResumed?:boolean; deadlineAt:number; id:string; token:string; event:SimulatorEvent; bindingId:string|null; state:ConversationState; catalog:Product[];catalogMap?:import('../../../../packages/contracts/index.js').CatalogMap;memory:AssistantMemory|null;displayedActions:SimulatorEvent[];displayedProducts:{event:SimulatorEvent;product:Product;delivered?:boolean}[] };
 class DeferredRecommendation extends Error {}
+class InventoryCheckIncomplete extends ToolError {
+  constructor(readonly transcript?:string) {
+    super('Could not complete the catalog check.','inventory_check_incomplete');
+  }
+}
 function correctionDescription(claim:Claimed,interpretation:Interpretation|undefined,description:string){
  if(claim.cartEditResumed&&claim.memory?.purpose==='cart_edit'&&claim.memory.sourceVersion===claim.state.version)return claim.memory.cartEdit?.description??description;
  const saved=claim.memory?.purpose==='cart_correction'&&claim.memory.sourceVersion===claim.state.version?claim.memory.correction:undefined;
@@ -212,7 +217,8 @@ export class ConversationRuntime {
           return true;
         }
         failureReason=error instanceof ToolError?error.code:undefined;
-        if(claimed.event.type==='voice'&&!failureReason?.startsWith('interpretation_')&&!(error instanceof FreeQuotaError)&&!(error instanceof ToolError&&['stale_version','quota_unavailable','budget_unavailable'].includes(error.code)))voiceFailureKind=error instanceof ToolError&&error.code==='voice_unreadable'?'unreadable':'processing';
+        if(error instanceof InventoryCheckIncomplete&&error.transcript)interpretation={operations:[],next:'continue',transcript:error.transcript};
+        if(claimed.event.type==='voice'&&!(error instanceof InventoryCheckIncomplete)&&!failureReason?.startsWith('interpretation_')&&!(error instanceof FreeQuotaError)&&!(error instanceof ToolError&&['stale_version','quota_unavailable','budget_unavailable'].includes(error.code)))voiceFailureKind=error instanceof ToolError&&error.code==='voice_unreadable'?'unreadable':'processing';
         failure=failureReason?.startsWith('interpretation_')?customerError(error instanceof Error?error.message:'Could not apply changes',claimed.state,failureReason):this.provider.mode==='live'?(error instanceof ToolError&&error.code==='stale_version'?error.message:error instanceof ToolError&&error.code==='quota_unavailable'?'I’m temporarily at the AI request limit. Your list is kept. Use a product button or ask the shop to help.':error instanceof FreeQuotaError?'The AI service is temporarily rate limited. Your list is kept; product buttons and catalog rechecks still work.':'I’m having trouble processing that message. Your list is kept. You can recheck the item, use the product choices, or try a new description shortly.'):error instanceof Error?error.message:'Interpretation failed. Your draft is retained.';
       }
     }
@@ -318,7 +324,7 @@ export class ConversationRuntime {
         }
       }
       if(claimed.event.type==='voice'&&interpretation?.transcript)await client.query('UPDATE messages SET text=$1 WHERE id=$2 AND conversation_id=$3',[interpretation.transcript,claimed.id,ctx.conversationId]);
-      if(failure)failure=voiceFailureKind==='unreadable'?customerCopy('voiceUnclear',current):voiceFailureKind==='processing'?customerCopy('voiceProcessing',current):customerError(failure,current);
+      if(failure)failure=failureReason==='inventory_check_incomplete'?customerCopy('inventoryCheckIncomplete',current):voiceFailureKind==='unreadable'?customerCopy('voiceUnclear',current):voiceFailureKind==='processing'?customerCopy('voiceProcessing',current):customerError(failure,current);
       const cartBefore=structuredClone(current);let cartMutated=false;const auditToolResults:Array<{tool:string;query:string|null;productSkus:string[];totalCount:number|null}>=[];
       const retainedCartGoal=claimed.memory&&['cart_edit','cart_correction'].includes(claimed.memory.purpose)&&claimed.memory.sourceVersion===current.version&&!current.lastRequestId?claimed.memory:undefined;
       let replyRequest:import('../../../../packages/contracts/index.js').OrderRequest|null|undefined;
@@ -586,7 +592,7 @@ export class ConversationRuntime {
         const added=finalState.draft.flatMap(line=>{const old=claimed.state.draft.find(l=>l.id===line.id),delta=(line.quantity??0)-(old?.quantity??0);return !old?[{line,quantity:line.quantity}]:delta>0?[{line,quantity:delta}]:[];});
         if(added.length){const details=added.map(({line,quantity})=>`${quantity??''} ${line.query??line.name}`.trim()).join(', ');const retained=claimed.state.draft.every(old=>finalState.draft.some(line=>line.id===old.id));const kept=retained?say(finalState,' Your earlier items are kept.',' முந்தைய பொருட்களும் பட்டியலில் உள்ளன.',' Munthaya porutkalum list-la irukku.'):'';rich={...rich,text:say(finalState,`Added: ${details}.`,`சேர்த்திருக்கிறேன்: ${details}.`,`Serthirukken: ${details}.`)+kept+'\n\n'+rich.text};}
       }
-      if(failure&&claimed.event.type==='voice'&&voiceFailureKind==='processing'){rich.buttons=[{label:say(finalState,'Try again','மீண்டும் முயல்','Marubadi try'),event:{id:randomUUID(),type:'retry_voice',mediaId:claimed.event.mediaId,expectedVersion:finalState.version}},shoppingButton(finalState,'handoff',say(finalState,'Talk to shop','கடையிடம் பேசு','Kadaiyila pesu'))];}
+      if(failure&&claimed.event.type==='voice'&&(voiceFailureKind==='processing'||failureReason==='inventory_check_incomplete')){rich.buttons=[{label:say(finalState,'Try again','மீண்டும் முயல்','Marubadi try'),event:{id:randomUUID(),type:'retry_voice',mediaId:claimed.event.mediaId,expectedVersion:finalState.version}},shoppingButton(finalState,'handoff',say(finalState,'Talk to shop','கடையிடம் பேசு','Kadaiyila pesu'))];}
       if(!failure&&!deterministic&&interpretation?.clarifyQuestion&&!interpretation.operations.length&&rich.stage!=='identify'&&rich.kind!=='product_choices'){const q=safeQuestion(interpretation.clarifyQuestion,finalState,interpretation.transcript??(claimed.event.type==='text'?claimed.event.text:''));if(q)rich={...plainReply(q),stage:'identify',clarificationReason:'intent_clarification'};}
       if(interpretation?.understanding?.inputKind==='handwritten_list'){rich={...rich,contextLines:[say(finalState,'I read your list. Please check every item, including lines marked for shop checking.','உங்கள் பட்டியலைப் படித்தேன். கடை சரிபார்க்க வேண்டிய வரிகள் உட்பட எல்லாப் பொருட்களையும் சரிபாருங்கள்.','Unga list-ai padithen. Kadai check panna vendiya varigal utpada ella porutkalaiyum check pannunga.'),...rich.contextLines??[]]};}
       if(finalState.visualOrdering&&interpretation?.shopQuestions?.length)rich.contextLines=[shopAnswers(finalState,interpretation.shopQuestions),...rich.contextLines??[]];
@@ -943,6 +949,7 @@ export class ConversationRuntime {
     text=correctionDescription(claim,identified,text);
 
     if(claim.state.visualOrdering&&(!image||identified.understanding?.inputKind==='handwritten_list'))identified=normalizeAmountEdits(identified,text,claim.state);
+    let repairedVisualPlan=false;
     if(claim.state.visualOrdering&&(!image||identified.understanding?.inputKind==='handwritten_list')&&identified.operations.length){
       let feedback:string|undefined;
       try{identified={...identified,operations:validateCurrentTurn(identified.operations,text,claim.state)};}
@@ -967,28 +974,26 @@ export class ConversationRuntime {
         if(evidenceRepair)throw new ToolError('Some cart details need checking. Please rephrase the current change.','interpretation_evidence');
         if(image)throw new ToolError('Some list details need checking. Please correct the unclear lines or ask the shop.','interpretation_evidence');
         const repaired=await this.callProvider(ctx,claim,{...input,text,audio:undefined,image:undefined,observations:recovery.length?recovery:input.observations,proposal:identified,planningFeedback:feedback,repairSourceKind:voice?'audio':'text'},'repair');
+        repairedVisualPlan=true;
         const normalized=normalizeAmountEdits(repaired,text,claim.state);
         identified={...normalized,...(voice?{transcript}:{}),operations:validateCurrentTurn(normalized.operations,text,claim.state)};
       }
     }
     if(this.options.inventoryGrounding&&this.provider.unifiedUnderstanding&&identified.understanding&&inventoryItems(identified).length){
       const items=inventoryItems(identified).slice(0,3);
-      const fresh=await withConversation(this.pool,ctx,client=>observeInventory(client,ctx,this.tools,items.map(item=>({query:item.query!,search:item.search})),`${claim.id}:inventory`));
-      // Exact names/SKUs already have hard-filtered current facts. Other
-      // candidates get one metered semantic grounding pass, including empty
-      // results, coarse families and exact aliases that may be incorrect.
-      if(fresh.some(o=>!evidenceInventorySelections.has(o.query)&&(!o.products.length||!['sku','name'].includes(o.discovery?.diagnostics?.identity??'none')))){
-        const calls=Number((await this.pool.query("SELECT count(*)::int AS calls FROM provider_attempts WHERE message_id=$1 AND stage<>'recognize'",[claim.id])).rows[0].calls);
-        if(calls>=2)return retainUngroundedItems(identified,fresh);
-        try{
-          const grounded=await this.callProvider(ctx,claim,{...input,inventoryReplan:true,audio:undefined,image:undefined,text,observations:fresh,proposal:identified,repairSourceKind:voice?'audio':'text',planningFeedback:'Ground the original product requests in these fresh inventory results. Preserve every item, sourceText, count, attribute, intent and cart edit. For broad results above ten matches, choose search.narrowing over useful observed facets instead of limiting to sampled SKUs. For compact results choose only genuinely matching selectedSkus; use [] when the returned names/specifications describe a different object. A bad alias or family is not proof of a match. If useful items were missed, refine search.identityQuery and keywords using faithful product meaning. Unobserved items must remain unchanged. Ask one practical question only for unresolved meaning.'},'repair');
-          return {...validateInventoryReplan(identified,grounded,fresh),...(voice?{transcript}:{})};
-        }catch(error){
-          if(error instanceof DeferredRecommendation)throw error;
-          return retainUngroundedItems(identified,fresh);
-        }
+      try{
+        const fresh=await withConversation(this.pool,ctx,client=>observeInventory(client,ctx,this.tools,items.map(item=>({query:item.query!,search:item.search})),`${claim.id}:inventory`));
+        // Exact names/SKUs already have hard-filtered current facts. Other
+        // candidates get one metered semantic grounding pass, including empty
+        // results, coarse families and exact aliases that may be incorrect.
+        if(!fresh.some(o=>!evidenceInventorySelections.has(o.query)&&(!o.products.length||!['sku','name'].includes(o.discovery?.diagnostics?.identity??'none'))))return identified;
+        if(evidenceRepair||repairedVisualPlan)throw new InventoryCheckIncomplete(transcript);
+        const grounded=await this.callProvider(ctx,claim,{...input,inventoryReplan:true,audio:undefined,image:undefined,text,observations:fresh,proposal:identified,repairSourceKind:voice?'audio':'text',planningFeedback:'Ground the original product requests in these fresh inventory results. Preserve every item, sourceText, count, attribute, intent and cart edit. For broad results above ten matches, choose search.narrowing over useful observed facets instead of limiting to sampled SKUs. For compact results choose only genuinely matching selectedSkus; use [] when the returned names/specifications describe a different object. A bad alias or family is not proof of a match. If useful items were missed, refine search.identityQuery and keywords using faithful product meaning. Unobserved items must remain unchanged. Ask one practical question only for unresolved meaning.'},'repair');
+        return {...validateInventoryReplan(identified,grounded,fresh),...(voice?{transcript}:{})};
+      }catch(error){
+        if(error instanceof DeferredRecommendation||error instanceof InventoryCheckIncomplete||error instanceof ToolError&&error.code==='turn_deadline')throw error;
+        throw new InventoryCheckIncomplete(transcript);
       }
-      return identified;
     }
     const mediaRecommendations=!!this.options.mediaRecommendations&&(voice||image);
     // Single spoken requests start with grounded choices, not an assumed cart selection.

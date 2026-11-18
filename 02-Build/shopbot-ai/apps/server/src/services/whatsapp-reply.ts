@@ -7,11 +7,12 @@ export type WhatsAppAction={id:string;label:string;event:SimulatorEvent};
 export type WhatsAppReply={payload:Record<string,unknown>;actions:WhatsAppAction[];format:'text'|'buttons'|'image'|'carousel'|'list'|'audio'};
 export {fitText} from '../../../../packages/contracts/channel-text.js';
 import {fitText,cardMessageText,productPhotoCaption,buildProductCaption} from '../../../../packages/contracts/channel-text.js';
-export function productMediaUrl(image:string|undefined,hostname:string):string|undefined {
+export function productMediaUrl(image:string|undefined,hostname?:string):string|undefined {
   if(!image)return;
-  if(/^\/demo-images\/H\d{2}\.jpg$/.test(image))return `https://${hostname}/catalog-images/${image.split('/').at(-1)}`;
-  if(/^\/catalog-images\/messages\/[a-f0-9]{64}\.png$/.test(image))return `https://${hostname}${image}`;
-  if(/^\/catalog-images\/(?:custom|reference)\/[a-f0-9-]{36}\.jpg$/.test(image))return `https://${hostname}${image}`;
+  const origin=hostname?`https://${hostname}`:'';
+  if(/^\/demo-images\/H\d{2}\.jpg$/.test(image))return `${origin}/catalog-images/${image.split('/').at(-1)}`;
+  if(/^\/catalog-images\/messages\/[a-f0-9]{64}\.png$/.test(image))return origin+image;
+  if(/^\/catalog-images\/(?:custom|reference)\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\.jpg$/.test(image))return origin+image;
   try{const url=new URL(image);if(url.protocol==='https:'&&!url.username&&!url.password)return url.href;}catch{}
 }
 export function cardText(card:ProductCard,reply:RichReply):string {

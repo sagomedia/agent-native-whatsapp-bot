@@ -64,7 +64,7 @@ test('repair receives failure, previous proposal and observations with text moda
  const prompt=JSON.parse(understandingPrompt(input));
  assert.equal(prompt.inputKind,'text');assert.equal(prompt.customerText,'two pipes');
  assert.equal(prompt.repair.originalInputKind,'audio');assert.equal(prompt.repair.feedback,input.planningFeedback);
- assert.deepEqual(prompt.repair.priorProposal,proposal);assert.deepEqual(prompt.repair.observations,[]);
+ assert.deepEqual(prompt.repair.priorProposal,proposal);assert.deepEqual(prompt.catalogObservations,[]);assert.equal(prompt.repair.observations,undefined);
  assert.notEqual(understandingPrompt(input),understandingPrompt({...input,planningFeedback:undefined}));
 });
 test('clear_list is a no-op proposal and cannot contain shopping operations',()=>{

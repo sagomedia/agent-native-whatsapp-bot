@@ -94,6 +94,21 @@ test('one saved item is shown as one native product image with actions',()=>fixt
  const s=await text(i,r,'show my list');capture('single-item',s);const payloads=assertVisual(s,['VIS-0']);assert.equal(currentReply(s).parts!.flatMap(p=>p.cards).length,1);assert.equal(payloads[0].format,'buttons');
 },1));
 
+test('viewing a list shows a photo for an unresolved choice without accepting that choice',()=>fixture(async(pool,i,r)=>{
+ const {conversation}=await i.snapshot();
+ const [uncertain,alternative,selected]=conversation.draft;
+ const candidates=[{...uncertain.candidates![0],imageUrl:undefined},alternative.candidates![0]];
+ await pool.query('UPDATE conversations SET draft=$1::jsonb WHERE id=$2',[JSON.stringify([{...uncertain,sku:undefined,resolution:'needs_choice',candidates},selected]),i.context.conversationId]);
+ const before=(await i.snapshot()).conversation;
+ const s=await text(i,r,'show my list');
+ assertVisual(s,['VIS-1','VIS-2']);
+ const cards=productCards(s);
+ assert.equal(cards[0].lineId,uncertain.id);assert.match(cards[0].caption,/Possible match/);
+ assert.equal(cards[0].buttons?.[0].event.type,'edit_item');
+ assert.equal(cards[1].lineId,selected.id);assert.doesNotMatch(cards[1].caption,/Possible match/);
+ assert.deepEqual(s.conversation,before);
+}));
+
 test('a list larger than one native carousel group retains every row and mutates nothing',()=>fixture(async(_pool,i,r)=>{
  const before=(await i.snapshot()).conversation,s=await text(i,r,'show my list');capture('twelve-items',s);
  const rich=currentReply(s),outbound=s.messages.filter(m=>m.direction==='outbound'),cards=outbound.flatMap(m=>m.rich?.parts?.flatMap(p=>p.cards)??[]).filter(c=>c.kind==='product');

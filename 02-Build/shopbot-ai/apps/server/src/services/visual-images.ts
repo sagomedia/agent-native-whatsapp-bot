@@ -6,6 +6,7 @@ import {resolve,join} from 'node:path';
 import type {VisualCard,RichReply} from '../../../../packages/contracts/index.js';
 import {measurementText,productName,referencePhotoLabel,say} from '../../../../packages/contracts/language.js';
 import {buildProductCaption,productPhotoCaption} from '../../../../packages/contracts/channel-text.js';
+import {productMediaUrl} from './whatsapp-reply.js';
 
 export const visualMediaDir=()=>resolve(process.env.VISUAL_MEDIA_DIR??'data/visual-images');
 const escape=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]!));
@@ -133,8 +134,8 @@ export function materializeVisualReply(reply:RichReply,directory=visualMediaDir(
  if(!reply.parts)return reply;
  const language=reply.replyLanguage??'en';
  return {...reply,parts:reply.parts.map(part=>({...part,cards:part.cards.map(card=>{
-  if(card.kind!=='product')return {...card,imageUrl:card.imageUrl??renderVisualImage({...card,storeName:reply.storeName},directory)};
-  if(card.product.imageUrl)return card;
+  if(card.kind!=='product')return productMediaUrl(card.imageUrl)?card:{...card,imageUrl:renderVisualImage({...card,storeName:reply.storeName},directory)};
+  if(productMediaUrl(card.product.imageUrl))return card;
   const missing=say(language,'Photo unavailable','படம் இல்லை','Padam illai');
   const name=productName(card.product,language),size=measurementText(card.product.specifications?.size??card.product.specifications?.weight??'',language);
   const reference=referencePhotoLabel(card.product,language);

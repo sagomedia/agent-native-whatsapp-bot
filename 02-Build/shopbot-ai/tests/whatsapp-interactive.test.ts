@@ -2,6 +2,7 @@ import {productName} from '../packages/contracts/language.js';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
 import pg from 'pg';
 import {renderWhatsAppReply,fitText,productMediaUrl,cardText} from '../apps/server/src/services/whatsapp-reply.js';
 import {planWhatsAppReply} from '../apps/server/src/services/whatsapp-plan.js';
@@ -149,6 +150,18 @@ test('only active catalog photos belonging to the sender store are public',async
   assert.equal((await app.inject({url:'/catalog-images/H99.jpg',headers:{host:cfg.hostname}})).statusCode,404);
   assert.equal((await app.inject({url:'/catalog-images/H02.jpg',headers:{host:'other.example.test'}})).statusCode,404);
   assert.equal((await app.inject({url:'/customer-uploads/private.jpg',headers:{host:cfg.hostname}})).statusCode,404);
+  const bytes=await readFile('resources/catalog/ksmc-demo/images/H02.jpg');
+  for(const [kind,sku] of [['custom','H02'],['reference','H03']]){
+   const id=randomUUID(),url=`/catalog-images/${kind}/${id}.jpg`;
+   await pool.query('INSERT INTO catalog_photos(id,store_id,image,width,height) VALUES($1,$2,$3,640,640)',[id,fixtureStore,bytes]);
+   assert.equal((await app.inject({url,headers:{host:cfg.hostname}})).statusCode,404);
+   await pool.query('UPDATE products SET image_path=$1 WHERE store_id=$2 AND sku=$3',[url,fixtureStore,sku]);
+   const ready=await app.inject({url,headers:{host:cfg.hostname}});
+   assert.equal(ready.statusCode,200);assert.equal(ready.headers['content-type'],'image/jpeg');assert.deepEqual(ready.rawPayload,bytes);
+   assert.equal((await app.inject({url,headers:{host:'other.example.test'}})).statusCode,404);
+   await pool.query('UPDATE products SET active=false WHERE store_id=$1 AND sku=$2',[fixtureStore,sku]);
+   assert.equal((await app.inject({url,headers:{host:cfg.hostname}})).statusCode,404);
+  }
  }finally{await app.close();}
 }));
 test('an oversized review preserves the draft but invalidates undisplayed consent',async()=>fixture(async(pool,channel,sent)=>{

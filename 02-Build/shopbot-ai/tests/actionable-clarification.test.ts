@@ -16,7 +16,7 @@ import type {AssistantMemory} from '../apps/server/src/services/agent-assistance
 import type {TurnUnderstanding} from '../packages/contracts/understanding.js';
 
 const base=()=>({schemaVersion:2,inputKind:'text',intents:['edit'],requestedItems:[],proposedEdits:[],shopQuestions:[],unresolved:[]});
-const product=(sku:string,name:string):Product=>({sku,name,unit:'piece',pricePaise:1000,stock:20,version:1,aliases:[],quantityStep:1,sellingUnitVerified:true,imageUrl:'/fixtures/'+sku+'.jpg'});
+const product=(sku:string,name:string):Product=>({sku,name,unit:'piece',pricePaise:1000,stock:20,version:1,aliases:[],quantityStep:1,sellingUnitVerified:true,imageUrl:`https://catalog.example.test/fixtures/${sku}.jpg`});
 const products:Product[]=[{...product('PIPE','PVC pipe 3/4 inch'),specifications:{diameter:'3/4 inch'}},{...product('KEY','Allen key set'),unit:'pack'},product('OAT','Plant drink'),product('DAIRY','Dairy drink')];
 const row=(p:Product,quantity:number|null):DraftLine=>({id:randomUUID(),query:p.sku==='PIPE'?'3/4 inch pipe':p.name.toLowerCase(),name:p.name,quantity,sku:p.sku,unit:p.unit,pricePaise:p.pricePaise,productVersion:1,candidates:[p],resolution:quantity===null?'needs_quantity':'matched'});
 const source='அண்ணா எனக்கு ஒரு ஆலன் கீ ஒன்னு அடுத்து வந்து முக்கால் இன்ச் பைப் ஒன்னு.';
@@ -56,7 +56,7 @@ test('the reported voice plan is repaired once, retains both requested totals an
  const runtime=new ConversationRuntime(pool,interpreter,{allowPaidInference:true,inventoryGrounding:true,visualOrdering:true});
  const id=randomUUID();await inbox.ingest({id,type:'voice',mediaId:id},{audio:Buffer.from('RIFF controlled audio'),durationSeconds:2,sourceHash:'synthetic-voice'});await runtime.processNext(inbox.context);
  const s=await inbox.snapshot();assert.equal(calls,2);assert.deepEqual(s.conversation.draft.map(line=>[line.id,line.quantity]),draft.map(line=>[line.id,1]));assert.equal(s.requests.length,0);
- assert.ok(s.messages.at(-1)?.rich?.parts?.some(part=>part.cards.some(card=>card.kind==='product'&&card.product.sku==='PIPE'&&!!card.product.imageUrl)),'a verified pipe candidate must use its real product photo');
+ assert.ok(s.messages.at(-1)?.rich?.parts?.some(part=>part.cards.some(card=>card.kind==='product'&&card.product.sku==='PIPE'&&card.product.imageUrl===products[0].imageUrl)),'a verified pipe candidate must use its real product photo');
  assert.notEqual(s.messages.at(-1)?.rich?.stage,'error');
  const attempts=(await pool.query('SELECT stage,state FROM provider_attempts ORDER BY created_at')).rows;assert.deepEqual(attempts.map(a=>[a.stage,a.state]),[['identify','failed'],['repair','succeeded']]);
 }));

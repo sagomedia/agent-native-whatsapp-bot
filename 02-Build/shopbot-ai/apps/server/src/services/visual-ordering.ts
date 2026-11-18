@@ -11,7 +11,7 @@ import {say,lineName,unitName,productName,safeQuestion,localName,draftIssueText,
 import {formatMoney,lineTotal} from '../../../../packages/contracts/money.js';
 import {productIdentity} from './product-confirmation.js';
 import {counterLine,nextCounterLine,productCheckCoversDraft} from './counter-state.js';
-import {fitText} from './whatsapp-reply.js';
+import {fitText,productMediaUrl} from './whatsapp-reply.js';
 import {requestStatusText} from './request-status.js';
 import {catalogPack,catalogContent} from './quantity-evidence.js';
 import {INVOICE_ROWS_PER_PAGE} from './visual-images.js';
@@ -47,10 +47,18 @@ function budgetText(line:ConversationState['draft'][number],state:ConversationSt
  const used=line.quantity!==null&&line.resolution==='matched'&&line.pricePaise!==undefined?lineTotal(line.pricePaise,line.quantity):null;
  return say(state,`Budget ${formatMoney(line.requestedBudgetPaise)}${used!==null?`; unspent ${formatMoney(Math.max(0,line.requestedBudgetPaise-used))}`:''}`,`கேட்ட தொகை ${formatMoney(line.requestedBudgetPaise)}${used!==null?`; மீதி ${formatMoney(Math.max(0,line.requestedBudgetPaise-used))}`:''}`,`Ketta thogai ${formatMoney(line.requestedBudgetPaise)}${used!==null?`; meethi ${formatMoney(Math.max(0,line.requestedBudgetPaise-used))}`:''}`);
 }
-function draftReviewCards(state:ConversationState):VisualCard[]{
+function draftReviewCards(state:ConversationState,showOptions=false):VisualCard[]{
  return state.draft.flatMap((line,index)=>{
   const edit:Button={label:say(state,'Change this','இதை மாற்று','Ithai maathu'),event:{id:randomUUID(),type:'edit_item',lineId:line.id,expectedVersion:state.version}};
   const product=line.candidates?.find(p=>p.sku===line.sku);
+  if(!line.sku&&showOptions&&line.resolution==='needs_choice'&&!line.shopCheckDeferred){
+   const option=line.candidates?.find(candidate=>productMediaUrl(candidate.imageUrl));
+   if(option){
+    const possible=say(state,'Possible match · check type','சாத்தியமான பொருள்','Possible match · vagai check');
+    const requested=say(state,`Requested: ${lineName(line,state)}`,`கேட்டது: ${lineName(line,state)}`,`Kettathu: ${lineName(line,state)}`);
+    return [{kind:'product',lineId:line.id,product:option,caption:productCaption(option,state,[possible,requested],index+1),buttons:[edit]}];
+   }
+  }
   if(!product)return [instruction(lineName(line,state),[say(state,'Request awaiting shop checking · price pending','கடை சரிபார்க்க வேண்டிய கோரிக்கை · விலை இன்னும் வரல','Kadai check panna vendiya request · vilai innum varala'),line.quantity===null?say(state,'Count to check','Count check பண்ணணும்','Count check pannanum'):`${line.quantity} ${unitName(line.unit??line.requestedUnit??'unit',state,line.quantity)}`],lineName(line,state),[edit])];
   const pack=line.packSize??catalogPack(product),size=pack?`${pack.value} ${pack.unit}`:product.specifications?.size;
   const content=catalogContent(product),amount=line.requestedAmount;
@@ -64,7 +72,7 @@ function draftReviewCards(state:ConversationState):VisualCard[]{
 export function visualListView(state:ConversationState):RichReply {
  if(!state.draft.length)return {...textPresentation(say(state,'Your list is empty. Tell me what you need.','உங்கள் பட்டியல் காலியாக இருக்கு. என்ன பொருள் வேணும் சொல்லுங்க.','Unga list kaaliya irukku. Enna porul venum sollunga.'),[],'status'),readOnly:true,replyLanguage:state.replyLanguage};
  if(!state.lastRequestId&&state.pending?.kind==='products'&&state.pending.version===state.version&&Date.parse(state.pending.expiresAt)>Date.now()&&productCheckCoversDraft(state,state.pending))return {...visualProductReview(state),readOnly:true,replyLanguage:state.replyLanguage};
- const cards=draftReviewCards(state);
+ const cards=draftReviewCards(state,!state.lastRequestId);
  if(state.lastRequestId)for(const card of cards)card.buttons=[{label:say(state,'Order status','Order நிலை','Order status'),event:{id:randomUUID(),type:'shopping_action',action:'status',expectedVersion:state.version}}];
  const title=say(state,`Your list · ${state.draft.length} items`,`உங்கள் பட்டியல் · ${state.draft.length} பொருட்கள்`,`Unga list · ${state.draft.length} porutkal`);
  const parts:ReplyPart[]=[];

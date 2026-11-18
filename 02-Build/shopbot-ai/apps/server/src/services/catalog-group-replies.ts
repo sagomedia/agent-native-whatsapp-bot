@@ -3,6 +3,7 @@ import {randomUUID} from 'node:crypto';
 import type {ConversationState,DiscoveryResult,Product,RichReply,VisualCard} from '../../../../packages/contracts/index.js';
 import {discoveryMoreValue,discoveryFacetValue,discoveryProductsValue} from '../../../../packages/contracts/discovery.js';
 import {localName,say,measurementText,facetLabel,safeQuestion} from '../../../../packages/contracts/language.js';
+import {productMediaUrl} from './whatsapp-reply.js';
 
 type Binding={memoryId?:string;lineId?:string;batchId?:string};
 type Group=NonNullable<DiscoveryResult['groups']>[number];
@@ -40,8 +41,7 @@ export function catalogGroupReply(result:DiscoveryResult,state:ConversationState
  const pageFacet=result.facets.find(f=>f.key===groups[0].key&&f.nextOffset!==undefined);
  const cards:VisualCard[]=groups.slice(0,pageFacet?9:10).map(group=>{
   const name=measurementText(localName(group.label,group.localNames,state),state);
-  const product=group.product??result.products.find(p=>matches(p,group));
-  const imageUrl=product?.imageUrl;
+  const imageUrl=productMediaUrl(group.product?.imageUrl)?group.product?.imageUrl:result.products.find(p=>matches(p,group)&&productMediaUrl(p.imageUrl))?.imageUrl;
   const count=say(state,`${group.count} ${group.count===1?'product':'products'}`,`${group.count} பொருட்கள்`,`${group.count} porutkal`);
   const example=imageUrl?say(state,'Example photo','எடுத்துக்காட்டு படம்','Example photo'):undefined;
   return {kind:'instruction',title:name,lines:[count,...(example?[example]:[])],caption:[fitText(name,80),count,example].filter(Boolean).join('\n'),...(imageUrl?{imageUrl}:{}),buttons:[{label:say(state,'Choose','தேர்வு','Choose'),event:event(group.key,group.value)}]};

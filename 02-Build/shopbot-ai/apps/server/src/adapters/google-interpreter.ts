@@ -16,6 +16,7 @@ import {interpretationSchema,operationSchema} from '../../../../packages/contrac
 import {geminiTextRate,geminiSpeechRate,validateRateCard,rateHealth,type RateCard} from '../services/inference-budget.js';
 import type {Interpreter,InterpretationInput,ProviderResult} from './interpreter.js';
 import {planningResponseSchema,imageResponseSchema,recognitionResponseSchema} from './google-planning-schema.js';
+import {catalogPromptObservations} from './catalog-prompt.js';
 
 // Explicit provider wire alias: accept add only with the same strict add_item fields.
 // Validate the whole wire object before translating; retail tools retain their contract.
@@ -89,7 +90,9 @@ function prompt(input:InterpretationInput) {
   const state=input.state.lastRequestId&&!input.audio&&!amendmentIntent(input.text)?{...input.state,draft:[],pending:null,editingLineId:null}:input.state;
   const memory=input.state.lastRequestId&&input.assistantMemory?.purpose==='pending'?null:input.assistantMemory;
   const publicCatalog=(mediaRecognition||input.stage==='recommend'||input.catalogMap?[]:input.catalog??[]).slice(0,20).map(p=>({sku:p.sku,name:p.name,unit:p.unit,familyId:p.familyId,specifications:p.specifications}));
-  const publicObservations=(items:NonNullable<InterpretationInput['observations']>)=>items.slice(0,3).map(o=>({tool:o.tool,query:o.query,totalCount:o.totalCount,discovery:o.discovery?{facets:o.discovery.facets.map(f=>({key:f.key,label:f.label,totalValues:f.totalValues,values:f.values.map(({product,...value})=>value)})),noExactMatch:o.discovery.noExactMatch}:undefined,products:o.products.slice(0,4).map(p=>({sku:p.sku,name:p.name,unit:p.unit,brand:p.brand,familyId:p.familyId,specifications:p.specifications}))}));
+  const publicObservations=(items:InterpretationInput['observations'])=>catalogPromptObservations(items,4).map(({facets,noExactMatch,groups,matchStatus,diagnostics,...observation})=>({
+    ...observation,discovery:facets?{facets,noExactMatch,groups,matchStatus,diagnostics}:undefined,
+  }));
   const focusedLineId=state.editingLineId??(state.pending?.kind==='question'?state.pending.lineId:state.pending?.kind==='products'&&state.pending.groups.length===1?state.pending.groups[0].lineId:undefined);
   const focused=focusedLineId?state.draft.find(line=>line.id===focusedLineId):undefined;
   return JSON.stringify({stage:input.stage??'identify',proposal:input.proposal,planningFeedback:input.planningFeedback,focusedPendingLine:focused?{id:focused.id,originalQuery:focused.query,productName:focused.name,quantity:focused.quantity,requestedUnit:focused.requestedUnit,brand:input.catalog?.find(product=>product.sku===focused.sku)?.brand}:null,editingLineId:state.editingLineId,replyLanguage:languageOf(state),customerMessage:input.text,submittedRequest:!!state.lastRequestId,currentDraft:state.draft.map(l=>({id:l.id,name:l.name,unit:l.unit,familyId:l.candidates?.find(p=>p.sku===l.sku)?.familyId,query:l.query,sku:l.sku,quantity:l.quantity,requestedUnit:l.requestedUnit,resolution:l.resolution,productIntent:l.productIntent,packSize:l.packSize,productMeasures:l.productMeasures})),pendingQuestion:state.pending?.kind==='question'?state.pending:null,pendingProductCheck:state.pending?.kind==='products'?{groups:state.pending.groups.map(g=>({lineId:g.lineId,products:g.products.map(p=>({sku:p.sku,name:p.name,unit:p.unit}))})),remaining:state.pending.remaining}:null,fulfillment:state.fulfillment,recentMessages:(input.audio?[]:input.history??[]).slice(-4).map(m=>({direction:m.direction,text:m.text.slice(0,240)})),publicCatalog,photoSpecificationKeys:input.image?photoSpecificationKeys(input):undefined,storeCatalogMap:catalogMap?{...catalogMap,departments:catalogMap.departments.slice(0,10).map(d=>({id:d.id,label:d.label,count:d.count,families:d.families.slice(0,20).map(f=>({id:f.id,label:f.label,count:f.count,aliases:f.aliases.slice(0,2)}))})),truncated:catalogMap.truncated||catalogMap.departments.length>10||catalogMap.departments.some(d=>d.families.length>20)}:null,assistantMemory:memory?{purpose:memory.purpose,queries:memory.queries,lineId:memory.lineId,requestedQuantity:memory.requestedQuantity,requestedUnit:memory.requestedUnit,observations:mediaRecognition?[]:publicObservations(memory.observations)}:null,toolObservations:mediaRecognition?[]:publicObservations(input.observations??[])});
@@ -124,11 +127,12 @@ export class GoogleInterpreter implements Interpreter {
     // Exactly one SDK request per ledger attempt; no SDK retries or automatic tool loop.
     this.transport=transport??new GoogleGenAI({apiKey:settings.apiKey,vertexai:false,httpOptions:{apiVersion:'v1beta',timeout:9500,retryOptions:{attempts:1}}}).models;
   }
-  validateInput(input:InterpretationInput) {
+  validateInput(input:InterpretationInput) { this.prepareInput(input); }
+  private validateContext(input:InterpretationInput) {
     if(input.audio&&input.stage!=='recognize'&&!(this.unifiedUnderstanding&&input.stage==='identify')||input.stage==='recognize'&&!input.audio)throw new Error('Audio is accepted only in the recognition stage.');
     if(input.image&&(!this.supportsImages||input.audio||input.image.mimeType!=='image/jpeg'||!input.image.data||input.image.data.length>2796204))throw new Error('Image input requires the free-only adapter and a verified photo under 2 MB.');
     if(input.audio&&(!this.supportsAudio||input.audio.mimeType!=='audio/wav'||input.audio.durationSeconds<=0||input.audio.durationSeconds>voiceLimits.maxSeconds||input.audio.data.length>voiceWavBase64Limit))throw new Error('Audio requires the free-only adapter and a verified recording of up to 90 seconds.');
-    if((input.catalog?.length??0)>200||Buffer.byteLength((input.stage==='recognize'?'Transcribe the new recording.':prompt(input))+(input.image?imageInstruction:planningInstruction),'utf8')>64000) throw new Error('Native context is too large. Narrow the catalog before interpretation.');
+    if((input.catalog?.length??0)>200) throw new Error('Native context is too large. Narrow the catalog before interpretation.');
   }
   private buildRequest(input:InterpretationInput):GenerateContentParameters {
     const signal=undefined;
@@ -140,7 +144,7 @@ export class GoogleInterpreter implements Interpreter {
   }
   prepareInput(input:InterpretationInput) {
     validateRateCard(this.billing);
-    this.validateInput(input);
+    this.validateContext(input);
     const request=this.buildRequest(input),admission=admitRequest(request);
     return {admission,interpret:(signal:AbortSignal)=>this.interpretPrepared(input,signal,request)};
   }

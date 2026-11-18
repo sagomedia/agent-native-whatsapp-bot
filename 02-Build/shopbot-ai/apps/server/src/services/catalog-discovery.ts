@@ -1,4 +1,4 @@
-import {naturalCatalogQuery,queryColour,removeTerm,specificationKeys,specificationValue,specificationTextMatch} from './catalog-request.js';
+import {catalogMeasurementSourceSql,catalogSpecificationSql,discoveryIdentityQuery,namedObjectPhrase,naturalCatalogQuery,normalizedSpec,numericDimensions,queryColour,removeTerm,specificationKeys,specificationValue,specificationTextMatch} from './catalog-request.js';
 import type {PoolClient} from 'pg';
 import type {CatalogMap,DiscoveryPlan,DiscoveryResult,DiscoveryFacet,Product} from '../../../../packages/contracts/index.js';
 import {discoveryPlanSchema} from '../../../../packages/contracts/index.js';
@@ -34,7 +34,6 @@ export async function getCatalogMap(client:PoolClient,ctx:ActorContext,departmen
  return {revision:store.catalog_revision,store:{name:store.name,type:store.store_type??'general retail'},productCount:count,departments,truncated:available.length>20||departments.some(d=>d.nextFamilyAfter!==undefined),...(available.length>20?{nextDepartmentAfter:departments.at(-1)!.id}:{}),...(departmentId&&departments[0]?.nextFamilyAfter?{nextFamilyAfter:departments[0].nextFamilyAfter}:{})};
 }
 function unique(a:string[]){return [...new Set(a.map(s=>s.trim()).filter(Boolean))];}
-function namedObjectPhrase(query:string){return query.split(/\s+(?:for|with|on)\s+/i,1)[0].trim();}
 // Pack spellings are search evidence, not different product nouns. Keep the
 // value/unit pair for eligibility while searching the remaining identity words.
 const withoutPackMeasures=withoutCatalogMeasurements;
@@ -130,11 +129,6 @@ function supportsCustomerIdentity(query:string,product:Product,nodes:{id:string;
  }
  return uncovered.every(word=>source.some(candidate=>oneEdit(word,candidate)));
 }
-function numericDimensions(text:string){
- const numbers:Record<string,number>={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12};
- return text.replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+(?=inch(?:es)?\b|in\b|mm\b|cm\b)/gi,word=>String(numbers[word.trim().toLowerCase()])+' ');
-}
-function normalizedSpec(s:string){return normalize(numericDimensions(s.toLowerCase()).replace(/(\d)\s*(?:["\u2033]|inches?\b|in\b)/g,'$1 inch')).replace(/\s+/g,'').replace(/^(\d+(?:\.\d+)?)(?:l|litres?|liters?)$/,'$1litre');}
 function specMatches(product:Product,key:string,value:string){if(['colour','color','material'].includes(key)){const actual=specificationKeys(key).map(k=>product.specifications?.[k]).filter((v):v is string=>!!v);return actual.length?actual.every(v=>specificationTextMatch(v,value)):specificationTextMatch(product.name,value);}return specificationKeys(key).some(k=>(measurementSpecEqual(product.specifications?.[k]??'',value)??(normalizedSpec(product.specifications?.[k]??'')===normalizedSpec(value))));}
 function keywordScore(query:string,plan:DiscoveryPlan,product:Product) {
  const source=[product.name,product.unit,...Object.values(product.localNames??{}),product.brand??'',...Object.values(product.specifications??{}),...product.aliases,...(product.keywords??[])],words=unique(source.flatMap(tokens));
@@ -250,25 +244,14 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
  else if(effective.departmentId)constraints.push(`p.family_id IN (SELECT id FROM catalog_nodes WHERE store_id=$1 AND parent_id=${add(effective.departmentId)})`);
  if(effective.priceRange){constraints.push("p.price_status='priced' AND p.selling_unit_verified=true AND p.price_paise>0 AND p.price_paise BETWEEN "+add(effective.priceRange.minPaise)+' AND '+add(effective.priceRange.maxPaise));}
  if(effective.brand)constraints.push('lower(p.brand)=lower('+add(effective.brand)+')');
- for(const [key,value] of Object.entries(peerSpecifications)){
-  if(['colour','color','material'].includes(key)){
-   const pattern=add('(^|[^[:alnum:]])'+value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'([^[:alnum:]]|$)');
-   const fields=specificationKeys(key).map(k=>`nullif(p.specifications->>${add(k)},'')`);
-   constraints.push(`(coalesce(${fields.join(',')},p.name) ~* ${pattern} AND ${fields.map(f=>`(${f} IS NULL OR ${f} ~* ${pattern})`).join(' AND ')})`);continue;
-  }
-  const measures=catalogMeasurements(value);
-  if(measures.length===1&&!withoutCatalogMeasurements(value)){constraints.push('('+unique(specificationKeys(key)).map(k=>`coalesce(p.specifications->>${add(k)},'') ~* ${add(catalogMeasurementSqlPattern(measures[0]))}`).join(' OR ')+')');continue;}
-  const target=add(normalizedSpec(value));
-  constraints.push('('+unique(specificationKeys(key)).map(k=>`regexp_replace(regexp_replace(regexp_replace(lower(p.specifications->>${add(k)}),'([0-9])[[:space:]]*(inches?\\M|in\\M|["\u2033])','\\1 inch','g'),'[^[:alnum:].]+','','g'),'^([0-9]+(?:[.][0-9]+)?)(l|litres?|liters?)$','\\1litre')=${target}`).join(' OR ')+')');
- }
+ for(const [key,value] of Object.entries(peerSpecifications))constraints.push(catalogSpecificationSql(key,value,add));
  if(root)constraints.push('p.unit='+add(root.unit));
  // A dimension in a job clause describes the workpiece, not the tool size.
  // Explicit product specifications above still constrain the returned SKU.
  const requestedMeasures=catalogMeasurements(objectPhrase);
  // Apply typed dimensions before LIMIT: a long run of 4 kg packs cannot hide
  // the late-sorted 4 litre pack. Aliases never establish physical pack facts.
- const measurementSource=`concat_ws('; ',p.name,(SELECT string_agg(value,'; ') FROM jsonb_each_text(p.specifications) WHERE key IN ('size','diameter','length','width','height','thickness','pack_size','pack_volume','volume','capacity','weight','pack_weight')),concat_ws(' ',p.selling_policy->'packContents'->>'value',p.selling_policy->'packContents'->>'unit'))`;
- for(const measure of requestedMeasures)constraints.push(`${measurementSource} ~* ${add(catalogMeasurementSqlPattern(measure))}`);
+ for(const measure of requestedMeasures)constraints.push(`${catalogMeasurementSourceSql} ~* ${add(catalogMeasurementSqlPattern(measure))}`);
  const numeric=root?[]:unique(normalize(withoutCatalogMeasurements(objectPhrase)).match(/\d+(?:\.\d+)?/g)??[]);
  for(const n of numeric)constraints.push(`p.search_text ~ ${add('(^|[^0-9.])'+n.replaceAll('.','\\.')+'([^0-9.]|$)')}`);
  const clauses=hints.map(h=>{const key=add(normalize(h));return `(p.search_vector @@ plainto_tsquery('simple',${key}) OR ${key} OPERATOR(public.<%) p.search_text)`;});
@@ -377,7 +360,7 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
 /** Shared customer resolver. Exact matching remains available without alternatives
  * for callers enforcing explicit filters; customer flows opt into labelled peers. */
 export async function discoverProducts(client:PoolClient,ctx:ActorContext,customerQuery:string,input?:DiscoveryPlan):Promise<DiscoveryResult> {
- const query=naturalCatalogQuery(input?.identityQuery??customerQuery)||(input?.identityQuery??customerQuery);
+ const query=discoveryIdentityQuery(customerQuery,input?.identityQuery);
  const colour=queryColour(query);
  const inferredBrands=(await client.query("SELECT DISTINCT brand FROM products WHERE store_id=$1 AND active=true AND brand IS NOT NULL AND (position(lower(brand) in lower($2))>0 OR position(regexp_replace(lower(brand),'s$','') in lower($2))>0) ORDER BY brand",[ctx.storeId,query])).rows.map(r=>r.brand as string);
  const plan:DiscoveryPlan={...(input??{keywords:[query.slice(0,120)]}),...(input?.brand?{}:inferredBrands.length===1?{brand:inferredBrands[0]}:{}),specifications:{...(colour?{colour}:{}),...(input?.specifications??{})}};

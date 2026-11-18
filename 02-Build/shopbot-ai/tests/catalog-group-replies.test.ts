@@ -35,6 +35,16 @@ test('missing example never borrows a different group photo',()=>{
  const entries=cards(catalogGroupReply(source,state,{memoryId})!);const missing=entries[1];assert.notEqual(missing.kind,'product');if(missing.kind!=='product'){assert.equal(missing.imageUrl,undefined);assert.doesNotMatch(missing.caption,/Example photo/);}
 });
 
+test('an unusable group photo uses another available photo from that group',()=>{
+ const unavailable={...product(1),imageUrl:'http://images.example.test/private.jpg'};
+ const source=result([unavailable,product(2),product(3,'other')]);
+ source.groups=[{key:'family',value:'pvc',label:'PVC',count:2,product:unavailable},{key:'family',value:'hose',label:'Hose',count:1,product:{...unavailable,familyId:'hose'}}];
+ const [available,missing]=cards(catalogGroupReply(source,state,{memoryId})!);
+ if(available.kind==='product'||missing.kind==='product')assert.fail('Expected group cards');
+ assert.equal(available.imageUrl,source.products[1].imageUrl);assert.match(available.caption,/Example photo/);
+ assert.equal(missing.imageUrl,undefined);assert.doesNotMatch(missing.caption,/Example photo/);
+});
+
 test('explicit solvent groups need no candidate products and never add phantom products',()=>{
  const source=result([],[],0);source.groups=[{key:'family',value:'pvc-solvent',label:'PVC solvent',count:2},{key:'family',value:'thinner',label:'Paint thinner',count:3}];
  const reply=discoveryPresentation(source,state,memoryId),entries=cards(reply);assert.equal(entries.length,2);assert.ok(entries.every(c=>c.kind==='instruction'));

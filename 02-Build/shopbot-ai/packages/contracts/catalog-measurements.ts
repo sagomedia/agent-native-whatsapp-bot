@@ -1,7 +1,7 @@
 import {canonicalMeasurementUnit,measurementUnitPattern,normalizeFractionNumbers} from './measurements.js';
 
 export type CatalogMeasurement={value:number;unit:string};
-const pattern=new RegExp('(?<![\\p{L}\\p{N}./])(\\d+(?:\\.\\d+)?)\\s*('+measurementUnitPattern+'|in|["″])(?![\\p{L}\\p{N}])','giu');
+const pattern=new RegExp('(?<![\\p{L}\\p{N}./])(\\d+(?:\\.\\d+)?)\\s*-?\\s*('+measurementUnitPattern+'|in|["″])(?![\\p{L}\\p{N}])','giu');
 /** Typed identity evidence only. No litre/kg or magnitude conversions. */
 export function catalogMeasurements(text:string):CatalogMeasurement[]{
  return [...normalizeFractionNumbers(text).matchAll(pattern)].map(m=>({value:Number(m[1]),unit:/^(?:in|["″])$/i.test(m[2])?'inch':canonicalMeasurementUnit(m[2])}));
@@ -21,5 +21,5 @@ export function catalogMeasurementSqlPattern(measure:CatalogMeasurement):string{
  for(const [symbol,numerator,denominator] of [['½',1,2],['¼',1,4],['¾',3,4],['⅛',1,8],['⅜',3,8],['⅝',5,8],['⅞',7,8]] as const){
   if(fraction===numerator/denominator){variants.push((whole?whole+'[[:space:]]*':'')+symbol);variants.push((whole?whole+'[[:space:]]+':'')+numerator+'[[:space:]]*/[[:space:]]*'+denominator);}
  }
- return '(^|[^[:alnum:]./])('+variants.join('|')+')[[:space:]]*('+unitPatterns[measure.unit]+')([^[:alnum:]]|$)';
+ return '(^|[^[:alnum:]./])('+variants.join('|')+')[[:space:]]*-?[[:space:]]*('+unitPatterns[measure.unit]+')([^[:alnum:]]|$)';
 }
