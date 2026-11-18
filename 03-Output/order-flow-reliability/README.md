@@ -9,3 +9,12 @@ Preserve the visual shop counter. A product request should lead to current inven
 5. Replay the blocked subtotal, fractional-pipe removal, ¾-inch pipe at 10 feet, brand-versus-length confusion, and multi-item voice cases. Verify a different catalog, genuine photo carousels, stale callbacks, and final consent. Keep real provider and phone checks separate from mocked regressions.
 
 This work starts from review commit `622f075`. The local test history is evidence for the failures. Raw customer data and recordings belong outside Git.
+
+## Implementation notes
+
+- An estimate keeps the known subtotal and routes the next action through the same draft facts used for checkout. With partial review disabled, a blocking item is named and gets its own edit and shop-help buttons. Seeing an estimate or approving a product photo does not submit an order.
+- Named removals use current item IDs, identities and dimensions. Saved group choices also recheck the actual named scope when used.
+- Search, SQL candidate observation, selection and review pass physical dimensions alongside the product words. A stored nominal size can include its equivalent label. A selected SKU that changes dimensions is rechecked before review. Compact uppercase identifiers such as 3M retain their spelling.
+- A failed catalog check can retry a saved voice interpretation for the same recording, customer and draft version. It reruns catalog validation. Independent additions can keep checked photos and counts while flagging an unfinished search separately. Linked changes stay together.
+- Replaying the 343-product snapshot returned Astral PVC Pipe 3/4 inch 10ft and excluded the 20 mm conduit. The 3M insulation tape request had no exact listing in that snapshot. A broader pipe request produced a native two-photo carousel payload with a selection action bound to each SKU.
+- The network-free replay exercises SQL and the WhatsApp payload renderer. Viewing and tapping the results on an actual WhatsApp handset still requires the review release to be connected.

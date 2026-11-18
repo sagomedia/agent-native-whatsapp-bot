@@ -1,3 +1,4 @@
+import {interpretationSchema,type Interpretation} from '../../../../packages/contracts/index.js';
 import {voiceLimits,voiceUploadBase64Limit} from '../../../../packages/contracts/voice-policy.js';
 import {spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
@@ -17,6 +18,25 @@ export async function normalizeVoice(input:z.infer<typeof voiceUploadSchema>):Pr
  return {audio:pcmWav(pcm),durationSeconds,sourceHash:createHash('sha256').update(input.mimeType).update(bytes).digest('hex')};
 }
 export async function loadVoice(pool:Pool,ctx:ActorContext,id:string){return withConversation(pool,ctx,async client=>{const row=(await client.query('SELECT audio,duration_seconds,source_version FROM voice_media WHERE id=$1 AND store_id=$2 AND conversation_id=$3 AND actor=$4',[id,ctx.storeId,ctx.conversationId,ctx.actor])).rows[0];if(!row)throw new ToolError('That voice note is not accessible to this conversation.','forbidden');return {mimeType:'audio/wav' as const,data:(row.audio as Buffer).toString('base64'),durationSeconds:Number(row.duration_seconds),sourceVersion:Number(row.source_version)};});}
+
+// Plans are application-validated and scoped to the exact recording and draft.
+export async function loadVoiceCatalogPlan(pool:Pool,ctx:ActorContext,id:string,sourceVersion:number){
+ return withConversation(pool,ctx,async client=>{
+  const row=(await client.query(`SELECT catalog_retry_plan FROM voice_media
+   WHERE id=$1 AND store_id=$2 AND conversation_id=$3 AND actor=$4 AND source_version=$5`,[id,ctx.storeId,ctx.conversationId,ctx.actor,sourceVersion])).rows[0];
+  const plan=interpretationSchema.safeParse(row?.catalog_retry_plan);
+  return plan.success&&plan.data.transcript?plan.data:undefined;
+ });
+}
+
+export async function saveVoiceCatalogPlan(pool:Pool,ctx:ActorContext,id:string,sourceVersion:number,messageId:string,claimToken:string,plan:Interpretation){
+ await withConversation(pool,ctx,async client=>{
+  await client.query(`UPDATE voice_media SET catalog_retry_plan=$6::jsonb
+   WHERE id=$1 AND store_id=$2 AND conversation_id=$3 AND actor=$4 AND source_version=$5
+    AND EXISTS(SELECT 1 FROM messages WHERE id=$7 AND conversation_id=$3 AND claim_token=$8 AND status='processing')`,
+   [id,ctx.storeId,ctx.conversationId,ctx.actor,sourceVersion,JSON.stringify(plan),messageId,claimToken]);
+ });
+}
 
 
 // Playback can use the bounded original even if normalization failed. Inference

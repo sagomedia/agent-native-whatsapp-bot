@@ -339,16 +339,18 @@ export function understandingToInterpretation(value:unknown,input:Interpretation
   if(['remove_item','decrement_quantity'].includes(e.kind)&&removalMention.test(removalSource)&&!positiveRemoval(removalSource,source))throw new Error('Removal needs explicit current intent with positive current-message evidence');
   if(['remove_item','decrement_quantity'].includes(e.kind)&&!positiveRemoval(removalSource,source)&&!(e.targetQuery&&removalSource.trim()===source.trim()))throw new Error('Removal needs explicit current intent with positive current-message evidence or a complete semantic command and target. For an identity correction use one replace edit: targetQuery=old identity, query=new identity, sourceText=complete verbatim correction. Omit the duplicate requestedItem and preserve the existing count. Otherwise ask which action was intended.');
   if(e.kind==='remove_item'&&[e.targetQuery,target.query,target.name,target.sku].some(name=>name&&normalize(name)===normalize(removalSource)))throw new Error('A product name alone is not removal evidence');
-  const named=input.inventoryGrounding&&e.targetQuery?inventoryEditTargets(e,input.state):cartEditCandidates(e,input.state);
-  const focused=(materialFocus?.id===target.id||input.state.editingLineId===target.id||input.state.pending?.kind==='question'&&input.state.pending.lineId===target.id)&&(!named.length||named.some(line=>line.id===target.id));
+  const scoped=!!(input.inventoryGrounding&&e.targetQuery);
+  const named=scoped?inventoryEditTargets(e,input.state):cartEditCandidates(e,input.state);
+  const editChoices=named.length||scoped?named:input.state.draft;
+  const focused=(materialFocus?.id===target.id||input.state.editingLineId===target.id||input.state.pending?.kind==='question'&&input.state.pending.lineId===target.id)&&(!scoped&&!named.length||named.some(line=>line.id===target.id)||materialFocus?.id===target.id);
   const explicitGroup=/\b(?:each|both|all)\b|ஒவ்வொரு|இரண்டுக்கும்|எல்லா/iu.test(e.sourceText);
   if(!selected&&!focused&&!(named.length===1&&named[0].id===target.id)&&!(explicitGroup&&named.some(line=>line.id===target.id))){
-   heldIds.add(target.id);deferredCartTargets.push({kind:'edit',index:editIndex,candidateLineIds:(named.length?named:input.state.draft).map(line=>line.id)});
+   heldIds.add(target.id);deferredCartTargets.push({kind:'edit',index:editIndex,candidateLineIds:editChoices.map(line=>line.id)});
    reconciliationQuestion=say(input.state,'Which existing item should receive this change?','ஏற்கனவே உள்ள எந்தப் பொருளுக்கு இந்த மாற்றம் வேண்டும்?','Irukkura entha porulukku intha maaththam venum?');continue;
   }
   const broadcast=u.proposedEdits.some(other=>other.targetLineId!==e.targetLineId&&other.sourceText===e.sourceText);
   if(broadcast&&!/\b(?:each|both|all)\b|ஒவ்வொரு|இரண்டுக்கும்|எல்லா/iu.test(e.sourceText)){
-   heldIds.add(target.id);deferredCartTargets.push({kind:'edit',index:editIndex,candidateLineIds:(named.length?named:input.state.draft).map(line=>line.id)});
+   heldIds.add(target.id);deferredCartTargets.push({kind:'edit',index:editIndex,candidateLineIds:editChoices.map(line=>line.id)});
    reconciliationQuestion=say(input.state,'Which one of the existing items should receive this change?','ஏற்கனவே உள்ள எந்த ஒரு பொருளுக்கு இந்த மாற்றம் வேண்டும்?','Irukkura entha oru porulukku intha maaththam venum?');continue;
   }
   if(e.kind==='increment_quantity'&&!additionalSupported(e,source))throw new Error('Additional quantity needs separate current action evidence. Use set_quantity for a repeated total, or quote the additional expression in additionalEvidence.');

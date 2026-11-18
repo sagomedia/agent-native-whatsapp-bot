@@ -559,6 +559,11 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
     await migrateOwnerDemoLogin(client);
     await migrateCatalogReview(client);
     await migrateStoreHours(client);
+    const v54=await client.query('SELECT version FROM schema_migrations WHERE version=54');
+    if(!v54.rowCount){await client.query(`
+      ALTER TABLE voice_media ADD COLUMN IF NOT EXISTS catalog_retry_plan jsonb;
+      INSERT INTO schema_migrations(version) VALUES(54);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

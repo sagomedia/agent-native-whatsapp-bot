@@ -5,6 +5,7 @@ import pg from 'pg';
 import {FinishReason,type GenerateContentResponse} from '@google/genai';
 import {setupDatabase} from '../apps/server/src/db/migrate.js';
 import {SimulatorService} from '../apps/server/src/services/simulator.js';
+import {offeredRemovalGroup} from '../apps/server/src/services/cart-clarification.js';
 import {ConversationRuntime} from '../apps/server/src/runtime/conversation.js';
 import {GoogleInterpreter,type NativeSettings} from '../apps/server/src/adapters/google-interpreter.js';
 import {understandingToInterpretation} from '../apps/server/src/adapters/turn-understanding.js';
@@ -107,4 +108,31 @@ for(const sourceText of ["don't remove both",'not both','இரண்டைய�
 test('quantity errors use typed meanings instead of matching the word quantity in arbitrary errors',()=>{
  assert.match(customerError('internal quantity callback mismatch','ta','quantity_unknown'),/மொத்தம்/);
  assert.doesNotMatch(customerError('quantity callback mismatch','ta','stale_question'),/அலகு|மாற்றத்தை/);
+});
+
+test('a fractional named edit resolves to the measured item and an unsupported size offers no unrelated removals',()=>{
+ const rows:DraftLine[]=[
+  {id:randomUUID(),query:'3/4 inch pipe',name:'3/4 inch pipe',quantity:1,resolution:'unavailable'},
+  {id:randomUUID(),query:'1 inch pipe',name:'1 inch pipe',quantity:1,resolution:'unavailable'},
+  row(products[1],1),
+ ];
+ for(const [spoken,query,matches] of [['Take the 3/4 inch pipe off my list','3/4 inch pipe',true],['Take the 2 inch pipe off my list','2 inch pipe',false]] as const){
+  const plan=understandingToInterpretation({...base(),proposedEdits:[{kind:'remove_item',targetLineId:rows[0].id,targetQuery:query,sourceText:spoken}]},{text:spoken,state:state(rows),inventoryGrounding:true},false);
+  if(matches)assert.deepEqual(plan.operations,[{kind:'remove_item',reference:rows[0].id,supportingPhrase:spoken}]);
+  else{
+   assert.deepEqual(plan.operations,[]);
+   assert.deepEqual(plan.deferredCartTargets?.[0].candidateLineIds,[]);
+  }
+ }
+});
+
+
+test('a stored removal question from the old fallback cannot remove unrelated rows',()=>{
+ const s=state([row(products[0],1),row(products[1],2)]);
+ const edit={kind:'remove_item' as const,targetLineId:s.draft[0].id,targetQuery:'2 inch pipe',sourceText:'remove 2 inch pipe'};
+ const understanding:TurnUnderstanding={...base(),schemaVersion:2,inputKind:'text',intents:['edit'],proposedEdits:[edit]};
+ const memory:AssistantMemory={id:randomUUID(),purpose:'cart_edit',queries:[edit.targetQuery],lineId:null,sourceVersion:s.version,observations:[],cartEdit:{
+  description:edit.sourceText,understanding,targets:[{kind:'edit',index:0,candidateLineIds:s.draft.map(line=>line.id)}],selections:[],
+ }};
+ assert.deepEqual(offeredRemovalGroup(memory,s),[]);
 });

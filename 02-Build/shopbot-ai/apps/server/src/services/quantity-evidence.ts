@@ -1,4 +1,5 @@
-import {measurementNumber,measurementNumberPattern,measurementUnitPattern,canonicalMeasurementUnit} from '../../../../packages/contracts/measurements.js';
+import {compactMetreIdentifier,measurementNumber,measurementNumberPattern,measurementUnitPattern,canonicalMeasurementUnit} from '../../../../packages/contracts/measurements.js';
+import {catalogMeasurements} from '../../../../packages/contracts/catalog-measurements.js';
 import type {Operation,DraftLine,Product} from '../../../../packages/contracts/index.js';
 import {sameUnit} from './catalog.js';
 import {quantityReply} from './shopping-language.js';
@@ -9,15 +10,15 @@ const measures=new RegExp('(?<![\\p{L}\\p{N}./])('+measurementNumberPattern+'|'+
 const measureUnit=canonicalMeasurementUnit;
 export const physicalMeasure=(measure:Measure)=>['inch','mm','cm','m','foot'].includes(measureUnit(measure.unit));
 function number(s:string){return (/^[\d½¼¾⅛⅜⅝⅞]/.test(s)?measurementNumber(s):undefined)??({a:1,an:1,mukkal:.75,'முக்கால்':.75,kaal:.25,ara:.5,arai:.5,'கால்':.25,'அரை':.5,'ஒண்ணு':1,'ஒன்ன':1,'ஒண்ண':1,'மூணு':3,fifty:50,hundred:100,'இருபது':20,'ஐம்பது':50,'நூறு':100} as Record<string,number>)[s.toLowerCase()]??quantityReply(s)?.quantity;}
-export function spokenMeasures(text:string):Measure[]{return [...text.matchAll(measures)].flatMap(m=>{const value=number(m[1]);return value?[{value,unit:measureUnit(m[2])}]:[];});}
+export function spokenMeasures(text:string):Measure[]{return [...text.matchAll(measures)].filter(m=>!compactMetreIdentifier(m[0])).flatMap(m=>{const value=number(m[1]);return value?[{value,unit:measureUnit(m[2])}]:[];});}
 export function countExpressionIsMeasurement(source:string,evidence:string):boolean {
- const spans=[...source.matchAll(measures)].map(m=>({start:m.index!,end:m.index!+m[0].length}));
+ const spans=[...source.matchAll(measures)].filter(m=>!compactMetreIdentifier(m[0])).map(m=>({start:m.index!,end:m.index!+m[0].length}));
  const positions:number[]=[];let at=source.indexOf(evidence);
  while(evidence.length&&at>=0){positions.push(at);at=source.indexOf(evidence,at+evidence.length);}
  return positions.length>0&&positions.every(start=>spans.some(span=>start>=span.start&&start+evidence.length<=span.end));
 }
 export function explicitPurchaseCount(phrase:string):number|undefined {
- const remainder=phrase.replace(measures,' '),re=new RegExp('(?:^|[^\\p{L}\\p{N}.])(\\d+(?:\\.\\d+)?|'+countWords+')(?=$|[^\\p{L}\\p{N}.])','giu');
+ const remainder=phrase.replace(measures,match=>compactMetreIdentifier(match)?match:' '),re=new RegExp('(?:^|[^\\p{L}\\p{N}.])(\\d+(?:\\.\\d+)?|'+countWords+')(?=$|[^\\p{L}\\p{N}.])','giu');
  const counts=[...remainder.matchAll(re)].map(m=>number(m[1])).filter((n):n is number=>n!==undefined);
  return counts.length===1?counts[0]:undefined;
 }
@@ -57,7 +58,7 @@ export function protectQuantityEvidence(operations:Operation[],description:strin
     const dimensions=op.productMeasures?.filter(m=>{const value=convertAmount(m,amount.unit);return value===null||Math.abs(value-amount.value)>1e-8;});
     return {...op,productMeasures:dimensions?.length?dimensions:undefined,supportingPhrase:phrase};
   }
-  const found=[...phrase.matchAll(measures)];
+  const found=[...phrase.matchAll(measures)].filter(m=>!compactMetreIdentifier(m[0]));
   if(found.length>1){
     const dimensions=op.productMeasures??found.flatMap(m=>{const value=number(m[1]),unit=measureUnit(m[2]);return value&&physicalMeasure({value,unit})?[{value,unit}]:[];});
     return {...op,...(dimensions.length?{productMeasures:dimensions}:{}),supportingPhrase:phrase};
@@ -87,13 +88,23 @@ export function catalogMeasures(product:Product):Measure[] {
  const result:Measure[]=[];
  for(const [key,value] of Object.entries(product.specifications??{})){
   if(!['size','diameter','length','width','height','thickness'].includes(key))continue;
-  for(const m of spokenMeasures(value))if(physicalMeasure(m))result.push({...m,role:key as Measure['role']});
+  for(const m of catalogMeasurements(value.toLowerCase()))if(physicalMeasure(m))result.push({...m,role:key as Measure['role']});
  }
  return result;
 }
 export function matchesProductMeasures(product:Product,requested:Measure[]):boolean {
  const verified=catalogMeasures(product);
- return requested.every(m=>verified.some(v=>(!m.role||m.role==='size'||v.role===m.role||v.role==='size'&&(verified.filter(x=>x.role==='size').length===1||m.role==='length'&&['m','foot'].includes(v.unit)&&verified.filter(x=>x.role==='size'&&['m','foot'].includes(x.unit)).length===1))&&Math.abs((convertAmount(v,m.unit)??NaN)-m.value)<1e-8));
+ const sizes=verified.filter(m=>m.role==='size');
+ const primarySize=catalogMeasurements((product.specifications?.size??'').toLowerCase().replace(/\([^)]*\)/g,'')).filter(physicalMeasure);
+ const longSizes=sizes.filter(m=>['m','foot'].includes(m.unit));
+ return requested.every(measure=>{
+  const role=measure.role;
+  const explicit=role&&role!=='size'?verified.filter(v=>v.role===role):verified;
+  // Catalog entries can state one nominal size followed by its labelled
+  // parenthetical equivalent. Keep that single size available to a named role.
+  const options=explicit.length?explicit:sizes.length===1||primarySize.length===1?sizes:role==='length'&&longSizes.length===1?longSizes:[];
+  return options.some(v=>Math.abs((convertAmount(v,measure.unit)??NaN)-measure.value)<1e-8);
+ });
 }
 export function amountToCount(line:DraftLine,product:Product):number|null {
  const amount=line.requestedAmount,pack=catalogContent(product);

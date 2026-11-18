@@ -11,6 +11,22 @@ export function estimateLines(lines:DraftLine[]) {
  return {knownSubtotalPaise:priced.reduce((n,line)=>n+lineTotal(line.pricePaise!,line.quantity!),0),complete:lines.length>0&&!excluded.length,excludedLineIds:excluded.map(line=>line.id),priced,excluded};
 }
 
+export function checkoutNextStep(state:ConversationState):
+ {kind:'review'|'partial_review'|'check_products'}|{kind:'shop_check';line:DraftLine} {
+ const estimate=estimateLines(state.draft);
+ const checks=state.draft.some(line=>{
+  if(line.shopCheckDeferred)return false;
+  const facts=counterLine(line);
+  return line.discovery?.matchStatus==='needs_detail'||
+    !line.sku&&!!line.candidates?.length||
+    !!facts.product&&(line.resolution==='needs_quantity'||state.requireProductConfirmation&&!facts.ready&&facts.canQuote);
+ });
+ if(checks)return {kind:'check_products'};
+ if(estimate.complete||!state.draft.length)return {kind:'review'};
+ if(state.allowPartialReview)return {kind:'partial_review'};
+ return {kind:'shop_check',line:estimate.excluded[0]};
+}
+
 /** Display-only arithmetic over explicit selling counts; never a final quote. */
 export function indicativeLineEstimate(line:DraftLine) {
  const product=counterLine(line).product,price=product?indicativePriceFor(product):undefined;

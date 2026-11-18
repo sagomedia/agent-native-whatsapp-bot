@@ -9,15 +9,16 @@ import {observeCatalog} from './agent-assistance.js';
 import type {RetailTools} from './tools.js';
 import {normalize,oneEdit,tokens} from '../../../../packages/contracts/catalog-text.js';
 import {catalogMeasurements,catalogMeasurementSqlPattern,withoutCatalogMeasurements} from '../../../../packages/contracts/catalog-measurements.js';
-import {catalogMeasurementSourceSql,catalogSpecificationSql,discoveryIdentityQuery,namedObjectPhrase,naturalCatalogQuery} from './catalog-request.js';
+import {catalogDimensionSql,searchWithDimensions,catalogMeasurementSourceSql,catalogSpecificationSql,discoveryIdentityQuery,namedObjectPhrase,naturalCatalogQuery} from './catalog-request.js';
 
 export const inventoryObservationLimit=5;
 
 /** The same bounded facts can ground a normal plan or its single evidence
  * repair. Neither path needs an extra unmetered model request. */
-export async function observeInventory(client:PoolClient,ctx:ActorContext,tools:RetailTools,items:{query:string;search?:DiscoveryPlan}[],key:string):Promise<CatalogObservation[]> {
+export async function observeInventory(client:PoolClient,ctx:ActorContext,tools:RetailTools,items:{query:string;search?:DiscoveryPlan;productMeasures?:DiscoveryPlan['dimensions']}[],key:string):Promise<CatalogObservation[]> {
  const found:CatalogObservation[]=[];
- for(const [index,item] of items.slice(0,inventoryObservationLimit).entries()){
+ for(const [index,source] of items.slice(0,inventoryObservationLimit).entries()){
+  const item={...source,search:searchWithDimensions(source.query,source.search,source.productMeasures)};
   const current=(await observeCatalog(client,ctx,tools,[item.query],`${key}:${index}`,item.search))[0];
   if(item.search?.selectedSkus!==undefined){found.push(current);continue;}
   const brand=item.search?.brand;
@@ -61,7 +62,7 @@ function candidateTerms(identity:string,keywords:string[]=[]):string[]{
 /** Retrieval facts for semantic review, including names filed under a wrong
  * family. These bounded rows are never customer-facing without validation. */
 export async function inventoryCandidateFacts(client:PoolClient,ctx:ActorContext,query:string,plan?:DiscoveryPlan,namesOnly=false):Promise<Product[]> {
- const identity=discoveryIdentityQuery(query,plan?.identityQuery),terms=candidateTerms(identity,plan?.keywords);
+ const identity=discoveryIdentityQuery(query,plan?.identityQuery,plan?.dimensions),terms=candidateTerms(identity,plan?.keywords);
  if(!terms.length)return [];
  const parameters:unknown[]=[ctx.storeId,terms],bind=(value:unknown)=>{parameters.push(value);return `$${parameters.length}`;};
  const scope=['p.store_id=$1','p.active=true'];
@@ -71,6 +72,7 @@ export async function inventoryCandidateFacts(client:PoolClient,ctx:ActorContext
  if(plan?.priceRange)scope.push(`p.price_status='priced' AND p.selling_unit_verified=true AND p.price_paise BETWEEN ${bind(plan.priceRange.minPaise)} AND ${bind(plan.priceRange.maxPaise)}`);
  for(const [key,value] of Object.entries(plan?.specifications??{}))scope.push(catalogSpecificationSql(key,value,bind));
  for(const measure of catalogMeasurements(namedObjectPhrase(identity)))scope.push(`${catalogMeasurementSourceSql} ~* ${bind(catalogMeasurementSqlPattern(measure))}`);
+ for(const dimension of plan?.dimensions??[])scope.push(catalogDimensionSql(dimension,bind));
  const nameVector=`to_tsvector('simple',p.name)`;
  const result=await client.query(`WITH terms AS (
   SELECT plainto_tsquery('simple',term) AS q,priority FROM unnest($2::text[]) WITH ORDINALITY AS hints(term,priority)

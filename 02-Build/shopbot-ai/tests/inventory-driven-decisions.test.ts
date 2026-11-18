@@ -4,6 +4,8 @@ import {randomUUID} from 'node:crypto';
 import pg from 'pg';
 import {setupDatabase} from '../apps/server/src/db/migrate.js';
 import {understandingToInterpretation,understandingPrompt,inventoryGroundingToInterpretation} from '../apps/server/src/adapters/turn-understanding.js';
+import {measurementText} from '../packages/contracts/language.js';
+import {catalogMeasurements} from '../packages/contracts/catalog-measurements.js';
 import {discoverProducts,refinementPlan} from '../apps/server/src/services/catalog-discovery.js';
 import {validateCurrentTurn} from '../apps/server/src/services/current-turn.js';
 import {ConversationRuntime} from '../apps/server/src/runtime/conversation.js';
@@ -162,9 +164,12 @@ test('a spoken inventory failure can retry the saved recording without applying 
  await pool.query('UPDATE conversations SET draft=$1::jsonb WHERE id=$2',[JSON.stringify(draft),inbox.context.conversationId]);
  const source='Remove the rice flour and add two oat milk';
  const original={...base(),inputKind:'audio',transcript:source,intents:['edit','add'],requestedItems:[{ordinal:0,sourceText:'add two oat milk',query:'oat milk',purchaseCount:2,unresolved:[],search:{keywords:['oat milk']}}],proposedEdits:[{kind:'remove_item',targetLineId:removed.id,targetQuery:'rice flour',sourceText:'Remove the rice flour'}]};
- let groundingCalls=0;
+ let groundingCalls=0,identifyCalls=0;
  const provider:Interpreter={name:'controlled-spoken-grounding-failure',mode:'mock',supportsAudio:true,unifiedUnderstanding:true,interpret:async input=>{
-  if(!input.inventoryReplan)return {output:understandingToInterpretation(original,input,false),usage:null,truncated:false};
+  if(!input.inventoryReplan){
+   identifyCalls++;
+   return {output:understandingToInterpretation(original,input,false),usage:null,truncated:false};
+  }
   if(++groundingCalls===1)throw new Error('Temporary lookup failure');
   return {output:inventoryGroundingToInterpretation({items:[{ordinal:0,query:'oat milk',search:{keywords:['oat milk'],selectedSkus:['OAT']}}],replacements:[]},input,false),usage:null,truncated:false};
  }};
@@ -184,6 +189,8 @@ test('a spoken inventory failure can retry the saved recording without applying 
  const retry=error?.buttons?.find(button=>button.event.type==='retry_voice');
  assert.ok(retry);
  const retried=await turn(inbox,runtime,retry.event);
+ assert.equal(identifyCalls,1,'catalog retry reuses the validated original meaning');
+ assert.equal(groundingCalls,2);
  assert.ok(!retried.conversation.draft.some(line=>line.id===removed.id));
  const preserved=retried.conversation.draft.find(line=>line.id===retained.id);
  assert.equal(preserved?.query,retained.query);
@@ -592,4 +599,83 @@ test('a five-item spoken list keeps every count and shows real matches while an 
  assert.deepEqual(confirmed.conversation.draft.map(line=>[line.id,line.quantity]),draft.map(line=>[line.id,line.quantity]));
  assert.equal(confirmed.requests.length,0);
  assert.equal(checks,1);
+}));
+
+
+test('fractional diameter and length survive discovery, semantic selection and photo presentation',()=>fixture(async(pool,inbox)=>{
+ const rows=[
+  ['PVC-075-10','PVC Pipe 0.75 in 10 ft','0.75 in','10 ft'],
+  ['PVC-075-20','PVC Pipe 0.75 in 20 ft','0.75 in','20 ft'],
+  ['PVC-100-10','PVC Pipe 1 in 10 ft','1 in','10 ft'],
+  ['PVC-SWAPPED','PVC Pipe 10 ft diameter 0.75 in long','10 ft','0.75 in'],
+ ] as const;
+ await pool.query("INSERT INTO catalog_nodes(store_id,id,kind,label,aliases) VALUES($1,'building','department','Building','[]')",[inbox.context.storeId]);
+ await pool.query("INSERT INTO catalog_nodes(store_id,id,parent_id,kind,label,aliases) VALUES($1,'pipe','building','family','Pipe','[]')",[inbox.context.storeId]);
+ for(const [sku,name,diameter,length] of rows)await pool.query(
+  "INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases,specifications,image_path,selling_unit_verified) VALUES($1,$2,$3,'piece',9000,10,'pipe','[]',$4,$5,true)",
+  [inbox.context.storeId,sku,name,JSON.stringify({diameter,length}),fixturePhoto(sku)],
+ );
+ const source='two three quarter inch PVC pipe ten feet',query='PVC pipe';
+ const dimensions=[{role:'diameter' as const,value:.75,unit:'inch'},{role:'length' as const,value:10,unit:'foot'}];
+ const original={...base(),intents:['add'],requestedItems:[{ordinal:0,sourceText:source,query,purchaseCount:2,countEvidence:{sourceText:'two',value:2,mode:'total'},dimensions,unresolved:[],search:{keywords:[query]}}]};
+ const provider:Interpreter={name:'controlled-dimensions',mode:'mock',unifiedUnderstanding:true,interpret:async input=>{
+  if(input.inventoryReplan)assert.deepEqual(input.observations?.[0].products.map(p=>p.sku),['PVC-075-10']);
+  const output=input.inventoryReplan
+    ?inventoryGroundingToInterpretation({items:[{ordinal:0,query,search:{keywords:[query],identityQuery:'three quarter inch pvc pipe 10 feet',selectedSkus:['PVC-075-10']}}],replacements:[]},input,false)
+    :understandingToInterpretation(original,input,false);
+  return {output,usage:null,truncated:false};
+ }};
+ const snapshot=await turn(inbox,new ConversationRuntime(pool,provider,{inventoryGrounding:true,visualOrdering:true}),{id:randomUUID(),type:'text',text:source});
+ const line=snapshot.conversation.draft[0];
+ assert.equal(line.quantity,2);
+ assert.deepEqual(line.discovery?.plan.dimensions,dimensions);
+ assert.deepEqual(line.candidates?.map(p=>[p.sku,p.imageUrl]),[['PVC-075-10',fixturePhoto('PVC-075-10')]]);
+ assert.equal(snapshot.requests.length,0);
+
+ // Catalog edits between a photo and review invalidate the current choice.
+ await pool.query("UPDATE products SET name='PVC Pipe 2 in 10 ft',specifications=jsonb_set(specifications,'{diameter}',to_jsonb('2 in'::text)),version=version+1 WHERE store_id=$1 AND sku='PVC-075-10'",[inbox.context.storeId]);
+ const changed=await turn(inbox,new ConversationRuntime(pool,provider,{inventoryGrounding:true,visualOrdering:true}),{id:randomUUID(),type:'review',expectedVersion:snapshot.conversation.version});
+ assert.equal(changed.requests.length,0);
+ assert.equal(changed.conversation.draft[0].quantity,2);
+ assert.equal(changed.conversation.draft[0].sku,undefined);
+ assert.equal(changed.conversation.draft[0].productConfirmation,undefined);
+ assert.doesNotMatch(changed.messages.at(-1)?.text??'',/All details could not/);
+}));
+
+test('a compact brand remains readable while explicit metre measurements still parse',()=>{
+ assert.deepEqual(catalogMeasurements('3M insulation tape 3m'),[{value:3,unit:'m'}]);
+ assert.equal(measurementText('3M insulation tape',{replyLanguage:'ta'}),'3M insulation tape');
+});
+
+test('a repaired voice list keeps independent counts and photos when one catalog search still needs checking',()=>fixture(async(pool,inbox)=>{
+ const transcript='Two oat milk and three hibiscus concentrates';
+ const understanding={...base(),schemaVersion:2 as const,inputKind:'audio' as const,transcript,intents:['add' as const],requestedItems:[
+  {ordinal:0,sourceText:'Two oat milk',query:'oat milk',purchaseCount:2,unresolved:[],search:{keywords:['oat milk']}},
+  {ordinal:1,sourceText:'three hibiscus concentrates',query:'hibiscus concentrate',purchaseCount:3,unresolved:[],search:{keywords:['hibiscus concentrate']}},
+ ]};
+ let calls=0;
+ const provider:Interpreter={name:'repaired-independent-additions',mode:'mock',supportsAudio:true,unifiedUnderstanding:true,interpret:async input=>{
+  if(++calls===1)return {
+   output:{operations:[],next:'continue',transcript,understanding:{...base(),unresolved:['validation_recovery']}},
+   evidenceRepair:{understanding:{...understanding,inputKind:'audio'},feedback:'Verify the item evidence.'},usage:null,truncated:false,
+  };
+  assert.equal(calls,2);
+  const [oat,held]=understanding.requestedItems;
+  const repaired={...understanding,inputKind:'text',transcript:undefined,requestedItems:[{...oat,search:{...oat.search,selectedSkus:['OAT']}},held]};
+  return {output:understandingToInterpretation(repaired,input,false),usage:null,truncated:false};
+ }};
+ const runtime=new ConversationRuntime(pool,provider,{inventoryGrounding:true,visualOrdering:true});
+ const mediaId=randomUUID(),pcm=Buffer.alloc(32000);
+ for(let i=0;i<pcm.length/2;i++)pcm.writeInt16LE(Math.round(Math.sin(i*.17)*1200),i*2);
+ const media=await normalizeVoice({id:mediaId,mimeType:'audio/wav',data:pcmWav(pcm).toString('base64')});
+ await inbox.ingest({id:mediaId,type:'voice',mediaId},media);
+ await runtime.processNext(inbox.context);
+ const snapshot=await inbox.snapshot(),[found,pending]=snapshot.conversation.draft;
+ assert.equal(snapshot.requests.length,0);
+ assert.equal(found?.quantity,2,JSON.stringify({calls,reason:snapshot.messages.at(-1)?.rich?.clarificationReason,attempts:(await pool.query('select stage,state,failure_code from provider_attempts where conversation_id=$1',[inbox.context.conversationId])).rows}));
+ assert.deepEqual(found?.candidates?.map(p=>p.sku),['OAT']);
+ assert.equal(pending?.quantity,3);
+ assert.equal(pending?.catalogIssue,'catalog_check_pending');
+ assert.deepEqual(pending?.candidates,[]);
+ assert.ok(snapshot.messages.at(-1)?.rich?.parts?.some(part=>part.cards.some(card=>card.kind==='product'&&card.product.imageUrl===fixturePhoto('OAT'))));
 }));

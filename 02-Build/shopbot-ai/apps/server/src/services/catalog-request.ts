@@ -6,7 +6,7 @@ import type {DiscoveryPlan,Product} from '../../../../packages/contracts/index.j
 // These are wording equivalents, never permission to change a product's rating,
 // material, brand or physical unit. The original query remains in the result.
 export function naturalCatalogQuery(input:string):string {
- return input.replace(/(?:\d+\s*)?[½¼¾⅛⅜⅝⅞]/gu,normalizeFractionNumbers).normalize('NFKC').toLowerCase().replace(/[?!,]/g,' ')
+ return input.replace(/(?:\d+\s*)?[½¼¾⅛⅜⅝⅞]/gu,normalizeFractionNumbers).normalize('NFKC').split(/(\b\d+M\b)/g).map((value,index)=>index%2?value:value.toLowerCase()).join('').replace(/[?!,]/g,' ')
   .replace(/முகத்துல போடுற மாஸ்க்|முகக் கவசம்|முகக்கவசம்|ஃபேஸ் மாஸ்க்|face\s+masks?/gu,'mask')
   .replace(/மாஸ்க்|மாஸ்கு|\b(?:maask|mugakavasa[mn]|mugathula podra mask)\b/gu,'mask')
   .replace(/தூசி|\bthoosi\b/gu,'dust').replace(/பெயிண்ட்ஸ்|பெயின்ட்ஸ்|பெயிண்ட்|பெயின்ட்|\b(?:peint|peyin[t]?|paintu)\b/gu,'paint')
@@ -22,7 +22,8 @@ export function naturalCatalogQuery(input:string):string {
 export function namedObjectPhrase(query:string):string {return query.split(/\s+(?:for|with|on)\s+/i,1)[0].trim();}
 export function numericDimensions(text:string):string {
  const numbers:Record<string,number>={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12};
- return text.replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)(?:\s+|-)(?=inch(?:es)?\b|in\b|mm\b|cm\b)/gi,(_,word)=>String(numbers[word.toLowerCase()])+' ');
+ return text.replace(/\b(?:three[- ]quarters?|a[- ]quarter|one[- ]quarter|half)(?:\s+|-)(?=inch(?:es)?\b|in\b)/gi,match=>match.toLowerCase().startsWith('three')?'0.75 ':match.toLowerCase().startsWith('half')?'0.5 ':'0.25 ')
+  .replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)(?:\s+|-)(?=inch(?:es)?\b|in\b|mm\b|cm\b|metres?\b|meters?\b|feet\b|foot\b|ft\b)/gi,(_,word)=>String(numbers[word.toLowerCase()])+' ');
 }
 export function discoveryIdentityQuery(customerQuery:string,identityQuery=customerQuery,dimensions:CatalogMeasurement[]=[]):string {
  const customer=numericDimensions(naturalCatalogQuery(customerQuery)||customerQuery);
@@ -68,6 +69,17 @@ export function specificationTextMatch(actual:string,requested:string):boolean {
  const a=normalize(actual).replace(/\bgray\b/g,'grey'),b=normalize(requested).replace(/\bgray\b/g,'grey');
  return a===b||(' '+a+' ').includes(' '+b+' ');
 }
+export function catalogDimensionSql(measure:NonNullable<DiscoveryPlan['dimensions']>[number],bind:(value:string)=>string):string {
+ const role=measure.role;
+ const fields=role&&role!=='size'?[role,'size']:['size','diameter','length','width','height','thickness'];
+ const pattern=bind(catalogMeasurementSqlPattern({...measure,unit:canonicalMeasurementUnit(measure.unit)}));
+ return '('+fields.map(field=>`coalesce(p.specifications->>${bind(field)},'') ~* ${pattern}`).join(' OR ')+')';
+}
+
+export function searchWithDimensions(query:string,search?:DiscoveryPlan,dimensions?:DiscoveryPlan['dimensions']):DiscoveryPlan|undefined {
+ return dimensions?.length?{keywords:[query.slice(0,120)],...search,dimensions}:search;
+}
+
 export function understandingSearch(item:{query?:string|null;brand?:string;colour?:string;material?:string;packSize?:{value:number;unit:string};dimensions?:CatalogMeasurement[];unresolved?:string[];search?:import('../../../../packages/contracts/understanding.js').TurnUnderstanding['requestedItems'][number]['search']}):DiscoveryPlan|undefined {
  if(!item.query)return;
  const brand=item.brand;

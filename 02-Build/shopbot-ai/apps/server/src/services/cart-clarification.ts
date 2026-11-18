@@ -2,6 +2,7 @@ import type {ConversationState,DraftLine} from '../../../../packages/contracts/i
 import type {TurnUnderstanding} from '../../../../packages/contracts/understanding.js';
 import {say,lineName} from '../../../../packages/contracts/language.js';
 import type {AssistantMemory} from './agent-assistance.js';
+import {inventoryEditTargets} from './inventory-edit-targets.js';
 
 export function totalQuantityQuestion(state:ConversationState,line:DraftLine):string {
  const name=lineName(line,state);
@@ -11,6 +12,10 @@ export function totalQuantityQuestion(state:ConversationState,line:DraftLine):st
 
 /** Render the missing decision from typed actions and actual current rows. */
 export function cartTargetQuestion(state:ConversationState,lines:DraftLine[],edit?:TurnUnderstanding['proposedEdits'][number]):string {
+ if(!lines.length&&edit?.targetQuery){
+  const name=edit.targetQuery.slice(0,80);
+  return say(state,`I couldn’t find “${name}” on this list. Tell me which item you meant.`,`“${name}” இந்தப் பட்டியலில் கிடைக்கவில்லை. எந்தப் பொருளைச் சொன்னீர்கள்?`,`“${name}” intha list-la kidaikkala. Entha porulai sonneenga?`);
+ }
  const names=lines.slice(0,4).map(line=>lineName(line,state)).join(' / ');
  const subject=names||say(state,'your listed items','பட்டியலில் உள்ள பொருட்கள்','list-la irukkura porutkal');
  if(edit?.kind==='remove_item')return say(state,`Which should I remove: ${subject}?`,`எதை நீக்கணும்: ${subject}?`,`Ethai neekkanum: ${subject}?`);
@@ -40,7 +45,8 @@ export function rejectedPlanQuestion(state:ConversationState,proposal?:TurnUnder
 export function offeredRemovalGroup(memory:AssistantMemory|null|undefined,state:ConversationState):string[] {
  const goal=memory?.cartEdit;
  if(memory?.purpose!=='cart_edit'||memory.sourceVersion!==state.version||!goal||goal.targets.length!==1||goal.understanding.requestedItems.length||goal.understanding.proposedEdits.length!==1)return [];
- const target=goal.targets[0];
- if(target.kind!=='edit'||goal.understanding.proposedEdits[target.index]?.kind!=='remove_item'||target.candidateLineIds.length<2||target.candidateLineIds.length>10)return [];
- return target.candidateLineIds.every(id=>state.draft.some(line=>line.id===id))?[...target.candidateLineIds]:[];
+ const target=goal.targets[0],edit=goal.understanding.proposedEdits[target.index];
+ if(target.kind!=='edit'||edit?.kind!=='remove_item'||!edit.targetQuery||target.candidateLineIds.length<2||target.candidateLineIds.length>10)return [];
+ const eligible=new Set(inventoryEditTargets(edit,state).map(line=>line.id));
+ return target.candidateLineIds.every(id=>eligible.has(id))?[...target.candidateLineIds]:[];
 }

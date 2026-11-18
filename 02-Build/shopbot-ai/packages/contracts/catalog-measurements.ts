@@ -1,12 +1,12 @@
-import {canonicalMeasurementUnit,measurementUnitPattern,normalizeFractionNumbers} from './measurements.js';
+import {compactMetreIdentifier,canonicalMeasurementUnit,measurementUnitPattern,normalizeFractionNumbers} from './measurements.js';
 
 export type CatalogMeasurement={value:number;unit:string};
 const pattern=new RegExp('(?<![\\p{L}\\p{N}./])(\\d+(?:\\.\\d+)?)\\s*-?\\s*('+measurementUnitPattern+'|in|["″])(?![\\p{L}\\p{N}])','giu');
 /** Typed identity evidence only. No litre/kg or magnitude conversions. */
 export function catalogMeasurements(text:string):CatalogMeasurement[]{
- return [...normalizeFractionNumbers(text).matchAll(pattern)].map(m=>({value:Number(m[1]),unit:/^(?:in|["″])$/i.test(m[2])?'inch':canonicalMeasurementUnit(m[2])}));
+ return [...normalizeFractionNumbers(text).matchAll(pattern)].filter(m=>!compactMetreIdentifier(m[0])).map(m=>({value:Number(m[1]),unit:/^(?:in|["″])$/i.test(m[2])?'inch':canonicalMeasurementUnit(m[2])}));
 }
-export function withoutCatalogMeasurements(text:string):string{return normalizeFractionNumbers(text).replace(pattern,' ').replace(/\s+/g,' ').trim();}
+export function withoutCatalogMeasurements(text:string):string{return normalizeFractionNumbers(text).replace(pattern,match=>compactMetreIdentifier(match)?match:' ').replace(/\s+/g,' ').trim();}
 export function sameCatalogMeasurement(a:CatalogMeasurement,b:CatalogMeasurement){return a.value===b.value&&a.unit===b.unit;}
 export function measurementSpecEqual(a:string,b:string):boolean|undefined{
  const first=catalogMeasurements(a),second=catalogMeasurements(b);

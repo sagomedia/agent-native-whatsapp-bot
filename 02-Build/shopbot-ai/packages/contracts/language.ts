@@ -99,6 +99,7 @@ export function requestedAmountText(line:ConversationState['draft'][number],cont
 export function draftIssueText(line:ConversationState['draft'][number],context:LanguageContext):string|undefined {
  if(line.sourceUncertainty?.includes('product_identity'))return say(context,'Describe what this item is for','இந்தப் பொருள் எதற்குத் தேவை என்று சொல்லுங்கள்','Intha porul ethukku venum-nu sollunga');
  const reasons:Record<string,[string,string,string]>={
+  catalog_check_pending:['Catalog check pending. Edit this item to search again, or ask the shop.','பொருளைச் சரிபார்க்க வேண்டும். மீண்டும் தேட இதைத் திருத்துங்கள் அல்லது கடையிடம் கேளுங்கள்.','Catalog check pending. Marubadi theda intha item-ai edit pannunga illa kadaiyila kelunga.'],
   unreadable:['This list line could not be read; correct it or ask the shop','இந்த வரியைப் படிக்க முடியவில்லை; திருத்திச் சொல்லுங்கள் அல்லது கடையிடம் கேளுங்கள்','Intha variyai padikka mudiyala; thiruthi sollunga illa kadaiyila kelunga'],
   budget_unverified:['Shop must confirm a valid amount within this budget','இந்தப் பணத்திற்கு தரக்கூடிய அளவை கடை உறுதி செய்யணும்','Intha panathukku tharakkoodiya alavai kadai confirm pannanum'],
   price_unverified:['Shop must confirm price','கடையில் சரிபார்த்து சொல்லப்படும்','Vilayai kadai confirm pannanum'],
@@ -117,7 +118,8 @@ export function draftIssueText(line:ConversationState['draft'][number],context:L
 }
 
 export function measurementText(value:string,context:LanguageContext):string {
- return value.replace(/(\d+(?:\.\d+)?)\s*(inch(?:es)?|metres?|meters?|litres?|liters?|mm|cm|kg|ft|m|l)\b/gi,(_,amount:string,raw:string)=>{
+ return value.replace(/(\d+(?:\.\d+)?)\s*(inch(?:es)?|metres?|meters?|litres?|liters?|mm|cm|kg|ft|m|l)\b/gi,(matched:string,amount:string,raw:string)=>{
+  if(raw==='M'&&matched===amount+raw)return matched;
   const u=raw.toLowerCase(),unit=/^inch/.test(u)?'inch':/^met|^m$/.test(u)?'metre':/^lit|^l$/.test(u)?'litre':u==='ft'?'foot':u;
   return amount+' '+unitName(unit,context);
  });
