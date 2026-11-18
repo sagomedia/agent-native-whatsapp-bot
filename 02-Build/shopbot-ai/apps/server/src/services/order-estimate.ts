@@ -12,16 +12,19 @@ export function estimateLines(lines:DraftLine[]) {
 }
 
 export function checkoutNextStep(state:ConversationState):
- {kind:'review'|'partial_review'|'check_products'}|{kind:'shop_check';line:DraftLine} {
+ {kind:'review'|'partial_review'}|{kind:'check_products'|'shop_check';line:DraftLine} {
  const estimate=estimateLines(state.draft);
- const checks=state.draft.some(line=>{
-  if(line.shopCheckDeferred)return false;
-  const facts=counterLine(line);
-  return line.discovery?.matchStatus==='needs_detail'||
-    !line.sku&&!!line.candidates?.length||
-    !!facts.product&&(line.resolution==='needs_quantity'||state.requireProductConfirmation&&!facts.ready&&facts.canQuote);
- });
- if(checks)return {kind:'check_products'};
+ const rows=state.draft.map(line=>({line,facts:counterLine(line)}));
+ const choices=rows.find(({line,facts})=>!line.shopCheckDeferred&&
+  (facts.blockers.includes('specification')||facts.blockers.includes('variant')));
+ if(choices)return {kind:'check_products',line:choices.line};
+ // An item with no eligible catalog choice cannot be resolved by repeating
+ // unrelated photo confirmations. Expose its correction/help path first.
+ const missing=rows.find(({line,facts})=>!facts.product&&!line.candidates?.length&&!estimate.priced.includes(line));
+ if(missing&&!state.allowPartialReview)return {kind:'shop_check',line:missing.line};
+ const check=rows.find(({line,facts})=>!line.shopCheckDeferred&&!!facts.product&&
+  (line.resolution==='needs_quantity'||state.requireProductConfirmation&&!facts.ready&&facts.canQuote));
+ if(check)return {kind:'check_products',line:check.line};
  if(estimate.complete||!state.draft.length)return {kind:'review'};
  if(state.allowPartialReview)return {kind:'partial_review'};
  return {kind:'shop_check',line:estimate.excluded[0]};

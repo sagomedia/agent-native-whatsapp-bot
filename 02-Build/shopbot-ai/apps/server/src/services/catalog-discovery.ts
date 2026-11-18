@@ -106,29 +106,30 @@ function customerIdentityWords(query:string) {
 function supportsCustomerIdentity(query:string,product:Product,nodes:{id:string;kind:string;label:string;aliases:string[]}[],requestedFamilies:string[]) {
  const words=customerIdentityWords(query).filter(word=>!tokens(product.unit).some(unit=>word===unit||word===unit+'s'));
  const source=unique([product.name,...Object.values(product.localNames??{}),product.brand??'',...Object.values(product.specifications??{}),...product.aliases,...(product.keywords??[])].flatMap(tokens));
- // An alias alone cannot turn an unrelated object into the requested type.
- // Regional synonyms remain supported by the store's actual type metadata.
- if(words.length>1){
-  const attributes=new Set(tokens([product.specifications?.colour,product.specifications?.color,product.specifications?.material].filter(Boolean).join(' ')));
-  const withoutBrand=(name:string)=>product.brand?name.replace(new RegExp(product.brand.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i'),' '):name;
-  const head=words.filter(word=>!attributes.has(word)).at(-1),primary=tokens([product.name,...Object.values(product.localNames??{})].map(withoutBrand).join(' '));
-  const family=nodes.find(n=>n.id===product.familyId&&n.kind==='family');
-  const genericRoot=head&&nodes.some(node=>node.kind==='family'&&[node.label,...node.aliases].some(phrase=>{const ts=customerIdentityWords(phrase);return ts.length===1&&sameObjectHead(ts[0],head);}));
-  const familyIdentity=family&&[family.label,...family.aliases].some(phrase=>{const ts=customerIdentityWords(phrase);return ts.length>1&&ts.every(t=>words.some(w=>sameObjectHead(w,t)))||genericRoot&&ts.some(t=>sameObjectHead(t,head!));});
-  if(head&&!primary.some(word=>sameObjectHead(head,word))&&!familyIdentity)return false;
- }
  if(words.length&&!requestedFamilies.length&&unsupportedNamedObject(query,nodes)&&!source.some(word=>sameObjectHead(words.at(-1)!,word)))return false;
  if(words.length<2)return true; // Vague single-word jobs still offer alternatives.
- let uncovered=[...words];
- if(product.familyId){
-  const family=nodes.find(n=>n.kind==='family'&&n.id===product.familyId);
-  const phrases=[family?.label??'',...(family?.aliases??[])].map(customerIdentityWords).sort((a,b)=>b.length-a.length);
-  for(const phrase of phrases)if(phrase.length&&phrase.length<=words.length){
-   const start=words.findIndex((_,i)=>phrase.every((word,j)=>oneEdit(words[i+j]??'',word)));
-   if(start>=0){uncovered=words.filter((_,i)=>i<start||i>=start+phrase.length);break;}
-  }
- }
- return uncovered.every(word=>source.some(candidate=>oneEdit(word,candidate)));
+
+ // A precise family class can describe variants with different names.
+ // An alias for a different object can retrieve a candidate, but cannot
+ // establish its type or cover qualifiers missing from that product.
+ const family=nodes.find(n=>n.kind==='family'&&n.id===product.familyId);
+ const label=customerIdentityWords(family?.label??'');
+ const familyHead=label.at(-1);
+ const phrases=[label,...(family?.aliases??[]).map(customerIdentityWords)].filter(phrase=>
+  !!familyHead&&phrase.length>0&&sameObjectHead(phrase.at(-1)!,familyHead)).sort((a,b)=>b.length-a.length);
+ const covered=phrases.map(phrase=>({phrase,start:words.findIndex((_,i)=>phrase.every((word,j)=>oneEdit(words[i+j]??'',word)))})).find(match=>match.start>=0);
+ const attributes=new Set(tokens([product.specifications?.colour,product.specifications?.color,product.specifications?.material].filter(Boolean).join(' ')));
+ const withoutBrand=(name:string)=>product.brand?name.replace(new RegExp(product.brand.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i'),' '):name;
+ const head=words.filter(word=>!attributes.has(word)).at(-1);
+ const primary=tokens([product.name,...Object.values(product.localNames??{})].map(withoutBrand).join(' '));
+ const parentType=head&&label.some(word=>sameObjectHead(head,word))&&nodes.some(node=>{
+  if(node.kind!=='family')return false;
+  const terms=customerIdentityWords(node.label);
+  return terms.length===1&&sameObjectHead(head,terms[0]);
+ });
+ if(head&&!primary.some(word=>sameObjectHead(head,word))&&
+  !(covered&&familyHead&&sameObjectHead(head,familyHead))&&!parentType)return false;
+ return words.every((word,index)=>(covered&&index>=covered.start&&index<covered.start+covered.phrase.length)||source.some(candidate=>oneEdit(word,candidate)));
 }
 function specMatches(product:Product,key:string,value:string){if(['colour','color','material'].includes(key)){const actual=specificationKeys(key).map(k=>product.specifications?.[k]).filter((v):v is string=>!!v);return actual.length?actual.every(v=>specificationTextMatch(v,value)):specificationTextMatch(product.name,value);}return specificationKeys(key).some(k=>(measurementSpecEqual(product.specifications?.[k]??'',value)??(normalizedSpec(product.specifications?.[k]??'')===normalizedSpec(value))));}
 function keywordScore(query:string,plan:DiscoveryPlan,product:Product) {
@@ -233,13 +234,33 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
  const hints=unique([root?.name??query,...effective.keywords].flatMap(h=>[h,withoutPackMeasures(h)])).slice(0,12),parameters:unknown[]=[ctx.storeId];
  const add=(v:unknown)=>{parameters.push(v);return '$'+parameters.length;};
  const constraints=['p.store_id=$1','p.active=true'];
+ // A product's exact alias can establish a translation when an independent
+ // search phrase is also supported by that SKU's name. Taxonomy and loose
+ // tokens can retrieve rows, but cannot establish this identity by themselves.
+ const aliasPhrase=normalize(withoutPackMeasures(objectPhrase));
+ const aliasWords=customerIdentityWords(aliasPhrase);
+ const aliasHints=aliasWords.length>1?unique([aliasWords.join(' '),...plan.keywords.map(hint=>customerIdentityWords(hint).join(' '))]).filter(hint=>{
+  const words=tokens(hint);
+  return words.length>1&&(hint===aliasWords.join(' ')||words.some(word=>!aliasWords.includes(word)));
+ }):[];
+ const aliasMatches=aliasHints.length?`(
+  EXISTS(SELECT 1 FROM jsonb_array_elements_text(p.aliases) AS a WHERE lower(trim(a))=${add(aliasPhrase)})
+  AND EXISTS(SELECT 1 FROM unnest(${add(aliasHints)}::text[]) AS hint
+   WHERE to_tsvector('english',concat_ws(' ',p.name,p.local_names->>'ta',p.local_names->>'ta-Latn',p.local_names->>'en')) @@ plainto_tsquery('english',hint))
+ )`:'false';
+ const verifiedAlias=(product:Product)=>{
+  if(!aliasHints.length||!product.aliases.some(alias=>alias.trim().toLowerCase()===aliasPhrase))return false;
+  const names=[product.name,...Object.values(product.localNames??{})];
+  return aliasHints.some(hint=>names.some(name=>matches(hint,[namedObjectPhrase(name)])));
+ };
+
  // A general-purpose family is only an escape for actual named peers.
  // Scope the SQL counts too: a 12-inch blade must not include a 12-inch pipe.
  if(measuredAliasFamilies.length)constraints.push(`(NOT (p.family_id=ANY(${add(measuredAliasFamilies)}::text[])) OR p.sku=ANY(${add(measuredAliasSkus)}::text[]))`);
  // The recommendation stage's explicit selection is a display boundary. An
  // empty selection is preserved above; the ranker cannot refill rejected cards.
  if(effective.selectedSkus)constraints.push('p.sku=ANY('+add(effective.selectedSkus)+'::text[])');
- if(requestedFamilies.length)constraints.push('p.family_id=ANY('+add(requestedFamilies)+'::text[])');
+ if(requestedFamilies.length)constraints.push(`(p.family_id=ANY(${add(requestedFamilies)}::text[]) OR ${aliasMatches})`);
  if(effective.familyId)constraints.push('p.family_id='+add(effective.familyId));
  else if(effective.familyIds)constraints.push('p.family_id=ANY('+add(effective.familyIds)+'::text[])');
  else if(effective.departmentId)constraints.push(`p.family_id IN (SELECT id FROM catalog_nodes WHERE store_id=$1 AND parent_id=${add(effective.departmentId)})`);
@@ -277,7 +298,8 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
  const intendedFamilies=effective.familyId?[effective.familyId]:effective.familyIds??(exactFamily.length?exactFamily:coveredFamily);
  const base=constraints.join(' AND ');
  const automaticFamilies=plan.selectedSkus?.length?[]:requestedFamilies.length?requestedFamilies:intendedFamilies.length===1?intendedFamilies:hintedFamilies;
- const automaticFamily=!effective.familyId&&!effective.familyIds&&automaticFamilies.length?` AND p.family_id=ANY(${add(automaticFamilies)}::text[])`:'';
+ const automaticFamily=!effective.familyId&&!effective.familyIds&&automaticFamilies.length?` AND (p.family_id=ANY(${add(automaticFamilies)}::text[]) OR ${aliasMatches})`:'';
+ if(aliasHints.length)clauses.push(aliasMatches);
  const where=base+automaticFamily+' AND ('+(clauses.join(' OR ')||'false')+')';
  const rankQuery=add(normalize(query)),identityQuery=add(query.trim()),preferredOrder=effective.preferredSkus?.length?`(p.sku=ANY(${add(effective.preferredSkus)}::text[])) DESC,`:"";
  const queryRows=async(scope:string,offset=0)=>(await bound(client,`SELECT ${productColumns.split(',').map(c=>'p.'+c).join(',')},count(*) OVER()::int AS total_count FROM products p WHERE ${scope} ORDER BY (lower(p.sku)=lower(${identityQuery})) DESC,(lower(p.name)=lower(${identityQuery})) DESC,${preferredOrder}ts_rank_cd(p.search_vector,plainto_tsquery('simple',${rankQuery})) DESC,p.sku LIMIT 120 OFFSET ${offset}`,parameters)).rows;
@@ -291,7 +313,9 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
  // Selected SKUs were scoped to fresh observations by the understanding compiler.
  // Keep hard brand/specification/measurement filters, without repeating a literal noun gate.
  const measurementsMatch=(p:Product)=>matchesPackMeasures(query,p)&&(!effective.dimensions||matchesProductMeasures(p,effective.dimensions));
- const eligible=(p:Product)=>measurementsMatch(p)&&(plan.selectedSkus?.includes(p.sku)||supportsCustomerIdentity(query,p,nodes,requestedFamilies))&&(usedWhere!==where||requestedFamilies.includes(p.familyId??'')||!!effective.departmentId||!!effective.familyId||!!effective.familyIds?.includes(p.familyId??'')||hintedFamilies.includes(p.familyId??'')||keywordScore(query,effective,p).match==='keyword_match');
+ const eligible=(p:Product)=>measurementsMatch(p)&&(verifiedAlias(p)||
+  (plan.selectedSkus?.includes(p.sku)||supportsCustomerIdentity(query,p,nodes,requestedFamilies))&&
+  (usedWhere!==where||requestedFamilies.includes(p.familyId??'')||!!effective.departmentId||!!effective.familyId||!!effective.familyIds?.includes(p.familyId??'')||hintedFamilies.includes(p.familyId??'')||keywordScore(query,effective,p).match==='keyword_match'));
  const sqlMatchCount=Number(rows[0]?.total_count??0),candidates:Product[]=[];
  const rejections:Record<string,number>={identity:0,measurement:0,relevance:0,category:0,brand:0,specifications:0};
  let rejectionSampleCount=0;

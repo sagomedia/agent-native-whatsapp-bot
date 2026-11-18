@@ -48,11 +48,17 @@ export type TurnUnderstanding=z.infer<typeof turnUnderstandingSchema>;
 
 /** Optional search hints may use empty/null absence. An explicit empty SKU
  * selection is a rejection and must survive normalization. */
-export function normalizeSearchAbsence(value:unknown):unknown {
+export function normalizeSearchAbsence(value:unknown,fallbackQuery?:unknown):unknown {
  if(!value||typeof value!=='object'||Array.isArray(value))return value;
  const next={...value} as Record<string,unknown>;
  for(const field of ['identityQuery','familyIds','selectedSkus','useCase','clarifyType','narrowing','browseAll'])if(next[field]===null||next[field]==='')delete next[field];
  if(Array.isArray(next.familyIds)&&next.familyIds.length===0)delete next.familyIds;
+ // A missing optional hint cannot invalidate an otherwise grounded item.
+ // Keep all explicit filters and SKU decisions, including explicit rejection.
+ if(Array.isArray(next.keywords)&&!next.keywords.length){
+  const identity=typeof next.identityQuery==='string'?next.identityQuery:fallbackQuery;
+  if(typeof identity==='string'&&identity.trim())next.keywords=[identity.trim().slice(0,120)];
+ }
  return next;
 }
 
@@ -76,13 +82,13 @@ export function normalizeUnderstandingAbsence(value:unknown):unknown {
   if(item.requestedBudgetPaise===0)delete item.requestedBudgetPaise;
   if(item.purchaseCount===null)delete item.countEvidence;
   for(const field of ['dimensions','attributeEvidence'])if(Array.isArray(item[field])&&item[field].length===0)delete item[field];
-  if(item.search!==undefined)item.search=normalizeSearchAbsence(item.search);
+  if(item.search!==undefined)item.search=normalizeSearchAbsence(item.search,item.query);
   return item;
  });
  if(Array.isArray(result.proposedEdits))result.proposedEdits=result.proposedEdits.map(v=>{
   if(!v||typeof v!=='object'||Array.isArray(v))return v;
   const edit=clean(v,['targetQuery','quantity','query','amount','mode','search','countEvidence','additionalEvidence']);
-  if(edit.search!==undefined)edit.search=normalizeSearchAbsence(edit.search);
+  if(edit.search!==undefined)edit.search=normalizeSearchAbsence(edit.search,edit.query);
   return edit;
  });
  return result;

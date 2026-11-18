@@ -465,7 +465,9 @@ test('empty optional family hints do not reject an item or erase an explicit gro
  const input={text:source,state:empty,proposal:original,observations:[{tool:'discover_products' as const,query:'oat drink',products:[],totalCount:0}]};
  const rejected=inventoryGroundingToInterpretation({items:[{ordinal:0,query:'oat drink',search:{keywords:['oat drink'],familyIds:[],selectedSkus:[]}}],replacements:[]},input,false);
  assert.deepEqual(rejected.understanding!.requestedItems[0].search?.selectedSkus,[]);
- assert.throws(()=>inventoryGroundingToInterpretation({items:[{ordinal:0,query:'oat drink',search:{keywords:[],selectedSkus:[]}}],replacements:[]},input,false));
+ const normalized=inventoryGroundingToInterpretation({items:[{ordinal:0,query:'oat drink',search:{keywords:[],selectedSkus:[]}}],replacements:[]},input,false);
+ assert.deepEqual(normalized.understanding?.requestedItems[0].search,{...rejected.understanding?.requestedItems[0].search});
+ assert.throws(()=>inventoryGroundingToInterpretation({items:[{ordinal:0,query:'oat drink',search:{keywords:[17],selectedSkus:[]}}],replacements:[]},input,false));
 });
 
 test('replacement searches normalize absent family hints and still reject unknown keys',()=>{
@@ -679,3 +681,46 @@ test('a repaired voice list keeps independent counts and photos when one catalog
  assert.deepEqual(pending?.candidates,[]);
  assert.ok(snapshot.messages.at(-1)?.rich?.parts?.some(part=>part.cards.some(card=>card.kind==='product'&&card.product.imageUrl===fixturePhoto('OAT'))));
 }));
+
+test('an exact store alias and an independently supported name find products outside inferred taxonomy',()=>fixture(async(pool,inbox)=>{
+ const ctx=inbox.context;
+ await pool.query(`INSERT INTO catalog_nodes(store_id,id,parent_id,kind,label,aliases) VALUES
+  ($1,'kitchen',NULL,'department','Kitchen','[]'),
+  ($1,'cookware','kitchen','family','Bowls and lids','["mixing bowl"]'),
+  ($1,'serveware','kitchen','family','Serving utensils','[]')`,[ctx.storeId]);
+ for(const [sku,name,family,aliases] of [
+  ['BOWL-A','Ceramic Mixing Bowl','cookware',['batter container','mixing bowl']],
+  ['BOWL-B','Steel Mixing Bowl','serveware',['batter container','mixing bowl']],
+  ['LID','Spare Bowl Lid','cookware',['batter container','bowl cover']],
+ ] as const){
+  await pool.query(`INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases,image_path,selling_unit_verified)
+   VALUES($1,$2,$3,'piece',30000,10,$4,$5::jsonb,$6,true)`,
+  [ctx.storeId,sku,name,family,JSON.stringify(aliases),fixturePhoto(sku)]);
+ }
+ const client=await pool.connect();
+ try{
+  const search={keywords:['batter container','mixing bowl'],identityQuery:'batter container'};
+  const found=await discoverProducts(client,ctx,'batter container',search);
+  assert.deepEqual(found.products.map(p=>p.sku).sort(),['BOWL-A','BOWL-B']);
+  assert.ok(found.products.every(p=>p.imageUrl===fixturePhoto(p.sku)));
+  const named=await discoverProducts(client,ctx,'mixing bowl');
+  assert.deepEqual(named.products.map(p=>p.sku).sort(),['BOWL-A','BOWL-B']);
+  const unsupported=await discoverProducts(client,ctx,'unknown part',{keywords:['unknown part','mixing bowl']});
+  assert.equal(unsupported.products.length,0);
+  const size=await discoverProducts(client,ctx,'batter container',{...search,dimensions:[{value:12,unit:'inch',role:'diameter'}]});
+  assert.equal(size.products.length,0);
+ }finally{client.release();}
+}));
+
+test('empty optional search keywords on a later voice item preserve the complete evidenced list',()=>{
+ const names=['oat drink','dairy milk','rice flour','vanilla','green tea','hibiscus','black beans'];
+ const transcript=names.map(name=>'two '+name).join(' and ');
+ const items=names.map((query,ordinal)=>({ordinal,query,sourceText:'two '+query,purchaseCount:2,
+  countEvidence:{sourceText:'two',value:2,mode:'total'},unresolved:[],search:{keywords:ordinal>=5?[]:[query]}}));
+ const input={text:transcript,state:empty,voiceTranscript:true,inventoryGrounding:true};
+ const original={...base(),intents:['add'],requestedItems:items};
+ const plan=understandingToInterpretation(original,input,false);
+ assert.deepEqual(plan.operations.map(op=>op.kind==='add_item'?[op.query,op.quantity]:[]),names.map(name=>[name,2]));
+ assert.deepEqual(plan.understanding?.requestedItems[6].search?.keywords,['black beans']);
+ assert.throws(()=>understandingToInterpretation({...original,requestedItems:items.map(item=>item.ordinal===6?{...item,sourceText:'two red beans'}:item)},input,false),/evidence is not in current input/i);
+});

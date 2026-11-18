@@ -40,7 +40,19 @@ function inventoryGroundingTargets(input:InterpretationInput){
  * echoing it back. Source fields and actions are owned by the first plan. */
 export function inventoryGroundingToInterpretation(value:unknown,input:InterpretationInput,allowImageLists:boolean):Interpretation {
  const raw=value&&typeof value==='object'&&!Array.isArray(value)?{...value} as Record<string,unknown>:value;
- if(raw&&typeof raw==='object'&&!Array.isArray(raw))for(const field of ['items','replacements'])if(Array.isArray((raw as Record<string,unknown>)[field]))(raw as Record<string,unknown>)[field]=((raw as Record<string,unknown>)[field] as unknown[]).map(item=>item&&typeof item==='object'&&!Array.isArray(item)?{...item,...('search' in item?{search:normalizeSearchAbsence(item.search)}:{})}:item);
+ if(raw&&typeof raw==='object'&&!Array.isArray(raw)){
+  const envelope=raw as Record<string,unknown>;
+  for(const field of ['items','replacements']){
+   if(!Array.isArray(envelope[field]))continue;
+   envelope[field]=envelope[field].map(row=>{
+    if(!row||typeof row!=='object'||Array.isArray(row))return row;
+    const entry=row as Record<string,unknown>;
+    const index=typeof entry.index==='number'?entry.index:-1;
+    const query=field==='items'?entry.query:input.proposal?.understanding?.proposedEdits[index]?.query;
+    return 'search' in entry?{...entry,search:normalizeSearchAbsence(entry.search,query)}:entry;
+   });
+  }
+ }
  const patch=inventoryGroundingSchema.parse(raw),prior=input.proposal?.understanding;
  if(!prior||!input.proposal)throw new Error('Inventory grounding requires the original understanding.');
  const targets=inventoryGroundingTargets(input),expected=targets.items.map(item=>item.ordinal),edits=targets.replacements.map(edit=>edit.index);

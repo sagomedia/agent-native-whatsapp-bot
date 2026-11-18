@@ -9,6 +9,7 @@ import type {Operation,SimulatorEvent,Snapshot,RichReply,ConversationState,Produ
 import {setupDatabase} from '../apps/server/src/db/migrate.js';
 import {SimulatorService,simulatorContext} from '../apps/server/src/services/simulator.js';
 import {ConversationRuntime} from '../apps/server/src/runtime/conversation.js';
+import {ownerSimpleStageSql} from '../apps/server/src/services/owner-read-query.js';
 import type {Interpreter} from '../apps/server/src/adapters/interpreter.js';
 import {protectQuantityEvidence,amountToCount} from '../apps/server/src/services/quantity-evidence.js';
 import {visualSvg,renderVisualImage,materializeVisualReply,INVOICE_ROWS_PER_PAGE} from '../apps/server/src/services/visual-images.js';
@@ -344,4 +345,31 @@ test('mixed confirmed, unconfirmed and unlisted rows render native buttons witho
  assert.ok(buttons(reply).some(b=>b.event.type==='select_product'),'retain individual product approval');assert.ok(buttons(reply).some(b=>b.event.type==='edit_item'||b.event.type==='shopping_action'),'retain edit/list actions');
  const rich=materializeVisualReply(reply);for(const part of rich.parts!){const rendered=renderWhatsAppReply({...rich,parts:[part]},randomUUID(),'example.test');assert.ok(['carousel','buttons'].includes(rendered.format));}
  assert.equal(state.draft.length,3);assert.equal(s.requests.length,0);
+}));
+
+test('a mixed request reaches Orders New after the shop-check bill is explicitly sent',()=>fixture(async(pool,inbox)=>{
+ const ops:Operation[]=[{kind:'add_item',query:'TEST0',quantity:1},{kind:'add_item',query:'unlisted spare part',quantity:2}];
+ const runtime=new ConversationRuntime(pool,planner(ops),{visualOrdering:true,partialReviews:true});
+ let s=await text(inbox,runtime,'one TEST0 and two unlisted spare parts');
+ assert.equal(s.requests.length,0);
+ s=await event(inbox,runtime,approve(s));
+ const bill=last(s);
+ assert.equal(bill.stage,'bill');
+ assert.match(bill.text,/check the pending items/);
+ assert.equal(s.requests.length,0);
+ const confirm=submit(s);
+ s=await event(inbox,runtime,confirm);
+ assert.equal(s.requests.length,1);
+ assert.equal(last(s).stage,'submitted');
+ assert.equal(s.requests[0].totalPaise,10000);
+ assert.deepEqual(s.requests[0].lines.map(l=>[l.sku,l.quantity]),[['TEST0',1],[undefined,2]]);
+ const row=(await pool.query(`SELECT estimate_complete,excluded_line_ids,acceptance,fulfillment,${ownerSimpleStageSql} AS stage
+  FROM order_requests r WHERE id=$1 AND store_id=$2`,[s.requests[0].id,inbox.context.storeId])).rows[0];
+ assert.deepEqual(row,{
+  estimate_complete:false,excluded_line_ids:[s.requests[0].lines[1].id],
+  acceptance:'awaiting_approval',fulfillment:'awaiting_approval',stage:'new',
+ });
+ await inbox.ingest(confirm);
+ assert.equal(await runtime.processNext(inbox.context),false);
+ assert.equal((await inbox.snapshot()).requests.length,1);
 }));

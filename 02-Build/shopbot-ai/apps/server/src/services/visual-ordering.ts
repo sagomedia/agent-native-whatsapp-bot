@@ -223,7 +223,10 @@ export function visualBill(state:ConversationState,request?:OrderRequest):RichRe
  // Each page is one native image. Consent travels with the final invoice page;
  // earlier pages must be delivered before its buttons become available.
  const pending=estimatePendingSummary(state,lines);
- const sendHint=buttons.length?say(state,'Tap Send to store when you’re ready.','தயாரானதும் கடைக்கு அனுப்பு என்பதைத் தட்டுங்க.','Ready-na Kadaikku anuppu-ai thattunga.'):undefined;
+ const sendHint=buttons.length?estimate.complete
+  ?say(state,'Tap Send to store when you’re ready.','தயாரானதும் கடைக்கு அனுப்பு என்பதைத் தட்டுங்க.','Ready-na Kadaikku anuppu-ai thattunga.')
+  :say(state,'Tap Send to store to ask the shop to check the pending items.','மீதமுள்ள பொருட்களைக் கடை சரிபார்க்க கடைக்கு அனுப்பு என்பதைத் தட்டுங்க.','Pending items-ai kadai check panna Kadaikku anuppu-ai thattunga.')
+  :undefined;
  const parts=cards.map((card,index)=>part([card],[
   pages>1?card.caption:undefined,
   index===cards.length-1?card.total:undefined,
@@ -260,8 +263,10 @@ export function visualEstimate(state:ConversationState,lines:ConversationState['
   event:next.kind==='partial_review'?{id:randomUUID(),type:'review_partial',expectedVersion:state.version}:{id:randomUUID(),type:'review',expectedVersion:state.version},
  }];
  if(!blocked)buttons.push(change(state));
- const parts=invoice.parts!.map((p,index)=>index===invoice.parts!.length-1?{...p,text:blocked?`${p.text}\n${blocked.text}`:p.text,cards:p.cards.map(c=>({...c,buttons}))}:{...p,cards:p.cards.map(c=>({...c,buttons:[change(state)]}))});
- const text=estimateText(state,lines,false,false)+(blocked?'\n\n'+blocked.text:'');
+ const nextItem=next.kind==='check_products'?fitText(lineName(next.line,state),65):undefined;
+ const guide=blocked?.text??(nextItem?say(state,`Check “${nextItem}” next.`,`அடுத்து “${nextItem}” சரிபார்க்கவும்.`,`Aduthu “${nextItem}” check pannunga.`):undefined);
+ const parts=invoice.parts!.map((p,index)=>index===invoice.parts!.length-1?{...p,text:guide?`${p.text}\n${guide}`:p.text,cards:p.cards.map(c=>({...c,buttons}))}:{...p,cards:p.cards.map(c=>({...c,buttons:[change(state)]}))});
+ const text=estimateText(state,lines,false,false)+(guide?'\n\n'+guide:'');
  return {...invoice,readOnly:true,text,accessibleText:text,parts,buttons};
 }
 
