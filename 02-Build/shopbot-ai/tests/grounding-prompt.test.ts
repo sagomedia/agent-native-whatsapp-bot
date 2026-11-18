@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import type {GenerateContentParameters,GenerateContentResponse} from '@google/genai';
 import {GoogleInterpreter} from '../apps/server/src/adapters/google-interpreter.js';
+import {understandingPrompt} from '../apps/server/src/adapters/turn-understanding.js';
 import type {InterpretationInput} from '../apps/server/src/adapters/interpreter.js';
 import {admitRequest,inputAdmissionLimits} from '../apps/server/src/services/inference-admission.js';
 import type {CatalogObservation} from '../apps/server/src/services/agent-assistance.js';
@@ -88,4 +89,19 @@ test('evidence repairs carry the rejected proposal and one bounded set of catalo
  assert.equal(prompt.catalogObservations.length,3);
  assert.equal(prepared.admission.requestHash,admitRequest(request!).requestHash);
  assert.throws(()=>provider.validateInput({text:'x'.repeat(inputAdmissionLimits.textBytes),state}),/including instructions and schema/);
+});
+
+test('one bounded grounding request can retain the SQL candidates for five independent items',()=>{
+ const names=['sandpaper','hardware tape','wire cutter','safety gloves','safety glasses'];
+ const observations=names.map((name,index)=>observe(name,index));
+ const items=names.map((query,ordinal)=>({ordinal,query,sourceText:query,purchaseCount:null,unresolved:[] as []}));
+ const input:InterpretationInput={
+  text:names.join(', '),state,observations,inventoryReplan:true,planningFeedback:'Ground these requests independently.',
+  proposal:{operations:[],next:'continue',understanding:{...proposal.understanding!,requestedItems:items,proposedEdits:[]}},
+ };
+ const provider=new GoogleInterpreter(settings,{generateContent:async()=>{throw new Error('Offline test');}});
+ assert.ok(provider.prepareInput(input).admission.textBytes<inputAdmissionLimits.textBytes);
+ const prompt=JSON.parse(understandingPrompt(input));
+ assert.deepEqual(prompt.groundingTargets.items,items.map(({ordinal,query})=>({ordinal,query})));
+ assert.deepEqual(prompt.catalogObservations.map((fact:CatalogObservation)=>fact.products.map(p=>p.sku)),observations.map(fact=>fact.products.map(p=>p.sku)));
 });

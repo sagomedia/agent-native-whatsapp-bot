@@ -102,6 +102,9 @@ function resolvedLine(product: Product, quantity: number | null, query: string, 
 async function resolveLine(client: PoolClient, ctx: ActorContext, query: string, quantity: number | null, id: string = randomUUID(),requestedUnit?:string,search?:DiscoveryPlan,evidence:LineEvidence={},previous?:DraftLine): Promise<DraftLine> {
   evidence=lineEvidence(evidence);
   search={keywords:[query.slice(0,120)],...search,allowAlternatives:search?.allowAlternatives??true};
+  if(evidence.sourceUncertainty?.includes('product_identity')&&!(previous&&query!==previous.query&&evidence.supportingPhrase)){
+    return {...evidence,id,query,name:query,quantity,resolution:'unavailable',candidates:[]};
+  }
   if(evidence.sourceUncertainty?.includes('unreadable')&&!(previous&&query!==previous.query&&evidence.supportingPhrase))return {...evidence,id,query,quantity:null,name:query,resolution:'unavailable',catalogIssue:'unreadable',candidates:[]};
   if(await catalogEnabled(client,ctx)){
     let searchQuery=packSearchQuery(query,evidence.packSize);

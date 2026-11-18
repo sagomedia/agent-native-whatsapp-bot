@@ -19,10 +19,15 @@ export function cartTargetQuestion(state:ConversationState,lines:DraftLine[],edi
  return say(state,`Which item do you mean: ${subject}?`,`எந்தப் பொருளைச் சொல்றீங்க: ${subject}?`,`Entha porulai solreenga: ${subject}?`);
 }
 
+export function retryProductList(state:ConversationState):string {
+ return say(state,'I couldn’t check the full list. Please send all the items again by text or voice.','முழுப் பட்டியலைச் சரிபார்க்க முடியவில்லை. எல்லாப் பொருட்களையும் மீண்டும் செய்தியாக அல்லது குரலில் சொல்லுங்கள்.','Muzhu list-ai check panna mudiyala. Ella porutkalaiyum marubadi text-la illa voice-la sollunga.');
+}
+
 /** Rejected proposals may explain a question, but never authorize a write. */
 export function rejectedPlanQuestion(state:ConversationState,proposal?:TurnUnderstanding):string {
  const edit=proposal?.proposedEdits[0];
  if(edit&&state.draft.length)return cartTargetQuestion(state,state.draft,edit);
+ if(proposal&&proposal.requestedItems.filter(item=>!item.crossedOut).length>1)return retryProductList(state);
  const item=proposal?.requestedItems.find(item=>item.query);
  if(item){
   const requested=`${item.purchaseCount===null?'':item.purchaseCount+' × '}${item.query!.slice(0,80)}`;

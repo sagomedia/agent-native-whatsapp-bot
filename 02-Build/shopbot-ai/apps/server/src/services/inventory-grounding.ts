@@ -11,11 +11,13 @@ import {normalize,oneEdit,tokens} from '../../../../packages/contracts/catalog-t
 import {catalogMeasurements,catalogMeasurementSqlPattern,withoutCatalogMeasurements} from '../../../../packages/contracts/catalog-measurements.js';
 import {catalogMeasurementSourceSql,catalogSpecificationSql,discoveryIdentityQuery,namedObjectPhrase,naturalCatalogQuery} from './catalog-request.js';
 
+export const inventoryObservationLimit=5;
+
 /** The same bounded facts can ground a normal plan or its single evidence
  * repair. Neither path needs an extra unmetered model request. */
 export async function observeInventory(client:PoolClient,ctx:ActorContext,tools:RetailTools,items:{query:string;search?:DiscoveryPlan}[],key:string):Promise<CatalogObservation[]> {
  const found:CatalogObservation[]=[];
- for(const [index,item] of items.slice(0,3).entries()){
+ for(const [index,item] of items.slice(0,inventoryObservationLimit).entries()){
   const current=(await observeCatalog(client,ctx,tools,[item.query],`${key}:${index}`,item.search))[0];
   if(item.search?.selectedSkus!==undefined){found.push(current);continue;}
   const brand=item.search?.brand;
@@ -83,7 +85,7 @@ export async function inventoryCandidateFacts(client:PoolClient,ctx:ActorContext
 
 export function inventoryItems(plan:Interpretation){
  const items=plan.operations.filter((op):op is Extract<Operation,{kind:'add_item'|'resolve_line'}>=>
-  (op.kind==='add_item'||op.kind==='resolve_line')&&!!op.query);
+  (op.kind==='add_item'||op.kind==='resolve_line')&&!!op.query&&!op.sourceUncertainty?.includes('product_identity'));
  if(items.length)return items;
  if(plan.next==='assist'&&plan.assistance)return plan.assistance.queries.map(query=>({kind:'add_item' as const,query,quantity:null,search:plan.assistance!.search}));
  if(plan.next==='price'&&plan.priceQuery)return [{kind:'add_item' as const,query:plan.priceQuery,quantity:null,search:plan.priceSearch}];

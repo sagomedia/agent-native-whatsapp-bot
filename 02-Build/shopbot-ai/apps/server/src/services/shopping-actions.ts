@@ -29,7 +29,7 @@ export function shoppingActions(reply:RichReply,state:ConversationState,map?:Cat
   if(reply.cards?.length)return {...reply,buttons:[...(reply.buttons??[]),flow('options','More options','மேலும் தேர்வுகள்','Innum options')]};
   if(!reply.cards?.length&&!reply.buttons?.length&&!state.pending){
     if(state.draft.length)return {...reply,buttons:[{label:say(state,'Review list','பட்டியலைப் பார்','List paaru'),event:{id:id(),type:'review',expectedVersion:state.version}},flow('edit_list','Change an item','பொருளை மாற்று','Porulai maathu'),flow('options','More options','வேற options','Vera options')]};
-    return {...reply,buttons:[flow('browse','Browse items','பொருட்களைப் பார்','Porutkal paaru'),flow('help','Help me choose','உதவி வேண்டும்','Help venum'),flow('options','More options','வேற options','Vera options')]};
+    return {...reply,buttons:[flow('browse','Browse catalog','கடை வகைகள் பார்','Kadai vagaigal paaru'),flow('help','Help me choose','உதவி வேண்டும்','Help venum'),flow('options','More options','வேற options','Vera options')]};
   }
   return reply;
 }

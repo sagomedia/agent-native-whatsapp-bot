@@ -11,6 +11,9 @@ import {setupImageDemo} from '../apps/server/src/services/demo-catalog.js';
 import {fixtureStore} from '../profiles/hardware.js';
 import {WhatsAppChannel,webhookSchema} from '../apps/server/src/services/whatsapp-channel.js';
 import {createApp} from '../apps/server/src/http/app.js';
+import {GoogleInterpreter} from '../apps/server/src/adapters/google-interpreter.js';
+import {geminiTextRate} from '../apps/server/src/services/inference-budget.js';
+import type {Interpreter} from '../apps/server/src/adapters/interpreter.js';
 import type {RichReply,SimulatorEvent,Product} from '../packages/contracts/index.js';
 import type {WhatsAppConfig} from '../apps/server/src/services/whatsapp-config.js';
 const cfg:WhatsAppConfig={hostname:'shopbot-api.example.test',storeId:fixtureStore,appId:'123456789',wabaId:'987654321',phoneId:'123987654',appSecret:'offline-test-secret',verifyToken:'offline-test-verification',accessToken:'offline-test-api-token-not-a-real-credential',graphVersion:'v25.0',recipients:['919000000001','919000000002'],defaultReplyLanguage:'en',processEnabled:true,sendEnabled:true};
@@ -82,11 +85,11 @@ test('service-window visual choices take priority over marketing templates and c
  assert.equal(planWhatsAppReply(reply(3),{...caps,serviceWindowOpen:false}).format,'blocked');
  assert.equal(planWhatsAppReply(reply(11),caps).format,'blocked');
 });
-async function fixture(run:(pool:pg.Pool,channel:WhatsAppChannel,sent:any[])=>Promise<void>){
+async function fixture(run:(pool:pg.Pool,channel:WhatsAppChannel,sent:any[])=>Promise<void>,config=cfg,provider?:Interpreter){
  const schema='wa_visual_'+randomUUID().replaceAll('-',''),admin=new pg.Pool({connectionString:process.env.DATABASE_URL});await admin.query(`CREATE SCHEMA "${schema}"`);
  const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:`-c search_path=${schema}`}),sent:any[]=[];
  try{await setupDatabase(pool,'mock');await setupImageDemo(pool,fixtureStore);
-  const channel=new WhatsAppChannel(pool,cfg,async(_url,init)=>{sent.push(JSON.parse(String(init!.body)));return new Response(JSON.stringify({messages:[{id:'wamid.out.'+sent.length}]}),{status:200});});await channel.setup();await run(pool,channel,sent);
+  const channel=new WhatsAppChannel(pool,config,async(_url,init)=>{sent.push(JSON.parse(String(init!.body)));return new Response(JSON.stringify({messages:[{id:'wamid.out.'+sent.length}]}),{status:200});},provider);await channel.setup();await run(pool,channel,sent);
  }finally{await pool.end();await admin.query(`DROP SCHEMA "${schema}" CASCADE`);await admin.end();}
 }
 const inbound=(message:object,from=cfg.recipients[0])=>webhookSchema.parse({object:'whatsapp_business_account',entry:[{id:cfg.wabaId,changes:[{field:'messages',value:{metadata:{phone_number_id:cfg.phoneId},messages:[{id:'wamid.'+randomUUID(),from,timestamp:String(Math.floor(Date.now()/1000)),...message}]}}]}]});
@@ -94,6 +97,62 @@ async function turn(channel:WhatsAppChannel,body:object,from?:string){await chan
 async function action(pool:pg.Pool,type:SimulatorEvent['type'],sku?:string){return (await pool.query(`SELECT a.*,o.provider_id FROM whatsapp_actions a JOIN whatsapp_outbox o ON o.message_id=a.message_id WHERE a.event->>'type'=$1 AND ($2::text IS NULL OR a.event->>'sku'=$2) ORDER BY o.created_at DESC LIMIT 1`,[type,sku??null])).rows[0];}
 const tap=(a:any)=>({type:'interactive',context:{id:a.provider_id},interactive:{type:'button_reply',button_reply:{id:a.id,title:'Untrusted customer supplied title'}}});
 const carouselTap=(a:any)=>({type:'button',context:{id:a.provider_id},button:{payload:a.id,text:'Untrusted customer supplied title'}});
+test('a rejected list asks for all items again without offering a department browser',()=>{
+ const badPlan={schemaVersion:2,inputKind:'text',intents:['add'],requestedItems:['electrical tape','sandpaper'].map((query,ordinal)=>({
+   query,ordinal,sourceText:query,purchaseCount:null,targetLineId:randomUUID(),unresolved:[],
+ })),proposedEdits:[],shopQuestions:[],unresolved:[]};
+ const provider=new GoogleInterpreter({
+  apiKey:'offline-only',model:geminiTextRate.model,allowPaidInference:false,budgetMicrousd:0,unifiedUnderstanding:true,
+  freeQuota:{scope:'wa-shopping-rejection',model:geminiTextRate.model},
+ },{generateContent:async()=>({
+  modelVersion:geminiTextRate.model,
+  candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(badPlan)}]}}],
+  usageMetadata:{promptTokenCount:1000,candidatesTokenCount:100,totalTokenCount:1100},
+ }) as any});
+ return fixture(async(pool,channel,sent)=>{
+  await turn(channel,{type:'text',text:{body:'I need electrical tape and sandpaper.'}});
+  assert.equal(sent.at(-1).type,'text');
+  assert.match(sent.at(-1).text.body,/send all the items again/i);
+  const review=(await pool.query("SELECT draft FROM conversations WHERE id IN (SELECT conversation_id FROM whatsapp_conversations)")).rows[0];
+  assert.deepEqual(review.draft,[]);
+  assert.equal((await pool.query("SELECT id FROM whatsapp_actions WHERE event->>'action' IN ('browse','view_products')")).rowCount,0);
+ },{...cfg,aiEnabled:true,visualOrdering:true},provider);
+});
+
+test('a current product photo button reopens the saved product check instead of browsing the catalog',()=>{
+ const provider:Interpreter={
+  name:'offline-product-tap-test',mode:'live',billing:geminiTextRate,
+  async interpret({state,text}){
+   const operations:import('../packages/contracts/index.js').Operation[]=state.draft.length
+    ?[{kind:'set_quantity',reference:state.draft.find(line=>line.sku==='H13')!.id,quantity:4,supportingPhrase:text}]
+    :[{kind:'add_item',query:'H02',quantity:1},{kind:'add_item',query:'H13',quantity:2}];
+   return {output:{operations,next:'review'},truncated:false,responseModel:geminiTextRate.model,usage:{promptTokenCount:1000,candidatesTokenCount:100,totalTokenCount:1100}};
+  }
+ };
+ return fixture(async(pool,channel,sent)=>{
+  await turn(channel,{type:'text',text:{body:'Add one H02 and two H13'}});
+  const hose=(await pool.query("SELECT name FROM products WHERE store_id=$1 AND sku='H13'",[fixtureStore])).rows[0];
+  await turn(channel,{type:'text',text:{body:`Change ${hose.name} to 4`}});
+  const button=(await pool.query(`SELECT a.*,o.provider_id FROM whatsapp_actions a JOIN whatsapp_outbox o ON o.message_id=a.message_id
+    WHERE a.event->>'action'='view_products' ORDER BY o.created_at DESC LIMIT 1`)).rows[0];
+  assert.ok(button,JSON.stringify((await pool.query("SELECT text,payload->>'stage' AS stage FROM messages WHERE direction='outbound'")).rows));
+  assert.equal(button.label,'Show products');
+  const snapshot=async()=>(await pool.query('SELECT version,draft,pending FROM conversations WHERE id=$1',[button.conversation_id])).rows[0];
+  const before=await snapshot();
+  assert.deepEqual(before.draft.map((line:{sku:string;quantity:number})=>[line.sku,line.quantity]),[['H02',1],['H13',4]]);
+  const attempts=(await pool.query('SELECT count(*)::int AS n FROM provider_attempts')).rows[0].n;
+  await turn(channel,tap(button));
+  const reply=sent.at(-1).interactive;
+  assert.equal(reply.type,'carousel');
+  const images=reply.action.cards.map((card:any)=>card.header.image.link);
+  assert.ok(images.includes('https://'+cfg.hostname+'/catalog-images/H02.jpg'));
+  assert.ok(images.includes('https://'+cfg.hostname+'/catalog-images/H13.jpg'));
+  assert.deepEqual(await snapshot(),before);
+  assert.equal((await pool.query('SELECT count(*)::int AS n FROM provider_attempts')).rows[0].n,attempts);
+  assert.equal((await pool.query('SELECT id FROM order_requests')).rowCount,0);
+ },{...cfg,visualOrdering:true,aiEnabled:true,paidEnabled:true,budgetMicrousd:5000000},provider);
+});
+
 test('category → photo → quantity → review → confirm runs without inference, and duplicate confirmation cannot submit twice',async()=>fixture(async(pool,channel,sent)=>{
  await turn(channel,{type:'text',text:{body:'hello'}});
  assert.equal(sent[0].type,'interactive');

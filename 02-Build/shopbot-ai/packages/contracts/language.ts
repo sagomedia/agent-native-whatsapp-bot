@@ -97,6 +97,7 @@ export function requestedAmountText(line:ConversationState['draft'][number],cont
  return say(context,`Requested: ${detail}${line.amountMode==='continuous'?' in one continuous length':''}`,`கேட்ட அளவு: ${detail}${line.amountMode==='continuous'?' ஒரே நீளமாக':''}`,`Ketta alavu: ${detail}${line.amountMode==='continuous'?' ore neelamaaga':''}`);
 }
 export function draftIssueText(line:ConversationState['draft'][number],context:LanguageContext):string|undefined {
+ if(line.sourceUncertainty?.includes('product_identity'))return say(context,'Describe what this item is for','இந்தப் பொருள் எதற்குத் தேவை என்று சொல்லுங்கள்','Intha porul ethukku venum-nu sollunga');
  const reasons:Record<string,[string,string,string]>={
   unreadable:['This list line could not be read; correct it or ask the shop','இந்த வரியைப் படிக்க முடியவில்லை; திருத்திச் சொல்லுங்கள் அல்லது கடையிடம் கேளுங்கள்','Intha variyai padikka mudiyala; thiruthi sollunga illa kadaiyila kelunga'],
   budget_unverified:['Shop must confirm a valid amount within this budget','இந்தப் பணத்திற்கு தரக்கூடிய அளவை கடை உறுதி செய்யணும்','Intha panathukku tharakkoodiya alavai kadai confirm pannanum'],

@@ -1,5 +1,5 @@
 import {readStoreHours,hoursAnswer,appendClosedShopNotice} from '../services/store-hours.js';
-import {inventoryItems,validateInventoryReplan,observeInventory} from '../services/inventory-grounding.js';
+import {inventoryItems,validateInventoryReplan,observeInventory,inventoryObservationLimit} from '../services/inventory-grounding.js';
 import {understandingSearch} from '../services/catalog-request.js';
 import {cartTargetQuestion,totalQuantityQuestion,offeredRemovalGroup} from '../services/cart-clarification.js';
 import {recordConversationAudit} from '../services/catalog-audit.js';
@@ -895,7 +895,7 @@ export class ConversationRuntime {
     }
     let text=claim.event.type==='text'?claim.event.text:claim.event.type==='image'?(claim.event.caption||'Find catalog products like the uploaded photo'):transcript??'Understand the current recording';
     const observations=image?[]:await withConversation(this.pool,ctx,async client=>observeCatalog(client,ctx,this.tools,observationQueries(text,claim.state,claim.memory),`${claim.id}:observe`));
-    const input={inventoryGrounding:!!this.options.inventoryGrounding,history:recent,text,audio:this.provider.unifiedUnderstanding&&!separateRecognition?audio:undefined,image:photo,state:claim.state,catalog:claim.catalog,catalogMap:claim.catalogMap,assistantMemory:claim.memory,observations};
+    const input={inventoryGrounding:!!this.options.inventoryGrounding,voiceTranscript:separateRecognition,history:recent,text,audio:this.provider.unifiedUnderstanding&&!separateRecognition?audio:undefined,image:photo,state:claim.state,catalog:claim.catalog,catalogMap:claim.catalogMap,assistantMemory:claim.memory,observations};
     let identified=await this.callProvider(ctx,claim,input,'identify');
     const evidenceInventorySelections=new Set<string>();
     if(voice){transcript=this.provider.unifiedUnderstanding&&!separateRecognition?identified.transcript:transcript;if(!transcript)throw new ToolError('No clear speech was recognized. Record again or type your request.','voice_unreadable');identified={...identified,transcript};text=transcript;}
@@ -980,7 +980,7 @@ export class ConversationRuntime {
       }
     }
     if(this.options.inventoryGrounding&&this.provider.unifiedUnderstanding&&identified.understanding&&inventoryItems(identified).length){
-      const items=inventoryItems(identified).slice(0,3);
+      const items=inventoryItems(identified).slice(0,inventoryObservationLimit);
       try{
         const fresh=await withConversation(this.pool,ctx,client=>observeInventory(client,ctx,this.tools,items.map(item=>({query:item.query!,search:item.search})),`${claim.id}:inventory`));
         // Exact names/SKUs already have hard-filtered current facts. Other

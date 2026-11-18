@@ -58,6 +58,6 @@ function compactObservation(observation:CatalogObservation,productLimit:number){
  return project(0,0,false,false);
 }
 
-export function catalogPromptObservations(observations:CatalogObservation[]|undefined,productLimit:number){
- return (observations??[]).slice(0,3).map(observation=>compactObservation(observation,productLimit));
+export function catalogPromptObservations(observations:CatalogObservation[]|undefined,productLimit:number,queryLimit=3){
+ return (observations??[]).slice(0,queryLimit).map(observation=>compactObservation(observation,productLimit));
 }

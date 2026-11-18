@@ -525,3 +525,71 @@ test('actual price bands filter known prices without inventing quality or treati
   for(const value of bands.values){const [low,high]=value.value.split(':').map(Number);assert.doesNotMatch(value.label,/premium|budget|quality/i);const refined=await discoverProducts(c,inbox.context,'oat drink',refinementPlan(result,'price',value.value));assert.ok(refined.products.length);assert.ok(refined.products.every(p=>p.priceStatus==='priced'&&p.pricePaise>=low&&p.pricePaise<=high));assert.equal(refined.plan.specifications?.pack_size,undefined);assert.equal(refined.plan.selectedSkus,undefined);}
  }finally{c.release();}
 }));
+
+test('a five-item spoken list keeps every count and shows real matches while an unclear item is held',()=>fixture(async(pool,inbox)=>{
+ const source='ஒரு சாணைத்தாள், ஒரு நல்லி, டேப் ஒன்னு, ஒரு கையுறை, பாதுகாப்புக் கண்ணாடி ஒன்னு.';
+ const rows=[
+  {name:'சாணைத்தாள்',count:'ஒரு',query:'sandpaper',sku:'PAPER'},
+  {name:'நல்லி',count:'ஒரு',query:null,sku:null},
+  {name:'டேப்',count:'ஒன்னு',query:'adhesive tape',sku:'TAPE'},
+  {name:'கையுறை',count:'ஒரு',query:'safety gloves',sku:'GLOVE'},
+  {name:'பாதுகாப்புக் கண்ணாடி',count:'ஒன்னு',query:'safety glasses',sku:'GLASSES'},
+ ];
+ for(const row of rows){
+  if(!row.sku)continue;
+  await pool.query(`INSERT INTO products(store_id,sku,name,unit,price_paise,stock,aliases,image_path,selling_unit_verified)
+   VALUES($1,$2,$3,'piece',10000,10,$4::jsonb,$5,true)`,[inbox.context.storeId,row.sku,'Shop '+row.query,JSON.stringify([row.query]),fixturePhoto(row.sku)]);
+ }
+ // Even a store alias with the exact uncertain word cannot assign its meaning.
+ await pool.query(`INSERT INTO products(store_id,sku,name,unit,price_paise,stock,aliases,image_path,selling_unit_verified)
+  VALUES($1,'ANCHOR','Wall plug anchor','piece',900,10,'["நல்லி"]',$2,true)`,[inbox.context.storeId,fixturePhoto('ANCHOR')]);
+ const original={...base(),intents:['add'],requestedItems:rows.map((row,ordinal)=>({
+  ordinal,sourceText:row.name,query:row.query,purchaseCount:1,countEvidence:{sourceText:row.count,value:1,mode:'total'},
+  packSize:{value:1,unit:row.sku==='GLOVE'?'pair':'piece'},
+  unresolved:row.query?[]:['identity'],...(row.query?{search:{keywords:[row.query]}}:{}),
+ }))};
+ let checks=0;
+ const recognition:Interpreter={name:'test-verbatim-recognition',mode:'mock',supportsAudio:true,interpret:async()=>({
+  output:{operations:[],next:'continue',transcript:source},usage:null,truncated:false,
+ })};
+ const provider:Interpreter={name:'test-whole-voice-list',mode:'mock',unifiedUnderstanding:true,supportsAudio:true,recognitionProvider:recognition,interpret:async(input)=>{
+  if(!input.inventoryReplan){
+   assert.ok(input.voiceTranscript);
+   return {output:understandingToInterpretation(original,input,false),usage:null,truncated:false};
+  }
+  checks++;
+  assert.deepEqual(input.observations?.map(fact=>fact.query),rows.flatMap(row=>row.query?[row.query]:[]));
+  const items=rows.flatMap((row,ordinal)=>{
+   if(!row.query||!row.sku)return [];
+   assert.ok(input.observations?.find(fact=>fact.query===row.query)?.products.some(product=>product.sku===row.sku));
+   return [{ordinal,query:row.query,search:{keywords:[row.query],selectedSkus:[row.sku]}}];
+  });
+  return {output:inventoryGroundingToInterpretation({items,replacements:[]},input,false),usage:null,truncated:false};
+ }};
+ const runtime=new ConversationRuntime(pool,provider,{visualOrdering:true,inventoryGrounding:true});
+ const id=randomUUID(),pcm=Buffer.alloc(32000);
+ for(let i=0;i<pcm.length/2;i++)pcm.writeInt16LE(Math.round(Math.sin(i*.17)*1100),i*2);
+ await inbox.ingest({id,type:'voice',mediaId:id},await normalizeVoice({id,mimeType:'audio/wav',data:pcmWav(pcm).toString('base64')}));
+ await runtime.processNext(inbox.context);
+ const saved=await inbox.snapshot(),draft=saved.conversation.draft;
+ assert.equal(checks,1);
+ assert.equal(saved.messages.find(message=>message.id===id)?.text,source);
+ assert.deepEqual(draft.map(line=>line.quantity),[1,1,1,1,1]);
+ assert.ok(draft.every(line=>!line.packSize&&!line.discovery?.plan.specifications?.pack_size));
+ assert.deepEqual(draft.map(line=>line.candidates?.[0]?.sku),['PAPER',undefined,'TAPE','GLOVE','GLASSES']);
+ assert.match(draft[1].name,/நல்லி/);
+ assert.ok(draft[1].sourceUncertainty?.includes('product_identity'));
+ assert.ok(!draft.some(line=>line.productConfirmation));
+ const cards=saved.messages.at(-1)?.rich?.parts?.flatMap(part=>part.cards)??[];
+ const photo=cards.find(card=>card.kind==='product'&&card.product.sku==='PAPER');
+ assert.ok(photo&&photo.kind==='product');
+ assert.equal(photo.product.imageUrl,fixturePhoto('PAPER'));
+ const pick=cards.flatMap(card=>card.buttons??[]).find(button=>button.event.type==='select_product');
+ assert.ok(pick);
+ const confirmed=await turn(inbox,runtime,pick.event);
+ const chosen=confirmed.conversation.draft.find(line=>line.productConfirmation);
+ assert.ok(chosen);
+ assert.deepEqual(confirmed.conversation.draft.map(line=>[line.id,line.quantity]),draft.map(line=>[line.id,line.quantity]));
+ assert.equal(confirmed.requests.length,0);
+ assert.equal(checks,1);
+}));
