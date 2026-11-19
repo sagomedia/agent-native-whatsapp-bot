@@ -11,13 +11,10 @@ import {textPresentation} from './message-presentation.js';
 import {recipientAllowed} from './customer-admission.js';
 import {requestStatusText} from './request-status.js';
 import {materializeVisualReply} from './visual-images.js';
-import {orderReference,visualStatus} from './visual-ordering.js';
-import {pricedBillRows,renderBillPdf} from './order-bill-pdf.js';
-import {formatMoney} from '../../../../packages/contracts/money.js';
-import {singleBillDocument} from './whatsapp-bill-document.js';
+import {visualStatus} from './visual-ordering.js';
 import {confirmedPriceBill} from './confirmed-bill.js';
 import {renderWhatsAppReply} from './whatsapp-reply.js';
-import {captureFinalBill,queueFinalBill,supersedeFinalBillNotices} from './final-order-bill.js';
+import {captureFinalBill,queuePickupBill,queuePurchaseInvoice,reviewedBillLines,supersedeFinalBillNotices} from './final-order-bill.js';
 import {digest} from './tools.js';
 import {currentReleaseFingerprint} from './release-manifest.js';
 export type OrderOwner={storeId:string;actor:string};
@@ -70,27 +67,17 @@ export async function reviewOwnerOrder(client:PoolClient,scope:OrderOwner,reques
       await client.query('UPDATE conversations SET draft=$1::jsonb,version=version+1 WHERE id=$2 AND last_request_id=$3',[JSON.stringify(lines),current.conversation_id,current.id]);
       let notice:any={customerNotification:'not_requested'};
       if(input.action==='revise'&&current.source!=='in_store'){
-        const customer=(await client.query(`SELECT c.reply_language,s.name AS store_name,s.bill_address,w.profile_name
-          FROM conversations c JOIN stores s ON s.id=c.store_id LEFT JOIN whatsapp_conversations w ON w.conversation_id=c.id
+        const customer=(await client.query(`SELECT c.reply_language,s.name AS store_name
+          FROM conversations c JOIN stores s ON s.id=c.store_id
           WHERE c.id=$1 AND c.store_id=$2`,[current.conversation_id,scope.storeId])).rows[0];
-        const language=customer?.reply_language??'en',reference=orderReference(current.id);
-        const bill=singleBillDocument(confirmedPriceBill(language,current.id,lines,total,customer?.store_name));
-        const caption=appendClosedShopNotice(textPresentation(bill.parts![0].text),await readStoreHours(client,scope.storeId),{replyLanguage:language},true);
-        const revisedAt=new Date();
-        notice=await queueOrderNotice(client,scope.storeId,current.id,`revised-${changed.effective_revision}`,caption,channel,input.notify,{
-          document:async()=>({
-            filename:`ShopBot-${reference.slice(1)}-revised-${changed.effective_revision}.pdf`,
-            pdf:await renderBillPdf({
-              title:'REVISED BILL',reference:'Order '+reference,issuedAt:revisedAt,revision:changed.effective_revision,
-              storeName:customer?.store_name??'Shop',storeAddress:customer?.bill_address,customerName:customer?.profile_name,
-              rows:pricedBillRows(lines),totalLabel:'Confirmed total',total:formatMoney(total),
-              notes:['The shop will let you know when your order is ready.'],
-            }),
-          }),
-        });
+        const language=customer?.reply_language??'en';
+        const bill=appendClosedShopNotice(confirmedPriceBill(language,current.id,lines,total,customer?.store_name),
+          await readStoreHours(client,scope.storeId),{replyLanguage:language},true);
+        notice=await queueOrderNotice(client,scope.storeId,current.id,`revised-${changed.effective_revision}`,
+          ()=>materializeVisualReply(bill),channel,input.notify);
       }else if(final){
         const bill=await captureFinalBill(client,scope.storeId,changed,input.action==='update_ready');
-        notice=await queueFinalBill(client,scope.storeId,bill,channel,input.notify&&current.source!=='in_store');
+        notice=await queuePickupBill(client,scope.storeId,bill,channel,input.notify&&current.source!=='in_store');
       }
       const result={requestId:current.id,stage:final?'ready':'new',effectiveRevision:changed.effective_revision,totalPaise:total,
         removedItems:removed.map(item=>({id:item.id,name:item.name})),addedLineIds:input.addedLineIds??[],...notice,replayed:false};
@@ -98,15 +85,31 @@ export async function reviewOwnerOrder(client:PoolClient,scope:OrderOwner,reques
       return result;
 }
 
-export async function completeOwnerOrder(client:PoolClient,scope:OrderOwner,requestId:string,input:{expectedRevision:number}){
-      const row=(await client.query('SELECT * FROM order_requests WHERE store_id=$1 AND id=$2 FOR UPDATE',[scope.storeId,requestId])).rows[0];
-      if(!row||row.effective_revision!==input.expectedRevision||row.packed_revision!==row.effective_revision||row.fulfillment!=='ready_for_pickup'||row.acceptance!=='accepted')throw new ToolError('Refresh this ready order before recording collection.','stale_version');
-      const pending=(await client.query(`SELECT EXISTS(SELECT 1 FROM order_quotes WHERE request_id=$1 AND state='offered')
-        OR EXISTS(SELECT 1 FROM order_amendments WHERE request_id=$1 AND state IN ('proposed','owner_pending')) AS waiting`,[requestId])).rows[0];
-      if(pending.waiting)throw new ToolError('Resolve the customer’s pending change before recording collection.','stale_version');
-      await closeRequestStock(client,scope.storeId,row.id,'collect',scope.actor);
-      await client.query("UPDATE order_requests SET fulfillment='collected' WHERE id=$1",[row.id]);
-      return {requestId:row.id,stage:'completed',effectiveRevision:row.effective_revision};
+export async function completeOwnerOrder(client:PoolClient,scope:OrderOwner,requestId:string,input:{
+ expectedRevision:number;notify?:boolean;
+},channel?:Config['whatsapp']){
+  const row=(await client.query('SELECT * FROM order_requests WHERE store_id=$1 AND id=$2 FOR UPDATE',[scope.storeId,requestId])).rows[0];
+  if(!row||row.effective_revision!==input.expectedRevision||row.packed_revision!==row.effective_revision||
+    !['ready_for_pickup','collected'].includes(row.fulfillment)||row.acceptance!=='accepted'){
+    throw new ToolError('Refresh this ready order before recording collection.','stale_version');
+  }
+  if(row.fulfillment==='ready_for_pickup'){
+    const pending=(await client.query(`SELECT EXISTS(SELECT 1 FROM order_quotes WHERE request_id=$1 AND state='offered')
+      OR EXISTS(SELECT 1 FROM order_amendments WHERE request_id=$1 AND state IN ('proposed','owner_pending')) AS waiting`,[requestId])).rows[0];
+    if(pending.waiting)throw new ToolError('Resolve the customer’s pending change before recording collection.','stale_version');
+    await closeRequestStock(client,scope.storeId,row.id,'collect',scope.actor);
+    await supersedeFinalBillNotices(client,row.id);
+    await client.query("UPDATE order_requests SET fulfillment='collected' WHERE id=$1",[row.id]);
+  }
+  const completed={requestId:row.id,stage:'completed',effectiveRevision:row.effective_revision};
+  if(!reviewedBillLines(row)){
+    // Older pickup records can predate per-line price confirmation.
+    return {...completed,customerNotification:'not_sent',reason:'This older order has incomplete or inconsistent saved prices, so an invoice could not be issued.'};
+  }
+  const bill=await captureFinalBill(client,scope.storeId,{...row,fulfillment:'collected'});
+  const notice=await queuePurchaseInvoice(client,scope.storeId,bill,channel,input.notify===true&&row.source!=='in_store');
+  return {...completed,...notice};
+
 }
 
 export async function decideOwnerOrder(client:PoolClient,scope:OrderOwner,requestId:string,input:{decision:'accepted'|'rejected';notify:boolean},channel?:Config['whatsapp']){
@@ -133,6 +136,11 @@ export async function fulfillOwnerOrder(client:PoolClient,scope:OrderOwner,reque
       if(p.status==='ready_for_pickup'&&p.packedChecked!==true&&row.packed_revision!==row.effective_revision)throw Object.assign(new Error('Check the physical products, quantities and pack sizes before marking ready.'),{statusCode:409});
       if(p.status==='collected'&&row.packed_revision!==row.effective_revision)throw Object.assign(new Error('Recheck this order and mark it ready before recording collection.'),{statusCode:409});
       if(p.status==='ready_for_pickup'&&p.packedChecked===true)await client.query('UPDATE order_requests SET packed_revision=effective_revision WHERE id=$1',[row.id]);
+      if(p.status==='collected'&&channel?.visualOrdering&&
+        (row.fulfillment==='collected'||(row.fulfillment===p.expected&&row.fulfillment==='ready_for_pickup'))){
+        const result=await completeOwnerOrder(client,scope,requestId,{expectedRevision:row.effective_revision,notify:p.notify},channel);
+        return {...result,fulfillment:p.status,duplicate:row.fulfillment==='collected'};
+      }
       if(row.fulfillment===p.status)return {fulfillment:p.status,duplicate:true,...(p.reason?{reason:p.reason}:{}),...await notifyOrderStatus(client,scope,row,p.notify,channel)};
       if(row.fulfillment!==p.expected||!((['awaiting_approval','preparing'].includes(row.fulfillment)&&['ready_for_pickup','cancelled'].includes(p.status))||(row.fulfillment==='ready_for_pickup'&&['collected','cancelled'].includes(p.status))))throw Object.assign(new Error('Request status changed or that transition is not allowed. Refresh before updating.'),{statusCode:409});
       if(p.status==='cancelled')await supersedeFinalBillNotices(client,row.id);

@@ -8,7 +8,6 @@ import {catalogPhoto} from './catalog-photos.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {eventSchema,type SimulatorEvent} from '../../../../packages/contracts/index.js';
 import {say} from '../../../../packages/contracts/language.js';
-import {renderWhatsAppOutgoing} from './whatsapp-bill-document.js';
 import {renderWhatsAppReply,WhatsAppRenderError} from './whatsapp-reply.js';
 import {plainReply} from './replies.js';
 import {shoppingButton} from './shopping-flow.js';
@@ -55,12 +54,7 @@ export class WhatsAppChannel {
       const revision=(await client.query('SELECT operator_revision FROM conversations WHERE id=$1',[ctx.conversationId])).rows[0].operator_revision;
       let state=await loadState(client,ctx);const memory=await loadAssistantMemory(client,ctx);
       let rendered;
-      try{
-        const hasBill=rich.parts?.[0]?.cards.some(card=>card.kind!=='product'&&card.billRows?.length);
-        const shop=hasBill?(await client.query(`SELECT s.name,s.bill_address AS address,w.profile_name AS customer FROM stores s
-          LEFT JOIN whatsapp_conversations w ON w.conversation_id=$2 WHERE s.id=$1`,[ctx.storeId,ctx.conversationId])).rows[0]:undefined;
-        rendered=await renderWhatsAppOutgoing(rich,messageId,config.hostname,shop);
-      }
+      try{rendered=renderWhatsAppReply(rich,messageId,config.hostname);}
       catch(error){
         const code=error instanceof WhatsAppRenderError?error.code:'unexpected';
         console.error(JSON.stringify({event:'whatsapp_render_failed',messageId,code,cards:rich.parts?.map(p=>p.cards.length),buttons:rich.parts?.map(p=>p.cards.map(c=>c.buttons?.length??p.buttons?.length??0))}));
@@ -71,9 +65,9 @@ export class WhatsAppChannel {
         fallback.replyLanguage=state.replyLanguage;fallback.stage='error';fallback.clarificationReason='render_'+code;
         if(state.draft.length)fallback.buttons=[shoppingButton(state,'view_list',say(state,'Show list','பட்டியலைக் காட்டு','List kaattu'))];
         await client.query('UPDATE messages SET text=$1,payload=$2::jsonb,stage=$3,clarification_reason=$4 WHERE id=$5',[fallback.text,JSON.stringify(fallback),fallback.stage,fallback.clarificationReason,messageId]);
-        rendered={...renderWhatsAppReply(fallback,messageId,config.hostname),pdf:undefined};
+        rendered=renderWhatsAppReply(fallback,messageId,config.hostname);
       }
-      await client.query('INSERT INTO whatsapp_outbox(message_id,conversation_id,operator_revision,reply_payload,sender_kind,document_pdf) VALUES($1,$2,$3,$4::jsonb,$5,$6)',[messageId,ctx.conversationId,revision,JSON.stringify(rendered.payload),rich.handoffRequested?'system':'assistant',rendered.pdf??null]);
+      await client.query('INSERT INTO whatsapp_outbox(message_id,conversation_id,operator_revision,reply_payload,sender_kind) VALUES($1,$2,$3,$4::jsonb,$5)',[messageId,ctx.conversationId,revision,JSON.stringify(rendered.payload),rich.handoffRequested?'system':'assistant']);
       for(const action of rendered.actions)await client.query('INSERT INTO whatsapp_actions(id,message_id,conversation_id,event,label,source_version,operator_revision,binding_id) VALUES($1,$2,$3,$4::jsonb,$5,$6,$7,$8)',[action.id,messageId,ctx.conversationId,JSON.stringify(action.event),action.label,state.version,revision,conversationBinding(state,memory)]);
     }});
   }
@@ -329,6 +323,7 @@ export class WhatsAppChannel {
         WHERE w.phone_id=$1 AND c.store_id=$2 AND o.state='queued' AND o.next_attempt_at<=now() AND NOT EXISTS(
           SELECT 1 FROM messages earlier JOIN whatsapp_outbox pending ON pending.message_id=earlier.id
           WHERE earlier.conversation_id=m.conversation_id AND earlier.sequence<m.sequence AND pending.operator_revision=o.operator_revision AND pending.state IN ('queued','sending','unknown')
+          AND NOT(pending.state='unknown' AND pending.last_error IS NOT DISTINCT FROM 'bill_superseded')
           AND NOT(pending.state='unknown' AND pending.sender_kind='assistant'
             AND earlier.reply_group_id IS NOT NULL AND m.reply_group_id IS DISTINCT FROM earlier.reply_group_id
             AND (o.sender_kind='assistant' AND EXISTS(SELECT 1 FROM messages old_turn JOIN messages new_turn ON new_turn.id=m.response_to
@@ -358,6 +353,8 @@ export class WhatsAppChannel {
       // can return success while this bounded HTTP request is still in progress.
       await client.query('BEGIN');
       await client.query('SELECT id FROM stores WHERE id=$1 FOR SHARE',[c.storeId]);
+      const delivery=(await client.query('SELECT state FROM whatsapp_outbox WHERE message_id=$1 FOR UPDATE',[row.message_id])).rows[0];
+      if(delivery?.state!=='sending'){await client.query('COMMIT');return true;}
       const controls=(await client.query('SELECT c.operator_mode,c.operator_revision,s.operator_paused FROM conversations c JOIN stores s ON s.id=c.store_id WHERE c.id=$1 FOR UPDATE OF c',[row.conversation_id])).rows[0];
       if(controls.operator_revision!==row.current_revision||row.sender_kind==='assistant'&&(controls.operator_paused||controls.operator_mode==='owner')||row.sender_kind==='owner'&&controls.operator_mode!=='owner'){await this.setDelivery(client,row.message_id,'cancelled','owner_control_changed');await client.query('COMMIT');return true;}
       let payload=row.reply_payload??{type:'text',text:{preview_url:false,body:row.text}};

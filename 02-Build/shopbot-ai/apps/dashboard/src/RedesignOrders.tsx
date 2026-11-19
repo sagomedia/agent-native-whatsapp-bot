@@ -158,7 +158,7 @@ export function RedesignOrders(){
  }
  function notifyResult(result:{customerNotification?:string;reason?:string}){
   const messages:Record<string,string>={
-   not_sent:'WhatsApp could not send the final bill.',
+   not_sent:'WhatsApp could not send the document.',
    outcome_unknown:'Delivery is uncertain. Check the WhatsApp chat before trying again.',
    already_queued:'This bill is already queued or sent.',
    queued:'Bill queued for WhatsApp.',
@@ -191,7 +191,7 @@ export function RedesignOrders(){
   }
   setBusy(true);setError('');setNotice('');setDeliveryNotice('');
   const base='requests/'+order.id;let path:string,body:unknown;
-  if(action==='complete'){path=base+'/complete';body={expectedRevision:current.revision};}
+  if(action==='complete'){path=base+'/complete';body={expectedRevision:current.revision,notify:order.source!=='in_store'};}
   else if(action==='cancel'){path=base+'/fulfillment';body={expected:'ready_for_pickup',status:'cancelled',expectedRevision:cancelTarget!.revision,reason:'not_picked_up',notify:false};}
   else if(action==='payment'){path=base+'/advance/confirm';body={received:true,expectedState:order.advance_state,notify:false};}
   else{
@@ -211,7 +211,7 @@ export function RedesignOrders(){
    setBill(null);setCancelTarget(null);
    const notices:Record<OrderAction,string>={
     save:'Order changes saved.',revise:'Revised bill saved. Order stays in New.',ready:'Order is ready for pickup.',
-    update_ready:'Updated final bill saved.',complete:'Pickup recorded. Order completed.',
+    update_ready:'Updated pickup bill saved.',complete:'Pickup recorded. Order completed.',
     cancel:'Order cancelled: customer did not pick up.',payment:'₹10 advance marked received.',
    };
    setNotice(notices[action]);notifyResult(result);
@@ -260,7 +260,7 @@ export function RedesignOrders(){
      <p>{t(current.dirty||current.amendmentId?'Save the item changes before recording pickup.':'Close the order after handing the items to the customer.')}</p>
      {current.dirty||current.amendmentId?<button className="rd-orders-primary" disabled={busy||stale||pendingBlocked} onClick={()=>showPreview('update_ready')}>
       {t(order.source==='in_store'?'Save updated bill':'Save & send updated bill')}
-     </button>:<button className="rd-orders-primary" disabled={busy||stale||!!amendment} onClick={()=>void run('complete')}>{t("Picked up · Close order")}</button>}
+     </button>:<button className="rd-orders-primary" disabled={busy||stale||!!amendment} onClick={()=>void run('complete')}>{t(order.source==='in_store'?"Picked up · Close order":"Picked up · Send invoice")}</button>}
      <button type="button" className="rd-orders-cancel-option" disabled={busy||stale||current.dirty} onClick={()=>setCancelTarget({id:order.id,revision:current.revision})}>{t("Not picked up · Cancel order")}</button>
     </>}
     {order.stage==='completed'&&<p>{t("Pickup recorded. This order is completed.")}</p>}
@@ -268,21 +268,21 @@ export function RedesignOrders(){
     {(order.has_final_bill||order.stage==='ready')&&
      <div className="rd-orders-share">
       {order.has_final_bill&&<>
-       <a href={billUrl(order.id,'download',current.revision)} download>{t('Download bill')}</a>
-       <a href={billUrl(order.id,'print',current.revision)} target="_blank" rel="noopener">{t('Print bill')}</a>
+       <a href={billUrl(order.id,'download',current.revision)} download>{t(order.stage==='completed'?'Download invoice':'Download bill')}</a>
+       <a href={billUrl(order.id,'print',current.revision)} target="_blank" rel="noopener">{t(order.stage==='completed'?'Print invoice':'Print bill')}</a>
        <button type="button" onClick={()=>setBill('history')}>{t('Bill history')}</button>
       </>}
       {(order.stage==='ready'||order.stage==='completed')&&!['queued','accepted','delivered','unknown'].includes(order.bill_delivery??'')&&
        <button type="button" disabled={busy||stale||current.dirty||!!amendment} onClick={()=>{
         if(order.source==='in_store'){setDialogError('');setBill('recipient');}else void sendFinalBill();
-       }}>{t(order.source==='in_store'?'Send on WhatsApp':'Send final bill')}</button>}
+       }}>{t(order.stage==='completed'?'Send invoice':order.source==='in_store'?'Send on WhatsApp':'Send pickup bill')}</button>}
       {order.bill_delivery&&<span role="status">{t(billStatus[order.bill_delivery]??'')}</span>}
      </div>}
    </footer>
   </>:<div className="rd-orders-empty"><h2>{selectedId?t("Order unavailable"):t("Choose an order")}</h2><p>{selectedId?t("Return to the list or try refreshing."):t("Review items and arrange pickup here.")}</p></div>}</section>
   <dialog className="rd-orders-dialog" ref={dialog} onCancel={event=>{event.preventDefault();closeDialog();}} aria-labelledby="rd-orders-dialog-title">
    <div className="rd-orders-dialog-head">
-    <h2 id="rd-orders-dialog-title">{t(cancelTarget?'Cancel uncollected order?':picker?pickerIsNew?'Add item':'Replace item':bill==='counter'?'New in-store order':bill==='history'?'Bill history':bill==='recipient'?'Send on WhatsApp':bill==='revise'?'Revised bill':bill==='update_ready'?'Updated final bill':'Final pickup bill')}</h2>
+    <h2 id="rd-orders-dialog-title">{t(cancelTarget?'Cancel uncollected order?':picker?pickerIsNew?'Add item':'Replace item':bill==='counter'?'New in-store order':bill==='history'?'Bill history':bill==='recipient'?'Send on WhatsApp':bill==='revise'?'Revised bill':bill==='update_ready'?'Updated pickup bill':'Pickup bill')}</h2>
     <button aria-label={t("Close dialog")} disabled={busy} onClick={closeDialog}>×</button>
    </div>
    {picker?<ItemPicker key={picker}

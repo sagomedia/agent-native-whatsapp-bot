@@ -176,7 +176,7 @@ test('additive v26 to current upgrade preserves prior requests, statuses, rate s
   const after=(await pool.query('SELECT * FROM '+table)).rows.map(row=>{delete row.input_admission;delete row.inference_deadline_at;delete row.pricing;delete row.observation;delete row.release_fingerprint;for(const key of ['reply_decision','estimate_complete','excluded_line_ids','advance_required','effective_revision','effective_lines','effective_total_paise','packed_revision','inventory_state','inventory_untracked_line_ids','source','counter_customer_name','counter_customer_phone','creation_hash'])delete row[key];return row;});assert.deepEqual(after,before[n],table);
  }
  assert.equal((await pool.query("SELECT inventory_state FROM order_requests")).rows[0].inventory_state,'legacy');assert.equal((await pool.query('SELECT * FROM inventory_movements')).rowCount,0);
- assert.equal((await pool.query('SELECT max(version) AS version FROM schema_migrations')).rows[0].version,56);assert.equal((await pool.query('SELECT * FROM owner_order_reviews')).rowCount,0);
+ assert.equal((await pool.query('SELECT max(version) AS version FROM schema_migrations')).rows[0].version,57);assert.equal((await pool.query('SELECT * FROM owner_order_reviews')).rowCount,0);
  assert.equal((await pool.query('SELECT source FROM order_requests')).rows[0].source,'chat');
  assert.equal((await pool.query('SELECT * FROM owner_final_bills')).rowCount,0);
  assert.equal((await pool.query('SELECT version FROM schema_migrations WHERE version=40')).rowCount,1);assert.equal((await pool.query('SELECT * FROM order_quote_drafts')).rowCount,0);

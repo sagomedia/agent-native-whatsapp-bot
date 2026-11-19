@@ -22,7 +22,6 @@ import {inferenceTiming,providerCallTimeout,processingLeaseSeconds} from '../ser
 import {productCheckCoversDraft} from '../services/counter-state.js';
 import {visualReply,visualListView,visualCartMutation,returningReply,cartProgress,visualCheckoutBlocker} from '../services/visual-ordering.js';
 import {productIdentity} from '../services/product-confirmation.js';
-import {singleBillDocument} from '../services/whatsapp-bill-document.js';
 import {materializeVisualReply} from '../services/visual-images.js';
 import {protectQuantityEvidence,explicitPurchaseCount} from '../services/quantity-evidence.js';
 import {namedEditLines,editObjectWords} from '../adapters/mention-reconciliation.js';
@@ -668,7 +667,6 @@ export class ConversationRuntime {
       // primary question. Read-only refreshes and rejected plans say nothing.
       const feedback=cartBefore.draft.length>0&&finalState.visualOrdering&&!failure&&rich.stage!=='error'&&cartMutated&&!cartBefore.lastRequestId&&!finalState.lastRequestId?cartChangeFeedback(cartBefore,finalState,rich.parts?.some(part=>part.cards.length)?30:70):undefined;
       if(feedback)rich={...rich,text:feedback+'\n'+rich.text,parts:rich.parts?.map((part,index)=>index===0?{...part,text:feedback+'\n'+part.text}:part)};
-      if(this.options.queueReply)rich=singleBillDocument(rich);
       message=rich.text;
       if(finalState.visualOrdering)await cancelSupersededReviews(client,ctx.conversationId,finalState.version,conversationBinding(finalState,await loadAssistantMemory(client,ctx)));
       const replyId=randomUUID();

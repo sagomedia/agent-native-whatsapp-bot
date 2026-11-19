@@ -1,6 +1,8 @@
 import type {PoolClient} from 'pg';
 import type {DraftLine} from '../../../../packages/contracts/index.js';
 import type {ReplyLanguage} from '../../../../packages/contracts/language.js';
+import {confirmedPriceBill} from './confirmed-bill.js';
+import {materializeVisualReply} from './visual-images.js';
 import {formatMoney} from '../../../../packages/contracts/money.js';
 import {recipientAllowed} from './customer-admission.js';
 import {ToolError} from './context.js';
@@ -30,6 +32,7 @@ export type SavedBill={
   store_address:string|null;
   customer_name:string|null;
   issued_at:Date;
+  invoice_issued_at:Date|null;
   fulfillment:'ready_for_pickup'|'collected';
   updated:boolean;
 };
@@ -40,61 +43,84 @@ export async function readFinalBill(client:PoolClient,storeId:string,requestId:s
     WHERE b.request_id=$2 AND b.revision=coalesce($3,r.effective_revision)`,[storeId,requestId,revision??null])).rows[0];
 }
 
-export async function captureFinalBill(client:PoolClient,storeId:string,order:BillOrder,updated=false):Promise<SavedBill>{
-  const prior=await readFinalBill(client,storeId,order.id,order.effective_revision);
-  if(prior)return prior;
+export function reviewedBillLines(order:BillOrder){
   const lines=order.effective_lines??order.lines,total=Number(order.effective_total_paise??order.total_paise);
   const estimate=estimateLines(lines);
-  if(!estimate.complete||estimate.knownSubtotalPaise!==total)throw new ToolError('Review every item and its final price before issuing a bill.');
-  const bill=(await client.query(`INSERT INTO owner_final_bills(request_id,revision,lines,total_paise,store_name,store_address,fulfillment,updated,customer_name)
-    SELECT $1,$2,$3::jsonb,$4,s.name,s.bill_address,$6,$7,coalesce(r.counter_customer_name,w.profile_name,CASE WHEN r.source='in_store' THEN 'Walk-in customer' END)
+  if(estimate.complete&&estimate.knownSubtotalPaise===total)return {lines,total};
+}
+
+export async function captureFinalBill(client:PoolClient,storeId:string,order:BillOrder,updated=false):Promise<SavedBill>{
+  const prior=await readFinalBill(client,storeId,order.id,order.effective_revision);
+  if(prior){
+    if(order.fulfillment!=='collected'||prior.invoice_issued_at)return prior;
+    return (await client.query(`UPDATE owner_final_bills SET invoice_issued_at=now()
+      WHERE request_id=$1 AND revision=$2 RETURNING *`,[order.id,order.effective_revision])).rows[0];
+  }
+  const reviewed=reviewedBillLines(order);
+  if(!reviewed)throw new ToolError('Review every item and its final price before issuing a bill.');
+  const {lines,total}=reviewed;
+  const bill=(await client.query(`INSERT INTO owner_final_bills(request_id,revision,lines,total_paise,store_name,store_address,fulfillment,updated,customer_name,invoice_issued_at)
+    SELECT $1,$2,$3::jsonb,$4,s.name,s.bill_address,$6,$7,coalesce(r.counter_customer_name,w.profile_name,CASE WHEN r.source='in_store' THEN 'Walk-in customer' END),CASE WHEN $6='collected' THEN now() END
     FROM stores s JOIN order_requests r ON r.store_id=s.id AND r.id=$1
     LEFT JOIN whatsapp_conversations w ON w.conversation_id=r.conversation_id
     WHERE s.id=$5 RETURNING *`,[order.id,order.effective_revision,JSON.stringify(lines),total,storeId,order.fulfillment,updated])).rows[0];
   return {...bill,fulfillment:order.fulfillment};
 }
 
+const billReference=(id:string)=>orderReference(id).replace('Order #','');
+
 export function finalBillFilename(bill:SavedBill){
-  return `ShopBot-${orderReference(bill.request_id).slice(1)}-bill-${bill.revision}.pdf`;
+  return `ShopBot-${billReference(bill.request_id)}-${bill.invoice_issued_at?'invoice':'pickup-bill'}-${bill.revision}.pdf`;
 }
 
 export function finalBillPdf(bill:SavedBill){
   return renderBillPdf({
-    title:bill.updated?'UPDATED FINAL BILL':bill.fulfillment==='ready_for_pickup'?'FINAL PICKUP BILL':'FINAL BILL',
-    reference:'Order '+orderReference(bill.request_id),issuedAt:bill.issued_at,revision:bill.revision,
+    title:bill.invoice_issued_at?'Invoice':bill.updated?'Updated pickup bill':'Pickup bill',
+    titleTamil:bill.invoice_issued_at?'விலைப்பட்டியல்':'பொருள் பட்டியல்',
+    reference:bill.invoice_issued_at?'INV-'+billReference(bill.request_id):orderReference(bill.request_id),
+    orderNumber:bill.invoice_issued_at?orderReference(bill.request_id):undefined,issuedAt:bill.invoice_issued_at??bill.issued_at,revision:bill.revision,
     storeName:bill.store_name,storeAddress:bill.store_address??undefined,customerName:bill.customer_name??undefined,
-    rows:pricedBillRows(bill.lines),totalLabel:'Final total',total:formatMoney(Number(bill.total_paise)),
-    notes:['Items and prices checked by the shop.'],
+    rows:pricedBillRows(bill.lines),totalLabel:'Total',total:formatMoney(Number(bill.total_paise)),
+    amountPaise:Number(bill.total_paise),
+    notes:bill.invoice_issued_at?[]:['Reviewed items and prices for pickup.'],
   });
 }
 
-export async function queueFinalBill(client:PoolClient,storeId:string,bill:SavedBill,channel?:WhatsAppConfig,notify=true,stillReady=bill.fulfillment==='ready_for_pickup'){
+async function billLanguage(client:PoolClient,storeId:string,requestId:string):Promise<ReplyLanguage>{
+  return (await client.query(`SELECT c.reply_language FROM order_requests r LEFT JOIN conversations c ON c.id=r.conversation_id
+    WHERE r.store_id=$1 AND r.id=$2`,[storeId,requestId])).rows[0]?.reply_language??'en';
+}
+
+export async function queuePickupBill(client:PoolClient,storeId:string,bill:SavedBill,channel?:WhatsAppConfig,notify=true){
   if(!notify)return {customerNotification:'not_requested'};
-  const language:ReplyLanguage=(await client.query(`SELECT c.reply_language FROM order_requests r LEFT JOIN conversations c ON c.id=r.conversation_id
-    WHERE r.store_id=$1 AND r.id=$2`,[storeId,bill.request_id])).rows[0]?.reply_language??'en';
-  const ready=stillReady
-    ?say(language,'Your order is ready for pickup.','உங்கள் ஆர்டர் எடுத்துச் செல்லத் தயார்.','Unga order pickup-ku ready.')
-    :'';
-  const text=[
-    say(language,'The shop has checked your items and prices.','பொருட்களையும் விலைகளையும் கடை சரிபார்த்துவிட்டது.','Items-um vilaiyum kadai check panniyachu.'),
-    ready,
-    say(language,'Final total','இறுதி மொத்தம்','Final total')+': '+formatMoney(Number(bill.total_paise)),
-    bill.updated?say(language,'This bill replaces the previous one.','முந்தைய பில்லுக்கு பதிலாக இந்த பில்லைப் பயன்படுத்துங்கள்.','Munnaadi anuppina bill-ku badhila idhai use pannunga.'):'',
-  ].filter(Boolean).join(' ');
-  return queueOrderNotice(client,storeId,bill.request_id,`final-bill-${bill.revision}`,textPresentation(text),channel,true,{
+  const language=await billLanguage(client,storeId,bill.request_id);
+  return queueOrderNotice(client,storeId,bill.request_id,`pickup-bill-${bill.revision}`,()=>materializeVisualReply(
+    confirmedPriceBill(language,bill.request_id,bill.lines,Number(bill.total_paise),bill.store_name,{
+      address:bill.store_address??undefined,date:bill.issued_at.toISOString(),revision:bill.revision,
+      fulfillment:'ready_for_pickup',updated:bill.updated,
+    })),channel,true,{finalBill:true});
+}
+
+export async function queuePurchaseInvoice(client:PoolClient,storeId:string,bill:SavedBill,channel?:WhatsAppConfig,notify=true){
+  if(!notify)return {customerNotification:'not_requested'};
+  if(!bill.invoice_issued_at)throw new ToolError('Record pickup before sending an invoice.');
+  const language=await billLanguage(client,storeId,bill.request_id);
+  const text=say(language,'Thank you for shopping with us. Your invoice is attached.','எங்கள் கடையில் வாங்கியதற்கு நன்றி. உங்கள் விலைப்பட்டியல் இணைக்கப்பட்டுள்ளது.','Enga kadaiyila vaangiyadhukku nandri. Unga invoice attach panniyirukkom.')
+    +' '+say(language,'Total','மொத்தம்','Total')+': '+formatMoney(Number(bill.total_paise));
+  return queueOrderNotice(client,storeId,bill.request_id,`purchase-invoice-${bill.revision}`,textPresentation(text),channel,true,{
     finalBill:true,document:()=>finalBillPdf(bill).then(pdf=>({pdf,filename:finalBillFilename(bill)})),
   });
 }
 
 export async function supersedeFinalBillNotices(client:PoolClient,requestId:string,keepRevision?:number){
   await client.query(`WITH cancelled AS (
-    UPDATE whatsapp_outbox o SET state='cancelled',last_error='bill_superseded'
+    UPDATE whatsapp_outbox o SET state=CASE WHEN o.state='unknown' THEN 'unknown' ELSE 'cancelled' END,last_error='bill_superseded'
     FROM messages m,request_notifications n
-    WHERE n.request_id=$1 AND (n.status_key LIKE 'event:final-bill-%' OR n.status_key LIKE 'event:revised-%' OR n.status_key NOT LIKE 'event:%')
-      AND ($2::integer IS NULL OR n.status_key<>('event:final-bill-'||$2))
-      AND (m.reply_group_id=n.message_id OR m.id=n.message_id) AND o.message_id=m.id AND o.state='queued'
-    RETURNING o.message_id
-  ) UPDATE messages SET status='cancelled' WHERE id IN (SELECT message_id FROM cancelled)`,[requestId,keepRevision??null]);
+    WHERE n.request_id=$1 AND (n.status_key LIKE 'event:final-bill-%' OR n.status_key LIKE 'event:pickup-bill-%' OR n.status_key LIKE 'event:revised-%' OR n.status_key NOT LIKE 'event:%')
+      AND ($2::integer IS NULL OR n.status_key<>('event:pickup-bill-'||$2))
+      AND (m.reply_group_id=n.message_id OR m.id=n.message_id) AND o.message_id=m.id AND o.state IN ('queued','sending','unknown')
+    RETURNING o.message_id,o.state
+  ) UPDATE messages SET status='cancelled' WHERE id IN (SELECT message_id FROM cancelled WHERE state='cancelled')`,[requestId,keepRevision??null]);
 }
 
 export async function finalBillRecipient(client:PoolClient,storeId:string,orderId:string,expected:{
@@ -134,6 +160,8 @@ export async function sendSavedOrderBill(client:PoolClient,storeId:string,orderI
     }
   }
   await supersedeFinalBillNotices(client,orderId,bill.revision);
-  const notice=await queueFinalBill(client,storeId,bill,channel,true,order.fulfillment==='ready_for_pickup');
+  const notice=order.fulfillment==='collected'
+    ?await queuePurchaseInvoice(client,storeId,bill,channel)
+    :await queuePickupBill(client,storeId,bill,channel);
   return {...notice,...(order.source==='in_store'&&{confirmedConversationId:input.conversationId,customerOptedIn:true})};
 }

@@ -18,7 +18,7 @@ const owner={hostname:'owner.example.test',issuer:'https://test.cloudflareaccess
 const headers={host:owner.hostname,'cf-access-jwt-assertion':'offline-owner',origin:'https://'+owner.hostname,'x-shopbot-owner':'1'};
 const manual=(name:string,pricePaise:number,quantity=1)=>({id:randomUUID(),name,unit:'piece',pricePaise,quantity,manualConfirmed:true});
 
-test('ready and counter orders use saved bill revisions and one WhatsApp send per revision',async()=>{
+test('Ready sends the reviewed image and collection sends one PDF invoice for the same revision',async()=>{
  const schema='owner_final_bills_'+randomUUID().replaceAll('-','');
  const admin=new pg.Pool({connectionString:process.env.DATABASE_URL});
  await admin.query(`CREATE SCHEMA ${schema}`);
@@ -77,12 +77,11 @@ test('ready and counter orders use saved bill revisions and one WhatsApp send pe
   assert.equal(print.headers['content-type'],'application/pdf');
   assert.equal(print.rawPayload.subarray(0,5).toString(),'%PDF-');
   assert.equal(await channel.sendNext(),true);
-  assert.equal(sent[0].type,'document');
-  assert.equal(sent[0].document.id,'media.fixture.1');
-  assert.match(sent[0].document.filename,/bill-3\.pdf$/);
-  assert.match(sent[0].document.caption,/shop has checked.*ready for pickup/is);
-  assert.match(sent[0].document.caption,/₹185\.00/);
-  assert.deepEqual(uploads[0],print.rawPayload);
+  assert.equal(sent[0].type,'image');
+  assert.match(sent[0].image.caption,/shop has checked.*ready for pickup/is);
+  assert.match(sent[0].image.caption,/₹185\.00/);
+  assert.equal(uploads.length,0,'Preparing the order must not issue a PDF invoice');
+  assert.equal((await pool.query('SELECT invoice_issued_at FROM owner_final_bills WHERE request_id=$1',[orderId])).rows[0].invoice_issued_at,null);
 
   const pipe=manual('PVC pipe',34000);
   const updated=await post(reviewPath,{id:randomUUID(),expectedRevision:3,action:'update_ready',
@@ -90,13 +89,33 @@ test('ready and counter orders use saved bill revisions and one WhatsApp send pe
   assert.equal(updated.statusCode,200,updated.body);
   assert.equal(updated.json().stage,'ready');
   assert.equal(updated.json().totalPaise,39500);
+  assert.equal(await channel.sendNext(),true);
+  assert.equal(sent[1].type,'image');
+  assert.match(sent[1].image.caption,/₹395\.00/);
+  assert.match(sent[1].image.caption,/replaces the previous one/i);
+
   assert.equal((await post(paths(orderId)+'/complete',{expectedRevision:3})).statusCode,409);
   const history=(await get(paths(orderId)+'/bills')).json();
   assert.deepEqual(history.bills.map((bill:any)=>[bill.revision,Number(bill.total_paise)]),[[4,39500],[3,18500]]);
   const olderDownload=await get(paths(orderId)+'/bill?mode=download&revision=3');
   assert.match(String(olderDownload.headers['content-disposition']),/attachment/);
   assert.deepEqual(olderDownload.rawPayload,print.rawPayload);
-  assert.equal((await post(paths(orderId)+'/complete',{expectedRevision:4})).statusCode,200);
+  await pool.query("UPDATE whatsapp_outbox SET state='unknown' WHERE message_id=$1",[updated.json().messageId]);
+  const completionRequest={expectedRevision:4,notify:true};
+  const completion=await post(paths(orderId)+'/complete',completionRequest);
+  assert.equal(completion.statusCode,200,completion.body);
+  assert.equal(completion.json().customerNotification,'queued');
+  assert.equal((await post(paths(orderId)+'/complete',completionRequest)).json().messageId,completion.json().messageId);
+  const invoice=await get(paths(orderId)+'/bill?mode=download&revision=4');
+  const invoiceFilename=`ShopBot-${orderId.slice(0,8).toUpperCase()}-invoice-4.pdf`;
+  assert.equal(invoice.headers['content-disposition'],`attachment; filename="${invoiceFilename}"`);
+  assert.equal(await channel.sendNext(),true);
+  assert.equal(sent[2].type,'document');
+  assert.equal(sent[2].document.id,'media.fixture.1');
+  assert.equal(sent[2].document.filename,invoiceFilename);
+  assert.match(sent[2].document.caption,/invoice is attached/i);
+  assert.match(sent[2].document.caption,/₹395\.00/);
+  assert.deepEqual(uploads[0],invoice.rawPayload);
   const original=(await pool.query('SELECT lines,payment FROM order_requests WHERE id=$1',[orderId])).rows[0];
   assert.deepEqual(original.lines.map((line:any)=>line.id),[a.id,b.id]);
   assert.equal(original.payment,'not_requested');
@@ -146,6 +165,7 @@ test('ready and counter orders use saved bill revisions and one WhatsApp send pe
   const document=(await pool.query('SELECT reply_payload,document_pdf FROM whatsapp_outbox WHERE message_id=$1',[counterSend.json().messageId])).rows[0];
   assert.equal(document.reply_payload.type,'document');
   assert.match(document.reply_payload.document.caption,/₹325\.00/);
+  assert.match(document.reply_payload.document.filename,/invoice-1\.pdf$/);
   assert.doesNotMatch(document.reply_payload.document.caption,/ready for pickup/i);
   assert.deepEqual(document.document_pdf,completedBill.rawPayload);
   await pool.query("UPDATE whatsapp_outbox SET state='blocked' WHERE message_id=$1",[counterSend.json().messageId]);

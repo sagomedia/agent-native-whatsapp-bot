@@ -196,7 +196,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
           WHEN bool_and(o.state IN ('read','delivered','accepted')) THEN 'accepted'
           ELSE 'queued' END
         FROM request_notifications n JOIN messages m ON m.reply_group_id=n.message_id JOIN whatsapp_outbox o ON o.message_id=m.id
-        WHERE n.request_id=r.id AND n.status_key='event:final-bill-'||r.effective_revision GROUP BY n.message_id) AS bill_delivery
+        WHERE n.request_id=r.id AND n.status_key=(CASE WHEN r.fulfillment='collected' THEN 'event:purchase-invoice-' ELSE 'event:pickup-bill-' END)||r.effective_revision GROUP BY n.message_id) AS bill_delivery
         FROM order_requests r LEFT JOIN conversations c ON c.id=r.conversation_id AND c.store_id=r.store_id LEFT JOIN whatsapp_conversations w ON w.conversation_id=c.id LEFT JOIN order_advances a ON a.request_id=r.id WHERE r.store_id=$1`;
       const orderFilter=` AND ($2::text IS NULL OR $2='all' OR (CASE WHEN $2 IN ('new','ready','completed','cancelled') THEN (${ownerSimpleStageSql}) ELSE (${ownerStageSql}) END)=$2) AND ($3::text='' OR r.id::text ILIKE $4 OR replace(r.id::text,'-','') ILIKE $4 OR r.conversation_id::text ILIKE $4 OR r.counter_customer_name ILIKE $4 OR r.counter_customer_phone ILIKE $4 OR EXISTS(SELECT 1 FROM whatsapp_conversations ow WHERE ow.conversation_id=r.conversation_id AND (ow.profile_name ILIKE $4 OR ('+'||ow.recipient) ILIKE $4)) OR coalesce(r.effective_lines,r.lines)::text ILIKE $4)`;
       const orderValues=[owner.storeId,read.orderStage??null,read.orderSearch,ownerSearchPattern(read.orderSearch)];
@@ -402,9 +402,9 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     return write('order_review',request.params.id,client=>reviewOwnerOrder(client,{storeId:owner.storeId,actor:owner.email},request.params.id,parsed.data,config.whatsapp));
   });
   app.post<{Params:{id:string}}>('/api/owner/requests/:id/complete',async(request,reply)=>{
-    const parsed=z.object({expectedRevision:z.number().int().positive()}).strict().safeParse(request.body);
+    const parsed=z.object({expectedRevision:z.number().int().positive(),notify:z.boolean().default(true)}).strict().safeParse(request.body);
     if(!parsed.success||!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Refresh the ready order before completing it.'});
-    return write('order_complete',request.params.id,client=>completeOwnerOrder(client,{storeId:owner.storeId,actor:owner.email},request.params.id,parsed.data));
+    return write('order_complete',request.params.id,client=>completeOwnerOrder(client,{storeId:owner.storeId,actor:owner.email},request.params.id,parsed.data,config.whatsapp));
   });
   app.post<{Params:{id:string}}>('/api/owner/requests/:id/decision',async(request,reply)=>{
     const input=z.object({decision:z.enum(['accepted','rejected']),notify:z.boolean().default(false)}).strict().safeParse(request.body);

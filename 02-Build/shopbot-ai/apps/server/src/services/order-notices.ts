@@ -3,7 +3,7 @@ import {randomUUID} from 'node:crypto';
 import type {PoolClient} from 'pg';
 import type {RichReply} from '../../../../packages/contracts/index.js';
 import type {WhatsAppConfig} from './whatsapp-config.js';
-import {renderWhatsAppOutgoing,singleBillDocument} from './whatsapp-bill-document.js';
+import {renderWhatsAppReply} from './whatsapp-reply.js';
 import {conversationBinding,loadAssistantMemory} from './agent-assistance.js';
 import {loadState} from './tools.js';
 import {currentReleaseFingerprint} from './release-manifest.js';
@@ -21,7 +21,7 @@ export async function queueOrderNotice(client:PoolClient,storeId:string,requestI
   retryable=pages.filter(page=>['cancelled','blocked','failed'].includes(page.state)).map(page=>page.message_id);
   if(!retryable.length)return {customerNotification:'already_queued',messageId:previous.message_id};
  }
- const row=(await client.query('SELECT c.*,w.recipient,w.phone_id,w.last_inbound_at,w.profile_name,s.name AS store_name,s.bill_address,s.operator_paused FROM order_requests r JOIN conversations c ON c.id=r.conversation_id AND c.store_id=r.store_id JOIN stores s ON s.id=c.store_id LEFT JOIN whatsapp_conversations w ON w.conversation_id=c.id WHERE r.id=$1 AND r.store_id=$2 FOR UPDATE OF c',[requestId,storeId])).rows[0];
+ const row=(await client.query('SELECT c.*,w.recipient,w.phone_id,w.last_inbound_at,s.operator_paused FROM order_requests r JOIN conversations c ON c.id=r.conversation_id AND c.store_id=r.store_id JOIN stores s ON s.id=c.store_id LEFT JOIN whatsapp_conversations w ON w.conversation_id=c.id WHERE r.id=$1 AND r.store_id=$2 FOR UPDATE OF c',[requestId,storeId])).rows[0];
  if(!row?.recipient)return {customerNotification:'not_sent',reason:'No WhatsApp chat is linked to this order.'};
  if(!config?.sendEnabled||row.operator_paused||(!options?.finalBill&&row.operator_mode==='owner')||row.phone_id!==config.phoneId||!recipientAllowed(config,row.recipient)){
   return {customerNotification:'not_sent',reason:'WhatsApp sending is unavailable for this chat.'};
@@ -34,7 +34,7 @@ export async function queueOrderNotice(client:PoolClient,storeId:string,requestI
   await client.query("UPDATE messages SET status='queued' WHERE id=ANY($1::uuid[])",[retryable]);
   return {customerNotification:'queued',messageId:previous.message_id};
  }
- const rich=singleBillDocument(typeof reply==='function'?reply():reply);
+ const rich=typeof reply==='function'?reply():reply;
  let document:{pdf:Buffer;filename:string}|undefined;
  if(options?.document){
   try{document=await options.document();}
@@ -49,9 +49,9 @@ export async function queueOrderNotice(client:PoolClient,storeId:string,requestI
  for(const [index,part] of parts.entries()){
   const id=index===0?groupId:randomUUID(),payload=part?{...rich,text:part.text,parts:[part],groupId,partIndex:index,partCount:parts.length}:rich;
   const rendered=document?{payload:{type:'document',document:{filename:document.filename,caption:payload.text}},actions:[],pdf:document.pdf}
-   :await renderWhatsAppOutgoing(payload,id,config.hostname,{name:row.store_name,address:row.bill_address,customer:row.profile_name});
+   :renderWhatsAppReply(payload,id,config.hostname);
   await client.query("INSERT INTO messages(id,conversation_id,direction,text,status,payload,reply_group_id,part_index,part_count,stage,release_fingerprint) VALUES($1,$2,'outbound',$3,'queued',$4::jsonb,$5,$6,$7,$8,$9)",[id,row.id,payload.text,JSON.stringify(payload),groupId,index,parts.length,payload.stage??'status',currentReleaseFingerprint()]);
-  await client.query("INSERT INTO whatsapp_outbox(message_id,conversation_id,operator_revision,sender_kind,reply_payload,document_pdf) VALUES($1,$2,$3,'system',$4::jsonb,$5)",[id,row.id,row.operator_revision,JSON.stringify(rendered.payload),rendered.pdf??null]);
+  await client.query("INSERT INTO whatsapp_outbox(message_id,conversation_id,operator_revision,sender_kind,reply_payload,document_pdf) VALUES($1,$2,$3,'system',$4::jsonb,$5)",[id,row.id,row.operator_revision,JSON.stringify(rendered.payload),document?.pdf??null]);
   for(const action of rendered.actions)await client.query('INSERT INTO whatsapp_actions(id,message_id,conversation_id,event,label,source_version,operator_revision,binding_id) VALUES($1,$2,$3,$4::jsonb,$5,$6,$7,$8)',[action.id,id,row.id,JSON.stringify(action.event),action.label,state.version,row.operator_revision,binding]);
  }
  await client.query('INSERT INTO request_notifications(request_id,status_key,message_id) VALUES($1,$2,$3) ON CONFLICT(request_id,status_key) DO UPDATE SET message_id=EXCLUDED.message_id',[requestId,'event:'+key,groupId]);

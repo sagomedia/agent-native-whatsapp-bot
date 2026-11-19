@@ -16,8 +16,8 @@ export function confirmedPriceBill(language:ConversationState['replyLanguage'],o
  const estimate=estimateLines(lines);
  if(!estimate.complete||estimate.knownSubtotalPaise!==totalPaise)throw new Error('Confirmed bill requires all prices and a matching total.');
  const title=details
-  ? details.updated?say(state,'Updated final bill','திருத்திய இறுதி பில்','Updated final bill')
-    :details.fulfillment==='collected'?say(state,'Final bill','இறுதி பில்','Final bill'):say(state,'Final pickup bill','இறுதி பில்','Final pickup bill')
+  ? details.updated?say(state,'Updated pickup bill','திருத்திய பில்','Updated pickup bill')
+    :details.fulfillment==='collected'?say(state,'Final bill','இறுதி பில்','Final bill'):say(state,'Pickup bill','எடுத்துச் செல்லும் பில்','Pickup bill')
   : say(state,'Confirmed price bill','உறுதி செய்த விலை Bill','Confirm panna vilai Bill');
  const ready=details
   ? details.fulfillment==='collected'

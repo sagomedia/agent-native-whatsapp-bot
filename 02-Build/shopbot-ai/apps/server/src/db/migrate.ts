@@ -597,6 +597,12 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       ALTER TABLE whatsapp_outbox ADD COLUMN IF NOT EXISTS document_pdf bytea;
       INSERT INTO schema_migrations(version) VALUES(56);
     `);}
+    const v57=await client.query('SELECT version FROM schema_migrations WHERE version=57');
+    if(!v57.rowCount){await client.query(`
+      ALTER TABLE owner_final_bills ADD COLUMN IF NOT EXISTS invoice_issued_at timestamptz;
+      UPDATE owner_final_bills SET invoice_issued_at=issued_at WHERE fulfillment='collected' AND invoice_issued_at IS NULL;
+      INSERT INTO schema_migrations(version) VALUES(57);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

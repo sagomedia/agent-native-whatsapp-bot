@@ -4,6 +4,14 @@ import {compactTamil} from './owner-compact-tamil.js';
 
 export type OwnerLocale='en'|'ta';
 const tamil:Record<string,string>={
+ 'Pickup bill':'எடுத்துச் செல்லும் பில்',
+ 'Updated pickup bill':'திருத்திய பில்',
+ 'Updated pickup bill saved.':'திருத்திய பில் சேமிக்கப்பட்டது.',
+ 'Picked up · Send invoice':'பொருட்கள் கொடுக்கப்பட்டன · விலைப்பட்டியல் அனுப்பு',
+ 'Download invoice':'விலைப்பட்டியலைப் பதிவிறக்கு',
+ 'Print invoice':'விலைப்பட்டியலை அச்சிடு',
+ 'Send invoice':'விலைப்பட்டியலை அனுப்பு',
+ 'Send pickup bill':'எடுத்துச் செல்லும் பில்லை அனுப்பு',
  'item ·':'பொருள் ·',
  "New in-store order":"புதிய கடை ஆர்டர்",
  "Walk-in customer":"கடைக்கு வந்த வாடிக்கையாளர்",
