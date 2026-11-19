@@ -42,12 +42,15 @@ export const variantBatchSchema=z.object({id:z.uuid(),name:z.string().trim().min
 
 export function registerOwnerSimpleProducts(app:FastifyInstance,_pool:Pool,storeId:string,write:Write){
  app.post('/api/owner/store/details',async(req,reply)=>{
-  const parsed=z.object({name:z.string().trim().min(2).max(120),expectedName:z.string().min(1).max(120)}).strict().safeParse(req.body);
+  const parsed=z.object({name:z.string().trim().min(2).max(120),expectedName:z.string().min(1).max(120),billAddress:z.string().trim().max(240).optional(),expectedBillAddress:z.string().max(240).nullable().optional()}).strict().safeParse(req.body);
   if(!parsed.success)return reply.code(400).send({error:'Enter a shop name between 2 and 120 characters.'});
   return write('store_details',storeId,async c=>{
-   const row=(await c.query('UPDATE stores SET name=$2 WHERE id=$1 AND name=$3 RETURNING name',[storeId,parsed.data.name,parsed.data.expectedName])).rows[0];
-   if(!row)throw invalid('The shop name changed. Reload before saving.',409);
-   return {name:row.name};
+   const {name,expectedName,billAddress,expectedBillAddress}=parsed.data;
+   const row=(await c.query(`UPDATE stores SET name=$2,bill_address=CASE WHEN $4::text IS NULL THEN bill_address ELSE nullif($4,'') END
+      WHERE id=$1 AND name=$3 AND ($4::text IS NULL OR bill_address IS NOT DISTINCT FROM $5::text) RETURNING name,bill_address`,
+      [storeId,name,expectedName,billAddress??null,expectedBillAddress??null])).rows[0];
+   if(!row)throw invalid('The shop details changed. Reload before saving.',409);
+   return {name:row.name,billAddress:row.bill_address};
   });
  });
  app.post('/api/owner/products/simple',{bodyLimit:2904000},async(req,reply)=>{
