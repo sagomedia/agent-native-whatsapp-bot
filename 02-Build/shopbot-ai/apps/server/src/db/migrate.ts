@@ -591,6 +591,12 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
       );
       INSERT INTO schema_migrations(version) VALUES(55);
     `);}
+    const v56=await client.query('SELECT version FROM schema_migrations WHERE version=56');
+    if(!v56.rowCount){await client.query(`
+      ALTER TABLE owner_final_bills ADD COLUMN IF NOT EXISTS customer_name text;
+      ALTER TABLE whatsapp_outbox ADD COLUMN IF NOT EXISTS document_pdf bytea;
+      INSERT INTO schema_migrations(version) VALUES(56);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

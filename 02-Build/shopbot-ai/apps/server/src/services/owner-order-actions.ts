@@ -11,7 +11,10 @@ import {textPresentation} from './message-presentation.js';
 import {recipientAllowed} from './customer-admission.js';
 import {requestStatusText} from './request-status.js';
 import {materializeVisualReply} from './visual-images.js';
-import {visualStatus} from './visual-ordering.js';
+import {orderReference,visualStatus} from './visual-ordering.js';
+import {pricedBillRows,renderBillPdf} from './order-bill-pdf.js';
+import {formatMoney} from '../../../../packages/contracts/money.js';
+import {singleBillDocument} from './whatsapp-bill-document.js';
 import {confirmedPriceBill} from './confirmed-bill.js';
 import {renderWhatsAppReply} from './whatsapp-reply.js';
 import {captureFinalBill,queueFinalBill,supersedeFinalBillNotices} from './final-order-bill.js';
@@ -67,13 +70,24 @@ export async function reviewOwnerOrder(client:PoolClient,scope:OrderOwner,reques
       await client.query('UPDATE conversations SET draft=$1::jsonb,version=version+1 WHERE id=$2 AND last_request_id=$3',[JSON.stringify(lines),current.conversation_id,current.id]);
       let notice:any={customerNotification:'not_requested'};
       if(input.action==='revise'&&current.source!=='in_store'){
-        const customer=(await client.query('SELECT c.reply_language,s.name AS store_name FROM conversations c JOIN stores s ON s.id=c.store_id WHERE c.id=$1 AND c.store_id=$2',[current.conversation_id,scope.storeId])).rows[0];
-        const language=customer?.reply_language??'en';
-        const bill=appendClosedShopNotice(confirmedPriceBill(language,current.id,lines,total,customer?.store_name),await readStoreHours(client,scope.storeId),{replyLanguage:language},true);
-        // Keep a readable text fallback when visual messages are disabled or image generation fails.
-        let noticeReply=textPresentation(bill.text);
-        if(input.notify&&channel?.visualOrdering)try{noticeReply=materializeVisualReply(bill);}catch{noticeReply=textPresentation(bill.text);}
-        notice=await queueOrderNotice(client,scope.storeId,current.id,`revised-${changed.effective_revision}`,noticeReply,channel,input.notify);
+        const customer=(await client.query(`SELECT c.reply_language,s.name AS store_name,s.bill_address,w.profile_name
+          FROM conversations c JOIN stores s ON s.id=c.store_id LEFT JOIN whatsapp_conversations w ON w.conversation_id=c.id
+          WHERE c.id=$1 AND c.store_id=$2`,[current.conversation_id,scope.storeId])).rows[0];
+        const language=customer?.reply_language??'en',reference=orderReference(current.id);
+        const bill=singleBillDocument(confirmedPriceBill(language,current.id,lines,total,customer?.store_name));
+        const caption=appendClosedShopNotice(textPresentation(bill.parts![0].text),await readStoreHours(client,scope.storeId),{replyLanguage:language},true);
+        const revisedAt=new Date();
+        notice=await queueOrderNotice(client,scope.storeId,current.id,`revised-${changed.effective_revision}`,caption,channel,input.notify,{
+          document:async()=>({
+            filename:`ShopBot-${reference.slice(1)}-revised-${changed.effective_revision}.pdf`,
+            pdf:await renderBillPdf({
+              title:'REVISED BILL',reference:'Order '+reference,issuedAt:revisedAt,revision:changed.effective_revision,
+              storeName:customer?.store_name??'Shop',storeAddress:customer?.bill_address,customerName:customer?.profile_name,
+              rows:pricedBillRows(lines),totalLabel:'Confirmed total',total:formatMoney(total),
+              notes:['The shop will let you know when your order is ready.'],
+            }),
+          }),
+        });
       }else if(final){
         const bill=await captureFinalBill(client,scope.storeId,changed,input.action==='update_ready');
         notice=await queueFinalBill(client,scope.storeId,bill,channel,input.notify&&current.source!=='in_store');

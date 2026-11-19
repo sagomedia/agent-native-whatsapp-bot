@@ -1,13 +1,15 @@
 import type {PoolClient} from 'pg';
-import type {DraftLine,RichReply} from '../../../../packages/contracts/index.js';
+import type {DraftLine} from '../../../../packages/contracts/index.js';
 import type {ReplyLanguage} from '../../../../packages/contracts/language.js';
 import {formatMoney} from '../../../../packages/contracts/money.js';
 import {recipientAllowed} from './customer-admission.js';
 import {ToolError} from './context.js';
-import {confirmedPriceBill} from './confirmed-bill.js';
+import {orderReference} from './visual-ordering.js';
+import {renderBillPdf,pricedBillRows} from './order-bill-pdf.js';
+import {say} from '../../../../packages/contracts/language.js';
+import {textPresentation} from './message-presentation.js';
 import {estimateLines} from './order-estimate.js';
 import {queueOrderNotice} from './order-notices.js';
-import {materializeVisualReply} from './visual-images.js';
 import type {WhatsAppConfig} from './whatsapp-config.js';
 
 type BillOrder={
@@ -26,6 +28,7 @@ export type SavedBill={
   total_paise:string;
   store_name:string;
   store_address:string|null;
+  customer_name:string|null;
   issued_at:Date;
   fulfillment:'ready_for_pickup'|'collected';
   updated:boolean;
@@ -43,31 +46,44 @@ export async function captureFinalBill(client:PoolClient,storeId:string,order:Bi
   const lines=order.effective_lines??order.lines,total=Number(order.effective_total_paise??order.total_paise);
   const estimate=estimateLines(lines);
   if(!estimate.complete||estimate.knownSubtotalPaise!==total)throw new ToolError('Review every item and its final price before issuing a bill.');
-  const bill=(await client.query(`INSERT INTO owner_final_bills(request_id,revision,lines,total_paise,store_name,store_address,fulfillment,updated)
-    SELECT $1,$2,$3::jsonb,$4,name,bill_address,$6,$7 FROM stores WHERE id=$5 RETURNING *`,[order.id,order.effective_revision,JSON.stringify(lines),total,storeId,order.fulfillment,updated])).rows[0];
+  const bill=(await client.query(`INSERT INTO owner_final_bills(request_id,revision,lines,total_paise,store_name,store_address,fulfillment,updated,customer_name)
+    SELECT $1,$2,$3::jsonb,$4,s.name,s.bill_address,$6,$7,coalesce(r.counter_customer_name,w.profile_name,CASE WHEN r.source='in_store' THEN 'Walk-in customer' END)
+    FROM stores s JOIN order_requests r ON r.store_id=s.id AND r.id=$1
+    LEFT JOIN whatsapp_conversations w ON w.conversation_id=r.conversation_id
+    WHERE s.id=$5 RETURNING *`,[order.id,order.effective_revision,JSON.stringify(lines),total,storeId,order.fulfillment,updated])).rows[0];
   return {...bill,fulfillment:order.fulfillment};
 }
 
-export function finalBillReply(bill:SavedBill,language:ReplyLanguage='en'){
-  return confirmedPriceBill(language,bill.request_id,bill.lines,Number(bill.total_paise),bill.store_name,{
-    address:bill.store_address??undefined,date:bill.issued_at.toISOString(),revision:bill.revision,fulfillment:bill.fulfillment,updated:bill.updated,
+export function finalBillFilename(bill:SavedBill){
+  return `ShopBot-${orderReference(bill.request_id).slice(1)}-bill-${bill.revision}.pdf`;
+}
+
+export function finalBillPdf(bill:SavedBill){
+  return renderBillPdf({
+    title:bill.updated?'UPDATED FINAL BILL':bill.fulfillment==='ready_for_pickup'?'FINAL PICKUP BILL':'FINAL BILL',
+    reference:'Order '+orderReference(bill.request_id),issuedAt:bill.issued_at,revision:bill.revision,
+    storeName:bill.store_name,storeAddress:bill.store_address??undefined,customerName:bill.customer_name??undefined,
+    rows:pricedBillRows(bill.lines),totalLabel:'Final total',total:formatMoney(Number(bill.total_paise)),
+    notes:['Items and prices checked by the shop.'],
   });
 }
 
-function textBill(bill:RichReply):RichReply{
-  return {...bill,parts:bill.parts?.map(part=>({...part,cards:[],text:[part.text,...part.cards.flatMap(card=>
-    card.kind==='product'?[]:(card.billRows??[]).map(row=>`${row.count} × ${row.name} · ${row.unitPrice} = ${row.total}`))].join('\n')}))};
-}
-
-export async function queueFinalBill(client:PoolClient,storeId:string,bill:SavedBill,channel?:WhatsAppConfig,notify=true){
+export async function queueFinalBill(client:PoolClient,storeId:string,bill:SavedBill,channel?:WhatsAppConfig,notify=true,stillReady=bill.fulfillment==='ready_for_pickup'){
   if(!notify)return {customerNotification:'not_requested'};
-  const language=(await client.query(`SELECT c.reply_language FROM order_requests r LEFT JOIN conversations c ON c.id=r.conversation_id
-    WHERE r.store_id=$1 AND r.id=$2`,[storeId,bill.request_id])).rows[0]?.reply_language;
-  return queueOrderNotice(client,storeId,bill.request_id,`final-bill-${bill.revision}`,()=>{
-    const rich=finalBillReply(bill,language??'en');
-    if(!channel?.visualOrdering)return textBill(rich);
-    try{return materializeVisualReply(rich);}catch{return textBill(rich);}
-  },channel,true,{finalBill:true});
+  const language:ReplyLanguage=(await client.query(`SELECT c.reply_language FROM order_requests r LEFT JOIN conversations c ON c.id=r.conversation_id
+    WHERE r.store_id=$1 AND r.id=$2`,[storeId,bill.request_id])).rows[0]?.reply_language??'en';
+  const ready=stillReady
+    ?say(language,'Your order is ready for pickup.','உங்கள் ஆர்டர் எடுத்துச் செல்லத் தயார்.','Unga order pickup-ku ready.')
+    :'';
+  const text=[
+    say(language,'The shop has checked your items and prices.','பொருட்களையும் விலைகளையும் கடை சரிபார்த்துவிட்டது.','Items-um vilaiyum kadai check panniyachu.'),
+    ready,
+    say(language,'Final total','இறுதி மொத்தம்','Final total')+': '+formatMoney(Number(bill.total_paise)),
+    bill.updated?say(language,'This bill replaces the previous one.','முந்தைய பில்லுக்கு பதிலாக இந்த பில்லைப் பயன்படுத்துங்கள்.','Munnaadi anuppina bill-ku badhila idhai use pannunga.'):'',
+  ].filter(Boolean).join(' ');
+  return queueOrderNotice(client,storeId,bill.request_id,`final-bill-${bill.revision}`,textPresentation(text),channel,true,{
+    finalBill:true,document:()=>finalBillPdf(bill).then(pdf=>({pdf,filename:finalBillFilename(bill)})),
+  });
 }
 
 export async function supersedeFinalBillNotices(client:PoolClient,requestId:string,keepRevision?:number){
@@ -80,27 +96,6 @@ export async function supersedeFinalBillNotices(client:PoolClient,requestId:stri
     RETURNING o.message_id
   ) UPDATE messages SET status='cancelled' WHERE id IN (SELECT message_id FROM cancelled)`,[requestId,keepRevision??null]);
 }
-
-const htmlEscape=(value:string)=>value.replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!));
-
-export function printableFinalBill(bill:SavedBill,printNonce?:string){
-  const reply=finalBillReply(bill),total=formatMoney(Number(bill.total_paise));
-  const pages=reply.parts!.flatMap(part=>part.cards.flatMap(card=>{
-    if(card.kind==='product')return [];
-    const rows=card.billRows!.map(row=>`<tr><td>${htmlEscape(row.name)}</td><td>${htmlEscape(row.count)}</td><td>${htmlEscape(row.unitPrice)}</td><td>${htmlEscape(row.total)}</td></tr>`).join('');
-    return [`<section><h1>${htmlEscape(card.title)}</h1><h2>${htmlEscape(bill.store_name)}</h2>
-      <p>${htmlEscape(bill.store_address??'')}</p><p>Order ${htmlEscape(card.reference??'')} · ${htmlEscape(card.billHeader!.date)} · Revision ${bill.revision}</p>
-      <table><thead><tr><th scope="col">Item</th><th scope="col">Qty</th><th scope="col">Price each</th><th scope="col">Amount</th></tr></thead><tbody>${rows}</tbody></table>
-      ${card.total?`<p class="total">Final total <strong>${htmlEscape(total)}</strong></p>`:''}<p>${htmlEscape(card.billHeader?.page??'')}</p></section>`];
-  })).join('');
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>ShopBot bill</title><style>body{font:16px system-ui,sans-serif;color:#202b30;margin:32px auto;padding:0 24px;max-width:760px}
-    h1,.total{background:#eef6f3;color:#16665b;padding:14px}h2,p{margin:8px 0}table{border-collapse:collapse;width:100%;margin:24px 0}
-    th,td{padding:12px 8px;border-bottom:1px solid #dce2e3;text-align:right}th:first-child,td:first-child{text-align:left}
-    .total{display:flex;justify-content:space-between}section+section{break-before:page;margin-top:32px}tr{break-inside:avoid}</style>
-    <body>${pages}${printNonce?`<script nonce="${printNonce}">window.addEventListener('load',()=>window.print())</script>`:''}</body></html>`;
-}
-
 
 export async function finalBillRecipient(client:PoolClient,storeId:string,orderId:string,expected:{
   phone?:string;conversationId?:string;
@@ -139,6 +134,6 @@ export async function sendSavedOrderBill(client:PoolClient,storeId:string,orderI
     }
   }
   await supersedeFinalBillNotices(client,orderId,bill.revision);
-  const notice=await queueFinalBill(client,storeId,{...bill,fulfillment:order.fulfillment},channel);
+  const notice=await queueFinalBill(client,storeId,bill,channel,true,order.fulfillment==='ready_for_pickup');
   return {...notice,...(order.source==='in_store'&&{confirmedConversationId:input.conversationId,customerOptedIn:true})};
 }

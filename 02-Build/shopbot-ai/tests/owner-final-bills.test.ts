@@ -25,9 +25,17 @@ test('ready and counter orders use saved bill revisions and one WhatsApp send pe
  const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:`-c search_path=${schema}`});
  let app:Awaited<ReturnType<typeof createApp>>|undefined;
  const sent:any[]=[];
+ const uploads:Buffer[]=[];
  try{
   await setupDatabase(pool,'mock');
-  const channel=new WhatsAppChannel(pool,channelConfig,async(_url,init)=>{
+  const channel=new WhatsAppChannel(pool,channelConfig,async(url,init)=>{
+   if(String(url).endsWith('/media')){
+    const file=(init!.body as FormData).get('file');
+    assert.ok(file instanceof Blob);
+    assert.equal(file.type,'application/pdf');
+    uploads.push(Buffer.from(await file.arrayBuffer()));
+    return new Response(JSON.stringify({id:'media.fixture.'+uploads.length}));
+   }
    const payload=JSON.parse(String(init!.body));sent.push(payload);
    return new Response(JSON.stringify({messages:[{id:'wamid.fixture.'+sent.length}]}),{status:200});
   });
@@ -66,17 +74,15 @@ test('ready and counter orders use saved bill revisions and one WhatsApp send pe
   assert.equal((await post(reviewPath,readyRequest)).json().messageId,first.messageId);
   const print=await get(paths(orderId)+'/bill');
   assert.equal(print.statusCode,200,print.body);
-  assert.match(print.body,/Demo Hardware/);
-  assert.match(print.body,/Tirunelveli, Tamil Nadu/);
-  assert.match(print.body,/₹185\.00/);
-  assert.doesNotMatch(print.body,/Unavailable gloves/);
+  assert.equal(print.headers['content-type'],'application/pdf');
+  assert.equal(print.rawPayload.subarray(0,5).toString(),'%PDF-');
   assert.equal(await channel.sendNext(),true);
-  assert.equal(sent[0].type,'image');
-  assert.match(sent[0].image.caption,/shop has checked.*ready for pickup/is);
-  assert.match(sent[0].image.caption,/₹185\.00/);
-  const media=await app.inject({url:new URL(sent[0].image.link).pathname,headers:{host:channelConfig.hostname}});
-  assert.equal(media.statusCode,200);
-  assert.match(String(media.headers['content-type']),/image\/png/);
+  assert.equal(sent[0].type,'document');
+  assert.equal(sent[0].document.id,'media.fixture.1');
+  assert.match(sent[0].document.filename,/bill-3\.pdf$/);
+  assert.match(sent[0].document.caption,/shop has checked.*ready for pickup/is);
+  assert.match(sent[0].document.caption,/₹185\.00/);
+  assert.deepEqual(uploads[0],print.rawPayload);
 
   const pipe=manual('PVC pipe',34000);
   const updated=await post(reviewPath,{id:randomUUID(),expectedRevision:3,action:'update_ready',
@@ -89,7 +95,7 @@ test('ready and counter orders use saved bill revisions and one WhatsApp send pe
   assert.deepEqual(history.bills.map((bill:any)=>[bill.revision,Number(bill.total_paise)]),[[4,39500],[3,18500]]);
   const olderDownload=await get(paths(orderId)+'/bill?mode=download&revision=3');
   assert.match(String(olderDownload.headers['content-disposition']),/attachment/);
-  assert.match(olderDownload.body,/Sandpaper P120/);
+  assert.deepEqual(olderDownload.rawPayload,print.rawPayload);
   assert.equal((await post(paths(orderId)+'/complete',{expectedRevision:4})).statusCode,200);
   const original=(await pool.query('SELECT lines,payment FROM order_requests WHERE id=$1',[orderId])).rows[0];
   assert.deepEqual(original.lines.map((line:any)=>line.id),[a.id,b.id]);
@@ -115,15 +121,13 @@ test('ready and counter orders use saved bill revisions and one WhatsApp send pe
   assert.equal((await post(paths(walkIn.id)+'/review',{id:randomUUID(),expectedRevision:1,action:'ready',lines:walkIn.lines})).statusCode,200);
 
   const completed={id:randomUUID(),stage:'completed',customerName:'Counter customer',customerPhone:'+'+recipient,
-   lines:Array.from({length:9},(_,index)=>manual('Counter item '+(index+1),2500))};
+   lines:Array.from({length:13},(_,index)=>manual('Counter item '+(index+1),2500))};
   assert.equal((await post('requests',completed)).statusCode,200);
   const completedOrders=(await get('snapshot?scope=orders&orderStage=completed')).json().requests;
   assert.equal(completedOrders.find((entry:any)=>entry.id===completed.id).stage,'completed');
   const completedBill=await get(paths(completed.id)+'/bill?mode=download&revision=1');
-  assert.match(completedBill.body,/Page 1\/2/);
-  assert.match(completedBill.body,/Page 2\/2/);
-  assert.match(completedBill.body,/Counter item 9/);
-  assert.match(completedBill.body,/₹225\.00/);
+  assert.equal(completedBill.headers['content-type'],'application/pdf');
+  assert.equal((completedBill.body.match(/\/Type \/Page\b/g)??[]).length,2);
   const find=await post(paths(completed.id)+'/bill/recipient',{phone:completed.customerPhone});
   assert.equal(find.json().conversationId,conversationId);
   const sendCounter={expectedRevision:1,conversationId,customerOptedIn:true};
@@ -139,17 +143,15 @@ test('ready and counter orders use saved bill revisions and one WhatsApp send pe
   assert.equal(counterSend.statusCode,200,counterSend.body);
   assert.equal(counterSend.json().customerNotification,'queued');
   assert.equal((await post(paths(completed.id)+'/bill/send',sendCounter)).json().messageId,counterSend.json().messageId);
-  const pages=(await pool.query('SELECT m.part_index,o.reply_payload FROM messages m JOIN whatsapp_outbox o ON o.message_id=m.id WHERE m.reply_group_id=$1 ORDER BY m.part_index',[counterSend.json().messageId])).rows;
-  assert.equal(pages.length,2);
-  assert.match(pages[0].reply_payload.image.caption,/Page 1\/2/);
-  assert.match(pages[1].reply_payload.image.caption,/₹225\.00/);
-  assert.doesNotMatch(pages[1].reply_payload.image.caption,/ready for pickup/i);
-  await pool.query(`UPDATE whatsapp_outbox o SET state=CASE WHEN m.part_index=0 THEN 'delivered' ELSE 'blocked' END
-    FROM messages m WHERE m.id=o.message_id AND m.reply_group_id=$1`,[counterSend.json().messageId]);
+  const document=(await pool.query('SELECT reply_payload,document_pdf FROM whatsapp_outbox WHERE message_id=$1',[counterSend.json().messageId])).rows[0];
+  assert.equal(document.reply_payload.type,'document');
+  assert.match(document.reply_payload.document.caption,/₹325\.00/);
+  assert.doesNotMatch(document.reply_payload.document.caption,/ready for pickup/i);
+  assert.deepEqual(document.document_pdf,completedBill.rawPayload);
+  await pool.query("UPDATE whatsapp_outbox SET state='blocked' WHERE message_id=$1",[counterSend.json().messageId]);
   const retry=await post(paths(completed.id)+'/bill/send',sendCounter);
   assert.equal(retry.json().messageId,counterSend.json().messageId);
-  const states=(await pool.query('SELECT o.state FROM messages m JOIN whatsapp_outbox o ON o.message_id=m.id WHERE m.reply_group_id=$1 ORDER BY m.part_index',[counterSend.json().messageId])).rows;
-  assert.deepEqual(states.map(row=>row.state),['delivered','queued']);
+  assert.equal((await pool.query('SELECT state FROM whatsapp_outbox WHERE message_id=$1',[counterSend.json().messageId])).rows[0].state,'queued');
  }finally{
   await app?.close();await pool.end();await admin.query(`DROP SCHEMA ${schema} CASCADE`);await admin.end();
  }

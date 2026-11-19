@@ -18,7 +18,7 @@ import {inStoreOrderSchema,ownerOrderReviewSchema,prepareOwnerOrderReview,record
 import {decideAmendment} from '../services/order-amendments.js';
 import {saveQuoteDraftSchema,saveQuoteDraft,quoteDraftRow} from '../services/order-quote-drafts.js';
 import {orderQuoteSchema,offerOrderQuote,orderQuoteReply} from '../services/order-quotes.js';
-import {finalBillRecipient,printableFinalBill,readFinalBill,sendSavedOrderBill} from '../services/final-order-bill.js';
+import {finalBillFilename,finalBillPdf,finalBillRecipient,readFinalBill,sendSavedOrderBill} from '../services/final-order-bill.js';
 import {queueOrderNotice} from '../services/order-notices.js';
 import {customerCopy} from '../../../../packages/contracts/customer-copy.js';
 import {formatMoney,lineTotal} from '../../../../packages/contracts/money.js';
@@ -373,10 +373,9 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     try{
       const bill=await readFinalBill(client,owner.storeId,request.params.id,query.data.revision);
       if(!bill)return reply.code(404).send({error:'A final bill has not been saved for this revision.'});
-      const printing=query.data.mode==='print',nonce=printing?randomUUID():undefined;
-      reply.header('Content-Security-Policy',`default-src 'none'; style-src 'unsafe-inline'; script-src ${printing?"'nonce-"+nonce+"'":"'none'"}; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`);
-      if(!printing)reply.header('Content-Disposition',`attachment; filename="ShopBot-${orderReference(bill.request_id).replace('#','')}-bill-${bill.revision}.html"`);
-      return reply.type('text/html; charset=utf-8').send(printableFinalBill(bill,nonce));
+      const disposition=query.data.mode==='download'?'attachment':'inline';
+      reply.header('Content-Disposition',`${disposition}; filename="${finalBillFilename(bill)}"`);
+      return reply.type('application/pdf').send(await finalBillPdf(bill));
     }finally{client.release();}
   });
   app.post<{Params:{id:string}}>('/api/owner/requests/:id/bill/recipient',async(request,reply)=>{

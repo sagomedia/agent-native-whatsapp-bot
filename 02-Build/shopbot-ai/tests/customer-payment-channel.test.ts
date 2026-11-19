@@ -18,7 +18,7 @@ test('WhatsApp → partial estimate → QR → manual advance check → final qu
  const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,options:`-c search_path=${schema}`});let app:Awaited<ReturnType<typeof createApp>>|undefined;
  try{
   await setupDatabase(pool,'mock');let sends=0;
-  const channel=new WhatsAppChannel(pool,config,async()=>new Response(JSON.stringify({messages:[{id:'wamid.fixture.sent.'+(++sends)}]}),{status:200}));await channel.setup();
+  const channel=new WhatsAppChannel(pool,config,async url=>new Response(JSON.stringify(String(url).endsWith('/media')?{id:'offline.fixture.pdf'}:{messages:[{id:'wamid.fixture.sent.'+(++sends)}]}),{status:200}));await channel.setup();
   app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,port:3017,host:'127.0.0.1',mediaDir:'/tmp/upi-channel',owner,whatsapp:config},pool,undefined,undefined,async()=>({email:owner.email,subject:'fixture-owner'}),channel);
   const post=(path:string,payload:object)=>app!.inject({method:'POST',url:'/api/owner/'+path,headers,payload});
   const deliver=async()=>{while(await channel.sendNext()){}await pool.query("UPDATE whatsapp_outbox SET state='delivered' WHERE state='accepted'");await pool.query("UPDATE messages SET status='delivered' WHERE id IN (SELECT message_id FROM whatsapp_outbox WHERE state='delivered')");};

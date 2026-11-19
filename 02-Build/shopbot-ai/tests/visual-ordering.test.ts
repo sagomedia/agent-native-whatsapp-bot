@@ -271,7 +271,7 @@ test('an empty search or processing failure preserves its message instead of res
 for(const stage of ['products','bill'])test(`shop handoff during ${stage} delivers its acknowledgement and pauses the assistant`,()=>fixture(async(pool)=>{
  let sends=0;
  const provider=new GoogleInterpreter({allowPaidInference:false,apiKey:'offline-placeholder',model:'gemini-3.5-flash-lite',budgetMicrousd:0,freeQuota:{scope:'visual-handoff',model:'gemini-3.5-flash-lite'}},{generateContent:async()=>Object.assign(new GenerateContentResponse(),{candidates:[{content:{parts:[{text:JSON.stringify({operations:[{kind:'add_item',query:'TEST0',quantity:1}],next:'review'})}]},finishReason:FinishReason.STOP}],modelVersion:'gemini-3.5-flash-lite',usageMetadata:{promptTokenCount:100,candidatesTokenCount:100,totalTokenCount:200}})});
- const channel=new WhatsAppChannel(pool,cfg,async()=>new Response(JSON.stringify({messages:[{id:'wamid.handoff.'+(++sends)}]}),{status:200}),provider);
+ const channel=new WhatsAppChannel(pool,cfg,async url=>new Response(JSON.stringify(String(url).endsWith('/media')?{id:'offline.handoff.pdf'}:{messages:[{id:'wamid.handoff.'+(++sends)}]}),{status:200}),provider);
  await channel.setup();await channel.receive(webhook('one TEST0','handoff-start'));await channel.processNext();while(await channel.sendNext()){await pool.query("UPDATE whatsapp_outbox SET state='delivered' WHERE state='accepted'");}
  const first=(await pool.query("SELECT m.*,o.state FROM messages m JOIN whatsapp_outbox o ON o.message_id=m.id ORDER BY m.sequence DESC LIMIT 1")).rows[0];
  if(stage==='bill'){

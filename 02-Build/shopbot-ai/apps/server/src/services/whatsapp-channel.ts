@@ -8,6 +8,7 @@ import {catalogPhoto} from './catalog-photos.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {eventSchema,type SimulatorEvent} from '../../../../packages/contracts/index.js';
 import {say} from '../../../../packages/contracts/language.js';
+import {renderWhatsAppOutgoing} from './whatsapp-bill-document.js';
 import {renderWhatsAppReply,WhatsAppRenderError} from './whatsapp-reply.js';
 import {plainReply} from './replies.js';
 import {shoppingButton} from './shopping-flow.js';
@@ -54,7 +55,12 @@ export class WhatsAppChannel {
       const revision=(await client.query('SELECT operator_revision FROM conversations WHERE id=$1',[ctx.conversationId])).rows[0].operator_revision;
       let state=await loadState(client,ctx);const memory=await loadAssistantMemory(client,ctx);
       let rendered;
-      try{rendered=renderWhatsAppReply(rich,messageId,config.hostname);}
+      try{
+        const hasBill=rich.parts?.[0]?.cards.some(card=>card.kind!=='product'&&card.billRows?.length);
+        const shop=hasBill?(await client.query(`SELECT s.name,s.bill_address AS address,w.profile_name AS customer FROM stores s
+          LEFT JOIN whatsapp_conversations w ON w.conversation_id=$2 WHERE s.id=$1`,[ctx.storeId,ctx.conversationId])).rows[0]:undefined;
+        rendered=await renderWhatsAppOutgoing(rich,messageId,config.hostname,shop);
+      }
       catch(error){
         const code=error instanceof WhatsAppRenderError?error.code:'unexpected';
         console.error(JSON.stringify({event:'whatsapp_render_failed',messageId,code,cards:rich.parts?.map(p=>p.cards.length),buttons:rich.parts?.map(p=>p.cards.map(c=>c.buttons?.length??p.buttons?.length??0))}));
@@ -65,9 +71,9 @@ export class WhatsAppChannel {
         fallback.replyLanguage=state.replyLanguage;fallback.stage='error';fallback.clarificationReason='render_'+code;
         if(state.draft.length)fallback.buttons=[shoppingButton(state,'view_list',say(state,'Show list','பட்டியலைக் காட்டு','List kaattu'))];
         await client.query('UPDATE messages SET text=$1,payload=$2::jsonb,stage=$3,clarification_reason=$4 WHERE id=$5',[fallback.text,JSON.stringify(fallback),fallback.stage,fallback.clarificationReason,messageId]);
-        rendered=renderWhatsAppReply(fallback,messageId,config.hostname);
+        rendered={...renderWhatsAppReply(fallback,messageId,config.hostname),pdf:undefined};
       }
-      await client.query('INSERT INTO whatsapp_outbox(message_id,conversation_id,operator_revision,reply_payload,sender_kind) VALUES($1,$2,$3,$4::jsonb,$5)',[messageId,ctx.conversationId,revision,JSON.stringify(rendered.payload),rich.handoffRequested?'system':'assistant']);
+      await client.query('INSERT INTO whatsapp_outbox(message_id,conversation_id,operator_revision,reply_payload,sender_kind,document_pdf) VALUES($1,$2,$3,$4::jsonb,$5,$6)',[messageId,ctx.conversationId,revision,JSON.stringify(rendered.payload),rich.handoffRequested?'system':'assistant',rendered.pdf??null]);
       for(const action of rendered.actions)await client.query('INSERT INTO whatsapp_actions(id,message_id,conversation_id,event,label,source_version,operator_revision,binding_id) VALUES($1,$2,$3,$4::jsonb,$5,$6,$7,$8)',[action.id,messageId,ctx.conversationId,JSON.stringify(action.event),action.label,state.version,revision,conversationBinding(state,memory)]);
     }});
   }
@@ -354,9 +360,28 @@ export class WhatsAppChannel {
       await client.query('SELECT id FROM stores WHERE id=$1 FOR SHARE',[c.storeId]);
       const controls=(await client.query('SELECT c.operator_mode,c.operator_revision,s.operator_paused FROM conversations c JOIN stores s ON s.id=c.store_id WHERE c.id=$1 FOR UPDATE OF c',[row.conversation_id])).rows[0];
       if(controls.operator_revision!==row.current_revision||row.sender_kind==='assistant'&&(controls.operator_paused||controls.operator_mode==='owner')||row.sender_kind==='owner'&&controls.operator_mode!=='owner'){await this.setDelivery(client,row.message_id,'cancelled','owner_control_changed');await client.query('COMMIT');return true;}
+      let payload=row.reply_payload??{type:'text',text:{preview_url:false,body:row.text}};
+      if(row.document_pdf){
+        const document=payload.type==='interactive'?payload.interactive.header.document:payload.document;
+        const uploaded=await this.uploadBillPdf(row.document_pdf,document.filename);
+        if(uploaded.id===undefined){
+          if(uploaded.retryable&&row.attempts<2){
+            await client.query("UPDATE whatsapp_outbox SET state='queued',next_attempt_at=now()+interval '30 seconds',last_error=$2 WHERE message_id=$1",[row.message_id,uploaded.code]);
+            await client.query("UPDATE messages SET status='queued' WHERE id=$1",[row.message_id]);
+          }else await this.setDelivery(client,row.message_id,'failed',uploaded.code);
+          if(uploaded.auth)await client.query("UPDATE whatsapp_channels SET send_blocked=true,last_error='authentication_or_permission' WHERE phone_id=$1",[c.phoneId]);
+          await client.query('COMMIT');return true;
+        }
+        if(Date.now()-new Date(row.last_inbound_at).getTime()>=24*3600000){
+          await this.setDelivery(client,row.message_id,'blocked','stale_reply_or_closed_window');await client.query('COMMIT');return true;
+        }
+        payload=payload.type==='interactive'
+          ?{...payload,interactive:{...payload.interactive,header:{type:'document',document:{...document,id:uploaded.id}}}}
+          :{...payload,document:{...document,id:uploaded.id}};
+      }
       let response:Response|undefined,data:any,networkError:unknown;
       try{
-        response=await this.request(`https://graph.facebook.com/${c.graphVersion}/${c.phoneId}/messages`,{method:'POST',headers:{authorization:'Bearer '+c.accessToken,'content-type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',recipient_type:'individual',to:row.recipient,...(row.reply_payload??{type:'text',text:{preview_url:false,body:row.text}}),biz_opaque_callback_data:row.message_id}),signal:AbortSignal.timeout(8000),redirect:'error'});
+        response=await this.request(`https://graph.facebook.com/${c.graphVersion}/${c.phoneId}/messages`,{method:'POST',headers:{authorization:'Bearer '+c.accessToken,'content-type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',recipient_type:'individual',to:row.recipient,...payload,biz_opaque_callback_data:row.message_id}),signal:AbortSignal.timeout(8000),redirect:'error'});
         data=await response.json().catch(()=>null);
       }catch(error){networkError=error;}
       if(!response){
@@ -381,6 +406,27 @@ export class WhatsAppChannel {
       await client.query('COMMIT');
       await this.reconcile();return true;
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
+  }
+  private async uploadBillPdf(pdf:Buffer,filename:string):Promise<
+    {id:string}|{id?:undefined;retryable:boolean;auth?:boolean;code:string}
+  >{
+    const c=this.config;
+    const form=new FormData();
+    form.append('messaging_product','whatsapp');
+    form.append('file',new Blob([new Uint8Array(pdf)],{type:'application/pdf'}),filename);
+    try{
+      const response=await this.request(`https://graph.facebook.com/${c.graphVersion}/${c.phoneId}/media`,{
+        method:'POST',headers:{authorization:'Bearer '+c.accessToken},body:form,signal:AbortSignal.timeout(8000),redirect:'error',
+      });
+      const data=await response.json().catch(()=>null);
+      if(response.ok&&typeof data?.id==='string'&&data.id)return {id:data.id};
+      const code=Number.isInteger(data?.error?.code)?data.error.code:response.status;
+      return {
+        retryable:response.status===429||response.status>=500||response.ok,
+        auth:response.status===401||response.status===403||code===190||code===10||code===200,
+        code:'bill_upload_'+code,
+      };
+    }catch{return {retryable:true,code:'bill_upload_network'};}
   }
   private async setDelivery(client:PoolClient,id:string,state:string,error:string){
     await client.query('UPDATE whatsapp_outbox SET state=$1,last_error=$2 WHERE message_id=$3',[state,error,id]);
