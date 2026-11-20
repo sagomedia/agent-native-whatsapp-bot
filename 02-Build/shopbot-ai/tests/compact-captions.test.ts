@@ -81,6 +81,24 @@ test('missing-photo fallback renders only the selected SKU name and size with ac
  }finally{rmSync(directory,{recursive:true,force:true});}
 });
 
+test('an unusable catalog photo falls back on its own card and preserves available photos and actions',()=>{
+ const directory=mkdtempSync(join(tmpdir(),'mixed-photos-'));
+ try{
+  const custom={...product,imageReference:undefined,imageUrl:'/catalog-images/custom/12345678-1234-1234-1234-123456789abc.jpg'};
+  const unusable={...product,sku:'PIPE-32',name:'PVC pipe 32 mm',imageReference:undefined,imageUrl:'/catalog-images/custom/12345678123412341234123456789abc----.jpg'};
+  const products=[custom,unusable];
+  const cards=products.map(p=>({kind:'product' as const,product:p,caption:buildProductCaption(p,'en'),buttons:[{label:'Choose',event:{id:p.sku,type:'choose_product' as const,sku:p.sku,expectedVersion:8}}]}));
+  const rich:RichReply={...makeReply(product),cards:undefined,replyLanguage:'en',parts:[{id:'part',text:'Choose a pipe',cards}]};
+  const rendered=renderWhatsAppReply(materializeVisualReply(rich,directory),'mixed-photos','shop.example.test');
+  assert.equal(rendered.format,'carousel');
+  assert.deepEqual(rendered.actions.map(a=>a.event),cards.map(c=>c.buttons[0].event));
+  const [available,missing]=(rendered.payload as any).interactive.action.cards;
+  assert.equal(available.header.image.link,'https://shop.example.test'+custom.imageUrl);
+  assert.match(missing.header.image.link,/\/catalog-images\/messages\/[a-f0-9]{64}\.png$/);
+  assert.match(missing.body.text,/PVC pipe 32 mm.*\n.*\nPhoto unavailable/s);
+ }finally{rmSync(directory,{recursive:true,force:true});}
+});
+
 test('compact QR payload preserves recipient, same-phone link, gated demo choice and unverified payment state',async()=>{
  const directory=mkdtempSync(join(tmpdir(),'compact-upi-')),previous=process.env.VISUAL_MEDIA_DIR;
  process.env.VISUAL_MEDIA_DIR=directory;

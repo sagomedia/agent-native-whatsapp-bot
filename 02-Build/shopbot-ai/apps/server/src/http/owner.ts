@@ -5,7 +5,7 @@ import {ownerDemoLogin} from './owner-demo-login.js';
 import {registerOwnerReading} from './owner-reading.js';
 import {ownerAttentionCounts,orderAttentionSql,orderUnreadSql,chatUnreadSql,messageSequence} from '../services/owner-reading.js';
 import {needsHelpSql} from '../services/owner-mcp.js';
-import {reviewOwnerOrder,completeOwnerOrder,decideOwnerOrder,fulfillOwnerOrder} from '../services/owner-order-actions.js';
+import {createInStoreOrder,reviewOwnerOrder,completeOwnerOrder,decideOwnerOrder,fulfillOwnerOrder} from '../services/owner-order-actions.js';
 import {recipientAllowed} from '../services/customer-admission.js';
 import {ownerSnapshotQuery,ownerReadPageSize,ownerActiveSql,ownerStageSql,ownerSimpleStageSql,ownerSearchPattern} from '../services/owner-read-query.js';
 import {messageGallery} from '../services/message-gallery.js';
@@ -14,10 +14,11 @@ import {productColumns,productFromRow} from '../services/catalog.js';
 import {reserveRequest,closeRequestStock} from '../services/inventory.js';
 import {ToolError} from '../services/context.js';
 import {verifyManualAdvance,verifyManualRefund,confirmManualAdvanceReceipt} from '../services/upi-advance.js';
-import {ownerOrderReviewSchema,prepareOwnerOrderReview,recordOwnerOrderReview} from '../services/owner-order-review.js';
+import {inStoreOrderSchema,ownerOrderReviewSchema,prepareOwnerOrderReview,recordOwnerOrderReview} from '../services/owner-order-review.js';
 import {decideAmendment} from '../services/order-amendments.js';
 import {saveQuoteDraftSchema,saveQuoteDraft,quoteDraftRow} from '../services/order-quote-drafts.js';
 import {orderQuoteSchema,offerOrderQuote,orderQuoteReply} from '../services/order-quotes.js';
+import {finalBillFilename,finalBillPdf,finalBillRecipient,readFinalBill,sendSavedOrderBill} from '../services/final-order-bill.js';
 import {queueOrderNotice} from '../services/order-notices.js';
 import {customerCopy} from '../../../../packages/contracts/customer-copy.js';
 import {formatMoney,lineTotal} from '../../../../packages/contracts/money.js';
@@ -153,7 +154,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     const client=await pool.connect();
     try{
       await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
-      const store=(await client.query('SELECT id,name,synthetic,operator_paused,operator_revision,inventory_policy FROM stores WHERE id=$1',[owner.storeId])).rows[0];
+      const store=(await client.query('SELECT id,name,synthetic,operator_paused,operator_revision,inventory_policy,bill_address FROM stores WHERE id=$1',[owner.storeId])).rows[0];
       const {conversations,inboxPage,conversationCounts}=includeInbox?await(async()=>{
       const conversationQuery=`SELECT c.id,c.actor,w.profile_name AS customer_name,w.recipient AS customer_phone,c.operator_mode,c.operator_revision,${read.scope==='inbox'?'':'c.reply_language,c.draft,c.version,'}
         ${needsReplySql} AS needs_reply,${chatUnreadSql} AS unread_count,
@@ -183,10 +184,22 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       return {conversations,inboxPage,conversationCounts};
       })():{conversations:[],inboxPage:{number:1,size:25,total:0,ids:[],hasNext:false},conversationCounts:{total:0,help:0,checkouts:0}};
       const {requests,requestCounts,orderPage,amendments,quotes}=includeOrders?await(async()=>{
-      const requestQuery=`SELECT r.id,r.conversation_id,c.actor,w.profile_name AS customer_name,w.recipient AS customer_phone,r.acceptance,r.payment,r.fulfillment,
+      const requestQuery=`SELECT r.id,r.conversation_id,c.actor,r.source,coalesce(r.counter_customer_name,w.profile_name) AS customer_name,
+        coalesce(r.counter_customer_phone,w.recipient) AS customer_phone,r.acceptance,r.payment,r.fulfillment,
         ${ownerSimpleStageSql} AS stage,${orderAttentionSql} AS attention_key,${orderUnreadSql} AS unread,
-        r.lines AS original_lines,r.total_paise AS original_total_paise,coalesce(r.effective_total_paise,r.total_paise) AS total_paise,coalesce(r.effective_lines,r.lines) AS lines,r.created_at,r.estimate_complete,r.excluded_line_ids,r.advance_required,r.effective_revision,r.inventory_state,r.inventory_untracked_line_ids,r.packed_revision,a.state AS advance_state,a.amount_paise AS advance_amount_paise,a.claimed_at AS advance_claimed_at,a.verified_at AS advance_verified_at,a.verified_by AS advance_verified_by FROM order_requests r JOIN conversations c ON c.id=r.conversation_id AND c.store_id=r.store_id LEFT JOIN whatsapp_conversations w ON w.conversation_id=c.id LEFT JOIN order_advances a ON a.request_id=r.id WHERE r.store_id=$1`;
-      const orderFilter=` AND ($2::text IS NULL OR $2='all' OR (CASE WHEN $2 IN ('new','ready','completed','cancelled') THEN (${ownerSimpleStageSql}) ELSE (${ownerStageSql}) END)=$2) AND ($3::text='' OR r.id::text ILIKE $4 OR replace(r.id::text,'-','') ILIKE $4 OR r.conversation_id::text ILIKE $4 OR EXISTS(SELECT 1 FROM whatsapp_conversations ow WHERE ow.conversation_id=r.conversation_id AND (ow.profile_name ILIKE $4 OR ('+'||ow.recipient) ILIKE $4)) OR coalesce(r.effective_lines,r.lines)::text ILIKE $4)`;
+        r.lines AS original_lines,r.total_paise AS original_total_paise,coalesce(r.effective_total_paise,r.total_paise) AS total_paise,coalesce(r.effective_lines,r.lines) AS lines,r.created_at,r.estimate_complete,r.excluded_line_ids,r.advance_required,r.effective_revision,r.inventory_state,r.inventory_untracked_line_ids,r.packed_revision,a.state AS advance_state,a.amount_paise AS advance_amount_paise,a.claimed_at AS advance_claimed_at,a.verified_at AS advance_verified_at,a.verified_by AS advance_verified_by,
+        coalesce(w.last_inbound_at <= now() - interval '24 hours',false) AS bill_reply_window_closed,
+        EXISTS(SELECT 1 FROM owner_final_bills b WHERE b.request_id=r.id AND b.revision=r.effective_revision) AS has_final_bill,
+        (SELECT CASE
+          WHEN bool_or(o.state='unknown') THEN 'unknown'
+          WHEN bool_or(o.state IN ('failed','cancelled','blocked')) THEN 'failed'
+          WHEN bool_and(o.state IN ('read','delivered')) THEN 'delivered'
+          WHEN bool_and(o.state IN ('read','delivered','accepted')) THEN 'accepted'
+          ELSE 'queued' END
+        FROM request_notifications n JOIN messages m ON m.reply_group_id=n.message_id JOIN whatsapp_outbox o ON o.message_id=m.id
+        WHERE n.request_id=r.id AND n.status_key=(CASE WHEN r.fulfillment='collected' THEN 'event:purchase-invoice-' ELSE 'event:pickup-bill-' END)||r.effective_revision GROUP BY n.message_id) AS bill_delivery
+        FROM order_requests r LEFT JOIN conversations c ON c.id=r.conversation_id AND c.store_id=r.store_id LEFT JOIN whatsapp_conversations w ON w.conversation_id=c.id LEFT JOIN order_advances a ON a.request_id=r.id WHERE r.store_id=$1`;
+      const orderFilter=` AND ($2::text IS NULL OR $2='all' OR (CASE WHEN $2 IN ('new','ready','completed','cancelled') THEN (${ownerSimpleStageSql}) ELSE (${ownerStageSql}) END)=$2) AND ($3::text='' OR r.id::text ILIKE $4 OR replace(r.id::text,'-','') ILIKE $4 OR r.conversation_id::text ILIKE $4 OR r.counter_customer_name ILIKE $4 OR r.counter_customer_phone ILIKE $4 OR EXISTS(SELECT 1 FROM whatsapp_conversations ow WHERE ow.conversation_id=r.conversation_id AND (ow.profile_name ILIKE $4 OR ('+'||ow.recipient) ILIKE $4)) OR coalesce(r.effective_lines,r.lines)::text ILIKE $4)`;
       const orderValues=[owner.storeId,read.orderStage??null,read.orderSearch,ownerSearchPattern(read.orderSearch)];
       const orderTotal=Number((await client.query('SELECT count(*)::int AS total FROM order_requests r WHERE r.store_id=$1'+orderFilter,orderValues)).rows[0].total);
       const orderLimit=read.orderStage?ownerReadPageSize:100,orderOffset=(read.orderPage-1)*orderLimit;
@@ -195,9 +208,9 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       if(read.order&&!requests.some(r=>r.id===read.order))requests.push(...(await client.query(requestQuery+' AND r.id=$2',[owner.storeId,read.order])).rows);
       for(const request of requests)request.original_estimate=originalEstimateSnapshot(request.original_lines);
       const requestSkus=[...new Set(requests.flatMap(r=>(r.lines as OrderRequest['lines']).flatMap(l=>l.sku?[l.sku]:[])))];
-      const stockProducts=requestSkus.length?(await client.query(`SELECT ${productColumns} FROM products WHERE store_id=$1 AND sku=ANY($2::text[])`,[owner.storeId,requestSkus])).rows.map(productFromRow):[];
+      const stockProducts=requestSkus.length?(await client.query(`SELECT ${productColumns},active FROM products WHERE store_id=$1 AND sku=ANY($2::text[])`,[owner.storeId,requestSkus])).rows.map(row=>({...productFromRow(row),active:row.active})):[];
       const reservations=requests.length?(await client.query("SELECT request_id,sku,quantity FROM inventory_reservations WHERE store_id=$1 AND request_id=ANY($2::uuid[]) AND state='active'",[owner.storeId,requests.map(r=>r.id)])).rows:[];
-      for(const r of requests)r.inventory=stockProducts.filter(p=>(r.lines as OrderRequest['lines']).some(l=>l.sku===p.sku)).map(p=>({sku:p.sku,name:p.name,unit:p.unit,onHand:p.stockOnHand,reserved:p.stockReserved,available:p.stock,held:Number(reservations.find(h=>h.request_id===r.id&&h.sku===p.sku)?.quantity??0),version:p.version,hasPhoto:!!p.imageUrl}));
+      for(const r of requests)r.inventory=stockProducts.filter(p=>(r.lines as OrderRequest['lines']).some(l=>l.sku===p.sku)).map(p=>({sku:p.sku,name:p.name,unit:p.unit,active:p.active,quantityStep:p.quantityStep,onHand:p.stockOnHand,reserved:p.stockReserved,available:p.stock,held:Number(reservations.find(h=>h.request_id===r.id&&h.sku===p.sku)?.quantity??0),version:p.version,hasPhoto:!!p.imageUrl}));
       const requestCounts=(await client.query(`SELECT count(*) FILTER(WHERE ${ownerActiveSql})::int AS active,count(*) FILTER(WHERE NOT ${ownerActiveSql})::int AS history,
         count(*) FILTER(WHERE (${ownerStageSql})='review')::int AS review,count(*) FILTER(WHERE (${ownerStageSql})='customer')::int AS customer,count(*) FILTER(WHERE (${ownerStageSql})='ready')::int AS ready,
         count(*) FILTER(WHERE r.acceptance IN ('awaiting_approval','accepted') AND r.fulfillment NOT IN ('ready_for_pickup','collected','cancelled'))::int AS new,
@@ -343,15 +356,56 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       return updated.rows[0];
     });
   });
+  app.post('/api/owner/requests',async(request,reply)=>{
+    const input=inStoreOrderSchema.safeParse(request.body);
+    if(!input.success)return reply.code(400).send({error:'Review the quantities and prices, and use an international number such as +91 if adding a phone.'});
+    return write('counter_order_create',input.data.id,client=>createInStoreOrder(client,{storeId:owner.storeId,actor:owner.email},input.data));
+  });
+  app.get<{Params:{id:string}}>('/api/owner/requests/:id/bills',async(request,reply)=>{
+    if(!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Check the order reference.'});
+    const bills=(await pool.query(`SELECT b.revision,b.issued_at,b.total_paise FROM owner_final_bills b
+      JOIN order_requests r ON r.id=b.request_id WHERE r.store_id=$1 AND r.id=$2 ORDER BY b.revision DESC`,[owner.storeId,request.params.id])).rows;
+    return {bills};
+  });
+  app.get<{Params:{id:string}}>('/api/owner/requests/:id/bill',async(request,reply)=>{
+    const query=z.object({revision:z.coerce.number().int().positive().optional(),mode:z.enum(['print','download']).default('print')}).strict().safeParse(request.query);
+    if(!uuid.safeParse(request.params.id).success||!query.success)return reply.code(400).send({error:'Check the bill reference.'});
+    const client=await pool.connect();
+    try{
+      const bill=await readFinalBill(client,owner.storeId,request.params.id,query.data.revision);
+      if(!bill)return reply.code(404).send({error:'A final bill has not been saved for this revision.'});
+      const disposition=query.data.mode==='download'?'attachment':'inline';
+      reply.header('Content-Disposition',`${disposition}; filename="${finalBillFilename(bill)}"`);
+      return reply.type('application/pdf').send(await finalBillPdf(bill));
+    }finally{client.release();}
+  });
+  app.post<{Params:{id:string}}>('/api/owner/requests/:id/bill/recipient',async(request,reply)=>{
+    const query=z.object({phone:z.string().regex(/^\+[1-9][0-9]{7,14}$/).optional()}).strict().safeParse(request.body);
+    if(!uuid.safeParse(request.params.id).success||!query.success)return reply.code(400).send({error:'Enter the customer’s WhatsApp number with its country code.'});
+    const client=await pool.connect();
+    try{
+      const contact=await finalBillRecipient(client,owner.storeId,request.params.id,query.data,config.whatsapp);
+      if(!contact||!config.whatsapp?.sendEnabled||!recipientAllowed(config.whatsapp,contact.recipient)){
+        return {reason:'No eligible WhatsApp chat was found for this number.'};
+      }
+      if(Date.now()-new Date(contact.last_inbound_at).getTime()>=24*3600000)return {reason:'The 24-hour WhatsApp reply window is closed.'};
+      return {conversationId:contact.id,name:contact.profile_name,phone:'+'+contact.recipient};
+    }finally{client.release();}
+  });
+  app.post<{Params:{id:string}}>('/api/owner/requests/:id/bill/send',async(request,reply)=>{
+    const input=z.object({expectedRevision:z.number().int().positive(),conversationId:uuid.optional(),customerOptedIn:z.boolean().optional()}).strict().safeParse(request.body);
+    if(!uuid.safeParse(request.params.id).success||!input.success)return reply.code(400).send({error:'Refresh the order before sending the final bill.'});
+    return write('send_final_bill',request.params.id,client=>sendSavedOrderBill(client,owner.storeId,request.params.id,input.data,config.whatsapp));
+  });
   app.post<{Params:{id:string}}>('/api/owner/requests/:id/review',async(request,reply)=>{
     const parsed=ownerOrderReviewSchema.safeParse(request.body);
     if(!parsed.success||!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Review each item with its current quantity, selling unit, and price.'});
     return write('order_review',request.params.id,client=>reviewOwnerOrder(client,{storeId:owner.storeId,actor:owner.email},request.params.id,parsed.data,config.whatsapp));
   });
   app.post<{Params:{id:string}}>('/api/owner/requests/:id/complete',async(request,reply)=>{
-    const parsed=z.object({expectedRevision:z.number().int().positive()}).strict().safeParse(request.body);
+    const parsed=z.object({expectedRevision:z.number().int().positive(),notify:z.boolean().default(true)}).strict().safeParse(request.body);
     if(!parsed.success||!uuid.safeParse(request.params.id).success)return reply.code(400).send({error:'Refresh the ready order before completing it.'});
-    return write('order_complete',request.params.id,client=>completeOwnerOrder(client,{storeId:owner.storeId,actor:owner.email},request.params.id,parsed.data));
+    return write('order_complete',request.params.id,client=>completeOwnerOrder(client,{storeId:owner.storeId,actor:owner.email},request.params.id,parsed.data,config.whatsapp));
   });
   app.post<{Params:{id:string}}>('/api/owner/requests/:id/decision',async(request,reply)=>{
     const input=z.object({decision:z.enum(['accepted','rejected']),notify:z.boolean().default(false)}).strict().safeParse(request.body);

@@ -1,0 +1,23 @@
+{
+  "cases": [
+    {
+      "id": "synthetic-identity-correction-preserves-known-count",
+      "messages": [
+        {"kind":"text","text":"மூன்று கட்டிங் பிளேடு வேணும். ஒரு மரக்கிளை வெட்டும் கருவியும் வேணும்."},
+        {"kind":"text","text":"கட்டிங் பிளேடு இல்ல, வயரை வெட்டுற கட்டிங் பிளேயர் வேணும்."}
+      ],
+      "expected": {"draftCount":2,"counts":[3,1],"minimumPhotoCandidates":[1,0],"candidateNameIncludes":["plier",null],"orders":0}
+    },
+    {
+      "id": "synthetic-five-turn-edit-cycle",
+      "messages": [
+        {"kind":"text","text":"மூன்று கட்டிங் பிளேடு வேணும். ஒரு மரக்கிளை வெட்டும் கருவியும் வேணும்."},
+        {"kind":"text","text":"கட்டிங் பிளேடு இல்ல, வயரை வெட்டுற கட்டிங் பிளேயர் வேணும்."},
+        {"kind":"text","text":"கட்டிங் பிளேயர் மொத்தம் ஐந்து பீஸ் ஆக மாற்றுங்க."},
+        {"kind":"text","text":"மரக்கிளை வெட்டும் கருவியை மட்டும் நீக்குங்க."},
+        {"kind":"text","text":"கட்டிங் பிளேயரை ரிமூவ் பண்ண வேண்டாம். அது அப்படியே இருக்கட்டும்."}
+      ],
+      "expected": {"draftCount":1,"counts":[5],"minimumPhotoCandidates":[1],"candidateNameIncludes":["plier"],"orders":0}
+    }
+  ]
+}

@@ -8,7 +8,7 @@ import {catalogPhoto} from './catalog-photos.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {eventSchema,type SimulatorEvent} from '../../../../packages/contracts/index.js';
 import {say} from '../../../../packages/contracts/language.js';
-import {renderWhatsAppReply} from './whatsapp-reply.js';
+import {renderWhatsAppReply,WhatsAppRenderError} from './whatsapp-reply.js';
 import {plainReply} from './replies.js';
 import {shoppingButton} from './shopping-flow.js';
 import {z} from 'zod';
@@ -52,15 +52,19 @@ export class WhatsAppChannel {
         await client.query('UPDATE messages SET payload=$1::jsonb WHERE id=$2',[JSON.stringify(rich),messageId]);
       }
       const revision=(await client.query('SELECT operator_revision FROM conversations WHERE id=$1',[ctx.conversationId])).rows[0].operator_revision;
-      const state=await loadState(client,ctx),memory=await loadAssistantMemory(client,ctx);
+      let state=await loadState(client,ctx);const memory=await loadAssistantMemory(client,ctx);
       let rendered;
       try{rendered=renderWhatsAppReply(rich,messageId,config.hostname);}
-      catch{
+      catch(error){
+        const code=error instanceof WhatsAppRenderError?error.code:'unexpected';
+        console.error(JSON.stringify({event:'whatsapp_render_failed',messageId,code,cards:rich.parts?.map(p=>p.cards.length),buttons:rich.parts?.map(p=>p.cards.map(c=>c.buttons?.length??p.buttons?.length??0))}));
         // Do not leave consent live for a review which was never displayed.
         if(rich.kind==='order_review'||rich.parts)await client.query('UPDATE conversations SET pending=NULL WHERE id=$1',[ctx.conversationId]);
-        const fallback=plainReply(say(state,'Your list is kept, but this reply has too many details to show safely in one message. Tell me which item to edit or remove, then review the list again.','உங்கள் பட்டியல் உள்ளது. ஒரே செய்தியில் காட்ட விவரங்கள் அதிகமாக உள்ளன. மாற்ற அல்லது நீக்க வேண்டிய பொருளைச் சொல்லுங்கள்; பிறகு பட்டியலை மீண்டும் பார்க்கலாம்.','Unga list irukku. Ore message-la kaatta details adhigam. Edit illa remove panna porulai sollunga; piragu list-ai marubadi paarunga.'));
-        fallback.replyLanguage=state.replyLanguage;
-        await client.query('UPDATE messages SET text=$1,payload=$2::jsonb WHERE id=$3',[fallback.text,JSON.stringify(fallback),messageId]);
+        state=await loadState(client,ctx);
+        const fallback=plainReply(say(state,'Your list is saved. I couldn’t display this reply. Tap *Show list* to try again.','பட்டியல் சேமிக்கப்பட்டது. இந்தப் பதிலைக் காட்ட முடியவில்லை. மீண்டும் பார்க்க *பட்டியலைக் காட்டு* தட்டுங்கள்.','List save aayirukku. Intha reply-ai kaatta mudiyala. Marubadi paakka *List kaattu* tap pannunga.'));
+        fallback.replyLanguage=state.replyLanguage;fallback.stage='error';fallback.clarificationReason='render_'+code;
+        if(state.draft.length)fallback.buttons=[shoppingButton(state,'view_list',say(state,'Show list','பட்டியலைக் காட்டு','List kaattu'))];
+        await client.query('UPDATE messages SET text=$1,payload=$2::jsonb,stage=$3,clarification_reason=$4 WHERE id=$5',[fallback.text,JSON.stringify(fallback),fallback.stage,fallback.clarificationReason,messageId]);
         rendered=renderWhatsAppReply(fallback,messageId,config.hostname);
       }
       await client.query('INSERT INTO whatsapp_outbox(message_id,conversation_id,operator_revision,reply_payload,sender_kind) VALUES($1,$2,$3,$4::jsonb,$5)',[messageId,ctx.conversationId,revision,JSON.stringify(rendered.payload),rich.handoffRequested?'system':'assistant']);
@@ -232,7 +236,7 @@ export class WhatsAppChannel {
         await held.query("UPDATE messages SET status='processed' WHERE id=$1",[row.message_id]);
         const state=await loadState(held,ctx),memory=await loadAssistantMemory(held,ctx),reply=plainReply(row.kind==='voice'?say(state,mediaError==='media_duration_invalid'?'Please send a voice note up to 90 seconds; your list is kept.':mediaError==='media_decode_timeout'?'Audio processing took too long. Your list is kept. Please try a shorter voice note or send text.':'That voice note did not open; your list is kept.',mediaError==='media_duration_invalid'?'90 seconds-க்குள்ள voice அனுப்புங்க. உங்க list அப்படியே இருக்கு.':mediaError==='media_decode_timeout'?'Voice process பண்ண நேரம் ஆகிடுச்சு. உங்க list அப்படியே இருக்கு. சின்ன voice அல்லது text அனுப்புங்க.':'Voice-ஐ open பண்ண முடியல. உங்க list அப்படியே இருக்கு.',mediaError==='media_duration_invalid'?'90 seconds-kulla voice anuppunga. Unga list appadiye irukku.':mediaError==='media_decode_timeout'?'Voice process panna neram aagiduchu. Unga list appadiye irukku. Chinna voice illa text anuppunga.':'Voice-ai open panna mudiyala. Unga list appadiye irukku.'):say(state,'That photo did not open; your list is kept.','அந்தப் படத்தைத் திறக்க முடியவில்லை; உங்கள் பட்டியல் உள்ளது.','Antha photo-ai thirakka mudiyala; unga list irukku.')),replyId=randomUUID();
         reply.replyLanguage=state.replyLanguage;
-        reply.buttons=[shoppingButton(state,'browse',say(state,'Browse items','பொருட்களைப் பார்','Porutkal paaru')),shoppingButton(state,'handoff',say(state,'Talk to shop','கடையிடம் பேசு','Kadaiyila pesu'))];
+        reply.buttons=[shoppingButton(state,'browse',say(state,'Browse catalog','கடை வகைகள் பார்','Kadai vagaigal paaru')),shoppingButton(state,'handoff',say(state,'Talk to shop','கடையிடம் பேசு','Kadaiyila pesu'))];
         const rendered=renderWhatsAppReply(reply,replyId,this.config.hostname);
         await held.query("INSERT INTO messages(id,conversation_id,direction,text,status,response_to,payload) VALUES($1,$2,'outbound',$3,'queued',$4,$5::jsonb)",[replyId,ctx.conversationId,reply.text,row.message_id,JSON.stringify(reply)]);
         await held.query("INSERT INTO whatsapp_outbox(message_id,conversation_id,operator_revision,sender_kind,reply_payload) SELECT $1,id,operator_revision,'system',$3::jsonb FROM conversations WHERE id=$2",[replyId,ctx.conversationId,JSON.stringify(rendered.payload)]);
@@ -319,6 +323,7 @@ export class WhatsAppChannel {
         WHERE w.phone_id=$1 AND c.store_id=$2 AND o.state='queued' AND o.next_attempt_at<=now() AND NOT EXISTS(
           SELECT 1 FROM messages earlier JOIN whatsapp_outbox pending ON pending.message_id=earlier.id
           WHERE earlier.conversation_id=m.conversation_id AND earlier.sequence<m.sequence AND pending.operator_revision=o.operator_revision AND pending.state IN ('queued','sending','unknown')
+          AND NOT(pending.state='unknown' AND pending.last_error IS NOT DISTINCT FROM 'bill_superseded')
           AND NOT(pending.state='unknown' AND pending.sender_kind='assistant'
             AND earlier.reply_group_id IS NOT NULL AND m.reply_group_id IS DISTINCT FROM earlier.reply_group_id
             AND (o.sender_kind='assistant' AND EXISTS(SELECT 1 FROM messages old_turn JOIN messages new_turn ON new_turn.id=m.response_to
@@ -348,11 +353,32 @@ export class WhatsAppChannel {
       // can return success while this bounded HTTP request is still in progress.
       await client.query('BEGIN');
       await client.query('SELECT id FROM stores WHERE id=$1 FOR SHARE',[c.storeId]);
+      const delivery=(await client.query('SELECT state FROM whatsapp_outbox WHERE message_id=$1 FOR UPDATE',[row.message_id])).rows[0];
+      if(delivery?.state!=='sending'){await client.query('COMMIT');return true;}
       const controls=(await client.query('SELECT c.operator_mode,c.operator_revision,s.operator_paused FROM conversations c JOIN stores s ON s.id=c.store_id WHERE c.id=$1 FOR UPDATE OF c',[row.conversation_id])).rows[0];
       if(controls.operator_revision!==row.current_revision||row.sender_kind==='assistant'&&(controls.operator_paused||controls.operator_mode==='owner')||row.sender_kind==='owner'&&controls.operator_mode!=='owner'){await this.setDelivery(client,row.message_id,'cancelled','owner_control_changed');await client.query('COMMIT');return true;}
+      let payload=row.reply_payload??{type:'text',text:{preview_url:false,body:row.text}};
+      if(row.document_pdf){
+        const document=payload.type==='interactive'?payload.interactive.header.document:payload.document;
+        const uploaded=await this.uploadBillPdf(row.document_pdf,document.filename);
+        if(uploaded.id===undefined){
+          if(uploaded.retryable&&row.attempts<2){
+            await client.query("UPDATE whatsapp_outbox SET state='queued',next_attempt_at=now()+interval '30 seconds',last_error=$2 WHERE message_id=$1",[row.message_id,uploaded.code]);
+            await client.query("UPDATE messages SET status='queued' WHERE id=$1",[row.message_id]);
+          }else await this.setDelivery(client,row.message_id,'failed',uploaded.code);
+          if(uploaded.auth)await client.query("UPDATE whatsapp_channels SET send_blocked=true,last_error='authentication_or_permission' WHERE phone_id=$1",[c.phoneId]);
+          await client.query('COMMIT');return true;
+        }
+        if(Date.now()-new Date(row.last_inbound_at).getTime()>=24*3600000){
+          await this.setDelivery(client,row.message_id,'blocked','stale_reply_or_closed_window');await client.query('COMMIT');return true;
+        }
+        payload=payload.type==='interactive'
+          ?{...payload,interactive:{...payload.interactive,header:{type:'document',document:{...document,id:uploaded.id}}}}
+          :{...payload,document:{...document,id:uploaded.id}};
+      }
       let response:Response|undefined,data:any,networkError:unknown;
       try{
-        response=await this.request(`https://graph.facebook.com/${c.graphVersion}/${c.phoneId}/messages`,{method:'POST',headers:{authorization:'Bearer '+c.accessToken,'content-type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',recipient_type:'individual',to:row.recipient,...(row.reply_payload??{type:'text',text:{preview_url:false,body:row.text}}),biz_opaque_callback_data:row.message_id}),signal:AbortSignal.timeout(8000),redirect:'error'});
+        response=await this.request(`https://graph.facebook.com/${c.graphVersion}/${c.phoneId}/messages`,{method:'POST',headers:{authorization:'Bearer '+c.accessToken,'content-type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',recipient_type:'individual',to:row.recipient,...payload,biz_opaque_callback_data:row.message_id}),signal:AbortSignal.timeout(8000),redirect:'error'});
         data=await response.json().catch(()=>null);
       }catch(error){networkError=error;}
       if(!response){
@@ -377,6 +403,27 @@ export class WhatsAppChannel {
       await client.query('COMMIT');
       await this.reconcile();return true;
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
+  }
+  private async uploadBillPdf(pdf:Buffer,filename:string):Promise<
+    {id:string}|{id?:undefined;retryable:boolean;auth?:boolean;code:string}
+  >{
+    const c=this.config;
+    const form=new FormData();
+    form.append('messaging_product','whatsapp');
+    form.append('file',new Blob([new Uint8Array(pdf)],{type:'application/pdf'}),filename);
+    try{
+      const response=await this.request(`https://graph.facebook.com/${c.graphVersion}/${c.phoneId}/media`,{
+        method:'POST',headers:{authorization:'Bearer '+c.accessToken},body:form,signal:AbortSignal.timeout(8000),redirect:'error',
+      });
+      const data=await response.json().catch(()=>null);
+      if(response.ok&&typeof data?.id==='string'&&data.id)return {id:data.id};
+      const code=Number.isInteger(data?.error?.code)?data.error.code:response.status;
+      return {
+        retryable:response.status===429||response.status>=500||response.ok,
+        auth:response.status===401||response.status===403||code===190||code===10||code===200,
+        code:'bill_upload_'+code,
+      };
+    }catch{return {retryable:true,code:'bill_upload_network'};}
   }
   private async setDelivery(client:PoolClient,id:string,state:string,error:string){
     await client.query('UPDATE whatsapp_outbox SET state=$1,last_error=$2 WHERE message_id=$3',[state,error,id]);

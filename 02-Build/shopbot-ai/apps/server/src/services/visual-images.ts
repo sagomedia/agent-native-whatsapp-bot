@@ -6,6 +6,7 @@ import {resolve,join} from 'node:path';
 import type {VisualCard,RichReply} from '../../../../packages/contracts/index.js';
 import {measurementText,productName,referencePhotoLabel,say} from '../../../../packages/contracts/language.js';
 import {buildProductCaption,productPhotoCaption} from '../../../../packages/contracts/channel-text.js';
+import {productMediaUrl} from './whatsapp-reply.js';
 
 export const visualMediaDir=()=>resolve(process.env.VISUAL_MEDIA_DIR??'data/visual-images');
 const escape=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]!));
@@ -40,12 +41,25 @@ function invoiceSvg(card:Exclude<VisualCard,{kind:'product'}>):string {
  const width=1080,ink='#202b30',muted='#647177',rule='#dce2e3',accent='#16665b';
  let y=64,content='';
  const draw=(value:string,x:number,baseline:number,size=24,color=ink,anchor='start')=>shapedText(value,x,baseline,size,color,anchor);
- for(const name of wrapPixels(card.storeName??'Shop',640,32)){content+=draw(name,56,y,32);y+=42;}
- content+=draw(card.invoiceType==='confirmed'?card.title:card.invoiceType==='quote'?'Shop quote':'Estimate',1024,64,30,accent,'end');
- content+=draw('INR',1024,102,20,muted,'end');
- if(card.reference){content+=draw(card.reference,56,y+10,20,muted);y+=40;}
+ const header=card.billHeader;
+ if(header){
+  content+=`<path d="M0 0H1080V12H0z" fill="${accent}"/><rect x="56" y="42" width="968" height="92" fill="#eef6f3"/>`;
+  content+=draw(card.title,78,100,37,accent);
+  if(header.page)content+=draw(header.page,1002,99,22,accent,'end');
+  y=183;
+  for(const name of wrapPixels(card.storeName??'Shop',950,33)){content+=draw(name,72,y,33);y+=42;}
+  for(const detail of [header.address,...header.details??[],[card.reference,header.date].filter(Boolean).join('  •  ')]){
+   if(!detail)continue;
+   for(const row of wrapPixels(detail,940,23)){content+=draw(row,72,y,23,muted);y+=32;}
+  }
+ }else{
+  for(const name of wrapPixels(card.storeName??'Shop',640,32)){content+=draw(name,56,y,32);y+=42;}
+  content+=draw(card.invoiceType==='confirmed'?card.title:card.invoiceType==='quote'?'Shop quote':'Estimate',1024,64,30,accent,'end');
+  content+=draw('INR',1024,102,20,muted,'end');
+  if(card.reference){content+=draw(card.reference,56,y+10,20,muted);y+=40;}
+ }
  y=Math.max(y+24,156);content+=`<path d="M56 ${y}H1024" stroke="${ink}" stroke-width="2"/>`;y+=42;
- content+=draw('Item / pack',72,y,22,muted)+draw('Qty',724,y,22,muted,'end')+draw('Rate',868,y,22,muted,'end')+draw('Amount',1008,y,22,muted,'end');
+ content+=draw('Item / pack',72,y,22,muted)+draw('Qty',724,y,22,muted,'end')+draw(header?'Price each':'Rate',868,y,22,muted,'end')+draw('Amount',1008,y,22,muted,'end');
  y+=18;content+=`<path d="M56 ${y}H1024" stroke="${rule}"/>`;
  for(const row of card.billRows??[]){
   const identity=(value:string)=>value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{M}\p{N}]/gu,'');
@@ -63,9 +77,11 @@ function invoiceSvg(card:Exclude<VisualCard,{kind:'product'}>):string {
   y=Math.max(baseline,top+quantity.length*28)+14;content+=`<path d="M56 ${y}H1024" stroke="${rule}"/>`;
  }
  y+=38;
- for(const paragraph of card.lines){for(const line of wrapPixels(paragraph,920,20)){content+=draw(line,72,y,20,muted);y+=29;}}
+ for(const paragraph of [...card.lines,...header?.summary??[]]){for(const line of wrapPixels(paragraph,920,20)){content+=draw(line,72,y,20,muted);y+=29;}}
  if(card.total){
-  y+=24;content+=`<path d="M56 ${y}H1024" stroke="${ink}" stroke-width="2"/>`;y+=42;
+  y+=24;
+  content+=header?`<rect x="56" y="${y}" width="968" height="73" fill="#eef6f3"/>`:`<path d="M56 ${y}H1024" stroke="${ink}" stroke-width="2"/>`;
+  y+=header?48:42;
   const money=/^(.*):\s*(₹[\d,.]+)$/.exec(card.total);
   if(money){for(const line of wrapPixels(money[1],Math.max(240,920-textWidth(money[2],34)-28),24)){content+=draw(line,72,y,24,accent);y+=34;}content+=draw(money[2],1008,y-34,34,ink,'end');}
   else for(const line of wrapPixels(card.total,920,26)){content+=draw(line,72,y,26,accent);y+=36;}
@@ -115,7 +131,7 @@ export function visualSvg(card:Exclude<VisualCard,{kind:'product'}>):string {
 }
 const renderCache=new Map<string,string>();
 export function renderVisualImage(card:Exclude<VisualCard,{kind:'product'}>,directory=visualMediaDir()):string {
- const key=createHash('sha256').update(JSON.stringify({title:card.title,reviewGuide:card.reviewGuide,invoiceType:card.invoiceType,footer:card.footer,lines:card.lines,billRows:card.billRows,total:card.total,reference:card.reference,storeName:card.storeName})).digest('hex');
+ const key=createHash('sha256').update(JSON.stringify({title:card.title,reviewGuide:card.reviewGuide,invoiceType:card.invoiceType,billHeader:card.billHeader,footer:card.footer,lines:card.lines,billRows:card.billRows,total:card.total,reference:card.reference,storeName:card.storeName})).digest('hex');
  const cached=renderCache.get(directory+'|'+key);if(cached&&existsSync(join(directory,cached.split('/').at(-1)!)))return cached;
  const svg=visualSvg(card),hash=createHash('sha256').update('visual-v6\0'+svg).digest('hex'),filename=hash+'.png';
  mkdirSync(directory,{recursive:true});const path=join(directory,filename);
@@ -133,8 +149,8 @@ export function materializeVisualReply(reply:RichReply,directory=visualMediaDir(
  if(!reply.parts)return reply;
  const language=reply.replyLanguage??'en';
  return {...reply,parts:reply.parts.map(part=>({...part,cards:part.cards.map(card=>{
-  if(card.kind!=='product')return {...card,imageUrl:card.imageUrl??renderVisualImage({...card,storeName:reply.storeName},directory)};
-  if(card.product.imageUrl)return card;
+  if(card.kind!=='product')return productMediaUrl(card.imageUrl)?card:{...card,imageUrl:renderVisualImage({...card,storeName:reply.storeName},directory)};
+  if(productMediaUrl(card.product.imageUrl))return card;
   const missing=say(language,'Photo unavailable','படம் இல்லை','Padam illai');
   const name=productName(card.product,language),size=measurementText(card.product.specifications?.size??card.product.specifications?.weight??'',language);
   const reference=referencePhotoLabel(card.product,language);

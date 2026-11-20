@@ -1,5 +1,8 @@
 /** Fractions are parsed as a whole; a denominator can never become the size. */
 const fractions:Record<string,number>={'½':.5,'¼':.25,'¾':.75,'⅛':.125,'⅜':.375,'⅝':.625,'⅞':.875};
+// Compact capital M can be a product identifier. Spaced M and lower-case m
+// remain valid units in free text, and an explicitly typed unit parses normally.
+export const compactMetreIdentifier=(text:string)=>/^\d+M$/.test(text);
 export const measurementUnitPattern = 'lit(?:re|er)s?|ltr?s?|l|லிட்டர்|லிட்டரு|inch(?:es)?|இன்ச்|இஞ்ச்|அங்குலம்|mm|cm|ml|kilograms?|kilos?|kgs?|g|கிலோ|கிராம்|met(?:re|er)s?|mtrs?|m|மீட்டர்|மீட்ர்|feet|foot|ft|அடி';
 export function canonicalMeasurementUnit(value: string): string {
  const unit = value.toLowerCase();

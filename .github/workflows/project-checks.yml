@@ -65,3 +65,5 @@ jobs:
         run: npx tsx --test --test-concurrency=2 tests/*.test.ts
       - name: Validate catalog preparation
         run: python3 -m unittest discover -s scripts -p 'test_catalog_cleanup.py'
+      - name: Validate local domain routing and restoration
+        run: python3 -m unittest discover -s deploy/native -p 'test_local_route.py'

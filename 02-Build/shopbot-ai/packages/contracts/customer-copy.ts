@@ -3,7 +3,7 @@ import {languageOf,type LanguageContext} from './language.js';
 // Customer wording is reviewed independently of the business action. Values
 // are backend facts; the model never rewrites an estimate or payment state.
 const copy = {
- welcome: ['Welcome! What items do you need?\n\nSend a voice note, text, or a photo.', 'வணக்கம்! என்னென்ன பொருள் வேணும்?\n\nVoice-ல சொல்லி அனுப்புங்க.\nText அல்லது photo அனுப்பினாலும் சரி.', 'Vanakkam! Ennenna porul venum?\n\nVoice-la solli anuppunga.\nText illa photo anuppinaalum sari.'],
+ welcome: ['What do you need? Type a message, send a voice note, or share a photo.', 'என்ன பொருள் வேணும்? மெசேஜ், வாய்ஸ் நோட் அல்லது படம் அனுப்புங்க.', 'Enna porul venum? Message, voice note illa photo anuppunga.'],
  help: ['What are you working on? You can send a voice note or photo.', 'என்ன வேலைக்கு பொருள் வேணும்?\nVoice அல்லது photo அனுப்பலாம்.', 'Enna velaikku porul venum?\nVoice illa photo anuppalaam.'],
  check: ['Is this the product you meant?', 'இந்த photo-ல இருக்குறது சரியா?', 'Intha photo-la irukkurathu sariyaa?'],
  quantity: ['How many {unit} of {item} do you need?', '{item} எத்தனை {unit} வேணும்?', '{item} eththanai {unit} venum?'],
@@ -34,6 +34,7 @@ const copy = {
  takeover: ['Your message is with the shop owner. They will reply here.', 'உங்க message-ஐ கடைக்காரருக்கு அனுப்பியிருக்கேன்.\nஇனி கடையிலிருந்து இங்க பதில் சொல்வாங்க.', 'Unga message-ai kadaikkaararukku anuppiyirukken.\nIni kadaiyilirunthu inga bathil solvaanga.'],
  refundNeeded: ['Your ₹10 arrived after the order closed. The shop needs to arrange a refund.', 'Order முடிஞ்ச பிறகு ₹10 வந்திருக்கு.\nகடை refund பண்ணணும்.', 'Order mudinja piragu ₹10 vanthirukku. Kadai refund pannanum.'],
  refundComplete: ['Your ₹10 advance refund is recorded as completed by the shop.', '₹10 advance refund complete ஆகியிருக்குனு கடை confirm பண்ணியிருக்கு.', '₹10 advance refund complete aagiyirukkunnu kadai confirm panniyirukku.'],
+ inventoryCheckIncomplete: ['I couldn’t finish checking the catalog for your request. Your list is kept. Please try sending your request again shortly.', 'உங்கள் கோரிக்கைக்காகப் பொருள் பட்டியலை முழுமையாகச் சரிபார்க்க முடியவில்லை. உங்கள் பட்டியல் பாதுகாப்பாக உள்ளது. சிறிது நேரம் கழித்து உங்கள் கோரிக்கையை மீண்டும் அனுப்புங்கள்.', 'Unga request-ku catalog check panna mudiyala. Unga list appadiye irukku. Konjam neram kazhichchu request-ai marubadi anuppunga.'],
  voiceUnclear: ['I could not make out the recording. Please record it again or type your request.', 'குரல் தெளிவாகப் புரியவில்லை.\nமீண்டும் voice அனுப்புங்க அல்லது text-ல சொல்லுங்க.', 'Voice theliva puriyala. Marubadi voice anuppunga illa text-la sollunga.'],
  voiceProcessing: ['Could not process that voice message.\nYour list is kept.\nTry again or send text.', 'குரல் செய்தியைச் செயலாக்க முடியவில்லை.\nபட்டியல் அப்படியே இருக்கு.\nமீண்டும் முயலுங்க அல்லது text அனுப்புங்க.', 'Voice message-ai process panna mudiyala.\nList appadiye irukku.\nMarubadi try pannunga illa text anuppunga.'],
  voiceError: ['I could not understand that voice note. Send it again, or type the unclear item.', 'Voice தெளிவா புரியல.\n\nமறுபடியும் voice அனுப்புங்க.\nஇல்ல அந்த item-ஐ text-ல சொல்லுங்க.', 'Voice theliva puriyala.\n\nMarubadi voice anuppunga.\nIlla antha item-ai text-la sollunga.'],

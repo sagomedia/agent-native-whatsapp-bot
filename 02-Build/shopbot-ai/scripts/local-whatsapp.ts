@@ -38,6 +38,7 @@ async function main(){
  const config=readConfig(),wa=config.whatsapp;
  if(!wa||!config.owner||wa.audience!=='test'||!wa.recipients.length||wa.storeId!==localCatalogStore||config.owner.storeId!==localCatalogStore||config.host!=='127.0.0.1'||config.port!==3018||wa.advance||!wa.visualOrdering||!wa.aiEnabled||!wa.mediaEnabled||!wa.processEnabled||!wa.sendEnabled||process.env.GEMINI_UNIFIED_UNDERSTANDING_ENABLED!=='true'||process.env.ALLOW_LOCAL_AI_TEST==='true'||process.env.SHOPBOT_MCP_PUBLIC_URL)throw new Error('The local connected profile must use its local snapshot, test recipients, loopback:3018, unified visual/media AI and no payment or MCP endpoints.');
  if(!wa.paidEnabled||wa.budgetMicrousd!==500000)throw new Error('Local WhatsApp testing requires the approved cumulative $0.50 allowance.');
+ if(config.owner.hostname!=='shopbot-local.sagoautomation.tech'||wa.hostname!=='shopbot-local-api.sagoautomation.tech'||wa.path!=='/webhook')throw new Error('Use the separate local dashboard/channel hostnames and the existing /webhook path. See LOCAL-DEVELOPMENT.md.');
  remote('true');
  const pool=new pg.Pool({connectionString:config.databaseUrl,max:1});
  try{
@@ -48,14 +49,16 @@ async function main(){
  if(action==='check')return;
  // Refuse to replace an existing local process.
  await new Promise<void>((done,reject)=>{const server=createServer();server.once('error',()=>reject(new Error('Port 3018 is occupied. Stop the other development server first.')));server.listen(3018,'127.0.0.1',()=>server.close(error=>error?reject(error):done()));});
- await runRemote(`sudo python3 ${remoteScript} check`);
+ // Older helpers moved the VPS dashboard too. Refuse that protocol before
+ // starting a backend/tunnel rather than silently using shared hostnames.
+ await runRemote(`sudo python3 ${remoteScript} check-separated`);
  await mkdir('data/logs',{recursive:true,mode:0o700});
  const log=await open('data/logs/local-whatsapp.log','a',0o600);
  const backend=spawn(process.execPath,['--watch','--import','tsx','apps/server/src/index.ts'],{stdio:['ignore',log.fd,log.fd],detached:true,env:process.env});
  let tunnel:ChildProcess|undefined,stopping=false,routed=false;
  const cleanup=async()=>{
   if(stopping)return;stopping=true;
-  try{if(tunnel){await runRemote(restoreCommand);console.log('The dashboard and WhatsApp are back on the VPS.');}}
+  try{if(tunnel){await runRemote(restoreCommand);console.log('WhatsApp is back on the VPS. The local test domains are offline.');}}
   catch{console.error('Could not confirm VPS restoration. The remote watchdog restores after the tunnel closes. Run npm run whatsapp:restore to verify.');process.exitCode=1;}
   finally{tunnel?.kill('SIGTERM');if(backend.pid)try{process.kill(-backend.pid,'SIGTERM');}catch{}await log.close();}
  };

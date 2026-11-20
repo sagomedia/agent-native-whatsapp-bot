@@ -9,11 +9,12 @@ export type SpeechRecognizerSettings={apiKey:string;model?:string;budgetMicrousd
 export type SpeechRequest=Interactions.CreateModelInteractionParamsNonStreaming;
 export type SpeechTransport={create(request:SpeechRequest,options:{signal:AbortSignal;timeout:number;maxRetries:number}):Promise<Interactions.Interaction>};
 
-/** Recognizes only the current audio. Shopping context never reaches ASR. */
+/** Recognizes only the current audio with a saved language hint.
+ * Shopping history and catalog facts never reach ASR. */
 export class GoogleSpeechRecognizer implements Interpreter {
  readonly mode='live' as const;
  readonly supportsAudio=true;
- readonly name=`google:${geminiSpeechRate.model}:verbatim-v1`;
+ readonly name=`google:${geminiSpeechRate.model}:verbatim-language-v2`;
  readonly billing:RateCard={...geminiSpeechRate};
  private readonly transport:SpeechTransport;
  constructor(settings:SpeechRecognizerSettings,transport?:SpeechTransport){
@@ -26,7 +27,11 @@ export class GoogleSpeechRecognizer implements Interpreter {
  }
  prepareInput(input:InterpretationInput){
   validateRateCard(this.billing);this.validateInput(input);
-  const request:SpeechRequest={model:this.billing.model,store:false,input:[{type:'audio',mime_type:'audio/wav',data:input.audio!.data}],generation_config:{max_output_tokens:this.billing.maxOutputTokens,transcription_config:{mode:{type:'verbatim'}}}};
+  // A language preference is a recognition hint, never a translation request.
+  // Tamil customers commonly mix English shop names into Tamil sentences.
+  const language=input.state.replyLanguage;
+  const languageCodes=language==='ta'||language==='ta-Latn'?['ta-IN','en-IN']:language==='en'?['en-IN']:undefined;
+  const request:SpeechRequest={model:this.billing.model,store:false,input:[{type:'audio',mime_type:'audio/wav',data:input.audio!.data}],generation_config:{max_output_tokens:this.billing.maxOutputTokens,transcription_config:{mode:{type:'verbatim'},...(languageCodes?{language_codes:languageCodes}:{})}}};
   const admission=admitInferenceRequest(request,this.billing.maxOutputTokens);
   return {admission,interpret:async(signal:AbortSignal):Promise<ProviderResult>=>{
    // One SDK/HTTP request per committed attempt; retry only in the runtime.

@@ -130,7 +130,10 @@ export function editMeasuresMatch(source:string,line:DraftLine):boolean {
  // it only for edit-size comparison, never for purchase-count extraction.
  const measures=spokenMeasures(source.replace(/\b(\d+(?:\.\d+)?)\s*in\b/giu,'$1 inch')).filter(measure=>['inch','mm','cm','m','foot','litre','ml','kg','g'].includes(measure.unit));
  const product=line.candidates?.find(product=>product.sku===line.sku),known=[...line.productMeasures??[],...(line.packSize?[line.packSize]:[]),...spokenMeasures([line.query,line.name].join(' ')),...(product?catalogMeasures(product):[])];
- return measures.every(measure=>{const comparable=known.filter(value=>convertAmount(value,measure.unit)!==null);return !comparable.length||comparable.some(value=>convertAmount(value,measure.unit)===measure.value);});
+ return measures.every(measure=>{const comparable=known.filter(value=>convertAmount(value,measure.unit)!==null);return !comparable.length||comparable.some(value=>{
+  const converted=convertAmount(value,measure.unit)!;
+  return Math.abs(converted-measure.value)<=Math.max(1,Math.abs(measure.value))*1e-8;
+ });});
 }
 // A normalized model target may translate a name, but cannot override a
 // different product type explicitly named in the current source.

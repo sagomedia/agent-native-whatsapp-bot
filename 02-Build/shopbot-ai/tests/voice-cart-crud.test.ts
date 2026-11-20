@@ -144,7 +144,7 @@ for(const channel of ['text','voice'] as const)test(`a ${channel} answer resumes
 test('an ambiguous spoken answer retains the original pending action and changes no rows',()=>fixture(async(_pool,i,r,output)=>{
  const before=await i.snapshot(),a=before.conversation.draft.find(line=>line.sku==='CRUD-PVC')!;
  output.value={...base,inputKind:'audio',transcript:'remove pipe',proposedEdits:[{kind:'remove_item',sourceText:'remove pipe',targetLineId:a.id}]};await voice(i,r);
- output.value={...base,inputKind:'audio',transcript:'pipe',cartTargetAnswer:{sourceText:'pipe',query:'pipe'}};const after=await voice(i,r);assert.deepEqual(after.conversation.draft,before.conversation.draft);assert.ok(choices(after).length);assert.match(after.messages.at(-1)?.text??'',/remove/);
+ output.value={...base,inputKind:'audio',transcript:'pipe',cartTargetAnswer:{sourceText:'pipe',query:'pipe'}};const after=await voice(i,r);assert.deepEqual(after.conversation.draft,before.conversation.draft);assert.ok(choices(after).length);assert.match(after.messages.at(-1)?.text??'',/நீக்கணும்/);assert.match(after.messages.at(-1)?.text??'',/PVC pipe/);assert.match(after.messages.at(-1)?.text??'',/water pumping pipe/);
 }));
 
 

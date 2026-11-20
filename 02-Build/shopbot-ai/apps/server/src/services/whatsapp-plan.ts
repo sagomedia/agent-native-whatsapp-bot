@@ -23,7 +23,7 @@ export function planWhatsAppReply(reply:RichReply,c:WhatsAppCapabilities):WhatsA
   }
   const cards=reply.cards??[],count=cards.length;
   if(count>10)return blocked('More than ten cards require narrowing; never silently drop or fan out choices.');
-  const visual=cards.every(card=>productMediaUrl(card.product.imageUrl,'catalog.example.test')&&(card.action||reply.buttons?.length));
+  const visual=cards.every(card=>productMediaUrl(card.product.imageUrl)&&(card.action||reply.buttons?.length));
   const carousel=c.allowMarketingCarousel&&c.marketingOptIn===true&&count>=2&&cards.every(card=>card.product.imageUrl)?templates.filter(t=>t.name&&t.cardCount===count&&t.cardCount<=10&&t.micros<=budget).sort((a,b)=>a.micros-b.micros)[0]:undefined;
   if(c.serviceWindowOpen&&service<=budget&&(!carousel||service<=carousel.micros)){
     const format=count?c.mediaCarouselEnabled!==false&&visual?(count===1?'image_buttons':'media_carousel'):c.catalogConnected?(count===1?'single_product':'multi_product'):'list':reply.buttons?.length&&reply.buttons.length<=3?'reply_buttons':'text';

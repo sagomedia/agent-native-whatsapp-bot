@@ -1,36 +1,36 @@
 [
   {
     "stage": "identify",
-    "text": "1 inch pipe — Choose a category",
+    "text": "1 inch pipe · Which *product type*?",
     "cards": [
       {
         "kind": "instruction",
-        "caption": "Garden hoses\n1 matching products\nExample product photo",
+        "caption": "Garden hoses\n1 product\nExample photo",
         "title": "Garden hoses",
         "lines": [
-          "1 matching products",
-          "Example product photo"
+          "1 product",
+          "Example photo"
         ]
       },
       {
         "kind": "instruction",
-        "caption": "PVC pipes\n4 matching products\nExample product photo",
+        "caption": "PVC pipes\n4 products\nExample photo",
         "title": "PVC pipes",
         "lines": [
-          "4 matching products",
-          "Example product photo"
+          "4 products",
+          "Example photo"
         ]
       }
     ],
     "actions": [
       {
-        "label": "Show products",
+        "label": "Garden hoses",
         "type": "refine_search",
         "facet": "family",
         "value": "hose"
       },
       {
-        "label": "Show products",
+        "label": "PVC pipes",
         "type": "refine_search",
         "facet": "family",
         "value": "pvc-pipes"
@@ -74,36 +74,36 @@
   },
   {
     "stage": "identify",
-    "text": "0.75 inch pipe — Choose a category",
+    "text": "0.75 inch pipe · Which *product type*?",
     "cards": [
       {
         "kind": "instruction",
-        "caption": "Garden hoses\n1 matching products\nExample product photo",
+        "caption": "Garden hoses\n1 product\nExample photo",
         "title": "Garden hoses",
         "lines": [
-          "1 matching products",
-          "Example product photo"
+          "1 product",
+          "Example photo"
         ]
       },
       {
         "kind": "instruction",
-        "caption": "PVC pipes\n4 matching products\nExample product photo",
+        "caption": "PVC pipes\n4 products\nExample photo",
         "title": "PVC pipes",
         "lines": [
-          "4 matching products",
-          "Example product photo"
+          "4 products",
+          "Example photo"
         ]
       }
     ],
     "actions": [
       {
-        "label": "Show products",
+        "label": "Garden hoses",
         "type": "refine_search",
         "facet": "family",
         "value": "hose"
       },
       {
-        "label": "Show products",
+        "label": "PVC pipes",
         "type": "refine_search",
         "facet": "family",
         "value": "pvc-pipes"
@@ -112,19 +112,13 @@
   },
   {
     "stage": "products",
-    "text": "Changed 0.75 inch PVC Pipe Local (1 piece)\n5 items",
+    "text": "Changed 0.75 inch PVC Pipe Local (1 piece)\nYour list · 5 items\nMessage or voice note to add, remove or change items.\nIf the photos are right, tap Show bill.",
     "cards": [
       {
         "kind": "instruction",
-        "caption": "Swipe to check → Then tap Show bill.",
-        "title": "5 items",
+        "caption": "If the photos are right, tap Show bill.",
+        "title": "Show bill",
         "lines": [
-          "Check one item at a time",
-          "1. 1 inch PVC Heavy Pipe Local",
-          "2. 0.75 inch PVC Pipe Local",
-          "3. Wall scraper 4 inch",
-          "4. Ratchet PVC Pipe Cutter 42 mm",
-          "5. White paint 10 litre",
           "Estimated total: ₹2,040.00"
         ]
       },
@@ -161,16 +155,7 @@
     ],
     "actions": [
       {
-        "label": "Correct, show bill",
-        "type": "confirm_products"
-      },
-      {
-        "label": "Change items",
-        "type": "shopping_action",
-        "action": "edit_list"
-      },
-      {
-        "label": "Correct, show bill",
+        "label": "Show bill",
         "type": "confirm_products"
       },
       {
@@ -178,32 +163,16 @@
         "type": "edit_item"
       },
       {
-        "label": "Correct, show bill",
-        "type": "confirm_products"
+        "label": "Change this",
+        "type": "edit_item"
       },
       {
         "label": "Change this",
         "type": "edit_item"
       },
       {
-        "label": "Correct, show bill",
-        "type": "confirm_products"
-      },
-      {
         "label": "Change this",
         "type": "edit_item"
-      },
-      {
-        "label": "Correct, show bill",
-        "type": "confirm_products"
-      },
-      {
-        "label": "Change this",
-        "type": "edit_item"
-      },
-      {
-        "label": "Correct, show bill",
-        "type": "confirm_products"
       },
       {
         "label": "Change this",
@@ -213,11 +182,11 @@
   },
   {
     "stage": "bill",
-    "text": "Estimated total: ₹2,040.00",
+    "text": "Estimated total: ₹2,040.00\nMessage or voice note to add, remove or change items.",
     "cards": [
       {
         "kind": "bill",
-        "caption": "Estimated invoice 1 / 1",
+        "caption": "Estimated total: ₹2,040.00\nMessage or voice note to add, remove or change items.",
         "title": "Estimated invoice",
         "lines": [
           "Final availability is checked by the shop"
@@ -264,7 +233,7 @@
     ],
     "actions": [
       {
-        "label": "Send order to shop",
+        "label": "Send to store",
         "type": "confirm"
       },
       {

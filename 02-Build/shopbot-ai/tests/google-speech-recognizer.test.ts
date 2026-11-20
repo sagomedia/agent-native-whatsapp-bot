@@ -26,6 +26,17 @@ test('empty, invalid, incomplete and model-mismatched transcripts cannot produce
  for(const data of ['', '!!!',Buffer.alloc(2880045).toString('base64')])await assert.rejects(new GoogleSpeechRecognizer(settings).interpret({...input,audio:{...input.audio,data}},AbortSignal.timeout(1000)));
  assert.throws(()=>new GoogleSpeechRecognizer({...settings,model:geminiTextRate.model}),/pinned model/);
 });
+test('saved Tamil and Tanglish hint Tamil with English without leaking cart facts or translating the result',async()=>{
+ const captured:SpeechRequest[]=[];
+ const provider=new GoogleSpeechRecognizer(settings,{create:async request=>{captured.push(request);return response('यहां पाइप');}});
+ for(const replyLanguage of ['ta','ta-Latn','en'] as const){
+  const result=await provider.interpret({...input,state:{...input.state,replyLanguage,draft:[{id:'private-line',name:'private old product',quantity:7,resolution:'needs_quantity'}]}},AbortSignal.timeout(1000));
+  assert.equal((result.output as any).transcript,'यहां पाइप');
+ }
+ assert.deepEqual(captured.map(r=>r.generation_config?.transcription_config?.language_codes),[['ta-IN','en-IN'],['ta-IN','en-IN'],['en-IN']]);
+ assert.ok(!JSON.stringify(captured).includes('private old product'));
+ assert.notEqual(provider.prepareInput(input).admission.requestHash,provider.prepareInput({...input,state:{...input.state,replyLanguage:'ta'}}).admission.requestHash);
+});
 test('Transcribe accounting uses its speech rate and holds unknown usage',()=>{
  validateRateCard(geminiSpeechRate,Date.parse('2026-10-21T12:00:00Z'));assert.equal(worstCaseReservation(geminiSpeechRate),57344);
  const result={output:{},truncated:false,responseModel:geminiSpeechRate.model,usage:{promptTokenCount:500,candidatesTokenCount:30,thoughtsTokenCount:0,totalTokenCount:530}};

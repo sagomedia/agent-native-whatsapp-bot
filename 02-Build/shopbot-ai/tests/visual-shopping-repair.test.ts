@@ -54,11 +54,60 @@ test('a spoken viewing request shows the saved products without the old edit que
  const s=await voice(i,r);capture('spoken-view',s);assertVisual(s,['VIS-0','VIS-1','VIS-2']);assert.deepEqual(s.conversation,before);assert.equal(out.calls,1);
 }));
 
-test('a real count edit retains the affected product photo after its old photo was delivered',()=>fixture(async(_pool,i,r,out)=>{
+test('a count edit shows the full cart after its earlier photos were delivered',()=>fixture(async(_pool,i,r,out)=>{
  await text(i,r,'review');const before=(await i.snapshot()).conversation,pipe=before.draft[0];
  out.value={...base,proposedEdits:[{kind:'set_quantity',targetLineId:pipe.id,targetQuery:'PVC pipe',sourceText:'make PVC pipe three',quantity:3}]};
- const s=await text(i,r,'make PVC pipe three');capture('quantity-edit',s);assert.equal(s.conversation.draft[0].quantity,3);assertVisual(s,['VIS-0']);assert.match(productCards(s)[0].caption,/3/);assert.equal(productCards(s)[0].kind==='product'&&productCards(s)[0].product.imageUrl,pipe.candidates![0].imageUrl);assert.deepEqual(s.conversation.draft.slice(1),before.draft.slice(1));
+ const s=await text(i,r,'make PVC pipe three');capture('quantity-edit',s);assert.equal(s.conversation.draft[0].quantity,3);assertVisual(s,['VIS-0','VIS-1','VIS-2']);assert.match(productCards(s)[0].caption,/3/);assert.equal(productCards(s)[0].kind==='product'&&productCards(s)[0].product.imageUrl,pipe.candidates![0].imageUrl);assert.deepEqual(s.conversation.draft.slice(1),before.draft.slice(1));
 }));
+
+for(const medium of ['text','voice'] as const)test(`${medium}: replace tape in one turn and show every current product`,()=>fixture(async(pool,i,r,out)=>{
+ await pool.query("UPDATE products SET name='Teflon tape',unit='roll',image_path='/demo-images/H08.jpg' WHERE store_id=$1 AND sku='VIS-0'",[fixtureStore]);
+ await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,selling_unit_verified) VALUES($1,'CELLO','Cello tape','roll',3000,25,true)",[fixtureStore]);
+ await text(i,r,'review');const before=(await i.snapshot()).conversation;
+ const anchor=before.draft[0],phrase='Remove the Teflon tape and replace it with cello tape';
+ out.value={...base,...(medium==='voice'?{inputKind:'audio',transcript:phrase}:{}),
+  proposedEdits:[{kind:'replace',targetLineId:anchor.id,targetQuery:'Teflon tape',query:'cello tape',sourceText:phrase}]};
+ const after=medium==='voice'?await voice(i,r):await text(i,r,phrase);
+ assert.equal(after.conversation.draft[0].sku,'CELLO',JSON.stringify(currentReply(after)));
+ assert.equal(after.conversation.draft[0].id,anchor.id);assert.equal(after.conversation.draft[0].quantity,anchor.quantity);
+ assert.deepEqual(after.conversation.draft.slice(1),before.draft.slice(1));
+ assertVisual(after,['CELLO','VIS-1','VIS-2']);
+ assert.match(productCards(after)[0].caption,/Photo unavailable/);assert.doesNotMatch(productCards(after)[0].caption,/Teflon/);
+ const show=currentReply(after).parts![0].cards.flatMap(card=>card.buttons??[]).find(button=>button.event.type==='confirm_products');
+ assert.equal(show?.label,'Show bill');
+}));
+
+test('an ambiguous replacement asks which width and resumes the same full list after selection',()=>fixture(async(pool,i,r,out)=>{
+ await pool.query("UPDATE products SET name='Teflon tape',unit='roll',image_path='/demo-images/H08.jpg' WHERE store_id=$1 AND sku='VIS-0'",[fixtureStore]);
+ for(const width of [12,19])await pool.query(
+  "INSERT INTO products(store_id,sku,name,unit,price_paise,stock,selling_unit_verified,aliases) VALUES($1,$2,$3,'roll',3000,25,true,'[\"cello tape\"]')",
+  [fixtureStore,'CELLO-'+width,'Cello tape '+width+' mm']);
+ await text(i,r,'review');const before=(await i.snapshot()).conversation;
+ const phrase='Remove the Teflon tape and replace it with cello tape';
+ out.value={...base,proposedEdits:[{kind:'replace',targetLineId:before.draft[0].id,targetQuery:'Teflon tape',query:'cello tape',sourceText:phrase}]};
+ const choices=await text(i,r,phrase);
+ assert.equal(currentReply(choices).stage,'identify');assertVisual(choices,['CELLO-12','CELLO-19']);
+ assert.deepEqual(choices.conversation.draft.slice(1),before.draft.slice(1));
+ const choice=productCards(choices)[0].buttons!.find(button=>button.event.type==='select_product');assert.ok(choice);
+ const after=await send(i,r,choice.event);
+ assert.equal(after.conversation.draft[0].id,before.draft[0].id);assert.equal(after.conversation.draft[0].quantity,before.draft[0].quantity);
+ assertVisual(after,['CELLO-12','VIS-1','VIS-2']);
+}));
+
+test('a large edit returns every product and places Show bill on the final carousel',()=>fixture(async(_pool,i,r,out)=>{
+ await text(i,r,'review');const before=(await i.snapshot()).conversation;
+ out.value={...base,proposedEdits:[{kind:'set_quantity',targetLineId:before.draft[0].id,targetQuery:'PVC pipe',sourceText:'make PVC pipe three',quantity:3}]};
+ const after=await text(i,r,'make PVC pipe three'),last=currentReply(after);
+ const pages=after.messages.filter(msg=>msg.rich?.groupId===last.groupId&&msg.direction==='outbound');
+ const products=pages.flatMap(page=>page.rich!.parts![0].cards.filter(card=>card.kind==='product'));
+ assert.deepEqual(products.map(card=>card.product.sku),before.draft.map(line=>line.sku));
+ assert.equal(pages.length,2);assert.match(pages[0].text,/1\/2/);assert.match(pages[1].text,/2\/2/);
+ const native=pages.map(page=>renderWhatsAppReply(page.rich!,page.id,'shop.example.test'));
+ assert.ok(native.every(page=>page.format==='carousel'));
+ assert.equal(native[0].actions.some(action=>action.event.type==='confirm_products'),false);
+ assert.ok(native[1].actions.some(action=>action.event.type==='confirm_products'&&action.label==='Show bill'));
+ assert.equal(after.requests.length,0);
+},12));
 
 test('a removal shows the remaining current products instead of an unchanged text summary',()=>fixture(async(_pool,i,r,out)=>{
  await text(i,r,'review');const before=(await i.snapshot()).conversation;
@@ -94,6 +143,21 @@ test('one saved item is shown as one native product image with actions',()=>fixt
  const s=await text(i,r,'show my list');capture('single-item',s);const payloads=assertVisual(s,['VIS-0']);assert.equal(currentReply(s).parts!.flatMap(p=>p.cards).length,1);assert.equal(payloads[0].format,'buttons');
 },1));
 
+test('viewing a list shows a photo for an unresolved choice without accepting that choice',()=>fixture(async(pool,i,r)=>{
+ const {conversation}=await i.snapshot();
+ const [uncertain,alternative,selected]=conversation.draft;
+ const candidates=[{...uncertain.candidates![0],imageUrl:undefined},alternative.candidates![0]];
+ await pool.query('UPDATE conversations SET draft=$1::jsonb WHERE id=$2',[JSON.stringify([{...uncertain,sku:undefined,resolution:'needs_choice',candidates},selected]),i.context.conversationId]);
+ const before=(await i.snapshot()).conversation;
+ const s=await text(i,r,'show my list');
+ assertVisual(s,['VIS-1','VIS-2']);
+ const cards=productCards(s);
+ assert.equal(cards[0].lineId,uncertain.id);assert.match(cards[0].caption,/Possible match/);
+ assert.equal(cards[0].buttons?.[0].event.type,'edit_item');
+ assert.equal(cards[1].lineId,selected.id);assert.doesNotMatch(cards[1].caption,/Possible match/);
+ assert.deepEqual(s.conversation,before);
+}));
+
 test('a list larger than one native carousel group retains every row and mutates nothing',()=>fixture(async(_pool,i,r)=>{
  const before=(await i.snapshot()).conversation,s=await text(i,r,'show my list');capture('twelve-items',s);
  const rich=currentReply(s),outbound=s.messages.filter(m=>m.direction==='outbound'),cards=outbound.flatMap(m=>m.rich?.parts?.flatMap(p=>p.cards)??[]).filter(c=>c.kind==='product');
@@ -116,7 +180,7 @@ test('a changed measured amount preserves the same photo and verified pack conve
  await pool.query("UPDATE products SET name='Garden hose 10m',image_path='/demo-images/H13.jpg',specifications='{\"size\":\"10m\"}',version=version+1 WHERE sku='VIS-0' AND store_id=$1",[fixtureStore]);
  await text(i,r,'review');const before=(await i.snapshot()).conversation;
  out.value={...base,proposedEdits:[{kind:'set_amount',targetLineId:before.draft[0].id,targetQuery:'garden hose',sourceText:'make garden hose 50 metres',amount:{value:50,unit:'metre'}}]};
- const s=await text(i,r,'make garden hose 50 metres');capture('measured-edit',s);assertVisual(s,['VIS-0']);assert.equal(s.conversation.draft[0].quantity,5);assert.deepEqual(s.conversation.draft[0].requestedAmount,{value:50,unit:'metre'});assert.match(productCards(s)[0].caption,/50/);assert.equal(s.conversation.draft[0].sku,before.draft[0].sku);
+ const s=await text(i,r,'make garden hose 50 metres');capture('measured-edit',s);assertVisual(s,['VIS-0','VIS-1','VIS-2']);assert.equal(s.conversation.draft[0].quantity,5);assert.deepEqual(s.conversation.draft[0].requestedAmount,{value:50,unit:'metre'});assert.match(productCards(s)[0].caption,/50/);assert.equal(s.conversation.draft[0].sku,before.draft[0].sku);
 }));
 
 test('viewing while a line editor is open preserves the editor and does not ask which item to edit',()=>fixture(async(_pool,i,r)=>{

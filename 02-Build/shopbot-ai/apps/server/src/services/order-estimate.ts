@@ -11,6 +11,25 @@ export function estimateLines(lines:DraftLine[]) {
  return {knownSubtotalPaise:priced.reduce((n,line)=>n+lineTotal(line.pricePaise!,line.quantity!),0),complete:lines.length>0&&!excluded.length,excludedLineIds:excluded.map(line=>line.id),priced,excluded};
 }
 
+export function checkoutNextStep(state:ConversationState):
+ {kind:'review'|'partial_review'}|{kind:'check_products'|'shop_check';line:DraftLine} {
+ const estimate=estimateLines(state.draft);
+ const rows=state.draft.map(line=>({line,facts:counterLine(line)}));
+ const choices=rows.find(({line,facts})=>!line.shopCheckDeferred&&
+  (facts.blockers.includes('specification')||facts.blockers.includes('variant')));
+ if(choices)return {kind:'check_products',line:choices.line};
+ // An item with no eligible catalog choice cannot be resolved by repeating
+ // unrelated photo confirmations. Expose its correction/help path first.
+ const missing=rows.find(({line,facts})=>!facts.product&&!line.candidates?.length&&!estimate.priced.includes(line));
+ if(missing&&!state.allowPartialReview)return {kind:'shop_check',line:missing.line};
+ const check=rows.find(({line,facts})=>!line.shopCheckDeferred&&!!facts.product&&
+  (line.resolution==='needs_quantity'||state.requireProductConfirmation&&!facts.ready&&facts.canQuote));
+ if(check)return {kind:'check_products',line:check.line};
+ if(estimate.complete||!state.draft.length)return {kind:'review'};
+ if(state.allowPartialReview)return {kind:'partial_review'};
+ return {kind:'shop_check',line:estimate.excluded[0]};
+}
+
 /** Display-only arithmetic over explicit selling counts; never a final quote. */
 export function indicativeLineEstimate(line:DraftLine) {
  const product=counterLine(line).product,price=product?indicativePriceFor(product):undefined;
@@ -52,10 +71,14 @@ export function estimatePendingReason(line:DraftLine):'product'|'unit'|'quantity
  return 'details';
 }
 export function estimatePendingSummary(state:ConversationState,lines:DraftLine[]=state.draft):string|undefined {
- const counts=new Map<ReturnType<typeof estimatePendingReason>,number>();
- for(const line of indicativeEstimate(lines).unpriced){const reason=estimatePendingReason(line);counts.set(reason,(counts.get(reason)??0)+1);}
+ const counts=new Map<ReturnType<typeof estimatePendingReason>|'shop_check',number>();
+ for(const line of indicativeEstimate(lines).unpriced){
+  const reason=!line.sku&&!line.candidates?.length&&line.resolution==='unavailable'?'shop_check':estimatePendingReason(line);
+  counts.set(reason,(counts.get(reason)??0)+1);
+ }
  if(!counts.size)return;
  return [...counts].map(([reason,count])=>({
+  shop_check:say(state,`${count} ${count===1?'item':'items'} for the shop to check`,`${count} பொருளை கடை சரிபார்க்கும்`,`${count} porulai kadai check pannum`),
   product:say(state,`${count} product choices pending`,`${count} பொருள் தேர்வு தேவை`,`${count} product choice venum`),
   unit:say(state,`${count} selling units to check`,`${count} விற்பனை அளவு சரிபார்க்கணும்`,`${count} selling unit check pannanum`),
   quantity:say(state,`${count} quantities needed`,`${count} எண்ணிக்கை சொல்லணும்`,`${count} count sollanum`),

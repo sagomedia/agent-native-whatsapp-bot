@@ -23,10 +23,10 @@ export function discoveryPresentation(result:DiscoveryResult,state:ConversationS
  const facetDimension=facet?.key.replace(/^spec:/,'');
  const facetIsKnownDimension=(facetDimension==='size'||facetDimension==='diameter'||facetDimension==='length')&&knownDimension(facetDimension);
  const askFacet=!!facet?.values.length&&!facetIsKnownDimension;
- const nextQuestion=questionText??(askFacet?say(state,`Which ${facet.label}: ${facet.values.map(v=>v.label).join(', ')}?`,`எந்த ${facetLabel(facet.key,facet.label,state)} வேண்டும்: ${facet.values.map(v=>localName(v.label,v.localNames,state)).join(', ')}?`,`Entha ${facetLabel(facet.key,facet.label,state)} venum: ${facet.values.map(v=>localName(v.label,v.localNames,state)).join(', ')}?`):say(state,'Which photo shows the item you need?','எந்தப் படத்தில் நீங்கள் கேட்ட பொருள் இருக்கு?','Entha photo-la neenga ketta porul irukku?'));
- const relatedWarning=result.noExactMatch?say(state,'These are related catalog items. Choose one only if you want that item instead.','இவை தொடர்புடைய பட்டியல் பொருட்கள். இதில் உள்ள பொருள் வேண்டுமென்றால் மட்டும் தேர்வு செய்யுங்கள்.','Ivai thodarbudaiya catalog porutkal. Ithil ulla porul venumna mattum choose pannunga.'):undefined;
- const photoStep=say(state,'Choose a photo, or reply with the item name or type if none fits.','படத்தில் தேர்வு செய்யுங்கள்; பொருந்தவில்லை என்றால் பொருள் பெயர் அல்லது வகையைச் சொல்லுங்கள்.','Photo-la choose pannunga; porunthalana porul peyar illa type sollunga.');
- let text=result.products.length?questionText?[questionText,[relatedWarning,photoStep].filter(Boolean).join(' ')].join('\n'):[relatedWarning,nextQuestion,photoStep].filter(Boolean).join(' '):'';
+ const nextQuestion=questionText??(askFacet?say(state,`Which ${facet.label}?`,`எந்த ${facetLabel(facet.key,facet.label,state)} வேண்டும்?`,`Entha ${facetLabel(facet.key,facet.label,state)} venum?`):say(state,'Which photo shows the item you need?','எந்தப் படத்தில் நீங்கள் கேட்ட பொருள் இருக்கு?','Entha photo-la neenga ketta porul irukku?'));
+ const relatedWarning=result.noExactMatch?say(state,'These are related catalog items.','இவை தொடர்புடைய பட்டியல் பொருட்கள்.','Ivai thodarbudaiya catalog porutkal.'):undefined;
+ const photoStep=say(state,'Choose a photo only if it fits.','பொருந்தினால் படத்தில் தேர்வு செய்யுங்கள்.','Porunthina Photo-la choose pannunga.');
+ let text=result.products.length?[nextQuestion,[relatedWarning,questionText||relatedWarning?photoStep:undefined].filter(Boolean).join(' ')].filter(Boolean).join('\n'):'';
  if(!result.products.length){
   const amount=selection?.quantity?say(state,` (${selection.quantity} ${selection.unit??'units'})`,` (${selection.quantity} ${unitName(selection.unit??'unit',state,selection.quantity)})`,` (${selection.quantity} ${unitName(selection.unit??'unit',state,selection.quantity)})`):'';
   const saved=!!lineId&&state.draft.some(l=>l.id===lineId);

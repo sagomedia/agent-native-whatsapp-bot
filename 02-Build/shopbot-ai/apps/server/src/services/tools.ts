@@ -1,4 +1,5 @@
-import {estimateLines,estimateText,partialReview} from './order-estimate.js';
+import {searchWithDimensions} from './catalog-request.js';
+import {checkoutNextStep,estimateLines,estimateText,partialReview} from './order-estimate.js';
 import {counterLine} from './counter-state.js';
 import {sellingBasisIssues} from '../../../../packages/contracts/selling-basis.js';
 import {createUpiAdvance,type UpiAdvanceConfig} from './upi-advance.js';
@@ -62,7 +63,7 @@ function validateQuantity(product: Product, quantity: number | null) {
   if (quantity === null) return;
   const scaled = Math.round(quantity * 1000);
   const step = Math.round(product.quantityStep * 1000);
-  if (scaled <= 0 || quantity > 100 || !step || scaled % step !== 0) throw new ToolError(`Use increments of ${product.quantityStep} ${product.unit} for ${product.name}.`);
+  if (scaled <= 0 || quantity > 100 || !step || scaled % step !== 0) throw new ToolError(`Use increments of ${product.quantityStep} ${product.unit} for ${product.name}.`,'quantity_step');
 }
 type LineEvidence=Pick<DraftLine,'clarification'|'packUnitAlternative'|'budgetCountDerived'|'sourceUncertainty'|'requestedBudgetPaise'|'packSize'|'productMeasures'|'productIntent'|'requestedAmount'|'amountMode'|'supportingPhrase'|'quantityEvidenceVersion'>;
 function lineEvidence(value:LineEvidence):LineEvidence {return Object.fromEntries(['clarification','packUnitAlternative','budgetCountDerived','sourceUncertainty','requestedBudgetPaise','packSize','productMeasures','productIntent','requestedAmount','amountMode','supportingPhrase','quantityEvidenceVersion'].flatMap(key=>value[key as keyof LineEvidence]===undefined?[]:[[key,value[key as keyof LineEvidence]]])) as LineEvidence;}
@@ -101,7 +102,11 @@ function resolvedLine(product: Product, quantity: number | null, query: string, 
 }
 async function resolveLine(client: PoolClient, ctx: ActorContext, query: string, quantity: number | null, id: string = randomUUID(),requestedUnit?:string,search?:DiscoveryPlan,evidence:LineEvidence={},previous?:DraftLine): Promise<DraftLine> {
   evidence=lineEvidence(evidence);
-  search={keywords:[query.slice(0,120)],...search,allowAlternatives:search?.allowAlternatives??true};
+  search=searchWithDimensions(query,{keywords:[query.slice(0,120)],...search,allowAlternatives:search?.allowAlternatives??true},evidence.productMeasures);
+  if(evidence.sourceUncertainty?.includes('product_identity')&&!(previous&&query!==previous.query&&evidence.supportingPhrase)){
+    return {...evidence,id,query,name:query,quantity,resolution:'unavailable',candidates:[]};
+  }
+  if(evidence.sourceUncertainty?.includes('catalog_check_pending'))return {...evidence,id,query,quantity,name:query,resolution:'unavailable',catalogIssue:'catalog_check_pending',candidates:[]};
   if(evidence.sourceUncertainty?.includes('unreadable')&&!(previous&&query!==previous.query&&evidence.supportingPhrase))return {...evidence,id,query,quantity:null,name:query,resolution:'unavailable',catalogIssue:'unreadable',candidates:[]};
   if(await catalogEnabled(client,ctx)){
     let searchQuery=packSearchQuery(query,evidence.packSize);
@@ -115,7 +120,13 @@ async function resolveLine(client: PoolClient, ctx: ActorContext, query: string,
     const oldFamily=previous?.candidates?.find(p=>p.sku===previous.sku)?.familyId;
     const proposedFamilies=new Set([...(search?.familyId?[search.familyId]:search?.familyIds??[]),...discovery.products.flatMap(p=>p.familyId?[p.familyId]:[])]);
     const replacement=!!previous&&!!oldFamily&&(proposedFamilies.size>0?!proposedFamilies.has(oldFamily):normalize(query)!==normalize(previous.query??previous.name));
-    if(previous&&!replacement){const supplied=evidence;evidence={...lineEvidence(previous),...supplied};if(query!==previous.query&&!supplied.productIntent)delete evidence.productIntent;if(query!==previous.query&&supplied.supportingPhrase)delete evidence.sourceUncertainty;requestedUnit??=previous.requestedUnit;}
+    if(previous&&!replacement){
+      const supplied=evidence;
+      evidence={...lineEvidence(previous),...supplied};
+      if(query!==previous.query&&!supplied.productIntent)delete evidence.productIntent;
+      if(supplied.supportingPhrase&&(query!==previous.query||previous.catalogIssue==='catalog_check_pending'&&!supplied.sourceUncertainty))delete evidence.sourceUncertainty;
+      requestedUnit??=previous.requestedUnit;
+    }
     if(evidence.productIntent?.kind==='ambiguous')return {...evidence,id,query,quantity,name:query,...(requestedUnit?{requestedUnit:normalizeUnit(requestedUnit)}:{}),resolution:'needs_choice',candidates:discovery.products,discovery};
     if(evidence.productMeasures){discovery.products=discovery.products.filter(p=>matchesProductMeasures(p,evidence.productMeasures!));const allowed=new Set(discovery.products.map(p=>p.sku));discovery.rankings=discovery.rankings.filter(r=>allowed.has(r.sku));if(!discovery.products.length)discovery.noExactMatch=true;}
     let retrievedProducts=[...discovery.products];
@@ -211,7 +222,7 @@ export class RetailTools {
       let knownSubtotalPaise=0;const missingLineIds:string[]=[];
       for(const line of state.draft){const product=line.sku?products.get(line.sku):undefined;if(product&&sameUnit(product.unit,line.unit??'')&&line.quantity!==null&&product.priceStatus!=='confirm'&&(product.pricePaise>0||product.priceStatus==='free'))knownSubtotalPaise+=lineTotal(product.pricePaise,line.quantity);else missingLineIds.push(line.id);}
       const complete=state.draft.length>0&&!missingLineIds.length;
-      const lines=state.draft.map(line=>{const product=line.sku?products.get(line.sku):undefined;return product?{...line,pricePaise:product.pricePaise,productVersion:product.version,candidates:[product]}:{...line,candidates:[]};});
+      const lines=state.draft.map(line=>{const product=line.sku?products.get(line.sku):undefined;return product?{...line,pricePaise:product.pricePaise,productVersion:product.version,candidates:[product]}:line.sku?{...line,candidates:[]}:line;});
       return {state,estimate:{knownSubtotalPaise,complete,missingLineIds,lines},message:say(state,complete?`Estimated total: ${formatMoney(knownSubtotalPaise)}.`:`Known-price subtotal: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} item(s) still need a price or quantity. You can send the list to the store for checking.`,complete?`உத்தேச மொத்தம்: ${formatMoney(knownSubtotalPaise)}.`:`தெரிந்த விலைகளின் கூட்டுத்தொகை: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} பொருட்களுக்கு விலை அல்லது எண்ணிக்கை தேவை. சரிபார்க்கப் பட்டியலைக் கடைக்கு அனுப்பலாம்.`,complete?`Estimate moththam: ${formatMoney(knownSubtotalPaise)}.`:`Therintha vilaikal subtotal: ${formatMoney(knownSubtotalPaise)}. ${missingLineIds.length} porutkalukku vilai illa count venum. List-ai kadaikku check panna anuppalaam.`)};
     }
     if(call.name==='request_store_assistance')return requestStoreAssistance(client,ctx,state,call.args.expectedVersion);
@@ -288,7 +299,7 @@ export class RetailTools {
             const eligible=await discoverProducts(client,ctx,old.query??old.name,old.discovery.plan);
             if(!eligible.products.some(p=>p.sku===op.query))throw new ToolError('That option no longer matches the requested item. Review the latest choices.','stale_confirmation');
           }
-          if(old.resolution==='needs_unit'&&op.quantity!==undefined&&!op.requestedUnit)throw new ToolError(`Please include the unit, for example 2 ${old.unit??'units'}. I can’t convert ${old.requestedUnit??'the requested amount'} without a verified pack size or length.`);
+          if(old.resolution==='needs_unit'&&op.quantity!==undefined&&!op.requestedUnit)throw new ToolError(`Please include the unit, for example 2 ${old.unit??'units'}. I can’t convert ${old.requestedUnit??'the requested amount'} without a verified pack size or length.`,'selling_unit_required');
           const acceptedAlternative=!!op.query&&old.discovery?.matchStatus==='alternatives'&&old.candidates?.find(p=>p.sku===op.query);
           const next=await resolveLine(client,ctx,op.query??old.sku??old.query??old.name,op.quantity??old.requestedQuantity??old.quantity,old.id,op.requestedUnit??(!op.query?old.requestedUnit:undefined),op.search??(!op.query?old.discovery?.plan:undefined),{sourceUncertainty:op.sourceUncertainty,requestedBudgetPaise:op.requestedBudgetPaise,packSize:acceptedAlternative?catalogPack(acceptedAlternative):op.packSize,productMeasures:op.productMeasures,productIntent:op.productIntent,requestedAmount:op.requestedAmount,amountMode:op.amountMode,supportingPhrase:op.supportingPhrase,quantityEvidenceVersion:state.visualOrdering?1:undefined},old);
           if(!op.query)next.query=old.query??old.name;
@@ -318,7 +329,7 @@ export class RetailTools {
           }
           else {
             delete line.budgetCountDerived;
-            if(line.resolution==='needs_unit'&&!line.requestedAmount)throw new ToolError('Please state the quantity and catalog unit together before changing this item.');
+            if(line.resolution==='needs_unit'&&!line.requestedAmount)throw new ToolError('Please state the quantity and catalog unit together before changing this item.','selling_unit_required');
             const nextQuantity=op.kind==='increment_quantity'?line.quantity===null?undefined:Math.round((line.quantity+op.delta)*1000)/1000:op.quantity;
             if(nextQuantity===undefined)throw new ToolError('Tell me the total quantity for this item first.','quantity_unknown');
             if(nextQuantity>100)throw new ToolError('The resulting quantity exceeds 100. Tell the shop the required amount.','quantity_limit');
@@ -334,7 +345,14 @@ export class RetailTools {
       }
       const limit=state.visualOrdering?(this.options.maxDraftLines??50):state.requireProductConfirmation?20:10;
       if(state.draft.length>limit) throw new ToolError(`Maximum ${limit} distinct lines. Split the request; no partial list was applied.`);
-      if(state.visualOrdering){const questionLineId=state.pending?.kind==='question'?state.pending.lineId:undefined;const answeringCount=!!questionLineId&&call.args.operations.every(op=>(op.kind==='resolve_line'&&!op.query&&op.lineId===questionLineId)||(op.kind==='set_quantity'&&op.reference===questionLineId));if(!answeringCount)state.productReview=null;}
+      if(state.visualOrdering){
+        const questionLineId=state.pending?.kind==='question'?state.pending.lineId:undefined;
+        const answeringCount=!!questionLineId&&call.args.operations.every(op=>(op.kind==='resolve_line'&&!op.query&&op.lineId===questionLineId)||(op.kind==='set_quantity'&&op.reference===questionLineId));
+        // Counts can change after the invoice without reapproving identical photos.
+        // A new invoice still needs its own send action and delivery proof.
+        const sameReviewedProducts=state.pending?.kind==='review'&&state.productReview?.hash===productListHash(state);
+        if(!answeringCount&&!sameReviewedProducts)state.productReview=null;
+      }
       if(state.visualOrdering){
         const explicit=call.args.operations.flatMap(op=>'lineId' in op?[op.lineId]:'reference' in op?state.draft.filter(line=>line.id===op.reference||line.sku===op.reference).map(line=>line.id):[]);
         const added=state.draft.find(line=>!previousLines.some(old=>old.id===line.id));
@@ -355,7 +373,7 @@ export class RetailTools {
           const count=explicitPurchaseCount(line.supportingPhrase);if(count!==undefined){line.quantity=count;refreshed=true;}
         }
         if(!line.sku) {
-          if(line.resolution==='unavailable'&&line.productMeasures?.length&&line.supportingPhrase&&/\b(?:this|that|indha|intha)\b|இந்த|இது/i.test(line.supportingPhrase)){
+          if(line.resolution==='unavailable'&&line.catalogIssue!=='catalog_check_pending'&&line.productMeasures?.length&&line.supportingPhrase&&/\b(?:this|that|indha|intha)\b|இந்த|இது/i.test(line.supportingPhrase)){
             const previous=(await client.query(`SELECT card->'product'->>'sku' AS sku FROM
               (SELECT payload,sequence FROM messages WHERE conversation_id=$1 AND direction='outbound' ORDER BY sequence DESC LIMIT 20) m
               CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(m.payload->'parts')='array' THEN m.payload->'parts' ELSE '[]'::jsonb END) part
@@ -377,6 +395,14 @@ export class RetailTools {
         }
         const [product]=await searchProducts(client,ctx,line.sku);
         if(!product) { if(line.resolution!=='unavailable'||line.candidates?.length||line.productConfirmation) {line.resolution='unavailable';line.candidates=[];delete line.productConfirmation;refreshed=true;} continue; }
+        if(line.productMeasures&&!matchesProductMeasures(product,line.productMeasures)){
+          const plan=line.discovery?.plan;
+          const search=plan?{...plan,selectedSkus:undefined,preferredSkus:undefined}:undefined;
+          const next=await resolveLine(client,ctx,line.query??line.name,line.requestedQuantity??line.quantity,line.id,line.requestedUnit,search,line);
+          state.draft[state.draft.findIndex(item=>item.id===line.id)]=next;
+          refreshed=true;
+          continue;
+        }
         const current=preserveConfirmation(line,resolvedLine(product,line.requestedQuantity??line.quantity,line.query??line.name,line.id,line.requestedUnit,line));
         if(state.catalogDiscovery&&!productConfirmed(line,product)){const discovery=await discoverProducts(client,ctx,line.query??line.name,line.discovery?.plan);current.candidates=discovery.products;current.discovery=discovery;
           // A failed refresh must not leave a hidden, unconfirmed SKU marked matched.
@@ -416,7 +442,8 @@ export class RetailTools {
         const check=makeProductCheck(state,!!this.options.sequentialItems);
         if(check){state.pending=check;await saveState(client,ctx,state);return {state,message:'Check the products before adding them to your list.'};}
       }
-      const unresolved=typeQuestion??(state.visualOrdering?active:undefined)??state.draft.find(l=>l.resolution!=='matched'&&!l.shopCheckDeferred)??state.draft.find(l=>l.resolution!=='matched');
+      const readiness=state.visualOrdering?checkoutNextStep(state):undefined;
+      const unresolved=typeQuestion??(readiness?.kind==='shop_check'?readiness.line:active)??state.draft.find(l=>l.resolution!=='matched'&&!l.shopCheckDeferred)??state.draft.find(l=>l.resolution!=='matched');
       if(unresolved) {
         state.pending={kind:'question',id:randomUUID(),lineId:unresolved.id,version:state.version};
         await saveState(client,ctx,state);

@@ -74,7 +74,7 @@ test('known pipe length still permits a diameter question',()=>{
  const reply=discoveryPresentation(found,s,undefined,lineId,'Which diameter do you need?');
  assert.match(reply.text,/Which diameter do you need\?/);
  const withoutModelQuestion=discoveryPresentation(found,s,undefined,lineId);
- assert.match(withoutModelQuestion.text,/Which diameter: 1 inch\?/);
+ assert.match(withoutModelQuestion.text,/Which diameter\?/);
 });
 
 test('a brand and size question stays when only size is known',()=>{

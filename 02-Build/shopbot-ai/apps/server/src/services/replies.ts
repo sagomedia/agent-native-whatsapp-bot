@@ -1,4 +1,5 @@
 import {visualEstimate} from './visual-ordering.js';
+import {retryProductList} from './cart-clarification.js';
 import {estimateText} from './order-estimate.js';
 import {textPresentation} from './message-presentation.js';
 import {say,canonicalShortcut,lineName,productName,unitName,safeQuestion,languageOf,productStockText,productPriceText,draftIssueText} from '../../../../packages/contracts/language.js';
@@ -53,6 +54,12 @@ export function shopAnswers(state:ConversationState,questions:Interpretation['sh
 
 function questionFromAI(value:string|undefined,state:ConversationState) {return safeQuestion(value,state);}
 export function presentReply(result:ToolResult,state:ConversationState,intent?:Interpretation,event?:SimulatorEvent):RichReply {
+  // A rejected proposal has no validated product scope. Keep its correction
+  // as the primary reply instead of attaching a new catalog browse.
+  if(intent?.understanding?.unresolved.includes('validation_recovery')&&!intent.operations.length&&!intent.conversation){
+    const question=safeQuestion(intent.clarifyQuestion,state,intent.transcript??(event?.type==='text'?event.text:''))??retryProductList(state);
+    return {...plainReply(question),stage:'identify',readOnly:true,clarificationReason:'request_needs_retry'};
+  }
   if(result.state&&state.pending?.kind==='review'&&(state.pending.excludedLineIds||state.pending.advanceRequired)){
     return {...textPresentation(estimateText(state,state.draft,!!state.pending.advanceRequired),[{label:say(state,'List is correct','List சரி','List sari'),event:{id:randomUUID(),type:'confirm',reviewId:state.pending.id}},{label:say(state,'Change items','மாற்றணும்','Maathanum'),event:{id:randomUUID(),type:'shopping_action',action:'edit_list',expectedVersion:state.version}}],'bill'),readOnly:state.visualOrdering?undefined:true};
   }

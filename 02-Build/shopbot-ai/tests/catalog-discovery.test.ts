@@ -4,6 +4,22 @@ async function fixture(run:(pool:pg.Pool,inbox:SimulatorService)=>Promise<void>)
 async function event(inbox:SimulatorService,runtime:ConversationRuntime,e:SimulatorEvent){await inbox.ingest(e);await runtime.processNext(inbox.context);return inbox.snapshot();}async function text(inbox:SimulatorService,runtime:ConversationRuntime,value:string){return event(inbox,runtime,{id:randomUUID(),type:'text',text:value});}function last(s:Snapshot){return s.messages.at(-1)!.rich!;}
 const never:Interpreter={name:'no-ai-for-choices',mode:'mock',interpret:async()=>{throw new Error('Unexpected AI call');}};
 
+test('a catalog identity with more metadata than customer filters still survives discovery and bill refresh',async()=>fixture(async(pool,inbox)=>{
+ const metadata=Object.fromEntries(Array.from({length:9},(_,index)=>['catalog_field_'+index,'value '+index]));
+ await pool.query('UPDATE products SET specifications=$1::jsonb WHERE store_id=$2 AND sku=$3',[JSON.stringify(metadata),inbox.context.storeId,'H14']);
+ const c=await pool.connect();try{
+  const first=await discoverProducts(c,inbox.context,'H14',{keywords:['H14']});
+  assert.equal(first.products[0].sku,'H14');assert.deepEqual(first.plan.specifications,{});
+  const refreshed=await discoverProducts(c,inbox.context,'H14',first.plan);assert.equal(refreshed.products[0].sku,'H14');
+  assert.ok(refreshed.products.every(product=>Object.entries(metadata).every(([key,value])=>product.specifications?.[key]===value)));
+ }finally{c.release();}
+ const tools=new RetailTools(pool);
+ await tools.invoke(inbox.context,{name:'apply_draft_changes',args:{expectedVersion:0,operations:[{kind:'add_item',query:'H14',quantity:3}]}},'metadata-add');
+ const state=(await inbox.snapshot()).conversation;
+ await tools.invoke(inbox.context,{name:'preview_order',args:{expectedVersion:state.version}},'metadata-preview');
+ assert.equal((await inbox.snapshot()).conversation.draft[0].quantity,3);
+}));
+
 test('white cement is not confused with white-cement-based putty or solvent cement',async()=>fixture(async(pool,inbox)=>{
  await pool.query(`UPDATE products SET name='Birla White Wall Putty 1kg',aliases='["white cement"]'::jsonb,keywords='["white cement"]'::jsonb,specifications='{"form":"white cement based powder","colour":"white"}'::jsonb WHERE store_id=$1 AND sku='H07'`,[inbox.context.storeId]);
  await pool.query(`UPDATE products SET name='Finolex PVC Solution 100ml',aliases='["white cement"]'::jsonb,keywords='["white cement"]'::jsonb,specifications='{"colour":"white"}'::jsonb WHERE store_id=$1 AND sku='H01'`,[inbox.context.storeId]);
@@ -75,13 +91,13 @@ test('an absent brush is never a bush or unrelated pipe fitting; publishing a br
 test('an exact alias in an owner family survives its returned plan and remains visible during checkout refresh',()=>fixture(async(pool,inbox)=>{
  const store=inbox.context.storeId;
  await pool.query("INSERT INTO catalog_nodes(store_id,id,parent_id,kind,label,aliases) VALUES($1,'levels','tools','family','Spirit levels','[\"spirit level\"]'),($1,'owner-other','tools','family','Other products','[]')",[store]);
- await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases,specifications,image_path,selling_unit_verified) VALUES($1,'LEVEL-12','Aluminium Spirit Level 12in','piece',45000,10,'owner-other','[\"spirit level\",\"ரசமட்டம்\"]','{\"length\":\"12 inch (300mm)\",\"vials\":\"3 vials\"}','/fixture/level.jpg',true)",[store]);
+ await pool.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases,specifications,image_path,selling_unit_verified) VALUES($1,'LEVEL-12','Aluminium Spirit Level 12in','piece',45000,10,'owner-other','[\"spirit level\",\"ரசமட்டம்\"]','{\"length\":\"12 inch (300mm)\",\"vials\":\"3 vials\"}','https://catalog.example/level.jpg',true)",[store]);
  const client=await pool.connect();try{
   const first=await discoverProducts(client,inbox.context,'spirit level');assert.deepEqual(first.products.map(p=>p.sku),['LEVEL-12']);
-  const sized=await discoverProducts(client,inbox.context,'spirit level 12 inch');assert.deepEqual(sized.products.map(p=>p.sku),['LEVEL-12']);assert.equal(sized.products[0].imageUrl,'/fixture/level.jpg');
+  const sized=await discoverProducts(client,inbox.context,'spirit level 12 inch');assert.deepEqual(sized.products.map(p=>p.sku),['LEVEL-12']);assert.equal(sized.products[0].imageUrl,'https://catalog.example/level.jpg');
   assert.equal((await discoverProducts(client,inbox.context,'spirit level 24 inch')).products.length,0);
   for(const query of ['spirit level','ரசமட்டம்']){
-   const again=await discoverProducts(client,inbox.context,query,first.plan);assert.deepEqual(again.products.map(p=>p.sku),['LEVEL-12']);assert.equal(again.products[0].imageUrl,'/fixture/level.jpg');
+   const again=await discoverProducts(client,inbox.context,query,first.plan);assert.deepEqual(again.products.map(p=>p.sku),['LEVEL-12']);assert.equal(again.products[0].imageUrl,'https://catalog.example/level.jpg');
   }
   assert.equal((await discoverProducts(client,inbox.context,'spirit level',{...first.plan,familyId:'levels'})).products.length,0,'an explicit conflicting family is still enforced');
   assert.equal((await discoverProducts(client,inbox.context,'spirit level',{...first.plan,specifications:{length:'24 inch'}})).products.length,0,'a conflicting dimension is still enforced');
@@ -91,7 +107,7 @@ test('an exact alias in an owner family survives its returned plan and remains v
   await pool.query('UPDATE conversations SET draft=$2::jsonb WHERE id=$1',[inbox.context.conversationId,JSON.stringify([stale,{id:randomUUID(),name:'stainless steel tap',query:'stainless steel tap',quantity:null,resolution:'unavailable',candidates:[]}])]);
   const runtime=new ConversationRuntime(pool,never,{visualOrdering:true});let s=await event(inbox,runtime,{id:randomUUID(),type:'review_partial',expectedVersion:0});
   assert.equal(s.requests.length,0);assert.equal(s.conversation.pending?.kind,'products');
-  const cards=last(s).parts!.flatMap(p=>p.cards);assert.ok(cards.some(c=>c.kind==='product'&&c.product.sku==='LEVEL-12'&&c.product.imageUrl==='/fixture/level.jpg'),'known spirit level is shown for explicit photo confirmation');
+  const cards=last(s).parts!.flatMap(p=>p.cards);assert.ok(cards.some(c=>c.kind==='product'&&c.product.sku==='LEVEL-12'&&c.product.imageUrl==='https://catalog.example/level.jpg'),'known spirit level is shown for explicit photo confirmation');
   assert.equal(s.conversation.draft[0].quantity,1);assert.ok(!s.conversation.draft[0].productConfirmation);
   const actions=(snapshot:Snapshot)=>last(snapshot).parts!.flatMap(p=>p.cards.flatMap(c=>c.buttons??[])).map(b=>b.event);
   const checked=actions(s).find(a=>a.type==='confirm_products');assert.ok(checked);s=await event(inbox,runtime,checked!);
@@ -113,5 +129,15 @@ test('measured alias recovery in a general family cannot show or count unrelated
   const r=await discoverProducts(c,inbox.context,'blade 12 inch');
   assert.deepEqual(new Set(r.products.map(p=>p.sku)),new Set(['BLADE-12','H16']));assert.equal(r.totalCount,2);
   assert.ok(!r.products.some(p=>p.sku==='PIPE-12'));
+ }finally{c.release();}
+}));
+
+test('bad broad measured aliases cannot override observed pipe or unfamiliar product selections',()=>fixture(async(pool,inbox)=>{
+ await pool.query(`UPDATE products SET aliases=aliases||'["pipe","spindle"]'::jsonb WHERE store_id=$1 AND sku='H10'`,[inbox.context.storeId]);
+ const c=await pool.connect();try{
+  const r=await discoverProducts(c,inbox.context,'0.75 inch PVC pipe',{keywords:['pipe'],selectedSkus:['H03']});assert.deepEqual(r.products.map(p=>p.sku),['H03']);assert.ok(!r.diagnostics!.appliedConstraints.familyIds.includes('taps-faucets'));
+  await pool.query(`INSERT INTO products(store_id,sku,name,unit,price_paise,specifications) VALUES($1,'SPINDLE-X','Laboratory spindle 7 mm','piece',1000,'{"diameter":"7 mm"}')`,[inbox.context.storeId]);
+  const unfamiliar=await discoverProducts(c,inbox.context,'7 mm spindle',{keywords:['spindle'],selectedSkus:['SPINDLE-X']});assert.deepEqual(unfamiliar.products.map(p=>p.sku),['SPINDLE-X']);
+  const wrongSize=await discoverProducts(c,inbox.context,'9 mm spindle',{keywords:['spindle'],selectedSkus:['SPINDLE-X']});assert.equal(wrongSize.products.length,0,'explicit SKU selection cannot override the customer dimension');
  }finally{c.release();}
 }));

@@ -129,8 +129,8 @@ test('UPI QR uses the supplied VPA, INR and exactly ₹10; a phone-only destinat
  const directory=mkdtempSync('/tmp/shopbot-qr-'),path=await qrImage(uri,directory),bytes=readFileSync(directory+'/'+path.split('/').at(-1));assert.equal(bytes.subarray(0,8).toString('hex'),'89504e470d0a1a0a');assert.equal(await qrImage(uri,directory),path);
 });
 
-test('Tamil copy preserves section spacing and ordinary English shop terms',()=>{
- const text=customerCopy('welcome','ta');assert.match(text,/வேணும்/);assert.match(text,/Voice/);assert.ok(text.includes('\n\n'));assert.doesNotMatch(text,/விவரிக்கவும்|கோரிக்கை/);
+test('Tamil welcome briefly offers text, voice and photo',()=>{
+ const text=customerCopy('welcome','ta');assert.match(text,/வேணும்/);assert.match(text,/மெசேஜ், வாய்ஸ் நோட் அல்லது படம்/);assert.equal(text.split('\n').length,1);assert.doesNotMatch(text,/விவரிக்கவும்|கோரிக்கை/);
  assert.equal(acknowledgementOnly('thanks, add two more'),false);assert.equal(acknowledgementOnly('சரி 👍'),true);
 });
 

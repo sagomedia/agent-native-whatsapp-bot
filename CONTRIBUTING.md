@@ -4,7 +4,7 @@ The application lives in `02-Build/shopbot-ai/`. Preserve original inputs under 
 
 ## Branches and commits
 
-Start from an up-to-date `main` and use one branch per change:
+Use the prepared checkout described in [LOCAL-DEVELOPMENT.md](LOCAL-DEVELOPMENT.md). Start from an up-to-date `main` and use one short-lived branch per change in the same checkout:
 
 ```bash
 git switch main

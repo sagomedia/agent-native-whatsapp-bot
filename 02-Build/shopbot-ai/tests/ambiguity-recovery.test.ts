@@ -77,7 +77,7 @@ test('recorded clear-everything voice asks before deleting and rejects forged/st
 test('a valid transcript with an invalid proposed reference yields a grounded no-op clarification',()=>fixture(async(pool,inbox)=>{
  const output={...base('audio'),transcript:'two water pumping pipes',requestedItems:[{ordinal:0,sourceText:'two water pumping pipes',query:'water pumping pipe',purchaseCount:2,targetLineId:randomUUID(),unresolved:[]}]};
  const r=new ConversationRuntime(pool,new GoogleInterpreter(settings,{generateContent:async()=>response(output)}),{allowPaidInference:true,visualOrdering:true});
- const s=await voice(inbox,r);assert.equal(s.conversation.draft.length,0);assert.equal(s.requests.length,0);assert.notEqual(s.messages.at(-1)!.rich?.stage,'error');assert.match(s.messages.at(-1)!.text,/two water pumping pipes/);
+ const s=await voice(inbox,r);assert.equal(s.conversation.draft.length,0);assert.equal(s.requests.length,0);assert.notEqual(s.messages.at(-1)!.rich?.stage,'error');assert.match(s.messages.at(-1)!.text,/new request for 2 × water pumping pipe/);assert.doesNotMatch(s.messages.at(-1)!.text,/Heard:|two water pumping pipes/);
  const a=(await pool.query('SELECT response,validation_issues FROM provider_attempts WHERE conversation_id=$1',[inbox.context.conversationId])).rows[0];assert.deepEqual(a.response.operations,[]);assert.equal(a.validation_issues[0].code,'invalid_evidence');
 }));
 
@@ -90,7 +90,7 @@ test('rejected spoken sack correction preserves every cart line and asks to chec
  const r=new ConversationRuntime(pool,new GoogleInterpreter(settings,{generateContent:async()=>response(output)}),{allowPaidInference:true,visualOrdering:true});
  const s=await voice(inbox,r);
  assert.deepEqual(s.conversation.draft,before);assert.equal(s.requests.length,0);
- const message=s.messages.at(-1)!;assert.match(message.text,/ஒயிட் சிமெண்ட்/);assert.match(message.text,/Which item should I check for product and pack/);assert.doesNotMatch(message.text,/what type and quantity do you want/i);
+ const message=s.messages.at(-1)!;assert.match(message.text,/Which item should I set to 1/);assert.match(message.text,/Birla White Wall Putty/);assert.doesNotMatch(message.text,/ஒயிட் சிமெண்ட்|what type and quantity do you want/i);
  const attempts=(await pool.query('SELECT failure_code FROM provider_attempts WHERE conversation_id=$1',[inbox.context.conversationId])).rows;
  assert.ok(attempts.some(a=>a.failure_code==='invalid_evidence'));
 }));

@@ -559,6 +559,50 @@ export async function setupDatabase(pool: Pool, mode: Config['mode']) {
     await migrateOwnerDemoLogin(client);
     await migrateCatalogReview(client);
     await migrateStoreHours(client);
+    const v54=await client.query('SELECT version FROM schema_migrations WHERE version=54');
+    if(!v54.rowCount){await client.query(`
+      ALTER TABLE voice_media ADD COLUMN IF NOT EXISTS catalog_retry_plan jsonb;
+      INSERT INTO schema_migrations(version) VALUES(54);
+    `);}
+    const v55=await client.query('SELECT version FROM schema_migrations WHERE version=55');
+    if(!v55.rowCount){await client.query(`
+      ALTER TABLE stores ADD COLUMN IF NOT EXISTS bill_address text;
+      ALTER TABLE order_requests ALTER COLUMN conversation_id DROP NOT NULL,
+        ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'chat' CHECK(source IN ('chat','in_store')),
+        ADD COLUMN IF NOT EXISTS counter_customer_name text,
+        ADD COLUMN IF NOT EXISTS counter_customer_phone text,
+        ADD COLUMN IF NOT EXISTS creation_hash text;
+      DO $$ BEGIN
+        IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='order_requests'::regclass AND conname='order_requests_store_fk') THEN
+          ALTER TABLE order_requests ADD CONSTRAINT order_requests_store_fk FOREIGN KEY(store_id) REFERENCES stores(id);
+        END IF;
+        IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='order_requests'::regclass AND conname='order_requests_chat_required') THEN
+          ALTER TABLE order_requests ADD CONSTRAINT order_requests_chat_required CHECK(source='in_store' OR conversation_id IS NOT NULL);
+        END IF;
+      END $$;
+      CREATE TABLE IF NOT EXISTS owner_final_bills (
+        request_id uuid NOT NULL REFERENCES order_requests(id) ON DELETE CASCADE,
+        revision integer NOT NULL CHECK(revision>0),
+        lines jsonb NOT NULL,total_paise bigint NOT NULL CHECK(total_paise>=0),
+        store_name text NOT NULL,store_address text,
+        fulfillment text NOT NULL CHECK(fulfillment IN ('ready_for_pickup','collected')),updated boolean NOT NULL DEFAULT false,
+        issued_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY(request_id,revision)
+      );
+      INSERT INTO schema_migrations(version) VALUES(55);
+    `);}
+    const v56=await client.query('SELECT version FROM schema_migrations WHERE version=56');
+    if(!v56.rowCount){await client.query(`
+      ALTER TABLE owner_final_bills ADD COLUMN IF NOT EXISTS customer_name text;
+      ALTER TABLE whatsapp_outbox ADD COLUMN IF NOT EXISTS document_pdf bytea;
+      INSERT INTO schema_migrations(version) VALUES(56);
+    `);}
+    const v57=await client.query('SELECT version FROM schema_migrations WHERE version=57');
+    if(!v57.rowCount){await client.query(`
+      ALTER TABLE owner_final_bills ADD COLUMN IF NOT EXISTS invoice_issued_at timestamptz;
+      UPDATE owner_final_bills SET invoice_issued_at=issued_at WHERE fulfillment='collected' AND invoice_issued_at IS NULL;
+      INSERT INTO schema_migrations(version) VALUES(57);
+    `);}
     await client.query('COMMIT');
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }

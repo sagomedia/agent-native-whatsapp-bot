@@ -1,10 +1,10 @@
 # Agent-native WhatsApp bot
 
-For moving devices or continuing with another coding agent, read [DEVICE-SETUP.md](DEVICE-SETUP.md) and [AGENT-HANDOFF.md](AGENT-HANDOFF.md). These record the newer recovered-source checkpoints; deployment statements below include historical milestones.
+For daily development and WhatsApp testing, start with [LOCAL-DEVELOPMENT.md](LOCAL-DEVELOPMENT.md). To continue with another coding agent, read [AGENT-HANDOFF.md](AGENT-HANDOFF.md), [WORKING-PREFERENCES.md](WORKING-PREFERENCES.md) and [CONTRIBUTING.md](CONTRIBUTING.md). [DEVICE-SETUP.md](DEVICE-SETUP.md) also preserves dated recovery instructions; use the current handoff to choose the source.
 
 Private repository: [sagomedia/agent-native-whatsapp-bot](https://github.com/sagomedia/agent-native-whatsapp-bot).
 
-Status: the source includes the retail runtime, catalog hierarchy, multimodal input, WhatsApp channel and protected owner dashboard. The customer ordering release adds unknown-item estimates, owner quotes, a manually verified ₹10 UPI advance and post-order amendments. See the [deployment handoff](03-Output/customer-ordering-finish/RELEASE-REPORT.md) for the recorded deployed checkpoint and remaining owner acceptance. A subsequent [voice-processing repair](03-Output/customer-ordering-finish/AUDIO-INCIDENT.md) is also included in this branch; its verification and deployment status are separate from that earlier handoff. Started 2 October 2026.
+ShopBot includes inventory-driven text, voice and photo shopping on WhatsApp, a shared owner order editor, in-store orders, pickup bill images and PDF invoices at collection. The [deployment handoff](03-Output/customer-ordering-finish/RELEASE-REPORT.md) records an earlier VPS checkpoint. Check the running release before comparing the VPS with local testing.
 
 Build a retail assistant that interprets whole customer requests and proposes typed business actions. Application services own identity, catalog facts, drafts, order confirmation, staff approval and payment truth.
 
@@ -21,7 +21,34 @@ The starting documents describe intended features. Consult `02-Build/shopbot-ai/
 
 Local Git history and rollback/export: `GIT-WORKFLOW.md`. Catalog and voice design: `02-Build/shopbot-ai/CATALOG-DISCOVERY.md`.
 
-## Quick start
+## Prepared checkout and daily workflow
+
+Large searches use an agent-authored visual narrowing strategy over real catalog attributes. The agent chooses the useful order for that request; group taps filter inventory without selecting the example product or changing purchase count. Nine choices plus continuation fit a carousel, and missing metadata falls back to paged real products. See [dynamic discovery verification](03-Output/dynamic-visual-discovery/README.md) and [catalog design](02-Build/shopbot-ai/CATALOG-DISCOVERY.md).
+
+On the prepared computer, work in `/home/gk-pc/projects/shopbot-inventory-dev` and start from `main`. The application is in `02-Build/shopbot-ai/`. Use this checkout to build, run and test the dashboard and WhatsApp together. Archived checkouts and deployment packages are recovery references.
+
+Clear add/remove/change requests execute against current inventory and cart rows. Ambiguous changes ask about named items, with photos and current choices; a removal question can offer “remove all shown” for exactly those rows. Repeated named quantities set totals; a genuine increase needs separate source evidence. An unknown total gets an item-specific quantity question. Questions retain the pending action, and selecting a current choice resumes it without another model call.
+
+```bash
+cd /home/gk-pc/projects/shopbot-inventory-dev/02-Build/shopbot-ai
+npm run local:db -- start
+npm run build
+npm run whatsapp:local
+```
+
+Wait for `LOCAL_ROUTE_READY`, then send a fresh message from the configured test phone to the same WhatsApp number. Open the [local dashboard](https://shopbot-local.sagoautomation.tech/owner) and sign in with the existing password. The [VPS dashboard](https://shopbot-preview.sagoautomation.tech/owner) always stays on the VPS. Ctrl+C restores the WhatsApp webhook to the VPS and disables the local addresses; `npm run whatsapp:restore` is the recovery command. Other senders are excluded during local test routing. Stop local mode before deploying.
+
+The private `.env`, `.env.ai` and `.env.whatsapp` files are already configured here and ignored by Git. Local products/photos are a separate snapshot; orders, stock edits and test chats remain local. Git pulls do not copy credentials, refresh inventory or restore databases. Dashboard asset changes appear after rebuilding from this checkout and refreshing the local dashboard.
+
+Normally: reproduce the problem, create a focused branch, fix the general inventory/semantic behavior, run mocked checks and appropriate metered fixtures, test on the owner's phone, push a PR, verify CI, then deploy an authorized release. A push or merge alone does not update the VPS. Do not add product-specific keyword branches as repairs.
+
+To hand over in the same folder, give the next agent this context:
+
+> Open /home/gk-pc/projects/shopbot-inventory-dev. Read AGENT-HANDOFF.md, WORKING-PREFERENCES.md, CONTRIBUTING.md, LOCAL-DEVELOPMENT.md and 03-Output/voice-corrections/README.md. Inspect git status and the current branch before changing anything. Start from the current `main` in this checkout and preserve any unfinished edits. ShopBot uses semantic understanding grounded in current inventory; preserve counts, unrelated cart rows, genuine product photos and explicit submission. Verify current local/VPS routing before starting or stopping services. Keep secrets/private audio outside Git and distinguish synthetic tests from actual phone acceptance.
+
+Use one writer in this checkout. Chat history and MCP/account permissions do not automatically transfer to another coding agent. See the handoff for architecture, deployment checkpoints, budget limits and remaining acceptance.
+
+## Fresh-device mock quick start
 
 Clone the repository onto a local disk, then start the mock environment:
 
@@ -37,7 +64,7 @@ Open http://localhost:3017. The optional AI test page is at http://localhost:301
 
 ## Development and verification
 
-`main` is the current published application baseline, including the consolidated ordering, catalog, WhatsApp recovery and owner-dashboard work. The [21 October branch cleanup](03-Output/branch-cleanup-20261021/README.md) records the retired branches and their preserved commits. One active dashboard branch remains for unfinished inventory work.
+`main` is the current published application baseline, including the consolidated ordering, catalog, WhatsApp recovery and owner-dashboard work. The [21 October branch cleanup](03-Output/branch-cleanup-20261021/README.md) records the retired branches and their preserved commits. Inspect current branches and open PRs for unfinished work; dated branch reports are historical.
 
 Create a `codex/<change>` or `feature/<change>` branch from an up-to-date `main`, open a pull request, and retire the branch after its work is merged. Historical rollback points are retained as `checkpoint/*` tags. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and [GIT-WORKFLOW.md](GIT-WORKFLOW.md) for recovery. Merging source does not deploy it or complete owner/device acceptance.
 

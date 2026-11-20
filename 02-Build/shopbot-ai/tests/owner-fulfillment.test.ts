@@ -194,7 +194,7 @@ test('staff acknowledges a handoff with a scoped visual receipt, rejects stale c
   await channel.runtime.tools.invoke({storeId:fixtureStore,conversationId:c.id,actor:c.actor,role:'customer'},{name:'apply_draft_changes',args:{expectedVersion:state.version,operations:[{kind:'add_item',query:'H08',quantity:1}]}},randomUUID());
   await channel.receive(inbound({type:'text',text:{body:'Hi'}}));const sentBefore=sent.length;
   const combined=await post(c.id,{mode:'assistant',revision:hold.json().operator_revision,notify:true});assert.equal(combined.statusCode,200);assert.equal(combined.json().customerNotification,'combined_with_pending_reply');
-  assert.equal(await channel.processNext(),true);assert.equal(await channel.sendNext(),true);assert.equal(sent.length,sentBefore+1);assert.match(JSON.stringify(sent.at(-1)),/saved list with 1 item/);
+  assert.equal(await channel.processNext(),true);assert.equal(await channel.sendNext(),true);assert.equal(sent.length,sentBefore+1);assert.match(JSON.stringify(sent.at(-1)),/1 item in your saved list/);
   await pool.query("UPDATE conversations SET handoff_requested=true,operator_mode='owner' WHERE id=$1",[c.id]);await pool.query("UPDATE whatsapp_conversations SET last_inbound_at=now()-interval '25 hours' WHERE conversation_id=$1",[c.id]);
   const closed=await post(c.id,{mode:'owner',revision:combined.json().operator_revision,acknowledge:true});assert.equal(closed.statusCode,200,closed.body);assert.equal(closed.json().customerNotification,'not_sent');assert.equal(await channel.sendNext(),false);
   assert.equal((await pool.query('SELECT count(*)::int AS n FROM order_requests')).rows[0].n,0);
