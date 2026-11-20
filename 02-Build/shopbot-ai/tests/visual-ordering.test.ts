@@ -44,7 +44,9 @@ for(const count of [1,5,8,9,10,12,18,19,20,50])test(`${count} products: complete
  assert.ok(!cards.some(c=>c.buttons?.some(b=>b.event.type==='shopping_action'&&b.event.action==='view_products')));
  assert.equal(cards.filter(c=>c.kind==='instruction').length,count===1?0:count>9&&count%10!==9?2:1);
  s=await event(inbox,runtime,approve(s));assert.equal(s.requests.length,0);assert.equal(s.conversation.pending?.kind,'review');assert.equal(last(s).stage,'bill');const bill=invoiceCards(s);assert.ok(bill.every(c=>c.kind!=='product'&&(c.billRows?.length??0)<=INVOICE_ROWS_PER_PAGE));
- const final=submit(s);s=await event(inbox,runtime,final);assert.equal(s.requests.length,1);assert.equal(last(s).stage,'submitted');assert.ok(s.messages.filter(m=>m.rich?.stage==='submitted').flatMap(m=>m.rich!.parts?.flatMap(p=>p.cards)??[]).some(c=>c.kind==='status'&&c.billRows?.length));await inbox.ingest(final);assert.equal(await runtime.processNext(inbox.context),false);assert.equal((await inbox.snapshot()).requests.length,1);
+ const final=submit(s);s=await event(inbox,runtime,final);assert.equal(s.requests.length,1);assert.equal(last(s).stage,'submitted');const receipt=s.messages.filter(m=>m.rich?.stage==='submitted');assert.equal(receipt.length,1);
+ assert.equal(invoiceCards(s).length,0);assert.match(receipt[0].text,new RegExp(s.requests[0].id.slice(0,8),'i'));
+ assert.ok(buttons(last(s)).some(b=>b.event.type==='shopping_action'&&b.event.action==='status'));await inbox.ingest(final);assert.equal(await runtime.processNext(inbox.context),false);assert.equal((await inbox.snapshot()).requests.length,1);
 }));
 
 test('pack size and count guard preserves paint/pipe dimensions and original evidence',()=>{
@@ -90,7 +92,12 @@ test('one remaining candidate progresses through product approval and bill inste
  await setupImageDemo(pool);const id=randomUUID();await pool.query("INSERT INTO conversations(id,store_id,actor) VALUES($1,$2,'candidate-test')",[id,demoCatalogStore]);
  const inbox=new SimulatorService(pool,{storeId:demoCatalogStore,conversationId:id,actor:'candidate-test',role:'customer'});
  const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:'blade',quantity:1,search:{keywords:['hacksaw'],familyId:'saw-blades'}}]),{visualOrdering:true});
- let s=await text(inbox,runtime,'one blade');const select=buttons(last(s)).find(b=>b.event.type==='select_product');assert.ok(select);s=await event(inbox,runtime,select.event);assert.equal(last(s).stage,'bill');assert.equal(s.requests.length,0);s=await event(inbox,runtime,submit(s));assert.equal(s.requests.length,1);
+ let s=await text(inbox,runtime,'one blade');const select=buttons(last(s)).find(b=>b.event.type==='select_product');assert.ok(select);s=await event(inbox,runtime,select.event);
+ assert.equal(last(s).stage,'products');assert.equal(invoiceCards(s).filter(c=>c.kind==='product').length,1);
+ assert.equal(s.conversation.pending,null);assert.equal(s.requests.length,0);
+ const show=buttons(last(s)).find(b=>b.event.type==='review');assert.ok(show);
+ s=await event(inbox,runtime,show.event);assert.equal(last(s).stage,'bill');assert.equal(s.requests.length,0);
+ s=await event(inbox,runtime,submit(s));assert.equal(s.requests.length,1);
 }));
 for(const mode of ['text','voice'])test(`${mode}: observed one 10-litre box remains one can, while a size alone asks its count`,()=>fixture(async(pool,inbox)=>{
  const phrase='one 10 liter box';const runtime=new ConversationRuntime(pool,planner([{kind:'add_item',query:'TEST0',quantity:10,requestedUnit:'litre'}],phrase),{visualOrdering:true,mediaRecommendations:true});
@@ -108,7 +115,7 @@ test('select the photographed product before a missing count; quantity has its p
  if(s.conversation.pending?.kind==='products')s=await event(inbox,runtime,approve(s));assert.equal(last(s).stage,'bill');assert.ok(buttons(last(s)).some(b=>b.event.type==='confirm'));assert.equal(s.requests.length,0);
 }));
 
-test('text and voice can update a shown bill without approving identical photos again',()=>fixture(async(pool,inbox)=>{
+test('text and voice edits reopen the cart with a fresh bill action and invalidate old consent',()=>fixture(async(pool,inbox)=>{
  const startOps:Operation[]=[
   {kind:'add_item',query:'TEST0',quantity:1},
   {kind:'add_item',query:'TEST1',quantity:2},
@@ -128,8 +135,11 @@ test('text and voice can update a shown bill without approving identical photos 
  const old=submit(s);
  assert.match(last(s).text,/message or voice note to add, remove or change/i);
  s=await text(inbox,runtime,'Change TEST1 to three cans');
- assert.equal(last(s).stage,'bill');
+ assert.equal(last(s).stage,'products');
+ assert.deepEqual(invoiceCards(s).filter(c=>c.kind==='product').map(c=>c.lineId),ids);
  assert.deepEqual(s.conversation.draft.map(l=>l.quantity),[1,3]);
+ const showText=buttons(last(s)).find(b=>b.event.type==='review');assert.ok(showText);
+ s=await event(inbox,runtime,showText.event);
  const afterText=submit(s);
  assert.notEqual(afterText.type==='confirm'&&afterText.reviewId,old.type==='confirm'&&old.reviewId);
  const mediaId=randomUUID(),pcm=Buffer.alloc(32000);
@@ -138,10 +148,13 @@ test('text and voice can update a shown bill without approving identical photos 
  await inbox.ingest({id:mediaId,type:'voice',mediaId},media);
  await runtime.processNext(inbox.context);
  s=await inbox.snapshot();
- assert.equal(last(s).stage,'bill');
+ assert.equal(last(s).stage,'products');
+ assert.deepEqual(invoiceCards(s).filter(c=>c.kind==='product').map(c=>c.lineId),ids);
  assert.deepEqual(s.conversation.draft.map(l=>l.id),ids);
  assert.deepEqual(s.conversation.draft.map(l=>l.quantity),[4,3]);
  assert.equal(s.requests.length,0);
+ const showVoice=buttons(last(s)).find(b=>b.event.type==='review');assert.ok(showVoice);
+ s=await event(inbox,runtime,showVoice.event);
  s=await event(inbox,runtime,{...old,id:randomUUID()});
  assert.equal(s.requests.length,0);
  s=await event(inbox,runtime,submit(s));

@@ -119,7 +119,7 @@ test('a rejected list asks for all items again without offering a department bro
  },{...cfg,aiEnabled:true,visualOrdering:true},provider);
 });
 
-test('a current product photo button reopens the saved product check instead of browsing the catalog',()=>{
+test('a saved edit sends the full product carousel and Show bill requires no inference',()=>{
  const provider:Interpreter={
   name:'offline-product-tap-test',mode:'live',billing:geminiTextRate,
   async interpret({state,text}){
@@ -134,24 +134,65 @@ test('a current product photo button reopens the saved product check instead of 
   const hose=(await pool.query("SELECT name FROM products WHERE store_id=$1 AND sku='H13'",[fixtureStore])).rows[0];
   await turn(channel,{type:'text',text:{body:`Change ${hose.name} to 4`}});
   const button=(await pool.query(`SELECT a.*,o.provider_id FROM whatsapp_actions a JOIN whatsapp_outbox o ON o.message_id=a.message_id
-    WHERE a.event->>'action'='view_products' ORDER BY o.created_at DESC LIMIT 1`)).rows[0];
-  assert.ok(button,JSON.stringify((await pool.query("SELECT text,payload->>'stage' AS stage FROM messages WHERE direction='outbound'")).rows));
-  assert.equal(button.label,'Show products');
-  const snapshot=async()=>(await pool.query('SELECT version,draft,pending FROM conversations WHERE id=$1',[button.conversation_id])).rows[0];
-  const before=await snapshot();
-  assert.deepEqual(before.draft.map((line:{sku:string;quantity:number})=>[line.sku,line.quantity]),[['H02',1],['H13',4]]);
-  const attempts=(await pool.query('SELECT count(*)::int AS n FROM provider_attempts')).rows[0].n;
-  await turn(channel,tap(button));
+    JOIN messages m ON m.id=a.message_id WHERE a.event->>'type'='confirm_products' ORDER BY m.sequence DESC LIMIT 1`)).rows[0];
+  assert.ok(button);assert.equal(button.label,'Show bill');
   const reply=sent.at(-1).interactive;
   assert.equal(reply.type,'carousel');
   const images=reply.action.cards.map((card:any)=>card.header.image.link);
   assert.ok(images.includes('https://'+cfg.hostname+'/catalog-images/H02.jpg'));
   assert.ok(images.includes('https://'+cfg.hostname+'/catalog-images/H13.jpg'));
-  assert.deepEqual(await snapshot(),before);
+  assert.ok(reply.action.cards.every((card:any)=>card.action.buttons.every((b:any)=>b.quick_reply.title!=='Show list')));
+  const snapshot=async()=>(await pool.query('SELECT version,draft,pending FROM conversations WHERE id=$1',[button.conversation_id])).rows[0];
+  const before=await snapshot();
+  assert.deepEqual(before.draft.map((line:{sku:string;quantity:number})=>[line.sku,line.quantity]),[['H02',1],['H13',4]]);
+  const attempts=(await pool.query('SELECT count(*)::int AS n FROM provider_attempts')).rows[0].n;
+  await turn(channel,tap(button));
+  const reviewed=await snapshot();
+  assert.equal(reviewed.pending.kind,'review');
+  assert.deepEqual(reviewed.draft.map((line:{sku:string;quantity:number})=>[line.sku,line.quantity]),[['H02',1],['H13',4]]);
   assert.equal((await pool.query('SELECT count(*)::int AS n FROM provider_attempts')).rows[0].n,attempts);
   assert.equal((await pool.query('SELECT id FROM order_requests')).rowCount,0);
  },{...cfg,visualOrdering:true,aiEnabled:true,paidEnabled:true,budgetMicrousd:5000000},provider);
 });
+
+test('a mixed catalog and unlisted WhatsApp order reaches the owner exactly once after the estimate',()=>fixture(async(pool,channel,sent)=>{
+ await turn(channel,{type:'text',text:{body:'two Teflon tapes and one special wire coil'}});
+ const summary=sent.at(-1).interactive;
+ assert.equal(summary.type,'carousel');
+ assert.ok(summary.action.cards.some((card:any)=>card.header.image.link.endsWith('/H08.jpg')));
+ const show=await action(pool,'confirm_products');assert.ok(show);assert.equal(show.label,'பில் காட்டு');
+ await turn(channel,carouselTap(show));
+ const invoice=sent.at(-1).interactive;
+ assert.equal(invoice.type,'button');assert.equal(invoice.header.type,'image');
+ assert.match(invoice.body.text,/₹40.00/);assert.match(invoice.body.text,/கடை சரிபார்க்கும்/);
+ const confirm=await action(pool,'confirm');assert.ok(confirm);assert.equal(confirm.label,'கடைக்கு அனுப்பு');
+ assert.equal((await pool.query('SELECT id FROM order_requests')).rowCount,0);
+ await turn(channel,tap(confirm));
+ const acknowledgement=sent.at(-1).interactive;
+ assert.equal(acknowledgement.type,'button');assert.equal(acknowledgement.header,undefined);
+ assert.match(acknowledgement.body.text,/கடைக்கு அனுப்பியாச்சு · Order #[A-F0-9]{8}/);
+ assert.equal(acknowledgement.action.buttons[0].reply.title,'ஆர்டர் நிலை');
+ await turn(channel,tap(confirm));
+
+ const owner={hostname:'checkout-owner.example.test',issuer:'https://fixture.cloudflareaccess.com',audience:'offline-checkout',email:'owner@example.test',storeId:fixtureStore};
+ const app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,port:3017,host:'127.0.0.1',mediaDir:'/tmp/shopbot-edited-checkout',owner},pool,undefined,undefined,async()=>({email:owner.email,subject:'offline'}));
+ try{
+  const response=await app.inject({url:'/api/owner/snapshot',headers:{host:owner.hostname,'cf-access-jwt-assertion':'offline'}});
+  assert.equal(response.statusCode,200);
+  const snapshot=response.json();
+  assert.equal(snapshot.requestCounts.active,1);assert.equal(snapshot.requests.length,1);
+  const order=snapshot.requests[0];
+  assert.equal(Number(order.total_paise),4000);assert.equal(order.estimate_complete,false);
+  assert.deepEqual(order.lines.map((line:any)=>[line.query,line.quantity]),[['H08',2],['special wire coil',1]]);
+  assert.deepEqual(order.excluded_line_ids,[order.lines[1].id]);
+ }finally{await app.close();}
+},{...cfg,visualOrdering:true,partialReviews:true,defaultReplyLanguage:'ta',aiEnabled:true,paidEnabled:true,budgetMicrousd:5000000},{
+ name:'offline-mixed-checkout',mode:'live',billing:geminiTextRate,
+ async interpret(){
+  return {output:{next:'review',operations:[{kind:'add_item',query:'H08',quantity:2},{kind:'add_item',query:'special wire coil',quantity:1}]},
+   truncated:false,responseModel:geminiTextRate.model,usage:{promptTokenCount:1000,candidatesTokenCount:100,totalTokenCount:1100}};
+ },
+}));
 
 test('category → photo → quantity → review → confirm runs without inference, and duplicate confirmation cannot submit twice',async()=>fixture(async(pool,channel,sent)=>{
  await turn(channel,{type:'text',text:{body:'hello'}});

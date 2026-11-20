@@ -419,7 +419,11 @@ export class ConversationRuntime {
             }
           }else{
           rich=await handleShoppingAction(client,ctx,current,event,claimed.catalogMap);
-          if(event.type==='shopping_action'&&event.action==='continue_list'){const next=await this.tools.invokeInTransaction(client,ctx,{name:'preview_order',args:{expectedVersion:current.version}},claimed.id+':continue');rich=presentReply(next,next.state!);}
+          if(event.type==='shopping_action'&&(event.action==='continue_list'||event.action==='keep_list'&&current.visualOrdering&&!current.lastRequestId)){
+            const list=event.action==='keep_list'?await loadState(client,ctx):current;
+            const next=await this.tools.invokeInTransaction(client,ctx,{name:'preview_order',args:{expectedVersion:list.version}},claimed.id+':continue');
+            rich=presentReply(next,next.state!);
+          }
           if(proposed){
             const state=await loadState(client,ctx);
             const changed=await this.tools.invokeInTransaction(client,ctx,{name:'apply_draft_changes',args:{expectedVersion:state.version,operations:proposed}},claimed.id+':new-list');
@@ -657,7 +661,25 @@ export class ConversationRuntime {
       if(claimed.catalogMap)rich={...rich,storeName:claimed.catalogMap.store.name};
       if(replyRequest?.advanceRequired&&this.options.advance&&!rich.readOnly)rich=await upiAdvanceReply(client,ctx,finalState,this.options.advance.hostname,{demoPayAtShop:this.options.advance.demoPayAtShop,onlyOnce:true})??rich;
       const alreadySeen=finalState.draft.length>0&&finalState.draft.every(line=>{const product=line.candidates?.find(p=>p.sku===line.sku);return product&&claimed.displayedProducts.some(p=>p.delivered&&p.event.type==='edit_item'&&p.event.lineId===line.id&&productIdentity(p.product)===productIdentity(product));});
-      const editVisual=finalState.visualOrdering&&cartBefore.pending?.kind!=='review'&&cartMutated&&!failure&&rich.stage!=='error'&&!rich.readOnly&&finalState.pending?.kind==='products'&&!['cart_edit_target','keep_only_target','intent_clarification'].includes(rich.clarificationReason??'')?visualCartMutation(cartBefore,finalState,{contextLines:rich.contextLines,fullList:interpretation?.understanding?.intents.includes('view_list')}):undefined;
+      const resumesList=claimed.event.type==='shopping_action'&&['continue_list','keep_list'].includes(claimed.event.action);
+      const chosenVariant=claimed.event.type==='select_product'?claimed.event:undefined;
+      const choseVariant=chosenVariant&&cartBefore.draft.some(line=>line.id===chosenVariant.lineId&&!line.sku);
+      const countLineId=cartBefore.pending?.kind==='question'?cartBefore.pending.lineId:undefined;
+      const countQuestion=countLineId&&cartBefore.draft.find(line=>line.id===countLineId&&line.sku&&line.quantity===null);
+      const completesCount=countQuestion&&finalState.pending?.kind==='review'&&finalState.draft.some(line=>
+        line.id===countLineId&&line.sku===countQuestion.sku&&line.quantity!==null)
+        &&digest(cartBefore.draft.filter(line=>line.id!==countLineId))===digest(finalState.draft.filter(line=>line.id!==countLineId));
+      const showUpdatedList=finalState.visualOrdering&&cartBefore.draft.length>0&&!finalState.lastRequestId
+        &&!failure&&!rich.readOnly&&!quantityLine&&rich.stage!=='error'&&!unclearKeep&&!unclearTarget&&!clearConfirmation
+        &&!['cart_edit_target','keep_only_target','intent_clarification'].includes(rich.clarificationReason??'')
+        &&(cartMutated&&!completesCount||resumesList||choseVariant);
+      const editVisual=showUpdatedList?visualCartMutation(finalState,rich.contextLines):undefined;
+      if(editVisual&&finalState.pending?.kind==='review'){
+        // A review created during revalidation has never been shown. Only the
+        // Show bill action can issue a fresh review with customer consent buttons.
+        await client.query('UPDATE conversations SET pending=NULL WHERE id=$1',[ctx.conversationId]);
+        finalState.pending=null;
+      }
       const wantsHours=interpretation?.shopQuestions?.includes('hours'),billStage=rich.stage==='bill'||rich.stage==='submitted'||finalState.pending?.kind==='review'&&rich.kind==='order_review';
       const shopHours=wantsHours||billStage?await readStoreHours(client,ctx.storeId):undefined;
       if(wantsHours&&shopHours){const oldAnswer=shopAnswers(finalState,['hours']),answer=hoursAnswer(shopHours,finalState);rich={...rich,text:rich.text.replaceAll(oldAnswer,answer),contextLines:rich.contextLines?.map(v=>v.replaceAll(oldAnswer,answer)),parts:rich.parts?.map(part=>({...part,text:part.text.replaceAll(oldAnswer,answer)}))};}

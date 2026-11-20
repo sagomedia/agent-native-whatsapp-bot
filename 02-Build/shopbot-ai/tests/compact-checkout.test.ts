@@ -36,10 +36,10 @@ test('an excluded count or identity is not mislabeled as only an unknown price',
  const unknown=line({...product,sku:'UNKNOWN',pricePaise:0,priceStatus:'confirm'}),s=state([line(product,2),quantity,missing,unknown]);
  assert.equal(estimateLines(s.draft).knownSubtotalPaise,4000);
  const summary=estimatePendingSummary(s)!;
- assert.match(summary,/1 எண்ணிக்கை/);assert.match(summary,/1 பொருள்/);assert.match(summary,/1 விலை/);
+ assert.match(summary,/1 எண்ணிக்கை/);assert.match(summary,/1 பொருளை கடை சரிபார்க்கும்/);assert.match(summary,/1 விலை/);
  assert.match(estimateTotalText(s),/₹40.00/);
  const card=visualBill(s).parts![0].cards[0];assert.equal(card.kind,'bill');if(card.kind!=='bill')return;
- assert.match(card.lines.join('\n'),/எண்ணிக்கை/);assert.match(card.lines.join('\n'),/பொருள் தேர்வு/);
+ assert.match(card.lines.join('\n'),/எண்ணிக்கை/);assert.match(card.lines.join('\n'),/பொருளை கடை சரிபார்க்கும்/);
  assert.doesNotMatch(card.lines.join('\n'),/3.*விலை/);
  assert.equal(card.billRows![1].total,'எண்ணிக்கை தேவை');
  const bill=visualBill(s);assert.match(bill.parts![0].text,/1 எண்ணிக்கை சொல்லணும்/);

@@ -3,7 +3,7 @@ import {languageOf,type LanguageContext} from './language.js';
 // Customer wording is reviewed independently of the business action. Values
 // are backend facts; the model never rewrites an estimate or payment state.
 const copy = {
- welcome: ['Welcome! What items do you need?\n\nSend a voice note, text, or a photo.', 'வணக்கம்! என்னென்ன பொருள் வேணும்?\n\nVoice-ல சொல்லி அனுப்புங்க.\nText அல்லது photo அனுப்பினாலும் சரி.', 'Vanakkam! Ennenna porul venum?\n\nVoice-la solli anuppunga.\nText illa photo anuppinaalum sari.'],
+ welcome: ['What do you need? Type a message, send a voice note, or share a photo.', 'என்ன பொருள் வேணும்? மெசேஜ், வாய்ஸ் நோட் அல்லது படம் அனுப்புங்க.', 'Enna porul venum? Message, voice note illa photo anuppunga.'],
  help: ['What are you working on? You can send a voice note or photo.', 'என்ன வேலைக்கு பொருள் வேணும்?\nVoice அல்லது photo அனுப்பலாம்.', 'Enna velaikku porul venum?\nVoice illa photo anuppalaam.'],
  check: ['Is this the product you meant?', 'இந்த photo-ல இருக்குறது சரியா?', 'Intha photo-la irukkurathu sariyaa?'],
  quantity: ['How many {unit} of {item} do you need?', '{item} எத்தனை {unit} வேணும்?', '{item} eththanai {unit} venum?'],

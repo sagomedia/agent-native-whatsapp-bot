@@ -1,7 +1,7 @@
 [
   {
     "stage": "identify",
-    "text": "1 inch pipe\nWhich *product type*?",
+    "text": "1 inch pipe · Which *product type*?",
     "cards": [
       {
         "kind": "instruction",
@@ -24,13 +24,13 @@
     ],
     "actions": [
       {
-        "label": "Choose",
+        "label": "Garden hoses",
         "type": "refine_search",
         "facet": "family",
         "value": "hose"
       },
       {
-        "label": "Choose",
+        "label": "PVC pipes",
         "type": "refine_search",
         "facet": "family",
         "value": "pvc-pipes"
@@ -74,7 +74,7 @@
   },
   {
     "stage": "identify",
-    "text": "0.75 inch pipe\nWhich *product type*?",
+    "text": "0.75 inch pipe · Which *product type*?",
     "cards": [
       {
         "kind": "instruction",
@@ -97,13 +97,13 @@
     ],
     "actions": [
       {
-        "label": "Choose",
+        "label": "Garden hoses",
         "type": "refine_search",
         "facet": "family",
         "value": "hose"
       },
       {
-        "label": "Choose",
+        "label": "PVC pipes",
         "type": "refine_search",
         "facet": "family",
         "value": "pvc-pipes"
@@ -186,7 +186,7 @@
     "cards": [
       {
         "kind": "bill",
-        "caption": "Estimated invoice 1 / 1",
+        "caption": "Estimated total: ₹2,040.00",
         "title": "Estimated invoice",
         "lines": [
           "Final availability is checked by the shop"

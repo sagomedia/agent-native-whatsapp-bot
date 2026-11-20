@@ -44,13 +44,14 @@ export function catalogGroupReply(result:DiscoveryResult,state:ConversationState
   const imageUrl=productMediaUrl(group.product?.imageUrl)?group.product?.imageUrl:result.products.find(p=>matches(p,group)&&productMediaUrl(p.imageUrl))?.imageUrl;
   const count=say(state,`${group.count} ${group.count===1?'product':'products'}`,`${group.count} பொருட்கள்`,`${group.count} porutkal`);
   const example=imageUrl?say(state,'Example photo','எடுத்துக்காட்டு படம்','Example photo'):undefined;
-  return {kind:'instruction',title:name,lines:[count,...(example?[example]:[])],caption:[fitText(name,80),count,example].filter(Boolean).join('\n'),...(imageUrl?{imageUrl}:{}),buttons:[{label:say(state,'Choose','தேர்வு','Choose'),event:event(group.key,group.value)}]};
+  return {kind:'instruction',title:name,lines:[count,...(example?[example]:[])],caption:[fitText(name,80),count,example].filter(Boolean).join('\n'),...(imageUrl?{imageUrl}:{}),buttons:[{label:fitText(name,20),event:event(group.key,group.value)}]};
  });
  if(pageFacet){const label=say(state,'More choices','மேலும் தேர்வுகள்','Melum choices');cards.push({kind:'instruction',title:label,lines:[],caption:label,buttons:[{label,event:event(pageFacet.key,discoveryMoreValue)}]});}
  const key=groups[0].key,label=facetLabel(key,facet?.label??'product type',state);
  const question=safeQuestion(result.plan.narrowing?.find(s=>s.key===key)?.question,state)??say(state,`Which *${label}*?`,`எந்த *${label}* வேண்டும்?`,`Entha *${label}* venum?`);
  const current=binding.lineId?state.draft.find(line=>line.id===binding.lineId):undefined;
- return makeReply(cards,current?fitText(measurementText(current.query??current.name,state),60)+'\n'+question:question);
+ const target=current&&state.draft.length>1?fitText(measurementText(current.query??current.name,state),60):undefined;
+ return makeReply(cards,target?`${target} · ${question}`:question);
 }
 function matches(product:Product,group:Group):boolean {
  const equal=(a:string|undefined,b:string)=>a?.trim().toLocaleLowerCase()===b.trim().toLocaleLowerCase();

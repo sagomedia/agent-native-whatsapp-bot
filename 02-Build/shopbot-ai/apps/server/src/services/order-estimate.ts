@@ -71,10 +71,14 @@ export function estimatePendingReason(line:DraftLine):'product'|'unit'|'quantity
  return 'details';
 }
 export function estimatePendingSummary(state:ConversationState,lines:DraftLine[]=state.draft):string|undefined {
- const counts=new Map<ReturnType<typeof estimatePendingReason>,number>();
- for(const line of indicativeEstimate(lines).unpriced){const reason=estimatePendingReason(line);counts.set(reason,(counts.get(reason)??0)+1);}
+ const counts=new Map<ReturnType<typeof estimatePendingReason>|'shop_check',number>();
+ for(const line of indicativeEstimate(lines).unpriced){
+  const reason=!line.sku&&!line.candidates?.length&&line.resolution==='unavailable'?'shop_check':estimatePendingReason(line);
+  counts.set(reason,(counts.get(reason)??0)+1);
+ }
  if(!counts.size)return;
  return [...counts].map(([reason,count])=>({
+  shop_check:say(state,`${count} ${count===1?'item':'items'} for the shop to check`,`${count} பொருளை கடை சரிபார்க்கும்`,`${count} porulai kadai check pannum`),
   product:say(state,`${count} product choices pending`,`${count} பொருள் தேர்வு தேவை`,`${count} product choice venum`),
   unit:say(state,`${count} selling units to check`,`${count} விற்பனை அளவு சரிபார்க்கணும்`,`${count} selling unit check pannanum`),
   quantity:say(state,`${count} quantities needed`,`${count} எண்ணிக்கை சொல்லணும்`,`${count} count sollanum`),

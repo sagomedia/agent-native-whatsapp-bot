@@ -6,6 +6,7 @@ import {referenceLine} from './tools.js';
 import {quantityReply} from './shopping-language.js';
 import {ToolError} from './context.js';
 import {tokens} from '../../../../packages/contracts/catalog-text.js';
+import {intentClauses,positiveRemoval,removalMention} from '../../../../packages/contracts/intent-language.js';
 
 export type KeepSelection={targetIndex:number;lineId:string};
 const negatedAction=/\b(?:do not|don't|never)\s+(?:keep|retain|leave|remove|delete|drop)|(?:நீக்க|எடுக்க|எடுத்துர|காலி|வைங்க|வைக்க|வைத்திரு|வச்சிரு).{0,16}(?:வேண்டாம்|வேணாம்)/iu;
@@ -81,7 +82,20 @@ export function bindExplicitCorrection(operations:Operation[],state:Conversation
  if(quantityReply(following))return operations;
  const reference=named[1].replace(/^(?:only\s+)?(?:(?:the|my|this|that)\s+)?/i,'').replace(/\s+(?:item|product|back)$/i,'').trim();
  const focused=state.editingLineId??(state.pending?.kind==='question'?state.pending.lineId:undefined);
- let target;try{target=referenceLine(state,focused&&/^(?:this|it|that)$/i.test(reference)?focused:reference);}catch{throw new ToolError('Which listed item should be replaced? Choose its photo; your list is kept.','correction_target');}
+ const pronoun=/^(?:this|it|that)$/i.test(reference);
+ const preceding=pronoun?intentClauses(description.slice(0,named.index).replace(/\band\s*$/i,'')).at(-1):undefined;
+ let target:DraftLine|undefined;
+ if(preceding&&removalMention.test(preceding)){
+  // "Remove the tape and replace it with …" refers to the preceding named
+  // item, even if the customer was looking at a different cart row.
+  const candidates=positiveRemoval(preceding,description)?namedEditLines(preceding,state):[];
+  if(candidates.length===1)target=candidates[0];
+ }else{
+  try{target=referenceLine(state,pronoun&&focused?focused:reference);}catch(error){
+   if(!(error instanceof ToolError))throw error;
+  }
+ }
+ if(!target)throw new ToolError('Which listed item should be replaced? Choose its photo; your list is kept.','correction_target');
  const resolve=operations.filter(op=>op.kind==='resolve_line');
  if(resolve.some(op=>op.lineId!==target.id))throw new ToolError('The proposed change did not match the item you named. Choose its photo; your list is kept.','correction_target');
  const removes=operations.filter(op=>op.kind==='remove_item'),adds=operations.filter(op=>op.kind==='add_item');

@@ -63,7 +63,7 @@ The budget reserves the model's full allowed input/output ceiling before each ca
 
 ## Actual WhatsApp and full owner dashboard locally
 
-The prepared private `.env.whatsapp` reuses the existing number, Meta connection and dashboard password. The product snapshot includes the current 343 inventory records and the photographs used by those records. The local database is independent: local orders and catalog changes do not change live shop data. Existing VPS customer history is not copied. Each database/schema retains its own inference ledger; the local WhatsApp channel and CLI evaluation each have a cumulative $0.50 ceiling.
+The prepared private `.env.whatsapp` reuses the existing number, Meta connection and dashboard password. Use `WHATSAPP_PARTIAL_REVIEWS_ENABLED=true` in that profile to test sending unlisted or unpriced items to the shop. Those items keep their requested quantities and stay out of the known subtotal. The product snapshot includes the current 343 inventory records and the photographs used by those records. The local database is independent: local orders and catalog changes do not change live shop data. Existing VPS customer history is not copied. Each database/schema retains its own inference ledger; the local WhatsApp channel and CLI evaluation each have a cumulative $0.50 ceiling.
 
 ```bash
 npm run local:db -- start
