@@ -4,6 +4,16 @@ import {compactTamil} from './owner-compact-tamil.js';
 
 export type OwnerLocale='en'|'ta';
 const tamil:Record<string,string>={
+ "Bill actions":"பில் செயல்கள்",
+ "Invoice actions":"விலைப்பட்டியல் செயல்கள்",
+ "Item actions":"பொருள் செயல்கள்",
+ "Increase quantity":"அளவை அதிகரி",
+ "Decrease quantity":"அளவைக் குறை",
+ "View original estimate":"முதல் மதிப்பீட்டைப் பார்",
+ "Original estimate":"முதல் மதிப்பீடு",
+ "Current item":"தற்போதைய பொருள்",
+ "Order total and bills":"ஆர்டர் மொத்தமும் பில்களும்",
+
  'Pickup bill':'எடுத்துச் செல்லும் பில்',
  'Updated pickup bill':'திருத்திய பில்',
  'Updated pickup bill saved.':'திருத்திய பில் சேமிக்கப்பட்டது.',
@@ -11,6 +21,7 @@ const tamil:Record<string,string>={
  'Download invoice':'விலைப்பட்டியலைப் பதிவிறக்கு',
  'Print invoice':'விலைப்பட்டியலை அச்சிடு',
  'Send invoice':'விலைப்பட்டியலை அனுப்பு',
+ 'The 24-hour WhatsApp reply window is closed.':'WhatsApp-ன் 24 மணி நேர பதில் காலம் முடிந்தது.',
  'Send pickup bill':'எடுத்துச் செல்லும் பில்லை அனுப்பு',
  'item ·':'பொருள் ·',
  "New in-store order":"புதிய கடை ஆர்டர்",
