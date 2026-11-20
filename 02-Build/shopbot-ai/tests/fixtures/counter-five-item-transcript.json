@@ -112,7 +112,7 @@
   },
   {
     "stage": "products",
-    "text": "Changed 0.75 inch PVC Pipe Local (1 piece)\n5 items\nSend a message or voice note to add, remove or change items.\nIf the photos are right, tap Show bill.",
+    "text": "Changed 0.75 inch PVC Pipe Local (1 piece)\nYour list · 5 items\nMessage or voice note to add, remove or change items.\nIf the photos are right, tap Show bill.",
     "cards": [
       {
         "kind": "instruction",
@@ -182,11 +182,11 @@
   },
   {
     "stage": "bill",
-    "text": "Estimated total: ₹2,040.00\nSend a message or voice note to add, remove or change items.\nTap Send to store when you’re ready.",
+    "text": "Estimated total: ₹2,040.00\nMessage or voice note to add, remove or change items.",
     "cards": [
       {
         "kind": "bill",
-        "caption": "Estimated total: ₹2,040.00",
+        "caption": "Estimated total: ₹2,040.00\nMessage or voice note to add, remove or change items.",
         "title": "Estimated invoice",
         "lines": [
           "Final availability is checked by the shop"

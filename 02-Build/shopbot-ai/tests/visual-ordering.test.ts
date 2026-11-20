@@ -368,7 +368,7 @@ test('a mixed request reaches Orders New after the shop-check bill is explicitly
  s=await event(inbox,runtime,approve(s));
  const bill=last(s);
  assert.equal(bill.stage,'bill');
- assert.match(bill.text,/check the pending items/);
+ assert.match(bill.text,/1 item for the shop to check/);
  assert.equal(s.requests.length,0);
  const confirm=submit(s);
  s=await event(inbox,runtime,confirm);

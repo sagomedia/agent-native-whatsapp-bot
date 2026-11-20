@@ -8,6 +8,8 @@ Prepared checkout on this computer: `/home/gk-pc/projects/shopbot-inventory-dev`
 
 Application: `/home/gk-pc/projects/shopbot-inventory-dev/02-Build/shopbot-ai`.
 
+Use this checkout for code, builds, and the running local dashboard and WhatsApp test service. The service uses port 3018 and the existing local database. The old `/tmp/shopbot-connected-preview`, `/tmp/shopbot-pickup-orders`, and `/tmp/shopbot-orders-refined` checkouts were temporary. Their Orders, bill delivery, and in-store orders patches have been integrated here alongside the WhatsApp cart updates. The disabled port 3048 service was a design rehearsal with a separate demo database.
+
 Private GitHub repository: https://github.com/sagomedia/agent-native-whatsapp-bot.
 
 Published baseline before this investigation: main `10a44dfb755d5f41748524b9dc936446851e36d8`, merging PR #90 after PR #89. The earlier unpublished-source warnings in dated recovery reports are historical. Do not replace this checkout with an older SMB folder or recovery bundle.

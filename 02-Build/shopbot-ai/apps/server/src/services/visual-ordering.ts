@@ -109,24 +109,20 @@ function cartReviewTitle(state:ConversationState) {
  const count=state.draft.length;
  return say(state,`Your list · ${count} ${count===1?'item':'items'}`,`பட்டியல் · ${count} ${count===1?'பொருள்':'பொருட்கள்'}`,`Unga list · ${count} ${count===1?'porul':'porutkal'}`);
 }
-function cartReviewPages(state:ConversationState,cards:VisualCard[],primary:Button|undefined,firstText:string,guide?:VisualCard):ReplyPart[] {
- const showGuide=guide&&cards.length>1&&cards.every(card=>(card.buttons?.length??1)===1);
- const reviewCards=showGuide?[guide,...cards]:cards;
- const pages=Math.ceil(reviewCards.length/10);
- const hasBillAction=primary?.label===showBillLabel(state);
+function reviewPageLabel(state:ConversationState,page:number,pages:number){
+ return say(state,`Items · ${page}/${pages}`,`பொருட்கள் · ${page}/${pages}`,`Porutkal · ${page}/${pages}`);
+}
+function cartReviewPages(state:ConversationState,cards:VisualCard[],primary:Button,firstText:string):ReplyPart[] {
+ const pages=Math.ceil(cards.length/10);
  const parts:ReplyPart[]=[];
- for(let offset=0;offset<reviewCards.length;offset+=10){
+ for(let offset=0;offset<cards.length;offset+=10){
   const page=offset/10+1,final=page===pages;
-  const group=reviewCards.slice(offset,offset+10).map(card=>{
+  const group=cards.slice(offset,offset+10).map(card=>{
    const buttons=card.buttons??[change(state)];
-   return {...card,buttons:final&&primary&&buttons.length===1?[primary,...buttons]:buttons.slice(0,2)};
+   return {...card,buttons:final?[primary,...buttons.slice(0,1)]:buttons};
   });
-  if(group.length>1&&group.some(card=>card.buttons.length===2)){
-   for(const card of group)if(card.buttons.length===1)card.buttons.push(change(state));
-  }
-  const pageNumber=say(state,`Items · ${page}/${pages}`,`பொருட்கள் · ${page}/${pages}`,`Porutkal · ${page}/${pages}`);
-  const next=final&&page>1&&hasBillAction?say(state,'Tap Show bill when ready.','பில் காட்டு என்பதைத் தட்டுங்க.','Bill kaattu-ai thattunga.'):undefined;
-  parts.push(part(group,[page===1?firstText:undefined,pages>1?pageNumber:undefined,next].filter(Boolean).join('\n')));
+  const next=final&&page>1?say(state,'Tap Show bill when ready.','பில் காட்டு என்பதைத் தட்டுங்க.','Bill kaattu-ai thattunga.'):undefined;
+  parts.push(part(group,[page===1?firstText:undefined,pages>1?reviewPageLabel(state,page,pages):undefined,next].filter(Boolean).join('\n')));
  }
  return parts;
 }
@@ -224,7 +220,8 @@ export function visualProductReview(state:ConversationState,compact=false,clarif
   const text=index===0
    ?[title,editHint(state),question??countAction,final?nextStep:undefined].filter(Boolean).join('\n')
    :final?nextStep:say(state,'Swipe to check the next items.','அடுத்த பொருட்களை நகர்த்திப் பாருங்க.','Adutha porutkalai nagarththi paarunga.');
-  return part(group,text);
+  const page=groups.length>1?reviewPageLabel(state,index+1,groups.length):undefined;
+  return part(group,[text,page].filter(Boolean).join('\n'));
  });
  return reply(missing.length?'shop_check':'products',parts,missing.length?missing.find(l=>l.catalogIssue)?.catalogIssue??'catalog_missing':undefined);
 }
