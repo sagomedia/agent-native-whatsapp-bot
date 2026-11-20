@@ -1,4 +1,4 @@
-# ShopBot coding-agent handoff — 3 November 2026
+# ShopBot coding-agent handoff — 20 November 2026
 
 Read this file, WORKING-PREFERENCES.md, CONTRIBUTING.md and LOCAL-DEVELOPMENT.md before editing. Inspect `git status`, the current branch and recent commits. This file is durable project context; chat history is not copied between agents.
 
@@ -14,7 +14,7 @@ Private GitHub repository: https://github.com/sagomedia/agent-native-whatsapp-bo
 
 Published baseline before this investigation: main `10a44dfb755d5f41748524b9dc936446851e36d8`, merging PR #90 after PR #89. The earlier unpublished-source warnings in dated recovery reports are historical. Do not replace this checkout with an older SMB folder or recovery bundle.
 
-Current review branch: `codex/voice-corrections-and-handoff` (local repairs and documentation implemented); see `03-Output/voice-corrections/README.md` for scope, evidence and verification. Keep one writer for this branch. Another agent can use this exact folder and read these files, but should not switch branches, pull over uncommitted edits or change shared files concurrently. Check with the current operator before taking over a running local session. A separate worktree provides independent files, but does not automatically isolate ports, databases or WhatsApp routing.
+Current local test branch: `codex/local-orders-and-whatsapp`. Earlier voice repairs are documented in `03-Output/voice-corrections/README.md`. Keep one writer for this branch. Another agent can use this exact folder and read these files, but should not switch branches, pull over uncommitted edits or change shared files concurrently. Check with the current operator before taking over a running local session. A separate worktree provides independent files, but does not automatically isolate ports, databases or WhatsApp routing.
 
 ## Product and decision boundaries
 
