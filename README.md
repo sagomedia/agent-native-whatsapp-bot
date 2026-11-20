@@ -4,7 +4,7 @@ For daily development and WhatsApp testing, start with [LOCAL-DEVELOPMENT.md](LO
 
 Private repository: [sagomedia/agent-native-whatsapp-bot](https://github.com/sagomedia/agent-native-whatsapp-bot).
 
-Status: the source includes the retail runtime, catalog hierarchy, multimodal input, WhatsApp channel and protected owner dashboard. The customer ordering release adds unknown-item estimates, owner quotes, a manually verified ₹10 UPI advance and post-order amendments. See the [deployment handoff](03-Output/customer-ordering-finish/RELEASE-REPORT.md) for the recorded deployed checkpoint and remaining owner acceptance. A subsequent [voice-processing repair](03-Output/customer-ordering-finish/AUDIO-INCIDENT.md) is also included in this branch; its verification and deployment status are separate from that earlier handoff. Started 2 October 2026.
+ShopBot includes inventory-driven text, voice and photo shopping on WhatsApp, a shared owner order editor, in-store orders, pickup bill images and PDF invoices at collection. The [deployment handoff](03-Output/customer-ordering-finish/RELEASE-REPORT.md) records an earlier VPS checkpoint. Check the running release before comparing the VPS with local testing.
 
 Build a retail assistant that interprets whole customer requests and proposes typed business actions. Application services own identity, catalog facts, drafts, order confirmation, staff approval and payment truth.
 
@@ -25,7 +25,7 @@ Local Git history and rollback/export: `GIT-WORKFLOW.md`. Catalog and voice desi
 
 Large searches use an agent-authored visual narrowing strategy over real catalog attributes. The agent chooses the useful order for that request; group taps filter inventory without selecting the example product or changing purchase count. Nine choices plus continuation fit a carousel, and missing metadata falls back to paged real products. See [dynamic discovery verification](03-Output/dynamic-visual-discovery/README.md) and [catalog design](02-Build/shopbot-ai/CATALOG-DISCOVERY.md).
 
-On the prepared computer, open `/home/gk-pc/projects/shopbot-inventory-dev`. The application is in `02-Build/shopbot-ai/`. Source is published on GitHub through PRs #89 and #90; [PR #91](https://github.com/sagomedia/agent-native-whatsapp-bot/pull/91) contains the voice-correction and actionable-clarification follow-up, documented in [verification notes](03-Output/voice-corrections/README.md). Do not use an older SMB/recovery copy as the development baseline.
+On the prepared computer, work in `/home/gk-pc/projects/shopbot-inventory-dev` and start from `main`. The application is in `02-Build/shopbot-ai/`. Use this checkout to build, run and test the dashboard and WhatsApp together. Archived checkouts and deployment packages are recovery references.
 
 Clear add/remove/change requests execute against current inventory and cart rows. Ambiguous changes ask about named items, with photos and current choices; a removal question can offer “remove all shown” for exactly those rows. Repeated named quantities set totals; a genuine increase needs separate source evidence. An unknown total gets an item-specific quantity question. Questions retain the pending action, and selecting a current choice resumes it without another model call.
 
@@ -33,20 +33,18 @@ Clear add/remove/change requests execute against current inventory and cart rows
 cd /home/gk-pc/projects/shopbot-inventory-dev/02-Build/shopbot-ai
 npm run local:db -- start
 npm run build
-npm run test:local
-# When ready for an actual phone test:
 npm run whatsapp:local
 ```
 
 Wait for `LOCAL_ROUTE_READY`, then send a fresh message from the configured test phone to the same WhatsApp number. Open the [local dashboard](https://shopbot-local.sagoautomation.tech/owner) and sign in with the existing password. The [VPS dashboard](https://shopbot-preview.sagoautomation.tech/owner) always stays on the VPS. Ctrl+C restores the WhatsApp webhook to the VPS and disables the local addresses; `npm run whatsapp:restore` is the recovery command. Other senders are excluded during local test routing. Stop local mode before deploying.
 
-The private `.env`, `.env.ai` and `.env.whatsapp` files are already configured here and ignored by Git. Local products/photos are a separate snapshot; orders, stock edits and test chats remain local. Git pulls do not copy credentials, refresh inventory or restore databases. `npm run dev` opens the offline preview at localhost:3018; it must be stopped before connected mode. Run `npm run dev:dashboard` separately for dashboard asset changes.
+The private `.env`, `.env.ai` and `.env.whatsapp` files are already configured here and ignored by Git. Local products/photos are a separate snapshot; orders, stock edits and test chats remain local. Git pulls do not copy credentials, refresh inventory or restore databases. Dashboard asset changes appear after rebuilding from this checkout and refreshing the local dashboard.
 
 Normally: reproduce the problem, create a focused branch, fix the general inventory/semantic behavior, run mocked checks and appropriate metered fixtures, test on the owner's phone, push a PR, verify CI, then deploy an authorized release. A push or merge alone does not update the VPS. Do not add product-specific keyword branches as repairs.
 
 To hand over in the same folder, give the next agent this context:
 
-> Open /home/gk-pc/projects/shopbot-inventory-dev. Read AGENT-HANDOFF.md, WORKING-PREFERENCES.md, CONTRIBUTING.md, LOCAL-DEVELOPMENT.md and 03-Output/voice-corrections/README.md. Inspect git status and the current branch before changing anything. Continue the current voice-correction work without discarding another agent's edits. ShopBot uses semantic understanding grounded in current inventory; preserve counts, unrelated cart rows, genuine product photos and explicit submission. Verify current local/VPS routing before starting or stopping services. Keep secrets/private audio outside Git and distinguish synthetic tests from actual phone acceptance.
+> Open /home/gk-pc/projects/shopbot-inventory-dev. Read AGENT-HANDOFF.md, WORKING-PREFERENCES.md, CONTRIBUTING.md, LOCAL-DEVELOPMENT.md and 03-Output/voice-corrections/README.md. Inspect git status and the current branch before changing anything. Start from the current `main` in this checkout and preserve any unfinished edits. ShopBot uses semantic understanding grounded in current inventory; preserve counts, unrelated cart rows, genuine product photos and explicit submission. Verify current local/VPS routing before starting or stopping services. Keep secrets/private audio outside Git and distinguish synthetic tests from actual phone acceptance.
 
 Use one writer in this checkout. Chat history and MCP/account permissions do not automatically transfer to another coding agent. See the handoff for architecture, deployment checkpoints, budget limits and remaining acceptance.
 

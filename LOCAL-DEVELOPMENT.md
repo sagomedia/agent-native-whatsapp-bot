@@ -6,21 +6,21 @@ GitHub contains the application code. The shop inventory, uploaded media, conver
 
 `/home/gk-pc/projects/shopbot-inventory-dev/02-Build/shopbot-ai`
 
-Node 22, npm and FFmpeg are available. A separate native PostgreSQL cluster is configured through private `.env` values, with development database `shopbot_dev`, disposable test database `shopbot_local_test`, and port 55440. The app uses localhost:3018. The earlier project checkout is preserved.
+Use this checkout and the `main` branch as the starting point for daily work. Build and test from the same application directory. Local PostgreSQL uses the existing development database `shopbot_dev` and the separate test database `shopbot_local_test`.
 
 ```bash
 cd /home/gk-pc/projects/shopbot-inventory-dev
-# Keep local changes on a branch. Never discard uncommitted work to update.
-git status
+git status --short --branch
+git switch main
 git pull --ff-only
 cd 02-Build/shopbot-ai
 npm ci
 npm run local:db -- start
 npm run build
-npm run dev
+npm run whatsapp:local
 ```
 
-Open http://localhost:3018. This page is the offline development preview. Backend edits restart automatically. In another terminal, `npm run dev:dashboard` rebuilds dashboard changes; refresh the browser after rebuilding. Stop the app with Ctrl+C. Stop only the local database with `npm run local:db -- stop`. Database files persist across restarts.
+When you see `LOCAL_ROUTE_READY`, open the [local dashboard](https://shopbot-local.sagoautomation.tech/owner) and send a fresh message from the configured WhatsApp test phone. The app and tunnel share port 3018. On the prepared computer, the background instance is named `shopbot-local-whatsapp.service`. Inspect it with `systemctl --user status shopbot-local-whatsapp`. Stop that unit before starting a terminal instance. Ctrl+C ends a terminal instance and restores the WhatsApp route.
 
 On another computer, install PostgreSQL/FFmpeg and supported Node 22, create separate local development and test databases, copy `.env.example` to `.env`, and set the matching URLs. The optional `local:db` helper requires an initialized PostgreSQL cluster and its `POSTGRES_BIN_DIR`, `POSTGRES_DATA_DIR`, `POSTGRES_SOCKET_DIR` and `POSTGRES_PORT` paths. Existing Docker Compose setup remains an alternative.
 
@@ -63,7 +63,7 @@ The budget reserves the model's full allowed input/output ceiling before each ca
 
 ## Actual WhatsApp and full owner dashboard locally
 
-The prepared private `.env.whatsapp` reuses the existing number, Meta connection and dashboard password. Use `WHATSAPP_PARTIAL_REVIEWS_ENABLED=true` in that profile to test sending unlisted or unpriced items to the shop. Those items keep their requested quantities and stay out of the known subtotal. The product snapshot includes the current 343 inventory records and the photographs used by those records. The local database is independent: local orders and catalog changes do not change live shop data. Existing VPS customer history is not copied. Each database/schema retains its own inference ledger; the local WhatsApp channel and CLI evaluation each have a cumulative $0.50 ceiling.
+The prepared private `.env.whatsapp` reuses the existing number, Meta connection and dashboard password. Use `WHATSAPP_PARTIAL_REVIEWS_ENABLED=true` in that profile to test sending unlisted or unpriced items to the shop. Those items keep their requested quantities and stay out of the known subtotal. The local inventory snapshot includes product records and photographs. The local database is independent: local orders and catalog changes do not change live shop data. Existing VPS customer history is not copied. Each database/schema retains its own inference ledger; the local WhatsApp channel and CLI evaluation each have a cumulative $0.50 ceiling.
 
 ```bash
 npm run local:db -- start
@@ -82,7 +82,7 @@ The helper verifies the local database, recipient allowlist, webhook challenge a
 
 Meta's webhook subscription and the original Cloudflare configuration remain unchanged. The same WhatsApp number has one selected receiving backend during the session; separate dashboard names do not create a second WhatsApp connection. Send a fresh WhatsApp message from the configured test phone. Open the **local** dashboard and sign in with the existing password. Sessions are hostname-bound, so sign in separately on each address. Old VPS buttons reference VPS conversation state, so begin a fresh local shopping conversation.
 
-Backend edits restart locally while this command runs. In another terminal, `npm run dev:dashboard` watches dashboard changes. The ordinary `npm run dev` preview must be stopped first because both use port 3018. Logs are in private `data/logs/local-whatsapp.log`.
+The running backend watches source files. Rebuild dashboard changes with `npm run build` in the same checkout and refresh the site. Logs are in private `data/logs/local-whatsapp.log`.
 
 Press Ctrl+C to restore the VPS webhook before the local backend stops. The local-only domains then stop serving the app; they never open the VPS database as a fallback. The VPS dashboard stays on the VPS throughout. The watchdog also restores after a tunnel/backend failure, and a session expires after six hours. A VPS reboot removes the runtime-only routing override. Verify recovery from another terminal if necessary:
 
@@ -100,4 +100,4 @@ To explicitly refresh the local inventory after exporting a new inventory-only s
 
 ## Normal change cycle
 
-Pull the verified GitHub state, create a feature branch, change code, run local fixtures/checks, and use the local WhatsApp session for connected testing. Push a PR and deploy a reviewed build to the VPS when it is ready. A GitHub push alone does not change the running VPS release.
+Start from `main` in the prepared checkout. Use a short-lived branch in that same folder for a change that needs review. Run the local checks, merge the pull request once CI passes, then return the checkout to `main`. The VPS runs a separate verified release and is updated through the deployment workflow.

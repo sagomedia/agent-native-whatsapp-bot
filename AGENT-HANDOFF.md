@@ -12,9 +12,9 @@ Use this checkout for code, builds, and the running local dashboard and WhatsApp
 
 Private GitHub repository: https://github.com/sagomedia/agent-native-whatsapp-bot.
 
-Published baseline before this investigation: main `10a44dfb755d5f41748524b9dc936446851e36d8`, merging PR #90 after PR #89. The earlier unpublished-source warnings in dated recovery reports are historical. Do not replace this checkout with an older SMB folder or recovery bundle.
+Use GitHub `main` and the matching local branch as the base. Git history holds the recovered Orders dashboard, pickup bills, PDF invoices, in-store orders and WhatsApp cart fixes together. Use a short-lived branch in this checkout for pull requests. Return to `main` after a merge. Check the running service and release separately when testing the VPS.
 
-Current local test branch: `codex/local-orders-and-whatsapp`. Earlier voice repairs are documented in `03-Output/voice-corrections/README.md`. Keep one writer for this branch. Another agent can use this exact folder and read these files, but should not switch branches, pull over uncommitted edits or change shared files concurrently. Check with the current operator before taking over a running local session. A separate worktree provides independent files, but does not automatically isolate ports, databases or WhatsApp routing.
+Keep one writer in this checkout. Inspect `git status` before changing branches, and preserve uncommitted changes. The SMB folder, old checkout and archived build copies are recovery references. For the dashboard and WhatsApp test commands, see [LOCAL-DEVELOPMENT.md](LOCAL-DEVELOPMENT.md).
 
 ## Product and decision boundaries
 
