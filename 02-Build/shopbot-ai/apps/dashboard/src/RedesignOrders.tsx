@@ -3,7 +3,7 @@ import {cachedOwnerRead} from './owner-read-cache.js';
 import {useEffect,useId,useRef,useState} from 'react';
 import type {DraftLine} from '../../../packages/contracts/index.js';
 import {formatMoney,lineTotal} from '../../../packages/contracts/money.js';
-import {initialQuoteLines} from '../../../packages/contracts/owner-quote.js';
+import {initialQuoteLines} from '../../../packages/contracts/owner-quote-fields.js';
 import {SELLING_UNITS} from '../../../packages/contracts/selling-unit-values.js';
 import {navigateOwner,useOwnerUrl,photoVariant} from './owner-ui.js';
 import {OwnerIcon} from './OwnerIcon.js';
@@ -20,13 +20,14 @@ type Product={sku:string;version:number;name:string;unit:string;pricePaise:numbe
 type OriginalEstimate={lines:{id:string;pricePaise?:number;totalPaise?:number;approximate:boolean}[];subtotalPaise:number;unpriced:number;approximate:boolean};
 type Order={unread?:boolean;attention_key?:string;original_estimate:OriginalEstimate;id:string;conversation_id:string|null;source?:'chat'|'in_store';has_final_bill?:boolean;bill_reply_window_closed?:boolean;bill_delivery?:string|null;customer_name?:string;customer_phone?:string;actor?:string;stage:'new'|'ready'|'completed'|'cancelled';lines:DraftLine[];original_lines:DraftLine[];original_total_paise:string;total_paise:string;effective_revision:number;created_at:string;advance_required:boolean;advance_state?:string;advance_amount_paise?:number;inventory?:{sku:string;name?:string;unit?:string;active?:boolean;quantityStep?:number;available:number|null;hasPhoto:boolean;version:number}[]};
 type Amendment={id:string;request_id:string;state:string;kind:string;summary:string;proposed_lines:DraftLine[]};
-type Snapshot={store?:{name:string;bill_address?:string|null};requests:Order[];amendments:Amendment[];orderPage:{number:number;total:number;hasNext:boolean;ids:string[]};requestCounts:{new:number;ready_for_pickup:number;completed:number;active:number;history:number}};
+type OrderListRow=Pick<Order,'id'|'actor'|'source'|'customer_name'|'customer_phone'|'unread'|'attention_key'|'stage'|'created_at'>&{item_count:number;item_names:(string|null)[]};
+type Snapshot={store?:{name:string;bill_address?:string|null};requests:OrderListRow[];selectedOrder:Order|null;amendments:Amendment[];orderPage:{number:number;total:number;hasNext:boolean;ids:string[]};requestCounts:{new:number;ready_for_pickup:number;completed:number;active:number;history:number}};
 type EditLine={id:string;sku?:string;productVersion?:number;name:string;quantity:string;unit:string;price:string;manualConfirmed?:boolean;free:boolean;saleMode?:'pack'|'measured';photo?:boolean;step?:number;needsMatch?:boolean};
 type Editor={orderId:string;revision:number;amendmentId?:string;source:string;lines:EditLine[];baseIds:string[];removed:{line:EditLine;index:number}[];dirty:boolean};
 const workflowStages=['new','ready','completed'] as const;
 const stages=[['new','New'],['ready','Ready'],['completed','Completed'],['all','All']] as const;
 const code=(id:string)=>id.replaceAll('-','').slice(0,8).toUpperCase();
-const person=(r:Order)=>r.customer_name||r.customer_phone||r.actor?.replace(/^whatsapp:/,'')||(r.source==='in_store'?'Walk-in customer':'Customer');
+const person=(r:OrderListRow|Order)=>r.customer_name||r.customer_phone||r.actor?.replace(/^whatsapp:/,'')||(r.source==='in_store'?'Walk-in customer':'Customer');
 const stageLabel=(stage:string)=>stage==='new'?'New':stage==='ready'?'Ready for pickup':stage==='completed'?'Completed':'Cancelled';
 const lineAmount=(l:EditLine)=>lineTotal(Math.round(Number(l.price)*100),Number(l.quantity));
 const total=(lines:EditLine[])=>lines.reduce((sum,l)=>sum+lineAmount(l),0);
@@ -90,8 +91,15 @@ function Thumb({line}:{line:EditLine}){return line.sku&&line.photo?<img alt="" s
 export function RedesignOrders(){
  const {t}=useOwnerLocale();
  const params=useOwnerUrl(),rawStage=params.get('orderStage')??'new',stage=stages.some(s=>s[0]===rawStage)?rawStage:'new',page=Math.max(1,Number(params.get('orderPage'))||1),search=params.get('orderSearch')??'',selectedId=params.get('order');
- const initialRead=new URLSearchParams({details:'0',scope:'orders',orderStage:stage,orderSearch:search,orderPage:String(page)});if(selectedId)initialRead.set('order',selectedId);
- const [snapshot,setSnapshot]=useState<Snapshot|undefined>(()=>cachedOwnerRead<Snapshot>('snapshot?'+initialRead)),[error,setError]=useState(''),[notice,setNotice]=useState(''),[deliveryNotice,setDeliveryNotice]=useState(''),[busy,setBusy]=useState(false),[editor,setEditor]=useState<Editor>(),[refresh,setRefresh]=useState(0),[query,setQuery]=useState(search),[picker,setPicker]=useState<string>(),[bill,setBill]=useState<DialogView>(null),[cancelTarget,setCancelTarget]=useState<{id:string;revision:number}|null>(null);
+ const read=new URLSearchParams({details:'0',scope:'orders',orderView:'compact',orderStage:stage,orderSearch:search,orderPage:String(page)});
+ if(selectedId)read.set('order',selectedId);
+ const readPath='snapshot?'+read;
+ const [loaded,setLoaded]=useState<{path:string;snapshot:Snapshot}|undefined>(()=>{
+  const retained=cachedOwnerRead<Snapshot>(readPath);
+  return retained?{path:readPath,snapshot:retained}:undefined;
+ });
+ const snapshot=loaded?.snapshot;
+ const [error,setError]=useState(''),[notice,setNotice]=useState(''),[deliveryNotice,setDeliveryNotice]=useState(''),[busy,setBusy]=useState(false),[editor,setEditor]=useState<Editor>(),[refresh,setRefresh]=useState(0),[query,setQuery]=useState(search),[picker,setPicker]=useState<string>(),[bill,setBill]=useState<DialogView>(null),[cancelTarget,setCancelTarget]=useState<{id:string;revision:number}|null>(null);
  const [counter,setCounter]=useState<CounterDraft|null>(null);
  const [dialogError,setDialogError]=useState('');
  const [pickerIsNew,setPickerIsNew]=useState(false);
@@ -99,15 +107,32 @@ export function RedesignOrders(){
  const retry=useRef<{key:string;id:string}|undefined>(undefined),dialog=useRef<HTMLDialogElement>(null),returnFocus=useRef<HTMLElement|null>(null);
  useEffect(()=>setQuery(search),[search]);
  useEffect(()=>{const timer=setTimeout(()=>{if(query!==search)navigateOwner({orderSearch:query||null,orderPage:null,order:null},true);},250);return()=>clearTimeout(timer);},[query,search]);
- useEffect(()=>visiblePoll(async signal=>{try{const read=new URLSearchParams({details:'0',scope:'orders',orderStage:stage,orderSearch:search,orderPage:String(page)});if(selectedId)read.set('order',selectedId);const data=await redesignApi<Snapshot>('snapshot?'+read,undefined,signal);if(!signal.aborted){setSnapshot(data);setError('');}}catch(e){if(!signal.aborted)setError((e as Error).message);throw e;}},{intervalMs:5000}),[stage,search,page,selectedId,refresh]);
- const listed=snapshot?.requests.filter(r=>snapshot.orderPage.ids.includes(r.id))??[],order=snapshot?.requests.find(r=>r.id===selectedId)??(!selectedId?listed[0]:undefined),amendment=snapshot?.amendments.find(a=>a.request_id===order?.id),source=order?sourceKey(order,amendment):'';
+ useEffect(()=>visiblePoll(async signal=>{
+  try{
+   const data=await redesignApi<Snapshot>(readPath,undefined,signal);
+   if(!signal.aborted){setLoaded({path:readPath,snapshot:data});setError('');}
+  }catch(e){if(!signal.aborted)setError((e as Error).message);throw e;}
+ },{intervalMs:5000}),[readPath,refresh]);
+ const listed=snapshot?.requests??[],wantedOrder=selectedId??listed[0]?.id;
+ const order=snapshot?.selectedOrder?.id===wantedOrder?snapshot?.selectedOrder??undefined:undefined;
+ const loadingDetail=!order&&loaded?.path!==readPath&&!error;
+ const amendment=snapshot?.amendments.find(a=>a.request_id===order?.id),source=order?sourceKey(order,amendment):'';
  useEffect(()=>{if(!order)return;setEditor(old=>old?.orderId===order.id&&old.dirty?old:makeEditor(order,amendment));},[order?.id,source]);
  const seen=useRef(new Set<string>());
  useEffect(()=>{
   if(!selectedId||!order||order.id!==selectedId||!order.attention_key||!order.unread)return;
   const key=order.id+':'+order.attention_key;let cancelled=false;
   const mark=()=>{if(document.hidden||!document.querySelector('.rd-orders-detail')?.getClientRects().length||seen.current.has(key))return;seen.current.add(key);
-   void redesignApi<{seen:boolean}>(`requests/${order.id}/seen`,{attentionKey:order.attention_key}).then(result=>{if(!cancelled&&result.seen){setSnapshot(current=>current?{...current,requests:current.requests.map(item=>item.id===order.id&&item.attention_key===order.attention_key?{...item,unread:false}:item)}:current);window.dispatchEvent(new Event('owner-attention-changed'));}}).catch(()=>seen.current.delete(key));};
+   void redesignApi<{seen:boolean}>(`requests/${order.id}/seen`,{attentionKey:order.attention_key}).then(result=>{
+    if(cancelled||!result.seen)return;
+    const markRead=<T extends Pick<Order,'id'|'attention_key'|'unread'>>(item:T):T=>item.id===order.id&&item.attention_key===order.attention_key?{...item,unread:false}:item;
+    setLoaded(current=>{
+     if(!current)return current;
+     const {requests,selectedOrder}=current.snapshot;
+     return {...current,snapshot:{...current.snapshot,requests:requests.map(markRead),selectedOrder:selectedOrder&&markRead(selectedOrder)}};
+    });
+    window.dispatchEvent(new Event('owner-attention-changed'));
+   }).catch(()=>seen.current.delete(key));};
   const timer=setTimeout(mark,500);document.addEventListener('visibilitychange',mark);return()=>{cancelled=true;clearTimeout(timer);document.removeEventListener('visibilitychange',mark);};
  },[selectedId,order?.id,order?.attention_key,order?.unread]);
  const originalLines=order?.original_lines??[],originalEstimate=order?.original_estimate;
@@ -268,7 +293,7 @@ export function RedesignOrders(){
   <aside className="rd-orders-list" aria-label={t("Order list")}><header className="rd-orders-list-head" data-scroll-tools><div className="rd-orders-heading"><PageHeading title={t("Orders")}/><button type="button" className="rd-orders-quiet" onClick={startCounter}><OwnerIcon name="plus"/>{t("New in-store order")}</button></div><label className="rd-orders-search"><OwnerIcon name="search"/><input aria-label={t("Search customers or orders")} type="search" placeholder={t("Search customers or orders")} value={query} onChange={e=>{if(current?.dirty){if(!window.confirm('Discard unsaved order changes?'))return;if(order)setEditor(makeEditor(order,amendment));}setQuery(e.target.value);}} maxLength={200}/></label><nav data-horizontal-scroll className="rd-orders-tabs" aria-label={t("Order stages")}>{stages.map(([value,label])=><button key={value} aria-pressed={stage===value} onClick={()=>leave({orderStage:value,order:null,orderPage:null})}>{t(label)}{value!=='all'&&snapshot?<span>{value==='ready'?snapshot.requestCounts.ready_for_pickup:snapshot.requestCounts[value]}</span>:null}</button>)}</nav></header><div className="rd-orders-rows" data-scroll-list tabIndex={0} role="region" aria-label={t("Order list")}>
   {!snapshot&&!error?<p className="rd-orders-empty" role="status">{t("Loading orders…")}</p>:null}
   {error&&!snapshot?<div className="rd-orders-empty" role="alert">{t(error)}<button onClick={()=>setRefresh(n=>n+1)}>{t("Try again")}</button></div>:null}
-  {listed.map(r=><button key={r.id} className={'rd-orders-list-row'+(order?.id===r.id?' is-active':'')} onClick={()=>{setNotice('');setError('');leave({order:r.id});}}><span className="rd-orders-avatar">{person(r).slice(0,1).toUpperCase()}</span><span className="rd-orders-list-copy"><strong>{t(person(r))}{r.source==='in_store'&&<span className="rd-orders-source">{t("In store")}</span>}{r.unread&&<span className="rd-orders-unread" role="img" aria-label={t("Unread order")} title={t("Not opened yet")}/>}</strong><small>{r.lines.length}{' '}{t(r.lines.length===1?"item ·":"items ·")}{' '}{r.lines.slice(0,2).map(l=>l.name).join(', ')}</small><span>#{code(r.id)} · {date(r.created_at)}</span></span>{stage==='all'&&<span className={'rd-orders-stage rd-orders-stage-'+r.stage}>{t(stageLabel(r.stage))}</span>}<span aria-hidden="true">›</span></button>)}
+  {listed.map(r=><button key={r.id} className={'rd-orders-list-row'+(order?.id===r.id?' is-active':'')} onClick={()=>{setNotice('');setError('');leave({order:r.id});}}><span className="rd-orders-avatar">{person(r).slice(0,1).toUpperCase()}</span><span className="rd-orders-list-copy"><strong>{t(person(r))}{r.source==='in_store'&&<span className="rd-orders-source">{t("In store")}</span>}{r.unread&&<span className="rd-orders-unread" role="img" aria-label={t("Unread order")} title={t("Not opened yet")}/>}</strong><small>{r.item_count}{' '}{t(r.item_count===1?"item ·":"items ·")}{' '}{r.item_names.filter(name=>name!==null).join(', ')}</small><span>#{code(r.id)} · {date(r.created_at)}</span></span>{stage==='all'&&<span className={'rd-orders-stage rd-orders-stage-'+r.stage}>{t(stageLabel(r.stage))}</span>}<span aria-hidden="true">›</span></button>)}
   {snapshot&&!listed.length?<div className="rd-orders-empty"><strong>{search?t("No matching orders"):t("No orders here")}</strong><p>{search?t("Try a customer, order number or item name."):t("Orders will appear here as customers place them.")}</p></div>:null}
   {snapshot&&(page>1||snapshot.orderPage.hasNext)?<div className="rd-orders-pages"><button disabled={page<=1} onClick={()=>leave({orderPage:String(page-1),order:null})}>{t("Previous")}</button><span>{t("Page")}{' '}{page} · {snapshot.orderPage.total}{' '}{t("orders")}</span><button disabled={!snapshot.orderPage.hasNext} onClick={()=>leave({orderPage:String(page+1),order:null})}>{t("Next")}</button></div>:null}</div></aside>
   <section className="rd-orders-detail" aria-label={t("Selected order")}>{order&&current?<><header className="rd-orders-detail-head"><div><button className="rd-orders-back" onClick={()=>leave({order:null})}>{t("← Orders")}</button><h2>{t(person(order))}{order.source==='in_store'&&<span className="rd-orders-source">{t("In store")}</span>}</h2>{customerContact(order.customer_phone)?<a className="rd-orders-quiet rd-orders-call" href={customerContact(order.customer_phone)!.href} aria-label={(t('Call customer'))+': '+customerContact(order.customer_phone)!.number}>{t('Call')} {customerContact(order.customer_phone)!.number}</a>:null}<p>{t("Order #")}{code(order.id)} · {date(order.created_at)}</p></div><div className="rd-orders-head-actions">{order.conversation_id&&<button className="rd-orders-quiet" onClick={openChat}><OwnerIcon name="messages"/>{' '}{t("Open chat")}</button>}<span className={'rd-orders-stage rd-orders-stage-'+order.stage}>{t(stageLabel(order.stage))}</span></div></header>
@@ -293,7 +318,9 @@ export function RedesignOrders(){
      else void sendFinalBill();
     }}
     onCancel={()=>setCancelTarget({id:order.id,revision:current.revision})}/>
-  </>:<div className="rd-orders-empty"><h2>{selectedId?t("Order unavailable"):t("Choose an order")}</h2><p>{selectedId?t("Return to the list or try refreshing."):t("Review items and arrange pickup here.")}</p></div>}</section>
+  </>:loadingDetail?<p className="rd-orders-empty" role="status">{t("Loading orders…")}</p>
+   :error&&snapshot?<div className="rd-orders-empty" role="alert">{t(error)}<button onClick={()=>{setError('');setRefresh(n=>n+1);}}>{t("Try again")}</button></div>
+   :<div className="rd-orders-empty"><h2>{selectedId?t("Order unavailable"):t("Choose an order")}</h2><p>{selectedId?t("Return to the list or try refreshing."):t("Review items and arrange pickup here.")}</p></div>}</section>
   <dialog className="rd-orders-dialog" ref={dialog} onCancel={event=>{event.preventDefault();closeDialog();}} aria-labelledby="rd-orders-dialog-title">
    <div className="rd-orders-dialog-head">
     <h2 id="rd-orders-dialog-title">{t(cancelTarget?'Cancel uncollected order?':picker?pickerIsNew?'Add item':'Replace item':bill==='counter'?'New in-store order':bill==='history'?'Bill history':bill==='original'?'Original estimate':bill==='recipient'?'Send on WhatsApp':bill==='revise'?'Revised bill':bill==='update_ready'?'Updated pickup bill':'Pickup bill')}</h2>

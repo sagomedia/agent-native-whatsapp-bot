@@ -44,6 +44,12 @@ test('owner queue and inbox paging search beyond 100 rows, retain selected metad
    await pool.query("INSERT INTO order_requests(id,store_id,conversation_id,actor,review_id,lines,total_paise,created_at) VALUES($1,$2,$3,$4,$5,$6,100,now()-($7::int * interval '1 minute'))",[id.order,fixtureStore,id.conversation,'shopper-'+i,randomUUID(),JSON.stringify([{id:randomUUID(),name:i===0?'Archived special 50%_item':'Product '+i,quantity:1,unit:'piece',resolution:'unavailable'}]),130-i]);
   }
   await pool.query("UPDATE order_requests SET acceptance='accepted',fulfillment='ready_for_pickup' WHERE id=$1",[ids[1]!.order]);
+  for(const [index,summary] of [[0,'Archived change'],[129,'Recent change']] as const){
+   const id=ids[index]!;
+   await pool.query(`INSERT INTO order_amendments(id,store_id,request_id,conversation_id,source_message_id,source_version,expected_revision,operations,proposed_lines,known_subtotal_paise,estimate_complete,summary,state)
+    SELECT $1,$2,$3,$4,m.id,1,1,'[]','[]',0,false,$5,'owner_pending' FROM messages m WHERE m.conversation_id=$4`,
+    [randomUUID(),fixtureStore,id.order,id.conversation,summary]);
+  }
   const owner={hostname:'owner.example.test',issuer:'https://offline.example.test',audience:'offline',email:'owner@example.test',storeId:fixtureStore};
   app=await createApp({mode:'mock',databaseUrl:process.env.DATABASE_URL!,host:'127.0.0.1',port:3017,mediaDir:'/tmp/owner-page-test',owner},pool,undefined,undefined,async()=>({email:owner.email,subject:'offline'}));
   const read=async(q:string)=>{const response=await app!.inject({url:'/api/owner/snapshot?details=0&'+q,headers:{host:owner.hostname,'cf-access-jwt-assertion':'offline'}});assert.equal(response.statusCode,200,response.body);return response.json();};
@@ -54,6 +60,35 @@ test('owner queue and inbox paging search beyond 100 rows, retain selected metad
   const searched=await read('orderStage=review&orderSearch=Archived');assert.equal(searched.requests.length,1);assert.equal(searched.requests[0].id,ids[0]!.order);assert.equal(searched.orderPage.total,1);
   const literal=await read('orderStage=review&orderSearch='+encodeURIComponent('50%_item'));assert.equal(literal.orderPage.total,1);
   const deep=await read('orderStage=review&order='+ids[0]!.order);assert.equal(deep.orderPage.ids.length,25);assert.equal(deep.requests.length,26);assert.ok(deep.requests.some((r:any)=>r.id===ids[0]!.order));
+  const compactQuery='scope=orders&orderView=compact&orderStage=review';
+  const compact=await read(compactQuery);
+  assert.deepEqual(compact.orderPage,first.orderPage);
+  assert.equal(compact.requestCounts.new,first.requestCounts.new);
+  assert.equal(compact.requests.length,25);
+  assert.deepEqual(compact.requests[0].item_names,['Product 129',null]);
+  assert.equal(compact.requests[0].item_count,1);
+  assert.ok(compact.requests.every((r:any)=>!('lines' in r)&&!('inventory' in r)));
+  assert.deepEqual(compact.selectedOrder,first.requests[0]);
+  assert.equal(compact.selectedOrder.attention_key,compact.requests[0].attention_key);
+  assert.deepEqual(compact.amendments.map((item:any)=>item.summary),['Recent change']);
+  const compactDeep=await read(compactQuery+'&order='+ids[0]!.order);
+  assert.deepEqual(compactDeep.orderPage,deep.orderPage);
+  assert.equal(compactDeep.requests.length,25);
+  assert.deepEqual(compactDeep.selectedOrder,deep.requests.at(-1));
+  assert.deepEqual(compactDeep.amendments.map((item:any)=>item.summary),['Archived change']);
+  const compactReady=await read('scope=orders&orderView=compact&orderStage=ready&order='+ids[0]!.order);
+  assert.deepEqual(compactReady.orderPage.ids,[ids[1]!.order]);
+  assert.equal(compactReady.selectedOrder.id,ids[0]!.order);
+  const compactSecond=await read(compactQuery+'&orderPage=2');
+  assert.deepEqual(compactSecond.orderPage,second.orderPage);
+  assert.deepEqual(compactSecond.selectedOrder,second.requests[0]);
+  const compactMissing=await read(compactQuery+'&order='+randomUUID());
+  assert.equal(compactMissing.selectedOrder,null);
+  assert.equal(compactMissing.requests.length,25);
+  const compactEmpty=await read(compactQuery+'&orderSearch=no-such-order');
+  assert.equal(compactEmpty.selectedOrder,null);
+  assert.equal(compactEmpty.requests.length,0);
+  assert.ok(Buffer.byteLength(JSON.stringify(compact))<Buffer.byteLength(JSON.stringify(await read('scope=orders&orderStage=review')))/2);
   const inbox=await read('inboxPage=1&inboxSearch=archived');assert.equal(inbox.inboxPage.total,1);assert.equal(inbox.conversations[0].id,ids[0]!.conversation);
   const help=await read('inboxPage=1&inboxHelp=1');assert.equal(help.inboxPage.total,1);
   for(const query of ['orderPage=0','orderStage=bogus','order=bad','inboxPage=-1','orderSearch='+encodeURIComponent('x'.repeat(201))]){assert.equal((await app!.inject({url:'/api/owner/snapshot?'+query,headers:{host:owner.hostname,'cf-access-jwt-assertion':'offline'}})).statusCode,400);}

@@ -4,13 +4,9 @@ import {formatMoney} from './money.js';
 import {indicativePriceFor} from './indicative-prices.js';
 export {indicativePriceFor} from './indicative-prices.js';
 
-export type ReplyLanguage='ta'|'ta-Latn'|'en';
-export type LocalNames=Partial<Record<ReplyLanguage,string>>;
-export type LanguageContext=(Pick<ConversationState,'replyLanguage'>&Partial<Pick<ConversationState,'draft'>>)|ReplyLanguage;
-// Missing language belongs to the legacy English renderer. Every new native
-// session explicitly stores Tamil; preferences never come from model guesses.
-export function languageOf(context:LanguageContext):ReplyLanguage {return typeof context==='string'?context:context.replyLanguage??'en';}
-export function say(context:LanguageContext,en:string,ta:string,tanglish:string):string {const language=languageOf(context);return language==='ta'?ta:language==='ta-Latn'?tanglish:en;}
+import {languageOf,say,referencePhotoLabel,type ReplyLanguage,type LocalNames,type LanguageContext} from './reply-copy.js';
+export {languageOf,say,referencePhotoLabel,type ReplyLanguage,type LocalNames,type LanguageContext} from './reply-copy.js';
+
 export function localName(name:string,names:LocalNames|undefined,context:LanguageContext):string {return names?.[languageOf(context)]??name;}
 export function productName(product:Product,context:LanguageContext):string {
  const name=localName(product.name,product.localNames,context),brand=product.brand?.trim();
@@ -123,9 +119,6 @@ export function measurementText(value:string,context:LanguageContext):string {
   const u=raw.toLowerCase(),unit=/^inch/.test(u)?'inch':/^met|^m$/.test(u)?'metre':/^lit|^l$/.test(u)?'litre':u==='ft'?'foot':u;
   return amount+' '+unitName(unit,context);
  });
-}
-export function referencePhotoLabel(product:Pick<Product,'imageReference'|'imageUrl'>,context:LanguageContext):string|undefined {
- if(product.imageReference||/^\/catalog-images\/reference\/[a-f0-9-]{36}\.jpg$/.test(product.imageUrl??''))return say(context,'Reference photo','Reference படம்','Reference photo');
 }
 export function indicativePriceText(product:Product,context:LanguageContext):string|undefined {
  const price=indicativePriceFor(product);if(!price)return;

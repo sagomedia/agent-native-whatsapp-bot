@@ -150,6 +150,7 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
     const selectedConversation=ownerSnapshotQuery.safeParse(request.query);
     if(!selectedConversation.success)return reply.code(400).send({error:'Invalid owner read query'});
     const read=selectedConversation.data,fullDetails=read.details==='1';
+    const compactOrders=read.scope==='orders'&&read.orderView==='compact';
     const includeInbox=read.scope==='all'||read.scope==='inbox',includeOrders=read.scope==='all'||read.scope==='orders';
     const client=await pool.connect();
     try{
@@ -183,11 +184,17 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
       const conversationCounts=(await client.query(`SELECT count(*)::int AS total,count(*) FILTER(WHERE ${needsReplySql})::int AS help,count(*) FILTER(WHERE c.pending->>'kind'='review')::int AS checkouts FROM conversations c WHERE c.store_id=$1`,[owner.storeId])).rows[0];
       return {conversations,inboxPage,conversationCounts};
       })():{conversations:[],inboxPage:{number:1,size:25,total:0,ids:[],hasNext:false},conversationCounts:{total:0,help:0,checkouts:0}};
-      const {requests,requestCounts,orderPage,amendments,quotes}=includeOrders?await(async()=>{
-      const requestQuery=`SELECT r.id,r.conversation_id,c.actor,r.source,coalesce(r.counter_customer_name,w.profile_name) AS customer_name,
-        coalesce(r.counter_customer_phone,w.recipient) AS customer_phone,r.acceptance,r.payment,r.fulfillment,
-        ${ownerSimpleStageSql} AS stage,${orderAttentionSql} AS attention_key,${orderUnreadSql} AS unread,
-        r.lines AS original_lines,r.total_paise AS original_total_paise,coalesce(r.effective_total_paise,r.total_paise) AS total_paise,coalesce(r.effective_lines,r.lines) AS lines,r.created_at,r.estimate_complete,r.excluded_line_ids,r.advance_required,r.effective_revision,r.inventory_state,r.inventory_untracked_line_ids,r.packed_revision,a.state AS advance_state,a.amount_paise AS advance_amount_paise,a.claimed_at AS advance_claimed_at,a.verified_at AS advance_verified_at,a.verified_by AS advance_verified_by,
+      const {requests,requestCounts,orderPage,amendments,quotes,selectedOrder}=includeOrders?await(async()=>{
+      const listColumns=`r.id,c.actor,r.source,coalesce(r.counter_customer_name,w.profile_name) AS customer_name,
+        coalesce(r.counter_customer_phone,w.recipient) AS customer_phone,r.created_at,
+        ${ownerSimpleStageSql} AS stage,${orderAttentionSql} AS attention_key,${orderUnreadSql} AS unread`;
+      const requestFrom=`FROM order_requests r LEFT JOIN conversations c ON c.id=r.conversation_id AND c.store_id=r.store_id
+        LEFT JOIN whatsapp_conversations w ON w.conversation_id=c.id`;
+      const effectiveLines='coalesce(r.effective_lines,r.lines)';
+      const listQuery=`SELECT ${listColumns},jsonb_array_length(${effectiveLines}) AS item_count,
+        ARRAY[${effectiveLines}->0->>'name',${effectiveLines}->1->>'name'] AS item_names ${requestFrom} WHERE r.store_id=$1`;
+      const requestQuery=`SELECT ${listColumns},r.conversation_id,r.acceptance,r.payment,r.fulfillment,
+        r.lines AS original_lines,r.total_paise AS original_total_paise,coalesce(r.effective_total_paise,r.total_paise) AS total_paise,${effectiveLines} AS lines,r.estimate_complete,r.excluded_line_ids,r.advance_required,r.effective_revision,r.inventory_state,r.inventory_untracked_line_ids,r.packed_revision,a.state AS advance_state,a.amount_paise AS advance_amount_paise,a.claimed_at AS advance_claimed_at,a.verified_at AS advance_verified_at,a.verified_by AS advance_verified_by,
         coalesce(w.last_inbound_at <= now() - interval '24 hours',false) AS bill_reply_window_closed,
         EXISTS(SELECT 1 FROM owner_final_bills b WHERE b.request_id=r.id AND b.revision=r.effective_revision) AS has_final_bill,
         (SELECT CASE
@@ -198,30 +205,41 @@ export async function registerOwner(app:FastifyInstance,pool:Pool,config:Config,
           ELSE 'queued' END
         FROM request_notifications n JOIN messages m ON m.reply_group_id=n.message_id JOIN whatsapp_outbox o ON o.message_id=m.id
         WHERE n.request_id=r.id AND n.status_key=(CASE WHEN r.fulfillment='collected' THEN 'event:purchase-invoice-' ELSE 'event:pickup-bill-' END)||r.effective_revision GROUP BY n.message_id) AS bill_delivery
-        FROM order_requests r LEFT JOIN conversations c ON c.id=r.conversation_id AND c.store_id=r.store_id LEFT JOIN whatsapp_conversations w ON w.conversation_id=c.id LEFT JOIN order_advances a ON a.request_id=r.id WHERE r.store_id=$1`;
+        ${requestFrom} LEFT JOIN order_advances a ON a.request_id=r.id WHERE r.store_id=$1`;
       const orderFilter=` AND ($2::text IS NULL OR $2='all' OR (CASE WHEN $2 IN ('new','ready','completed','cancelled') THEN (${ownerSimpleStageSql}) ELSE (${ownerStageSql}) END)=$2) AND ($3::text='' OR r.id::text ILIKE $4 OR replace(r.id::text,'-','') ILIKE $4 OR r.conversation_id::text ILIKE $4 OR r.counter_customer_name ILIKE $4 OR r.counter_customer_phone ILIKE $4 OR EXISTS(SELECT 1 FROM whatsapp_conversations ow WHERE ow.conversation_id=r.conversation_id AND (ow.profile_name ILIKE $4 OR ('+'||ow.recipient) ILIKE $4)) OR coalesce(r.effective_lines,r.lines)::text ILIKE $4)`;
       const orderValues=[owner.storeId,read.orderStage??null,read.orderSearch,ownerSearchPattern(read.orderSearch)];
       const orderTotal=Number((await client.query('SELECT count(*)::int AS total FROM order_requests r WHERE r.store_id=$1'+orderFilter,orderValues)).rows[0].total);
       const orderLimit=read.orderStage?ownerReadPageSize:100,orderOffset=(read.orderPage-1)*orderLimit;
-      const requests=(await client.query(requestQuery+orderFilter+` ORDER BY CASE WHEN ${ownerActiveSql} THEN 0 ELSE 1 END,r.created_at DESC,r.id LIMIT $5 OFFSET $6`,[...orderValues,orderLimit,orderOffset])).rows;
+      const requests=(await client.query((compactOrders?listQuery:requestQuery)+orderFilter+` ORDER BY CASE WHEN ${ownerActiveSql} THEN 0 ELSE 1 END,r.created_at DESC,r.id LIMIT $5 OFFSET $6`,[...orderValues,orderLimit,orderOffset])).rows;
       const orderPage={number:read.orderPage,size:orderLimit,total:orderTotal,ids:requests.map(r=>r.id),hasNext:orderOffset+orderLimit<orderTotal};
-      if(read.order&&!requests.some(r=>r.id===read.order))requests.push(...(await client.query(requestQuery+' AND r.id=$2',[owner.storeId,read.order])).rows);
-      for(const request of requests)request.original_estimate=originalEstimateSnapshot(request.original_lines);
-      const requestSkus=[...new Set(requests.flatMap(r=>(r.lines as OrderRequest['lines']).flatMap(l=>l.sku?[l.sku]:[])))];
+      // Desktop opens the first visible order when the URL has no explicit selection.
+      // A deep link still resolves directly against the store outside the current page or filter.
+      const selectedId=read.order??(compactOrders?requests[0]?.id:undefined);
+      const selectedRows=selectedId&&(compactOrders||!orderPage.ids.includes(selectedId))
+        ?(await client.query(requestQuery+' AND r.id=$2',[owner.storeId,selectedId])).rows:[];
+      if(!compactOrders)requests.push(...selectedRows);
+      const detailedRequests=compactOrders?selectedRows:requests;
+      for(const request of detailedRequests)request.original_estimate=originalEstimateSnapshot(request.original_lines);
+      const requestSkus=[...new Set(detailedRequests.flatMap(r=>(r.lines as OrderRequest['lines']).flatMap(l=>l.sku?[l.sku]:[])))];
       const stockProducts=requestSkus.length?(await client.query(`SELECT ${productColumns},active FROM products WHERE store_id=$1 AND sku=ANY($2::text[])`,[owner.storeId,requestSkus])).rows.map(row=>({...productFromRow(row),active:row.active})):[];
-      const reservations=requests.length?(await client.query("SELECT request_id,sku,quantity FROM inventory_reservations WHERE store_id=$1 AND request_id=ANY($2::uuid[]) AND state='active'",[owner.storeId,requests.map(r=>r.id)])).rows:[];
-      for(const r of requests)r.inventory=stockProducts.filter(p=>(r.lines as OrderRequest['lines']).some(l=>l.sku===p.sku)).map(p=>({sku:p.sku,name:p.name,unit:p.unit,active:p.active,quantityStep:p.quantityStep,onHand:p.stockOnHand,reserved:p.stockReserved,available:p.stock,held:Number(reservations.find(h=>h.request_id===r.id&&h.sku===p.sku)?.quantity??0),version:p.version,hasPhoto:!!p.imageUrl}));
+      const requestIds=detailedRequests.map(r=>r.id);
+      const reservations=requestIds.length?(await client.query("SELECT request_id,sku,quantity FROM inventory_reservations WHERE store_id=$1 AND request_id=ANY($2::uuid[]) AND state='active'",[owner.storeId,requestIds])).rows:[];
+      for(const r of detailedRequests)r.inventory=stockProducts.filter(p=>(r.lines as OrderRequest['lines']).some(l=>l.sku===p.sku)).map(p=>({sku:p.sku,name:p.name,unit:p.unit,active:p.active,quantityStep:p.quantityStep,onHand:p.stockOnHand,reserved:p.stockReserved,available:p.stock,held:Number(reservations.find(h=>h.request_id===r.id&&h.sku===p.sku)?.quantity??0),version:p.version,hasPhoto:!!p.imageUrl}));
       const requestCounts=(await client.query(`SELECT count(*) FILTER(WHERE ${ownerActiveSql})::int AS active,count(*) FILTER(WHERE NOT ${ownerActiveSql})::int AS history,
-        count(*) FILTER(WHERE (${ownerStageSql})='review')::int AS review,count(*) FILTER(WHERE (${ownerStageSql})='customer')::int AS customer,count(*) FILTER(WHERE (${ownerStageSql})='ready')::int AS ready,
+        ${compactOrders?'':`
+        count(*) FILTER(WHERE (${ownerStageSql})='review')::int AS review,count(*) FILTER(WHERE (${ownerStageSql})='customer')::int AS customer,count(*) FILTER(WHERE (${ownerStageSql})='ready')::int AS ready,`}
         count(*) FILTER(WHERE r.acceptance IN ('awaiting_approval','accepted') AND r.fulfillment NOT IN ('ready_for_pickup','collected','cancelled'))::int AS new,
         count(*) FILTER(WHERE r.acceptance='accepted' AND r.fulfillment='ready_for_pickup')::int AS ready_for_pickup,
         count(*) FILTER(WHERE r.fulfillment='collected')::int AS completed FROM order_requests r WHERE r.store_id=$1`,[owner.storeId])).rows[0];
 
-      const requestIds=requests.map(r=>r.id);
-      const amendments=(await client.query("SELECT id,request_id,conversation_id,kind,summary,proposed_lines,state,expected_revision,known_subtotal_paise,estimate_complete,created_at FROM order_amendments WHERE store_id=$1 AND request_id=ANY($2::uuid[]) AND state IN ('owner_pending','proposed') ORDER BY created_at",[owner.storeId,requestIds])).rows;
-      const quotes=(await client.query("SELECT id,request_id,state,expected_revision,total_paise,lines,created_at FROM order_quotes WHERE store_id=$1 AND request_id=ANY($2::uuid[]) AND state='offered' ORDER BY created_at",[owner.storeId,requestIds])).rows;
-      return {requests,requestCounts,orderPage,amendments,quotes};
-      })():{requests:[],requestCounts:{active:0,history:0,review:0,customer:0,ready:0,new:0,ready_for_pickup:0,completed:0},orderPage:{number:1,size:25,total:0,ids:[],hasNext:false},amendments:[],quotes:[]};
+      const amendments=requestIds.length?(await client.query("SELECT id,request_id,conversation_id,kind,summary,proposed_lines,state,expected_revision,known_subtotal_paise,estimate_complete,created_at FROM order_amendments WHERE store_id=$1 AND request_id=ANY($2::uuid[]) AND state IN ('owner_pending','proposed') ORDER BY created_at",[owner.storeId,requestIds])).rows:[];
+      const quotes=!compactOrders&&requestIds.length?(await client.query("SELECT id,request_id,state,expected_revision,total_paise,lines,created_at FROM order_quotes WHERE store_id=$1 AND request_id=ANY($2::uuid[]) AND state='offered' ORDER BY created_at",[owner.storeId,requestIds])).rows:[];
+      return {requests,requestCounts,orderPage,amendments,quotes,selectedOrder:selectedRows[0]??null};
+      })():{requests:[],requestCounts:{active:0,history:0,review:0,customer:0,ready:0,new:0,ready_for_pickup:0,completed:0},orderPage:{number:1,size:25,total:0,ids:[],hasNext:false},amendments:[],quotes:[],selectedOrder:null};
+      if(compactOrders){
+        await client.query('COMMIT');
+        return {store:{name:store.name,bill_address:store.bill_address},requests,requestCounts,orderPage,amendments,selectedOrder};
+      }
       const usage=fullDetails?(await client.query(`SELECT count(*)::int AS attempts,count(*) FILTER(WHERE state='failed')::int AS failures,count(*) FILTER(WHERE state='unknown')::int AS unknown,coalesce(sum(estimated_cost_microusd),0)::text AS estimated_microusd FROM (SELECT state,estimated_cost_microusd FROM provider_attempts WHERE store_id=$1 UNION ALL SELECT state,estimated_cost_microusd FROM catalog_suggestions WHERE store_id=$1) attempts`,[owner.storeId])).rows[0]:null;
       const budget=(await client.query('SELECT limit_microusd,committed_microusd,held_microusd,blocked FROM inference_budgets WHERE store_id=$1',[owner.storeId])).rows[0]??null;
       const audit=fullDetails&&read.scope==='all'?(await client.query('SELECT action,target_id,details,created_at FROM owner_audit WHERE store_id=$1 ORDER BY sequence DESC LIMIT 20',[owner.storeId])).rows:[];

@@ -30,7 +30,7 @@ function Workspace(){
  async function refresh(signal?:AbortSignal){const next=await redesignApi(view==='connections'?'snapshot?details=1&scope=settings':'summary',undefined,signal);if(!signal?.aborted){setSnapshot(next);setError('');}}
  useEffect(()=>{const stop=visiblePoll(async signal=>{try{await refresh(signal);}catch(e){if(!signal.aborted)setError(e instanceof Error?e.message:'Could not load shop details.');throw e;}},{intervalMs:15000});return stop;},[attempt,view==='connections']);
  useEffect(()=>{const changed=()=>setAttempt(value=>value+1);window.addEventListener('owner-attention-changed',changed);return()=>window.removeEventListener('owner-attention-changed',changed);},[]);
- useEffect(()=>{document.title=t(tabs.find(x=>x.view===view)?.label??'Settings');},[view,locale]);
+ useEffect(()=>{document.title=t(tabs.find(x=>x.view===view)?.label??'Settings');},[view,locale,t]);
  async function act(path:string,body:unknown,success:string){if(busy)return;setBusy(true);setError('');setNotice('');try{await redesignApi(path,body);setNotice(success);void refresh().catch(e=>setError(e instanceof Error?e.message:'Saved, but shop details could not be refreshed.'));}catch(e){setError(e instanceof Error?e.message:'Could not save. Please try again.');}finally{setBusy(false);}}
  async function signOut(){if(busy)return;setBusy(true);try{await redesignApi('logout',{});window.location.replace('/login');}catch(e){setError(e instanceof Error?e.message:'Could not sign out. Please try again.');setBusy(false);}}
  const newRoute=(next:string)=>({view:next,order:null,conversation:null,orderSearch:null,orderPage:null,inboxSearch:null,inboxPage:null,inboxHelp:null,import:null,bulk:null,visibility:null,advanced:null,drafts:null,draft:null,product:null});
