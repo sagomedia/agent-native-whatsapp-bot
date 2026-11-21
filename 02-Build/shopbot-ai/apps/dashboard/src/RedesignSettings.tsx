@@ -1,3 +1,4 @@
+import {OwnerIcon} from './OwnerIcon.js';
 import {ShopHoursSettings} from './ShopHoursSettings.js';
 import {rupeeEstimate} from './owner-model.js';
 import {RupeeConversion,useRupeeRate} from './RupeeConversion.js';
@@ -62,7 +63,7 @@ export function RedesignSettings({snapshot,busy=false,onAct,onSignOut}:Props){
   const chosen=entries.find(entry=>entry.id===previewKind);
   const toggle=()=>{if(!onAct||busy)return;void onAct('pause',{paused:!paused,revision:snapshot.store.operator_revision},paused?'Automatic replies are on.':'Automatic replies are off.');};
   return <section className="rd-settings" aria-label={t('Settings')}>
-    {panel&&<button type="button" className="rd-settings-back" onClick={()=>setPanel(null)}><span aria-hidden="true">←</span>{t('Settings')}</button>}
+    {panel&&<button type="button" className="rd-control rd-settings-back" onClick={()=>setPanel(null)}><OwnerIcon name="back"/>{t('Settings')}</button>}
     <div className="rd-settings-title-row"><h1>{t(panel?title[panel]:'Settings')}</h1>{snapshot.authMode==='demo_password'&&onSignOut?<button type="button" className="rd-demo-signout" disabled={busy} onClick={()=>void onSignOut()}>{t('Sign out')}</button>:null}</div>
     {!panel&&<div className="rd-settings-main">
       <div className="rd-settings-shop"><div className="rd-settings-avatar" aria-hidden="true"><Icon kind="shop"/></div><div><strong>{snapshot.store.name}</strong><small>{t("Shop profile")}</small></div><button type="button" onClick={()=>setPanel('shop')}>{t("View shop")}</button></div>

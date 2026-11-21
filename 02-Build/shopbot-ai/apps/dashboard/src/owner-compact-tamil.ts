@@ -1,7 +1,7 @@
 /** Everyday owner controls; product names and customer messages stay untouched. */
 export const compactTamil:Record<string,string>={
  'Call':'அழை','Call customer':'வாடிக்கையாளரை அழை',
- 'Search products':'பொருளைத் தேடு','Low stock':'குறைந்த இருப்பு','Out of stock':'இருப்பு இல்லை','Needs attention':'கவனம் தேவை',
+ 'Search products':'பொருளைத் தேடு','Updating results…':'முடிவுகள் புதுப்பிக்கப்படுகின்றன…','Low stock':'குறைந்த இருப்பு','Out of stock':'இருப்பு இல்லை','Needs attention':'கவனம் தேவை',
  'Shop details':'கடை விவரங்கள்','Name and account details':'பெயர், கணக்கு விவரங்கள்','Preview replies':'பதில் மாதிரிகள்','See how your replies look to customers':'வாடிக்கையாளருக்குத் தோன்றும் பதிலைப் பார்',
  'WhatsApp connection':'வாட்ஸ்அப் இணைப்பு','Manage connection':'இணைப்பை நிர்வகி','Connection details':'இணைப்பு விவரங்கள்','Usage and billing':'பயன்பாடும் கட்டணமும்','View recorded usage':'பதிவு செய்த பயன்பாட்டைப் பார்','Help':'உதவி','Find answers':'பதில்களைக் கண்டுபிடி','Technical details':'தொழில்நுட்ப விவரங்கள்','For advanced users':'கூடுதல் விவரங்கள்',
  'Inventory in ChatGPT':'ChatGPT-இல் பொருள் பட்டியல்','Copy link and open ChatGPT':'இணைப்பை நகலெடுத்து ChatGPT-ஐத் திற','Greeting':'வரவேற்பு','Cart':'கூடை','Pickup':'பொருள் வழங்கல்',
@@ -21,6 +21,7 @@ export const compactTamil:Record<string,string>={
  'This photo could not be loaded.':'இந்தப் படத்தை ஏற்ற முடியவில்லை.','Customer photo':'வாடிக்கையாளர் படம்','Close dialog':'சாளரத்தை மூடு','Dismiss message':'செய்தியை நீக்கு',
  'Automatic replies':'தானியங்கிப் பதில்கள்','Let the bot answer customers':'வாடிக்கையாளர்களுக்கு உதவியாளர் பதிலளிக்கட்டும்','Paused for all chats':'அனைத்து உரையாடல்களிலும் நிறுத்தப்பட்டுள்ளது',
  'You’re replying':'நீங்கள் பதிலளிக்கிறீர்கள்',"You're replying":'நீங்கள் பதிலளிக்கிறீர்கள்','Bot handling this chat':'உதவியாளர் கவனிக்கிறார்','Let bot reply':'உதவியாளர் பதிலளிக்கட்டும்','Reply myself':'நானே பதிலளிக்கிறேன்',
+ 'Take over to reply from the store.':'கடையின் சார்பாக நீங்களே பதிலளிக்கலாம்.',
  'Back to chats':'உரையாடல்களுக்குத் திரும்பு','View all chats':'அனைத்தையும் பார்','Other chats are handled by the bot':'மற்ற உரையாடல்களை உதவியாளர் கவனிக்கிறார்',
  'Choose a chat to read its messages.':'செய்திகளைப் படிக்க உரையாடலைத் தேர்ந்தெடுங்கள்.','No chats need your reply.':'உங்கள் பதில் தேவைப்படும் உரையாடல்கள் இல்லை.',
  'No chats yet.':'இன்னும் உரையாடல்கள் இல்லை.','No matching chats.':'பொருந்தும் உரையாடல்கள் இல்லை.','No messages yet.':'இன்னும் செய்திகள் இல்லை.',
@@ -68,7 +69,7 @@ export const compactTamil:Record<string,string>={
  'Names customers use':'வாடிக்கையாளர்கள் பயன்படுத்தும் பெயர்கள்','Help customers find this product':'பொருளைக் கண்டுபிடிக்க உதவும் பெயர்கள்','English, Tamil or Tanglish names, one per line':'ஆங்கிலம், தமிழ் அல்லது தங்க்லிஷ் பெயர்கள்; வரிக்கு ஒன்று','Relevant product terms, one per line':'பொருத்தமான தேடல் சொற்கள்; வரிக்கு ஒன்று','Other suggested names · check before adding':'மற்ற பரிந்துரைப் பெயர்கள் · சேர்க்கும் முன் சரிபார்',
  'Search names stay separate from the display name. Keep names for this exact item; leave sizes and colours in the variant rows.':'தேடல் பெயர்கள் காட்சிப் பெயரிலிருந்து தனியாக இருக்கும். இந்தப் பொருளுக்கான பெயர்களை மட்டும் வைத்திருங்கள்; அளவு, நிறத்தை வகை வரிசைகளில் இடுங்கள்.',
  'Show in shop':'கடையில் காட்டு','Inside a pack':'பொட்டலத்தின் உள்ளே','Pack amount':'பொட்டல அளவு','Amount inside one':'ஒன்றின் உள்ளளவு','Price is per':'விலை இதற்கானது','Select unit':'அளவைத் தேர்ந்தெடு',
- 'Update stock':'இருப்பை மாற்று','Save stock':'இருப்பைச் சேமி','Stock action':'இருப்பு நடவடிக்கை','Add received stock':'வந்த இருப்பைச் சேர்','Set physical shelf count':'கடையில் உள்ள எண்ணிக்கையைப் பதிவு செய்','Quantity on shelf':'கடையில் உள்ள எண்ணிக்கை','Quantity received':'வந்த எண்ணிக்கை',
+ 'Update stock':'இருப்பை மாற்று','Update stock for':'இருப்பை மாற்று','Save stock':'இருப்பைச் சேமி','Stock action':'இருப்பு நடவடிக்கை','Add received stock':'வந்த இருப்பைச் சேர்','Set physical shelf count':'கடையில் உள்ள எண்ணிக்கையைப் பதிவு செய்','Quantity on shelf':'கடையில் உள்ள எண்ணிக்கை','Quantity received':'வந்த எண்ணிக்கை',
  'Count everything physically on the shelf, including items set aside for orders.':'ஆர்டர்களுக்காக ஒதுக்கியவை உட்பட கடையில் உள்ள அனைத்தையும் எண்ணுங்கள்.','available to sell after saving':'சேமித்தபின் விற்கக் கிடைக்கும்','set aside for orders':'ஆர்டர்களுக்காக ஒதுக்கப்பட்டது','set aside for orders. Update stock using the stock control.':'ஆர்டர்களுக்காக ஒதுக்கப்பட்டது. இருப்புக் கட்டுப்பாட்டில் மாற்றுங்கள்.',
  'Shop name':'கடைப் பெயர்','Shop profile':'கடை விவரம்','View shop':'கடையைப் பார்','Save shop name':'கடைப் பெயரைச் சேமி','Account':'கணக்கு','Dashboard language':'செயலியின் மொழி','This setting changes the owner dashboard language on this device.':'இந்தச் சாதனத்தில் கடை நிர்வாகத்தின் மொழியை மாற்றும்.',
  'Address and contact editing are not available in this dashboard yet.':'முகவரி, தொடர்பு விவரங்களை இங்கு இன்னும் மாற்ற முடியாது.','Connected':'இணைக்கப்பட்டது','Not connected':'இணைக்கப்படவில்லை','Connection is active':'இணைப்பு செயல்படுகிறது','Connection is not active':'இணைப்பு செயல்படவில்லை','Connection needs attention':'இணைப்பைச் சரிபார்க்க வேண்டும்',
