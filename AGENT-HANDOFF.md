@@ -2,6 +2,8 @@
 
 Read this file, WORKING-PREFERENCES.md, CONTRIBUTING.md and LOCAL-DEVELOPMENT.md before editing. Inspect `git status`, the current branch and recent commits. This file is durable project context; chat history is not copied between agents.
 
+For maintenance, experiments and a step-by-step customer release, use the [ShopBot operations playbook](SHOPBOT-OPERATIONS.md).
+
 ## Correct working folder and source
 
 Prepared checkout on this computer: `/home/gk-pc/projects/shopbot-inventory-dev`.
