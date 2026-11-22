@@ -339,42 +339,6 @@
 .redesign .rd-orders .rd-orders-cancel-option:hover:not(:disabled) { background: #fcf1ee; border-color: #c58b80; }
 .redesign .rd-orders .rd-order-menu-trigger.is-icon { width: 36px; min-height: 36px; padding: 0; border-color: transparent; }
 
-.redesign .rd-order-menu {
-  position: fixed;
-  inset: auto;
-  margin: 0;
-  width: max-content;
-  min-width: 154px;
-  max-width: calc(100vw - 16px);
-  max-height: calc(100dvh - 16px);
-  overflow: auto;
-  padding: 5px;
-  border: 1px solid var(--order-border);
-  border-radius: 9px;
-  background: #fff;
-  color: var(--rd-text);
-  box-shadow: 0 8px 24px #17333825;
-}
-.redesign .rd-order-menu .rd-order-menu-entry {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 9px;
-  min-height: 38px;
-  border: 0;
-  border-radius: 6px;
-  background: #fff;
-  color: inherit;
-  font-size: 13px;
-  font-weight: 550;
-  text-align: left;
-  text-decoration: none;
-}
-.redesign .rd-order-menu .rd-order-menu-entry:is(:hover,:focus-visible) { background: var(--order-surface); }
-.redesign .rd-order-menu .rd-order-menu-entry.is-danger { color: var(--order-danger); }
-.redesign .rd-order-menu .owner-icon { width: 16px; height: 16px; flex: none; }
-
 .redesign .rd-orders-payment { display: flex; align-items: center; gap: 11px; padding: 13px 0; margin-top: 12px; border-bottom: 1px solid var(--order-border); }
 .redesign .rd-orders-payment-icon { display: grid; place-items: center; flex: none; width: 31px; height: 31px; border-radius: 50%; background: var(--order-active); color: var(--rd-teal); }
 .redesign .rd-orders-payment>div { flex: 1; }

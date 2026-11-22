@@ -34,7 +34,7 @@ export function OrderActionMenu({label,trigger,actions,iconOnly=false,preferAbov
   },[open]);
 
   return <>
-    <button ref={button} type="button" className={'rd-orders-quiet rd-order-menu-trigger'+(iconOnly?' is-icon':'')}
+    <button ref={button} type="button" className={'rd-control rd-orders-quiet rd-order-menu-trigger'+(iconOnly?' is-icon':'')}
       aria-label={label} aria-controls={id} aria-expanded={open} popoverTarget={id} disabled={disabled}>
       {trigger}
     </button>

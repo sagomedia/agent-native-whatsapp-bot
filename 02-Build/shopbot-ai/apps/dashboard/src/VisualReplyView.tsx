@@ -1,5 +1,5 @@
-import {fitText,cardMessageText,productPhotoCaption} from '../../../packages/contracts/channel-text.js';
-import {say,referencePhotoLabel} from '../../../packages/contracts/language.js';
+import {fitText,cardMessageText,productPhotoCaption} from '../../../packages/contracts/channel-caption.js';
+import {say,referencePhotoLabel} from '../../../packages/contracts/reply-copy.js';
 import type {RichReply,SimulatorEvent} from '../../../packages/contracts/index.js';
 import './visual-reply.css';
 export function VisualReplyView({reply,disabled=true,current=()=>false,onChoose,productImage,messageImage,diagnostics=false,showText=false}:{showText?:boolean;diagnostics?:boolean;reply:RichReply;disabled?:boolean;current?:(event:SimulatorEvent)=>boolean;onChoose?:(event:SimulatorEvent)=>void;productImage?:(sku:string)=>string;messageImage?:(url:string)=>string}){

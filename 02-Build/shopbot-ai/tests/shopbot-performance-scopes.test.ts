@@ -19,6 +19,34 @@ test('scoped reads preserve order facts and inbox metadata while omitting unrela
  const denied=await app.inject({url:'/api/owner/snapshot?scope=inbox',headers:{host:owner.hostname}});assert.equal(denied.statusCode,403);
  const catalog=(await app.inject({url:'/api/owner/catalog?limit=2',headers})).json(),compact=(await app.inject({url:'/api/owner/catalog?limit=2&metadata=compact',headers})).json();assert.deepEqual(compact.products,catalog.products);assert.equal(compact.total,catalog.total);assert.ok(compact.nodes.every((n:any)=>Object.keys(n).every(k=>['id','kind','label'].includes(k))));
  if(catalog.nextCursor){const next=await app.inject({url:'/api/owner/catalog?'+new URLSearchParams({limit:'2',cursor:catalog.nextCursor,metadata:'compact'}),headers});assert.equal(next.statusCode,200,next.body);}
+ const first=catalog.products[0];
+ assert.ok(first&&catalog.nextCursor);
+ const queryCatalog=async(query:Record<string,string>)=>{
+  const result=await app!.inject({url:'/api/owner/catalog?'+new URLSearchParams(query),headers});
+  assert.equal(result.statusCode,200,result.body);
+  return result.json();
+ };
+ const list=await queryCatalog({limit:'2',metadata:'list'});
+ assert.deepEqual(list.products.map((product:any)=>product.sku),catalog.products.map((product:any)=>product.sku));
+ assert.equal(list.total,catalog.total);
+ assert.equal(list.nextCursor,catalog.nextCursor);
+ assert.ok(!('summary' in list)&&!('totalStore' in list));
+ for(const row of list.products)assert.ok(!('aliases' in row)&&!('specifications' in row)&&!('indicativePrice' in row));
+ const fullNext=await queryCatalog({limit:'2',cursor:catalog.nextCursor});
+ const listNext=await queryCatalog({limit:'2',cursor:list.nextCursor,metadata:'list'});
+ assert.deepEqual(listNext.products.map((product:any)=>product.sku),fullNext.products.map((product:any)=>product.sku));
+ const estimate={pricePaise:1200,lowPaise:1000,highPaise:1500,unit:first.unit,currency:'INR',asOf:'2026-10-01',source:'model-low-indicative',generation:{model:'fixture',effort:'low',inputHash:'a'.repeat(64),proposalHash:'b'.repeat(64)}};
+ await pool.query("UPDATE products SET price_paise=0,price_status='confirm' WHERE store_id=$1 AND sku=$2",[fixtureStore,first.sku]);
+ await pool.query("UPDATE products SET indicative_price=$3 WHERE store_id=$1 AND sku=$2",[fixtureStore,first.sku,estimate]);
+ const priced=await queryCatalog({limit:'2',metadata:'list'});
+ assert.equal(priced.products.find((product:any)=>product.sku===first.sku).indicativePricePaise,1200);
+ const details=await app.inject({url:'/api/owner/catalog/products/'+encodeURIComponent(first.sku),headers});
+ assert.equal(details.statusCode,200);
+ assert.equal(details.json().product.indicativePricePaise,1200);
+ assert.deepEqual(details.json().product.indicativePrice,estimate);
+ await pool.query("UPDATE products SET indicative_price=$3 WHERE store_id=$1 AND sku=$2",[fixtureStore,first.sku,{...estimate,unit:first.unit==='piece'?'pack':'piece'}]);
+ const invalidEstimate=await queryCatalog({limit:'2',metadata:'list'});
+ assert.ok(!('indicativePricePaise' in invalidEstimate.products.find((product:any)=>product.sku===first.sku)));
  assert.equal((await pool.query('SELECT count(*)::int AS n FROM owner_audit')).rows[0].n,0);
  }finally{await app?.close();await pool.end();await admin.query(`DROP SCHEMA ${schema} CASCADE`);await admin.end();}
 });

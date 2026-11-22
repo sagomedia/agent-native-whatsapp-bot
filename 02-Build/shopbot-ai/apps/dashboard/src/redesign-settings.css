@@ -35,3 +35,19 @@
 .redesign .rd-settings-costs .rd-settings-facts strong{white-space:nowrap;flex-shrink:0}
 
 .redesign .rd-settings-hours{margin-top:28px;padding-top:24px;border-top:1px solid var(--rd-line)}.redesign .rd-settings-hours p{font-size:14px;color:var(--rd-muted);line-height:1.5}.redesign .rd-settings-hours-times{display:grid;grid-template-columns:1fr 1fr;gap:16px}.redesign .rd-settings-hours-days{border:0;padding:0;margin:16px 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.redesign .rd-settings-hours-days legend{margin-bottom:12px}.redesign .rd-settings-hours-days label{display:flex;gap:9px;align-items:center;min-height:36px}.redesign .rd-settings-hours-days input{width:18px;height:18px;accent-color:var(--rd-teal)}
+
+.redesign[data-compact] .rd-settings-main .rd-settings-shop {
+  align-items: center;
+  padding: 13px;
+  border: 1px solid var(--rd-line);
+  border-radius: 11px;
+  background: var(--rd-soft);
+}
+.redesign[data-compact] .rd-settings-main .rd-settings-shop .rd-settings-avatar { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px; flex: none; color: var(--rd-teal); background: var(--rd-tint); }
+.redesign[data-compact] .rd-settings-main .rd-settings-shop>button { min-height: 37px; padding: 6px 10px; border: 1px solid var(--rd-control-line); border-radius: 8px; background: white; }
+.redesign[data-compact] .rd-settings-main .rd-settings-rows { margin-top: 15px; border: 1px solid var(--rd-line); border-radius: 11px; }
+.redesign[data-compact] .rd-settings-main .rd-settings-row { padding: 10px 13px; }
+.redesign[data-compact] .rd-settings-main .rd-settings-row:last-child { border-bottom: 0; }
+.redesign .rd-settings-row:not(.rd-settings-switch-row):not(.rd-settings-chatgpt):hover { background: var(--rd-soft); }
+.redesign .rd-settings .rd-settings-back { padding: 6px 10px; border: 1px solid var(--rd-control-line); margin-bottom: 13px; color: var(--rd-text); background: white; }
+.redesign .rd-settings-detail :is(.rd-settings-field input,.rd-settings-field select) { border-color: var(--rd-control-line); }

@@ -10,6 +10,7 @@ import {redesignApi} from './redesign-api.js';
 import './redesign-chats.css';
 import {useOwnerLocale} from './owner-locale.js';
 import {PageHeading} from './mobile-workspace.js';
+import {OwnerIcon} from './OwnerIcon.js';
 import {useOwnerPhoto} from './OwnerPhotoViewer.js';
 
 type Conversation = CustomerIdentity & {
@@ -48,8 +49,6 @@ function delivery(status:string,whatsapp:boolean){
   const labels:Record<string,string>={queued:'Queued',accepted:'Sending',sent:'Sent',delivered:'Delivered',read:'Read',unknown:'Delivery uncertain',failed:'Could not send',cancelled:'Not sent'};
   return labels[status]??status.replaceAll('_',' ');
 }
-function SearchIcon(){return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="10.8" cy="10.8" r="6.7"/><path d="m16 16 5 5"/></svg>;}
-function SendIcon(){return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="m3 4 18 8-18 8 3-7 8-1-8-1-3-7Z" fill="currentColor"/></svg>;}
 
 export function RedesignChats(){
   const {t}=useOwnerLocale(),openPhoto=useOwnerPhoto();
@@ -245,7 +244,7 @@ export function RedesignChats(){
 
   return <div className={`rd-chats ${mobileDetail?'rd-chats-detail-open':''}`}>
     <section className="rd-chats-list" aria-label={t("Chats")}>
-      <header className="rd-chats-list-head" data-scroll-tools><PageHeading title={t("Chats")}/><label className="rd-chats-search"><SearchIcon/><span className="rd-chats-sr-only">{t("Search chats")}</span><input type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder={t("Search chats")} autoComplete="off"/></label><div data-horizontal-scroll className="rd-chats-filters" role="group" aria-label={t("Filter chats")}><button type="button" className={filter==='all'?'is-active':''} aria-pressed={filter==='all'} onClick={()=>{setFilter('all');navigateOwner({inboxPage:null,conversation:null},true);}}>{t("All")}</button><button type="button" className={filter==='needs'?'is-active':''} aria-pressed={filter==='needs'} onClick={()=>{setFilter('needs');navigateOwner({inboxPage:null,conversation:null},true);}}>{t("Needs reply")}{' '}{needsCount>0&&<span className="rd-chats-count">{needsCount}</span>}</button></div></header>
+      <header className="rd-chats-list-head" data-scroll-tools><PageHeading title={t("Chats")}/><label className="rd-chats-search"><OwnerIcon name="search"/><span className="rd-chats-sr-only">{t("Search chats")}</span><input type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder={t("Search chats")} autoComplete="off"/></label><div data-horizontal-scroll className="rd-chats-filters" role="group" aria-label={t("Filter chats")}><button type="button" className={filter==='all'?'is-active':''} aria-pressed={filter==='all'} onClick={()=>{setFilter('all');navigateOwner({inboxPage:null,conversation:null},true);}}>{t("All")}</button><button type="button" className={filter==='needs'?'is-active':''} aria-pressed={filter==='needs'} onClick={()=>{setFilter('needs');navigateOwner({inboxPage:null,conversation:null},true);}}>{t("Needs reply")}{' '}{needsCount>0&&<span className="rd-chats-count">{needsCount}</span>}</button></div></header>
       {inboxError&&<p className="rd-chats-alert" role="alert">{t("Chats are not updating.")}{' '}<button type="button" onClick={()=>void refresh().catch(()=>{})}>{t("Try again")}</button></p>}
       {!inbox&&!inboxError?<p className="rd-chats-empty">{t("Loading chats…")}</p>:shown.length===0?<div className="rd-chats-empty"><p>{query?t("No matching chats."):filter==='needs'?t("No chats need your reply."):t("No chats yet.")}</p>{filter==='needs'&&<button type="button" className="rd-chats-outline" onClick={()=>setFilter('all')}>{t("View all chats")}</button>}</div>:<div data-scroll-list className="rd-chats-rows" role="region" aria-label={t("Chat list")} tabIndex={0}>{shown.map(c=><button type="button" key={c.id} disabled={busy} className={`rd-chats-row ${selectedId===c.id?'is-selected':''}`} aria-current={selectedId===c.id?'true':undefined} onClick={()=>choose(c.id)}><span className="rd-chats-avatar" aria-hidden="true">{initials(displayName(c))}</span><span className="rd-chats-row-main"><span className="rd-chats-row-top"><strong>{displayName(c)}</strong><time>{c.updated_at?clockTime(c.updated_at):''}</time></span><span className="rd-chats-preview">{c.last_text||'No messages yet'}</span>{needsReply(c)?<span className="rd-chats-needs-label">{t("Needs your reply")}</span>:c.operator_mode==='owner'?<span className="rd-chats-owner-label">{t("You’re replying")}</span>:null}</span>{(c.unread_count??0)>0?<span className="rd-chats-unread-count" aria-label={`${c.unread_count} unread customer messages`}>{c.unread_count!>99?'99+':c.unread_count}</span>:needsReply(c)?<span className="rd-chats-dot" aria-label={t("Needs reply")}/>:null}</button>)}</div>}
       {inbox?.inboxPage&&inbox.inboxPage.total>inbox.inboxPage.ids.length&&<div className="rd-chats-pages"><button type="button" disabled={inboxPage<=1} onClick={()=>navigateOwner({inboxPage:String(inboxPage-1),conversation:null})}>{t("Previous")}</button><span>{t("Page")}{' '}{inboxPage}</span><button type="button" disabled={!inbox.inboxPage.hasNext} onClick={()=>navigateOwner({inboxPage:String(inboxPage+1),conversation:null})}>{t("Next")}</button></div>}
@@ -253,8 +252,15 @@ export function RedesignChats(){
     </section>
     <section className="rd-chats-thread" aria-label={t("Selected chat")}>
       {conversation?<>
-        <header className="rd-chats-thread-head"><button type="button" className="rd-chats-back" aria-label={t("Back to chats")} disabled={busy} onClick={()=>navigateOwner({conversation:null})}>←</button><span className="rd-chats-avatar" aria-hidden="true">{initials(displayName(conversation))}</span><div className="rd-chats-thread-person"><h2>{displayName(conversation)}</h2><span>{phone(conversation)}</span></div><span className={`rd-chats-status ${conversation.operator_mode==='owner'?'is-owner':''}`}>{conversation.operator_mode==='owner'?t("You're replying"):t("Bot handling this chat")}</span></header>
-        {conversation.operator_mode==='owner'&&<div className="rd-chats-control"><strong>{t("You’re replying")}</strong><button type="button" className="rd-chats-outline" disabled={busy} onClick={()=>void control('assistant')}>{t("Let bot reply")}</button></div>}
+        <header className="rd-chats-thread-head">
+          <div className="rd-chats-head-inner">
+            <button type="button" className="rd-control rd-control-icon rd-chats-back" aria-label={t("Back to chats")} disabled={busy} onClick={()=>navigateOwner({conversation:null})}><OwnerIcon name="back"/></button>
+            <span className="rd-chats-avatar" aria-hidden="true">{initials(displayName(conversation))}</span>
+            <div className="rd-chats-thread-person"><h2>{displayName(conversation)}</h2><span>{phone(conversation)}</span></div>
+            <OwnerLink className="rd-control rd-control-icon rd-chats-order-link" aria-label={t("View this customer’s orders")} title={t("View this customer’s orders")} values={{view:'requests',requests:'all',order:null,orderSearch:conversation.id,orderPage:null}}><OwnerIcon name="orders"/></OwnerLink>
+            <span className={'rd-chats-status'+(conversation.operator_mode==='owner'?' is-owner':'')}>{conversation.operator_mode==='owner'?t("You’re replying"):t("Bot handling this chat")}</span>
+          </div>
+        </header>
         {actionError&&<div className="rd-chats-thread-alert" role="alert">{t(actionError)}</div>}
         {reader.readError&&<div className="rd-chats-thread-alert" role="status">{reader.readError}</div>}
         {notice&&<div className="rd-chats-thread-notice" role="status">{t(notice)}</div>}
@@ -268,8 +274,29 @@ export function RedesignChats(){
           </div>
           {(awayFromLatest||newerCursor.current)&&<button type="button" className="rd-chats-new" disabled={jumping} onClick={()=>void jumpLatest()}>{jumping?t("Loading…"):unseen?t("New messages ↓"):t("Latest messages ↓")}</button>}
         </div>
-        <div className="rd-chats-bottom">{conversation.operator_mode==='assistant'?<button type="button" className="rd-chats-primary" disabled={busy} onClick={()=>void control('owner')}>{t("Reply myself")}</button>:!canSend?<p className="rd-chats-cannot-send">{conversation.actor==='local-simulator'?t("This demo chat cannot send replies."):!inbox?.channel.liveSending?t("Customer replies are unavailable right now."):t("The WhatsApp reply window has closed.")}</p>:<form className="rd-chats-compose" onSubmit={event=>{event.preventDefault();void send();}}><label className="rd-chats-sr-only" htmlFor="rd-chats-reply">{t("Reply to customer")}</label><textarea id="rd-chats-reply" rows={1} maxLength={4096} placeholder={t("Write your reply…")} value={draft} disabled={busy} onChange={event=>{const value=event.target.value;setDrafts(current=>({...current,[selectedId]:value}));if(attempts.current[selectedId]?.text!==value.trim())delete attempts.current[selectedId];}}/><button type="submit" className="rd-chats-send" disabled={busy||!draft.trim()} aria-label={t("Send reply")}><SendIcon/></button></form>}</div>
-        <div className="rd-chats-order-link"><OwnerLink values={{view:'requests',requests:'all',order:null,orderSearch:conversation.id,orderPage:null}}>{t("View this customer’s orders")}</OwnerLink></div>
+        <footer className="rd-chats-bottom">
+          <div className="rd-chats-footer-inner">
+            {conversation.operator_mode==='assistant'?<div className="rd-chats-takeover">
+              <p>{t("Take over to reply from the store.")}</p>
+              <button type="button" className="rd-control rd-control-primary" disabled={busy} onClick={()=>void control('owner')}>{t("Reply myself")}</button>
+            </div>:<>
+              <div className="rd-chats-control">
+                <span>{t("You’re replying")}</span>
+                <button type="button" className="rd-control" disabled={busy} onClick={()=>void control('assistant')}>{t("Let bot reply")}</button>
+              </div>
+              {!canSend?<p className="rd-chats-cannot-send">{conversation.actor==='local-simulator'?t("This demo chat cannot send replies."):!inbox?.channel.liveSending?t("Customer replies are unavailable right now."):t("The WhatsApp reply window has closed.")}</p>:
+                <form className="rd-chats-compose" onSubmit={event=>{event.preventDefault();void send();}}>
+                  <label className="rd-chats-sr-only" htmlFor="rd-chats-reply">{t("Reply to customer")}</label>
+                  <textarea id="rd-chats-reply" rows={1} maxLength={4096} placeholder={t("Write your reply…")} value={draft} disabled={busy} onChange={event=>{
+                    const value=event.target.value;
+                    setDrafts(current=>({...current,[selectedId]:value}));
+                    if(attempts.current[selectedId]?.text!==value.trim())delete attempts.current[selectedId];
+                  }}/>
+                  <button type="submit" className="rd-control rd-control-primary rd-chats-send" disabled={busy||!draft.trim()} aria-label={t("Send reply")}><OwnerIcon name="send"/>{t("Send")}</button>
+                </form>}
+            </>}
+          </div>
+        </footer>
       </>:<div className="rd-chats-no-selection">{t("Choose a chat to read its messages.")}</div>}
     </section>
   </div>;

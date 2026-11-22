@@ -1,10 +1,11 @@
 import {createHash} from 'node:crypto';
 import type {PoolClient} from 'pg';
 import {z} from 'zod';
+import {indicativePriceFor} from '../../../../packages/contracts/indicative-prices.js';
 import {productColumns,productFromRow} from '../services/catalog.js';
 
 const pageFields={q:z.string().trim().max(200).default(''),limit:z.coerce.number().int().min(1).max(100).default(25),cursor:z.string().max(4000).optional()};
-export const productPageSchema=z.object({...pageFields,visibility:z.enum(['','visible','draft']).default(''),stock:z.enum(['','out','unknown','low','attention']).default(''),family:z.string().max(80).default(''),brand:z.string().max(120).default(''),exception:z.enum(['','missing_photo','pending_price','pending_review','review_conflicts']).default(''),sort:z.enum(['name','sku','updated']).default('name'),metadata:z.enum(['full','compact']).default('full')}).strict();
+export const productPageSchema=z.object({...pageFields,visibility:z.enum(['','visible','draft']).default(''),stock:z.enum(['','out','unknown','low','attention']).default(''),family:z.string().max(80).default(''),brand:z.string().max(120).default(''),exception:z.enum(['','missing_photo','pending_price','pending_review','review_conflicts']).default(''),sort:z.enum(['name','sku','updated']).default('name'),metadata:z.enum(['full','compact','list']).default('full')}).strict();
 export const proposalPageSchema=z.object({...pageFields,batch:z.string().max(100).default(''),exception:z.enum(['','conflicts','issues','missing_photo','pending_price','unknown_stock']).default('')}).strict();
 const invalid=(message:string,statusCode=400)=>Object.assign(new Error(message),{statusCode});
 const signature=(input:Record<string,unknown>)=>createHash('sha256').update(JSON.stringify({...input,cursor:undefined})).digest('hex');
@@ -15,11 +16,18 @@ function readCursor(cursor:string|undefined,scope:string,query:string,revision:n
 }
 function nextCursor(scope:string,query:string,revision:number,key:string,id:string){return Buffer.from(JSON.stringify({v:1,scope,query,revision,key,id})).toString('base64url');}
 const ownerRow=(p:any)=>({...productFromRow(p),active:p.active,verification:p.merchant_verification,origin:p.catalog_origin,inventoryUpdatedAt:p.inventory_updated_at});
+const listColumns='sku,name,unit,price_paise,price_status,indicative_price,stock,reserved_stock,version,inventory_version,image_path,product_group_id,product_group_name,variant_label,selling_unit_verified';
+function ownerListRow(row:Parameters<typeof ownerRow>[0]){
+ const product=productFromRow(row);
+ const {sku,name,unit,pricePaise,priceStatus,stock,stockOnHand,stockReserved,version,inventoryVersion,imageUrl,productGroup,sellingUnitVerified}=product;
+ return {sku,name,unit,pricePaise,priceStatus,stock,stockOnHand,stockReserved,version,inventoryVersion,imageUrl,productGroup,sellingUnitVerified,active:row.active,verification:row.merchant_verification,indicativePricePaise:indicativePriceFor(product)?.pricePaise};
+}
 export async function selectedOwnerProduct(c:PoolClient,storeId:string,sku:string){
  const row=(await c.query(`SELECT ${productColumns},active,catalog_origin,inventory_updated_at,merchant_verification FROM products WHERE store_id=$1 AND sku=$2`,[storeId,sku])).rows[0];if(!row)throw invalid('Product not found in this shop.',404);
  // Source photos remain private review evidence and never become a customer image URL.
  const referencePhotos=(await c.query(`SELECT a.id,p.id AS "proposalId",a.match_kind AS "matchKind" FROM catalog_proposals p JOIN catalog_proposal_assets a ON a.store_id=p.store_id AND a.proposal_id=p.id WHERE p.store_id=$1 AND p.published_sku=$2 AND p.state='published' ORDER BY p.updated_at DESC,p.id,a.created_at,a.id LIMIT 5`,[storeId,sku])).rows;
- return {...ownerRow(row),referencePhotos};
+ const product=ownerRow(row);
+ return {...product,indicativePricePaise:indicativePriceFor(product)?.pricePaise,referencePhotos};
 }
 export async function ownerProductPage(c:PoolClient,storeId:string,input:z.infer<typeof productPageSchema>){
  const revision=(await c.query('SELECT catalog_revision FROM stores WHERE id=$1',[storeId])).rows[0].catalog_revision;
@@ -49,15 +57,17 @@ export async function ownerProductPage(c:PoolClient,storeId:string,input:z.infer
  if(input.exception==='pending_review')where.push(pendingReview);
  if(input.exception==='review_conflicts')where.push(conflicts);
  const condition=where.join(' AND ');
- const summary=(await c.query(`SELECT count(*)::int AS total,count(*) FILTER(WHERE image_path IS NULL OR image_path='')::int AS "missingPhoto",count(*) FILTER(WHERE price_status='confirm')::int AS "pendingPrice",count(*) FILTER(WHERE stock IS NULL)::int AS "unknownStock",count(*) FILTER(WHERE ${pendingReview})::int AS "pendingReview",count(*) FILTER(WHERE ${conflicts})::int AS "reviewConflicts" FROM products WHERE ${condition}`,values)).rows[0];
- const totalStore=(await c.query('SELECT count(*)::int AS total FROM products WHERE store_id=$1',[storeId])).rows[0].total;
+ const simpleList=input.metadata==='list';
+ const summary=simpleList?undefined:(await c.query(`SELECT count(*)::int AS total,count(*) FILTER(WHERE image_path IS NULL OR image_path='')::int AS "missingPhoto",count(*) FILTER(WHERE price_status='confirm')::int AS "pendingPrice",count(*) FILTER(WHERE stock IS NULL)::int AS "unknownStock",count(*) FILTER(WHERE ${pendingReview})::int AS "pendingReview",count(*) FILTER(WHERE ${conflicts})::int AS "reviewConflicts" FROM products WHERE ${condition}`,values)).rows[0];
+ const total=summary?.total??(await c.query(`SELECT count(*)::int AS total FROM products WHERE ${condition}`,values)).rows[0].total;
+ const totalStore=simpleList?undefined:(await c.query('SELECT count(*)::int AS total FROM products WHERE store_id=$1',[storeId])).rows[0].total;
  const key=input.sort==='updated'?"coalesce(inventory_updated_at,'epoch'::timestamptz)":input.sort==='sku'?'sku':'name';const direction=input.sort==='updated'?'DESC':'ASC',comparison=input.sort==='updated'?'<':'>';
  if(cursor){const p=bind(cursor.key),id=bind(cursor.id);where.push(`(${key} ${comparison} ${p}${input.sort==='updated'?'::timestamptz':''} OR (${key}=${p}${input.sort==='updated'?'::timestamptz':''} AND sku>${id}))`);}
- const rows=(await c.query(`SELECT ${productColumns},active,catalog_origin,inventory_updated_at,merchant_verification,(${key})::text AS cursor_key FROM products WHERE ${where.join(' AND ')} ORDER BY ${key} ${direction},sku ASC LIMIT ${bind(input.limit+1)}`,values)).rows;
+ const rows=(await c.query(`SELECT ${simpleList?listColumns:productColumns+',catalog_origin,inventory_updated_at'},active,merchant_verification,(${key})::text AS cursor_key FROM products WHERE ${where.join(' AND ')} ORDER BY ${key} ${direction},sku ASC LIMIT ${bind(input.limit+1)}`,values)).rows;
  const more=rows.length>input.limit,loaded=rows.slice(0,input.limit),last=loaded.at(-1);
  // Brands are separate metadata, never inferred from the loaded page.
- const brands=input.metadata==='compact'?[]:(await c.query("SELECT DISTINCT brand FROM products WHERE store_id=$1 AND brand IS NOT NULL AND brand<>'' ORDER BY brand LIMIT 1000",[storeId])).rows.map(r=>r.brand);
- return {revision,products:loaded.map(ownerRow),total:summary.total,totalStore,summary,brands,limit:input.limit,nextCursor:more&&last?nextCursor(scope,query,revision,last.cursor_key,last.sku):null};
+ const brands=input.metadata!=='full'?[]:(await c.query("SELECT DISTINCT brand FROM products WHERE store_id=$1 AND brand IS NOT NULL AND brand<>'' ORDER BY brand LIMIT 1000",[storeId])).rows.map(r=>r.brand);
+ return {revision,products:simpleList?loaded.map(ownerListRow):loaded.map(ownerRow),total,totalStore,summary,brands,limit:input.limit,nextCursor:more&&last?nextCursor(scope,query,revision,last.cursor_key,last.sku):null};
 }
 const proposalAssets=`coalesce((SELECT jsonb_agg(jsonb_build_object('id',a.id,'matchKind',a.match_kind,'width',a.width,'height',a.height) ORDER BY a.created_at,a.id) FROM catalog_proposal_assets a WHERE a.store_id=p.store_id AND a.proposal_id=p.id),'[]'::jsonb) AS assets`;
 const draftConflicts=`(p.base_sku IS NOT NULL AND NOT EXISTS(SELECT 1 FROM products b WHERE b.store_id=p.store_id AND b.sku=p.base_sku AND b.version=p.base_version))`;
