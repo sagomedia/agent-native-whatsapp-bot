@@ -341,9 +341,10 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
  // This makes a brand with few products discoverable in a large catalog.
  const facetKey=add(effective.facetPage?.key??''),facetSearch=add('%'+(effective.facetPage?.search??'').replace(/[\\%_]/g,'\\$&')+'%'),facetOffset=add(effective.facetPage?.offset??0);
  const strategyKeys=add(effective.narrowing?.map(step=>step.key)??[]);
- // A zero- or one-row SQL scope cannot offer a narrowing choice. Skip the
- // second full-scope aggregation, which is costly for exact and absent items.
- const allFacets=sqlMatchCount>1?(await bound(client,`WITH scope AS (SELECT p.family_id,p.brand,p.specifications,p.price_paise,p.price_status,p.unit,p.selling_unit_verified FROM products p WHERE ${usedWhere}), price_values AS (
+ // A singleton has no automatic narrowing choices, but an explicit facet
+ // page still needs its remaining value when earlier choices have narrowed it.
+ const needsFacets=sqlMatchCount>1||(sqlMatchCount===1&&!!effective.facetPage);
+ const allFacets=needsFacets?(await bound(client,`WITH scope AS (SELECT p.family_id,p.brand,p.specifications,p.price_paise,p.price_status,p.unit,p.selling_unit_verified FROM products p WHERE ${usedWhere}), price_values AS (
  SELECT price_paise,ntile(3) OVER(ORDER BY price_paise) AS band FROM (SELECT DISTINCT price_paise FROM scope WHERE price_status='priced' AND price_paise>0 AND selling_unit_verified=true) prices
  WHERE (SELECT count(DISTINCT unit) FROM scope)=1), price_bands AS (
  SELECT min(price_paise)::int AS low,max(price_paise)::int AS high FROM price_values GROUP BY band), facet_values AS (

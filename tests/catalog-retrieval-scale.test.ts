@@ -46,7 +46,7 @@ test('single-result searches avoid facet aggregation while preserving current fa
  await c.query("INSERT INTO catalog_profiles(store_id,store_type) VALUES($1,'grocery')",[groceryId]);
  await c.query("INSERT INTO catalog_nodes(store_id,id,kind,label) VALUES($1,'snacks','department','Snacks')",[groceryId]);
  await c.query("INSERT INTO catalog_nodes(store_id,id,parent_id,kind,label) VALUES($1,'sweets','snacks','family','Sweets')",[groceryId]);
- await c.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases,version) VALUES($1,'PULI-1','Puli Mittai Tamarind Candy','packet',4200,8,'sweets','[\"puli mittai\"]',4)",[groceryId]);
+ await c.query("INSERT INTO products(store_id,sku,name,unit,price_paise,stock,family_id,aliases,specifications,version) VALUES($1,'PULI-1','Puli Mittai Tamarind Candy','packet',4200,8,'sweets','[\"puli mittai\"]','{\"flavour\":\"tamarind\"}',4)",[groceryId]);
  const originalQuery=c.query.bind(c);let facetQueries=0;
  (c as typeof c & {query:typeof c.query}).query=((...args:Parameters<typeof c.query>)=>{
   if(typeof args[0]==='string'&&args[0].includes('WITH scope AS (SELECT p.family_id'))facetQueries++;
@@ -63,7 +63,10 @@ test('single-result searches avoid facet aggregation while preserving current fa
   assert.equal(grocery.products[0].pricePaise,4200);
   assert.equal(grocery.products[0].stock,8);
   assert.equal(grocery.products[0].version,4);
-  assert.equal(facetQueries,0,'zero or one SQL match cannot produce a narrowing choice');
+  assert.equal(facetQueries,0,'a singleton skips automatic facet aggregation');
+  const paged=await discoverProducts(c,{...ctx,storeId:groceryId},'puli mittai',{keywords:['puli mittai'],facetPage:{key:'spec:flavour',offset:0}});
+  assert.deepEqual(paged.facets.map(f=>[f.key,f.values.map(v=>v.value)]),[['spec:flavour',['tamarind']]]);
+  assert.equal(facetQueries,1,'an explicit facet page preserves its current value');
  }finally{c.query=originalQuery;}
 }));
 

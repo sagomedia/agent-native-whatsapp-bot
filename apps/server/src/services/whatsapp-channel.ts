@@ -293,24 +293,26 @@ export class WhatsAppChannel {
         // The claim precedes the HTTP call so overlapping workers never send a
         // second indicator for an accepted request. Retry only an explicit 408
         // or 503; a thrown request may already have reached Meta.
+        const deadline=AbortSignal.timeout(1500);
         for(let attempt=0;attempt<2;attempt++){
           try{
-            const response=await this.request(`https://graph.facebook.com/${c.graphVersion}/${c.phoneId}/messages`,{method:'POST',headers:{authorization:'Bearer '+c.accessToken,'content-type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',status:'read',message_id:row.provider_id,typing_indicator:{type:'text'}}),signal:AbortSignal.timeout(1500)});
+            const response=await this.request(`https://graph.facebook.com/${c.graphVersion}/${c.phoneId}/messages`,{method:'POST',headers:{authorization:'Bearer '+c.accessToken,'content-type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',status:'read',message_id:row.provider_id,typing_indicator:{type:'text'}}),signal:deadline});
             if(response.ok){
               const result=await response.json().catch(()=>null) as {success?:unknown}|null;
               if(result?.success===true)break;
               console.error(JSON.stringify({event:'whatsapp_typing_failed',code:'invalid_success_response'}));
               break;
             }
-            if(attempt===0&&(response.status===408||response.status===503)){
+            await response.body?.cancel().catch(()=>{});
+            if(attempt===0&&!deadline.aborted&&(response.status===408||response.status===503)){
               const eligible=await this.pool.query(`SELECT 1 FROM messages m JOIN conversations v ON v.id=m.conversation_id JOIN stores s ON s.id=v.store_id JOIN whatsapp_conversations w ON w.conversation_id=v.id WHERE m.id=$1 AND s.id=$2 AND w.phone_id=$3 AND NOT s.operator_paused AND v.operator_mode='assistant' AND w.last_inbound_at>now()-interval '24 hours' AND m.status IN ('pending','processing')`,[row.id,c.storeId,c.phoneId]);
-              if(eligible.rowCount)continue;
+              if(eligible.rowCount&&!deadline.aborted)continue;
               break;
             }
             console.error(JSON.stringify({event:'whatsapp_typing_failed',status:response.status}));
             break;
-          }catch(error){
-            console.error(JSON.stringify({event:'whatsapp_typing_failed',code:error instanceof Error?error.name:'request_error'}));
+          }catch{
+            console.error(JSON.stringify({event:'whatsapp_typing_failed',code:deadline.aborted?'timeout':'request_error'}));
             break;
           }
         }
