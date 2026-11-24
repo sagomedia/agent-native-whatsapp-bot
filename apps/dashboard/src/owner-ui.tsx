@@ -34,6 +34,12 @@ export function OwnerLink({values,onNavigate,disabled,children,...props}:Omit<An
     event.preventDefault();if(disabled)return;if(onNavigate)onNavigate();else navigateOwner(values);
   }}>{children}</a>;
 }
+export function OwnerLoading({label, variant}: {label: string; variant?: 'rows' | 'messages'}) {
+  return <div className={'rd-wait' + (variant ? ' rd-wait-' + variant : '')}>
+    <p role="status"><span className="rd-wait-indicator" aria-hidden="true"/>{label}</p>
+    {variant && <div className="rd-wait-preview" aria-hidden="true"><i/><i/><i/></div>}
+  </div>;
+}
 export function Notice({children, error = false}: {children: ReactNode; error?: boolean}) {
   return <p className={error ? 'owner-error' : 'owner-success'} role={error ? 'alert' : 'status'}>{children}</p>;
 }

@@ -3,8 +3,9 @@ import {prepareCatalogPhoto,CATALOG_PHOTO_HELP} from './catalog-photo.js';
 import {lazy,Suspense,useEffect,useMemo,useRef,useState,type ChangeEvent,type FormEvent,type MouseEvent} from 'react';
 import {SELLING_UNITS} from '../../../packages/contracts/selling-unit-values.js';
 import {useOwnerLocale} from './owner-locale.js';
-import {redesignApi} from './redesign-api.js';
-import {photoVariant} from './owner-ui.js';
+import {readOwnerView,redesignApi} from './redesign-api.js';
+import {productListRead} from './owner-view-reads.js';
+import {OwnerLoading,photoVariant} from './owner-ui.js';
 import './redesign-products.css';
 import {OwnerIcon} from './OwnerIcon.js';
 import {OrderActionMenu} from './OrderActionMenu.js';
@@ -26,18 +27,23 @@ type Suggestion={description?:string;aliasSuggestions?:string[];name:string;bran
 const emptyForm=():Form=>({name:'',price:'',unit:'piece',stock:'',brand:'',size:'',description:'',familyId:'',localTa:'',localLatin:'',packValue:'',packUnit:'',showInShop:true,aliases:'',keywords:''});
 const money=(paise:number)=>'₹'+(paise/100).toLocaleString('en-IN',{maximumFractionDigits:2});
 const plural=(unit:string,n:number)=>unit+(n===1||unit==='kg'||unit==='litre'?'':'s');
-const photoUrl=(p:Product)=>p.imageUrl?'/api/owner/products/'+encodeURIComponent(p.sku)+'/image?v='+p.version:'';
+const photoUrl=(p:Product)=>p.imageUrl?'/api/owner/products/'+encodeURIComponent(p.sku)+'/image?v='+encodeURIComponent(p.imageUrl):'';
 const priceValue=(p:Product)=>p.priceStatus==='confirm'?(p.indicativePricePaise??0):p.pricePaise;
 const imgText=(name:string)=>name.trim().slice(0,1).toLocaleUpperCase()||'□';
 const isAbort=(e:unknown)=>e instanceof DOMException&&e.name==='AbortError';
+type StockAttempt={id:string;kind:'count'|'restock';quantity:number;reason:string;expectedVersion:number};
+const unresolvedStock=new Map<string,StockAttempt>();
+const uncertainStockMessage='The last stock update may have saved. Retry the same update to check.';
 
 export function RedesignProducts(){
  const {t}=useOwnerLocale(),openPhoto=useOwnerPhoto();
  const [query,setQuery]=useState(''),[filter,setFilter]=useState<'all'|'low'|'out'|'attention'|'ai'>('all');
- const retained=cachedOwnerRead<Page>('catalog?'+new URLSearchParams({q:'',limit:'50',stock:'',metadata:'list'}));
+ const retained=cachedOwnerRead<Page>(productListRead());
  const [page,setPage]=useState<Page|null>(retained??null),[rows,setRows]=useState<Product[]>(retained?.products??[]),[cursor,setCursor]=useState<string|null>(retained?.nextCursor??null);
  const [loading,setLoading]=useState(!retained),[refreshing,setRefreshing]=useState(false),[loadingMore,setLoadingMore]=useState(false),[listError,setListError]=useState('');
  const [screen,setScreen]=useState<'list'|'form'>('list'),[editingSku,setEditingSku]=useState<string|null>(null),[selected,setSelected]=useState<Product|null>(null),[form,setForm]=useState<Form>(emptyForm);
+ const productList=useRef<HTMLDivElement>(null);
+ const [requestedPhotos,setRequestedPhotos]=useState<Set<string>>(()=>new Set());
  const photoAttempt=useRef(0);
  const [preparingPhoto,setPreparingPhoto]=useState(false);
  const [photo,setPhoto]=useState<Photo|null>(null),[formError,setFormError]=useState(''),[notice,setNotice]=useState('');
@@ -48,17 +54,61 @@ export function RedesignProducts(){
  const variantMode=variants.length>0;
  const awaitingProduct=!!editingSku&&!selected&&!variantSource;
  const [stockKind,setStockKind]=useState<'count'|'restock'>('count');
- const baseline=useRef(JSON.stringify(emptyForm())),formSession=useRef(0),editRequest=useRef<AbortController|null>(null),moreRequest=useRef<AbortController|null>(null),listScope=useRef(''),suggestRequest=useRef<{key:string;id:string}|null>(null),stockRequest=useRef<{key:string;id:string}|null>(null);
+ const baseline=useRef(JSON.stringify(emptyForm())),formSession=useRef(0),editRequest=useRef<AbortController|null>(null),moreRequest=useRef<AbortController|null>(null),listScope=useRef(''),suggestRequest=useRef<{key:string;id:string}|null>(null);
  const scope=JSON.stringify([query,filter,refreshKey]);listScope.current=scope;
  const dirty=screen==='form'&&(JSON.stringify(form)!==baseline.current||photo!==null||Object.keys(extraSpecs).length>0||variants.length>0);
  useEffect(()=>{if(!dirty)return;const unload=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};const navigate=(e:globalThis.MouseEvent)=>{const anchor=(e.target as Element).closest?.('a[href]') as HTMLAnchorElement|null;if(!anchor||e.defaultPrevented||e.metaKey||e.ctrlKey||e.shiftKey||anchor.target==='_blank'||anchor.getAttribute('href')?.startsWith('#'))return;if(!window.confirm('Discard unsaved product changes?')){e.preventDefault();e.stopPropagation();}else window.removeEventListener('beforeunload',unload);};window.addEventListener('beforeunload',unload);document.addEventListener('click',navigate,true);return()=>{window.removeEventListener('beforeunload',unload);document.removeEventListener('click',navigate,true);};},[dirty]);
  useEffect(()=>()=>{editRequest.current?.abort();moreRequest.current?.abort();formSession.current++;photoAttempt.current++;setPreparingPhoto(false);},[]);
+ const stockInFlight=useRef(false);
+ const [stockUncertain,setStockUncertain]=useState(false);
  const [stockProduct,setStockProduct]=useState<Product|null>(null),[stockAmount,setStockAmount]=useState(''),[stockError,setStockError]=useState(''),[stockSaving,setStockSaving]=useState(false);
  const searchRef=useRef<HTMLInputElement>(null),stockDialog=useRef<HTMLDialogElement>(null),stockOpener=useRef<HTMLElement|null>(null),formId=useRef(crypto.randomUUID());
 
- useEffect(()=>{moreRequest.current?.abort();setLoadingMore(false);if(filter==='ai'){setLoading(false);setListError('');return;}setLoading(!page);setRefreshing(true);const controller=new AbortController(),timer=window.setTimeout(async()=>{setListError('');try{const params=new URLSearchParams({q:query,limit:'50',stock:filter==='all'?'':filter,metadata:'list'});const result=await redesignApi<Page>('catalog?'+params,undefined,controller.signal);if(controller.signal.aborted)return;setPage(result);setRows(result.products);setCursor(result.nextCursor);}catch(e){if(!isAbort(e))setListError((e as Error).message);}finally{if(!controller.signal.aborted){setLoading(false);setRefreshing(false);}}},query?250:0);return()=>{controller.abort();window.clearTimeout(timer);};},[query,filter,refreshKey]);
- async function loadMore(){if(!cursor||loadingMore||loading||refreshing)return;const currentScope=scope,controller=new AbortController();moreRequest.current=controller;setLoadingMore(true);setListError('');try{const params=new URLSearchParams({q:query,limit:'50',stock:filter==='all'?'':filter,metadata:'list',cursor});const result=await redesignApi<Page>('catalog?'+params,undefined,controller.signal);if(controller.signal.aborted||listScope.current!==currentScope)return;setRows(old=>[...old,...result.products]);setCursor(result.nextCursor);}catch(e){if(!isAbort(e)&&listScope.current===currentScope)setListError((e as Error).message);}finally{if(moreRequest.current===controller)setLoadingMore(false);}}
+ useEffect(()=>{
+  moreRequest.current?.abort();moreRequest.current=null;setLoadingMore(false);
+  if(filter==='ai'){setLoading(false);setRefreshing(false);setListError('');return;}
+  setLoading(!page);setRefreshing(true);setListError('');
+  const controller=new AbortController();
+  const read=async()=>{
+   try{
+    const result=await readOwnerView<Page>(productListRead(query,filter==='all'?'':filter),controller.signal);
+    if(controller.signal.aborted)return;
+    setPage(result);setRows(result.products);setCursor(result.nextCursor);
+   }catch(e){if(!controller.signal.aborted&&!isAbort(e))setListError((e as Error).message);}
+   finally{if(!controller.signal.aborted){setLoading(false);setRefreshing(false);}}
+  };
+  const timer=query?window.setTimeout(()=>void read(),250):undefined;
+  if(timer===undefined)void read();
+  return()=>{controller.abort();window.clearTimeout(timer);};
+ },[query,filter,refreshKey]);
+ async function loadMore(){
+  if(!cursor||loadingMore||loading||refreshing||moreRequest.current)return;
+  const currentScope=scope,controller=new AbortController();
+  moreRequest.current=controller;setLoadingMore(true);setListError('');
+  try{
+   const result=await redesignApi<Page>(productListRead(query,filter==='all'?'':filter,cursor),undefined,controller.signal);
+   if(controller.signal.aborted||listScope.current!==currentScope)return;
+   setRows(old=>[...old,...result.products]);setCursor(result.nextCursor);
+  }catch(e){if(!isAbort(e)&&listScope.current===currentScope)setListError((e as Error).message);}
+  finally{if(moreRequest.current===controller){moreRequest.current=null;setLoadingMore(false);}}
+ }
  const visible=useMemo(()=>rows,[rows]);
+ useEffect(()=>{
+  const root=productList.current;
+  if(!root||typeof IntersectionObserver==='undefined')return;
+  const observer=new IntersectionObserver(entries=>{
+   const ready:string[]=[];
+   for(const entry of entries){
+    if(!entry.isIntersecting)continue;
+    const photo=(entry.target as HTMLElement).dataset.catalogThumbnail;
+    if(photo)ready.push(photo);
+    observer.unobserve(entry.target);
+   }
+   if(ready.length)setRequestedPhotos(previous=>new Set([...previous,...ready]));
+  },{root,rootMargin:'240px 0px'});
+  for(const target of root.querySelectorAll('[data-catalog-thumbnail]'))observer.observe(target);
+  return()=>observer.disconnect();
+ },[visible,loading,screen,filter]);
  function resetVariants(){setVariants([]);setVariantSource(null);setSourceLabel('');setAliasSuggestions([]);setSuggestionQuestions([]);}
  function startAdd(){resetVariants();setEditingSku(null);editRequest.current?.abort();formSession.current++;photoAttempt.current++;setPreparingPhoto(false);formId.current=crypto.randomUUID();baseline.current=JSON.stringify(emptyForm());setLoadingProduct(false);setExtraSpecs({});suggestRequest.current=null;setSelected(null);setForm(emptyForm());setPhoto(null);setSuggested(false);setDetailsOpen(false);setFormError('');setScreen('form');}
  async function startEdit(sku:string){resetVariants();setEditingSku(sku);editRequest.current?.abort();const controller=new AbortController();editRequest.current=controller;const session=++formSession.current;setLoadingProduct(true);setFormError('');setScreen('form');setSelected(null);const blank=emptyForm();setForm(blank);baseline.current=JSON.stringify(blank);setExtraSpecs({});suggestRequest.current=null;setPhoto(null);setSuggested(false);setDetailsOpen(false);try{const result=await redesignApi<{product:Product}>('catalog/products/'+encodeURIComponent(sku),undefined,controller.signal);if(controller.signal.aborted||session!==formSession.current)return;setSelected(result.product);setForm(fromProduct(result.product));baseline.current=JSON.stringify(fromProduct(result.product));}catch(e){if(!isAbort(e)&&session===formSession.current)setFormError('Could not refresh this product: '+(e as Error).message);}finally{if(session===formSession.current)setLoadingProduct(false);}}
@@ -74,10 +124,59 @@ export function RedesignProducts(){
  const variantRows=variants.map(v=>{if(!/^(?:\d+)(?:\.\d{1,2})?$/.test(v.price)||Number(v.price)<=0)throw new Error('Enter a selling price greater than zero for every variant.');const stock=v.stock.trim()?Number(v.stock):null;if(stock!==null&&(!Number.isFinite(stock)||stock<0||Math.abs(stock*1000-Math.round(stock*1000))>1e-7))throw new Error('Check each variant’s stock count.');return {id:v.id,label:v.label.trim(),size:v.size.trim(),color:v.color.trim(),unit:v.unit,pricePaise:Math.round(Number(v.price)*100),stock,...(variantContents(v.size)?{packContents:variantContents(v.size)}:{})};});
  await redesignApi('products/variants',{id:formId.current,name:form.name.trim(),active:form.showInShop,details:payload.details,variants:variantRows,...(payload.photo?{photo:payload.photo}:{}),...(variantSource?{sourceProduct:{sku:variantSource.sku,version:variantSource.version},...(!variantSource.productGroup?{sourceLabel:sourceLabel.trim()}:{} )}:{})});
  }else await redesignApi('products/simple',payload);setNotice(variantMode?variants.length+' variants added. Search each size or colour to update its stock.':selected?'Product changes saved.':'Product added to your shop.');setScreen('list');setPhoto(null);setRefreshKey(n=>n+1);}catch(e){setFormError((e as Error).message);}finally{setSaving(false);}}
- function openStock(product:Product,event:MouseEvent<HTMLElement>){stockOpener.current=event.currentTarget;setStockKind('count');setStockProduct(product);setStockAmount(product.stockOnHand===null?'':String(product.stockOnHand));setStockError('');}
+ function openStock(product:Product,event:MouseEvent<HTMLElement>){
+  const unresolved=unresolvedStock.get(product.sku);
+  stockOpener.current=event.currentTarget;
+  setStockProduct(product);setStockKind(unresolved?.kind??'count');
+  setStockAmount(unresolved?String(unresolved.quantity):String(product.stockOnHand??''));
+  setStockUncertain(!!unresolved);setStockError(unresolved?uncertainStockMessage:'');
+ }
  useEffect(()=>{const dialog=stockDialog.current;if(stockProduct&&dialog&&!dialog.open){dialog.showModal();}return()=>{if(dialog?.open)dialog.close();};},[stockProduct]);
- function closeStock(){if(stockSaving)return;setStockProduct(null);stockOpener.current?.focus();}
- async function saveStock(){if(!stockProduct||stockSaving)return;const qty=Number(stockAmount);if(!stockAmount.trim()||!Number.isFinite(qty)||qty<0||Math.round(qty*1000)!==qty*1000){setStockError('Enter the physical quantity on the shelf.');return;}if(stockKind==='restock'&&(stockProduct.stockOnHand===null||qty<=0)){setStockError('Record a shelf count first, then enter a positive received quantity.');return;}if(stockKind==='count'&&qty<(stockProduct.stockReserved??0)){setStockError('The count is below stock held for orders. Check those orders first.');return;}const key=JSON.stringify([stockProduct.sku,stockProduct.inventoryVersion,stockKind,qty]);if(stockRequest.current?.key!==key)stockRequest.current={key,id:crypto.randomUUID()};setStockSaving(true);setStockError('');try{await redesignApi('catalog/products/'+encodeURIComponent(stockProduct.sku)+'/stock',{id:stockRequest.current!.id,kind:stockKind,quantity:qty,reason:stockKind==='restock'?'Received new stock':'Physical shelf count',expectedVersion:stockProduct.inventoryVersion??1});setStockProduct(null);setNotice('Stock updated.');setRefreshKey(n=>n+1);stockOpener.current?.focus();}catch(e){setStockError((e as Error).message);}finally{setStockSaving(false);}}
+ function closeStock(){if(stockInFlight.current)return;setStockProduct(null);stockOpener.current?.focus();}
+ async function saveStock(){
+  if(!stockProduct||stockInFlight.current)return;
+  const {sku}=stockProduct;
+  const unresolved=unresolvedStock.get(sku);
+  const qty=Number(stockAmount);
+  if(!unresolved){
+   if(!stockAmount.trim()||!Number.isFinite(qty)||qty<0||Math.abs(qty*1000-Math.round(qty*1000))>1e-7){
+    setStockError('Enter the physical quantity on the shelf.');return;
+   }
+   if(stockKind==='restock'&&(stockProduct.stockOnHand===null||qty<=0)){
+    setStockError('Record a shelf count first, then enter a positive received quantity.');return;
+   }
+   if(stockKind==='count'&&qty<(stockProduct.stockReserved??0)){
+    setStockError('The count is below stock held for orders. Check those orders first.');return;
+   }
+  }
+  const attempt=unresolved??{
+   id:crypto.randomUUID(),kind:stockKind,quantity:qty,
+   reason:stockKind==='restock'?'Received new stock':'Physical shelf count',expectedVersion:stockProduct.inventoryVersion??1,
+  };
+  unresolvedStock.set(sku,attempt);
+  stockInFlight.current=true;setStockSaving(true);setStockError('');
+  try{
+   const result=await redesignApi<{inventoryVersion:number;onHand?:number;available?:number}>(
+    'catalog/products/'+encodeURIComponent(sku)+'/stock',
+    attempt,
+   );
+   const {onHand,available,inventoryVersion}=result;
+   if(filter==='all'&&onHand!==undefined&&available!==undefined){
+    setRows(current=>current.map(row=>row.sku===sku&&row.inventoryVersion===attempt.expectedVersion
+     ?{...row,stockOnHand:onHand,stock:available,inventoryVersion}
+     :row));
+   }
+   unresolvedStock.delete(sku);setStockUncertain(false);setStockProduct(null);setNotice('Stock updated.');
+   setRefreshKey(n=>n+1);stockOpener.current?.focus();
+  }catch(e){
+   const status=(e as {status?:number}).status;
+   const uncertain=status===undefined||status>=500;
+   if(!uncertain)unresolvedStock.delete(sku);
+   setStockUncertain(uncertain);
+   setStockError(uncertain?uncertainStockMessage:(e as Error).message);
+  }
+  finally{stockInFlight.current=false;setStockSaving(false);}
+ }
  const photoPreview=photo?.preview||(selected?photoUrl(selected):variantSource?photoUrl(variantSource):'');
  return <section className={"rd-products "+(screen==='list'?'rd-products-browse':'rd-products-edit')} data-workspace-detail={screen==='form'?"true":undefined} aria-label={t('Products')}>
  {notice&&screen==='list'?<p className="rd-products-notice" role="status">{t(notice)}<button type="button" onClick={()=>setNotice('')} aria-label={t("Dismiss message")}>×</button></p>:null}
@@ -106,23 +205,28 @@ export function RedesignProducts(){
       </div>
     </div>
   </header>
-  <div className="rd-products-content" data-scroll-list tabIndex={0} role="region" aria-label={t("Product list")}>
+  <div ref={productList} className="rd-products-content" data-scroll-list tabIndex={0} role="region" aria-label={t("Product list")}>
     <div className="rd-products-content-inner">
   {filter==='ai'?<Suspense fallback={<p role="status">{t('Loading…')}</p>}><ProductAiActivity key={refreshKey} query={query} onOpen={sku=>void startEdit(sku)}/></Suspense>:<>
   {listError?<div className="rd-products-error" role="alert">{t(listError)} <button type="button" onClick={()=>setRefreshKey(n=>n+1)}>{t("Try again")}</button></div>:null}
+  {!loading&&refreshing?<p className="rd-products-refresh" role="status">{t("Updating results…")}</p>:null}
+  {loading?<OwnerLoading label={t('Loading products…')} variant="rows"/>:null}
   <div className="rd-products-list" aria-busy={loading||refreshing}>
-    {loading?<p className="rd-products-loading" role="status">{t('Loading…')}</p>:<>
+    {!loading&&<>
       {visible.length?<div role="table" aria-label={t("Products")}>
         <div className="rd-products-table-head" role="row">
           <span role="columnheader">{t('Product')}</span><span role="columnheader">{t('Price')}</span><span role="columnheader">{t('In stock')}</span>
         </div>
         {visible.map(p=>{
           const image=photoUrl(p);
+          const deferred=image&&typeof IntersectionObserver!=='undefined'?!requestedPhotos.has(image):undefined;
           const issue=filter==='attention'?attentionText(p):!p.active?'Hidden from shop':'';
           const stock=stockClass(p);
+          const quantityLabel=t(stockText(p));
+          const lowStockLabel=stock==='low'?t('Low stock'):'';
           return <div className="rd-products-row" role="row" key={p.sku}>
             <div className="rd-products-main" role="cell">
-              {image?<button type="button" className="rd-photo-trigger" aria-label={t("View photo")+": "+p.name} onClick={()=>openPhoto({src:image,name:p.name})}><ProductImage src={image} name={p.name}/></button>:<ProductImage src={image} name={p.name}/>}
+              {image?<button type="button" className="rd-photo-trigger" data-catalog-thumbnail={deferred?image:undefined} aria-label={t("View photo")+": "+p.name} onClick={()=>openPhoto({src:image,name:p.name})}><ProductImage src={image} name={p.name} deferred={deferred}/></button>:<ProductImage src={image} name={p.name}/>}
               <button className="rd-products-identity" type="button" onClick={()=>void startEdit(p.sku)} aria-label={t('Edit')+' '+p.name}>
                 <span className="rd-products-identity-copy"><strong>{p.name}</strong>
                   {p.productGroup?<span className="rd-products-group-label">{t("Variant of")}{' '}{p.productGroup.name}</span>:null}
@@ -132,15 +236,15 @@ export function RedesignProducts(){
               </button>
             </div>
             <div className="rd-products-price" role="cell"><small className="rd-products-mobile-label">{t('Price')}</small><strong>{t(displayPrice(p))}</strong>{p.priceStatus==='free'||priceValue(p)>0?<span> / {p.unit}</span>:null}</div>
-            <div className="rd-products-stock-cell" role="cell"><small className="rd-products-mobile-label">{t('In stock')}</small><button type="button" className={'rd-products-stock '+stock} onClick={e=>openStock(p,e)} aria-label={t('Update stock for')+' '+p.name}>{t(stockText(p))}{stock==='low'?<span className="rd-products-stock-badge">{t('Low stock')}</span>:null}</button></div>
+            <div className="rd-products-stock-cell" role="cell"><small className="rd-products-mobile-label">{t('In stock')}</small><button type="button" className={'rd-products-stock '+stock} onClick={e=>openStock(p,e)} aria-label={[quantityLabel,lowStockLabel,t('Update stock for')+' '+p.name].filter(Boolean).join(' ')}>{quantityLabel}{lowStockLabel?<span className="rd-products-stock-badge">{lowStockLabel}</span>:null}</button></div>
           </div>;
         })}
-      </div>:<div className="rd-products-empty"><span className="rd-products-empty-icon"><OwnerIcon name="products"/></span>
+      </div>:refreshing||listError?null:<div className="rd-products-empty"><span className="rd-products-empty-icon"><OwnerIcon name="products"/></span>
         <h2>{query?t("No products match this search."):t("No products here yet.")}</h2>
         {query?<button className="rd-control" type="button" onClick={()=>{setQuery('');searchRef.current?.focus();}}>{t('Clear search')}</button>:filter!=='all'?<button className="rd-control" type="button" onClick={()=>setFilter('all')}>{t('All')}</button>:null}
       </div>}
       <div className="rd-products-footer" aria-live="polite">
-        <span>{refreshing?t("Updating results…"):<>{rows.length}{' '}{t("of")}{' '}{page?.total??rows.length}{' '}{t("products")}</>}</span>
+        <span>{!refreshing&&!listError?<>{rows.length}{' '}{t("of")}{' '}{page?.total??rows.length}{' '}{t("products")}</>:null}</span>
         {cursor?<button className="rd-control" type="button" disabled={loadingMore||refreshing} onClick={()=>void loadMore()}>{loadingMore?t("Loading…"):t("Load more")}</button>:null}
       </div>
     </>}
@@ -154,7 +258,7 @@ export function RedesignProducts(){
    {detailsOpen?<div className="rd-products-details"><button type="button" className="rd-products-suggest" disabled={suggesting||(!photo&&!form.name.trim())} onClick={()=>void suggest()}>{suggesting?t("Suggesting…"):t("Suggest from photo & name")}</button><label>{t('Category')}<select value={form.familyId} onChange={e=>update('familyId',e.target.value)}><option value="">{t("Other products")}</option>{page?.nodes.filter(n=>n.kind==='family').map(n=><option value={n.id} key={n.id}>{n.label}</option>)}</select></label><label>{t('Brand')}<input maxLength={100} value={form.brand} onChange={e=>update('brand',e.target.value)} placeholder={t("Add brand")}/></label>{!variantMode?<label>{t('Size')}<input maxLength={120} value={form.size} onChange={e=>update('size',e.target.value)} placeholder={t("e.g. 15 mm")}/></label>:null}<label>{t("Description")}{' '}<small>{t("optional")}</small><textarea maxLength={120} value={form.description} onChange={e=>update('description',e.target.value)} placeholder={t("Add useful product details")}/></label>{Object.entries({...selected?.specifications,...extraSpecs}).filter(([key])=>!['size','description'].includes(key)).map(([key,value])=><label key={key}>{key.replaceAll('_',' ')}<input maxLength={120} value={value} onChange={e=>updateDetail(key,e.target.value)}/></label>)}<details className="rd-product-search-details"><summary>{t("Help customers find this product")}</summary><p className="rd-products-hint">{t("Search names stay separate from the display name. Keep names for this exact item; leave sizes and colours in the variant rows.")}</p><label>{t("Names customers use")}<textarea aria-label={t("Names customers use")} maxLength={4800} rows={3} value={form.aliases} onChange={e=>update('aliases',e.target.value)} placeholder={t("English, Tamil or Tanglish names, one per line")}/></label><label>{t("Search terms")}<textarea aria-label={t("Search terms")} maxLength={4800} rows={2} value={form.keywords} onChange={e=>update('keywords',e.target.value)} placeholder={t("Relevant product terms, one per line")}/></label>{aliasSuggestions.length?<div className="rd-alias-suggestions"><strong>{t("Other suggested names · check before adding")}</strong>{aliasSuggestions.map(alias=><label className="rd-products-check" key={alias}><input type="checkbox" checked={words(form.aliases).includes(alias)} onChange={e=>update('aliases',e.target.checked?mergeWords(form.aliases,[alias]):words(form.aliases).filter(a=>a!==alias).join('\n'))}/>{alias}</label>)}</div>:null}<label>{t('Tamil name')}<input lang="ta" maxLength={160} value={form.localTa} onChange={e=>update('localTa',e.target.value)}/></label><label>{t('Tanglish name')}<input maxLength={160} value={form.localLatin} onChange={e=>update('localLatin',e.target.value)}/></label></details>{!variantMode?<div className="rd-products-unit-details"><strong>{t("Amount inside one")}{' '}{form.unit}</strong><p className="rd-products-hint">{t("Price is per")}{' '}{form.unit}{t("; stock counts")}{' '}{plural(form.unit,2)}.</p><div className="rd-products-field-pair"><label>{t("Pack amount")}<input inputMode="decimal" value={form.packValue} onChange={e=>update('packValue',e.target.value)} placeholder={t("e.g. 10")}/></label><label>{t("Inside a pack")}<select value={form.packUnit} onChange={e=>update('packUnit',e.target.value)}><option value="">{t("Select unit")}</option>{['piece','litre','ml','kg','g','metre','foot'].map(u=><option key={u} value={u}>{u}</option>)}</select></label></div></div>:null}{suggestionQuestions.length?<div className="rd-products-hint" role="status"><strong>{t("Check suggested details")}</strong><ul>{suggestionQuestions.map(q=><li key={q}>{q}</li>)}</ul></div>:null}{selected?<label className="rd-products-check"><input type="checkbox" checked={form.showInShop} onChange={e=>update('showInShop',e.target.checked)}/>{' '}{t("Show in shop")}</label>:null}</div>:null}
    {formError?<p className="rd-products-error" role="alert">{t(formError)}</p>:null}<div className="rd-products-form-actions"><button className="rd-products-primary" type="submit" disabled={saving}>{saving?t('Saving…'):variantMode?'Save '+variants.length+' variants':selected?t('Save changes'):t('Add product')}</button><button type="button" onClick={closeForm} disabled={saving}>{t('Cancel')}</button></div></fieldset></form></div><aside className="rd-products-preview"><h2>{t("How it appears")}</h2><div><ProductImage src={photoPreview} name={form.name||'Product'}/><span><strong>{form.name||'Product name'}{variantMode&&variantLabel(variants[0])?' · '+variantLabel(variants[0]):''}</strong><small>{(variantMode?variants[0].price:form.price)?money(Math.round(Number(variantMode?variants[0].price:form.price)*100)):t("Price needed")} / {variantMode?variants[0].unit:form.unit}{' '}{t(" · ")}{' '}{form.stock?form.stock+' in stock':t("Stock not entered")}</small></span></div></aside></div>
  </>}
- <dialog className="rd-products-stock-dialog" ref={stockDialog} aria-labelledby="rd-products-stock-title" onCancel={e=>{e.preventDefault();closeStock();}}>{stockProduct?<><div className="rd-products-stock-dialog-head"><h2 id="rd-products-stock-title">{t("Update stock")}</h2><button type="button" onClick={closeStock} aria-label={t("Close")}>×</button></div><div className="rd-products-stock-product"><ProductImage src={photoUrl(stockProduct)} name={stockProduct.name}/><strong>{stockProduct.name}</strong></div><label>{t("Stock action")}<select aria-label={t("Stock action")} value={stockKind} onChange={e=>{const kind=e.target.value as 'count'|'restock';setStockKind(kind);setStockAmount(kind==='count'?(stockProduct.stockOnHand===null?'':String(stockProduct.stockOnHand)):'');setStockError('');}}><option value="count">{t("Set physical shelf count")}</option><option value="restock" disabled={stockProduct.stockOnHand===null}>{t("Add received stock")}</option></select></label><label>{stockKind==='restock'?t("Quantity received"):t("Quantity on shelf")}<div className="rd-products-quantity"><input inputMode="decimal" value={stockAmount} onChange={e=>setStockAmount(e.target.value)} autoFocus/><span>{plural(stockProduct.unit,2)}</span></div></label><p className="rd-products-stock-caption">{stockProduct.stockReserved??0}{' '}{t("set aside for orders")}<br/>{stockAmount?Math.max(0,(stockKind==='restock'?(stockProduct.stockOnHand??0):0)+Number(stockAmount)-stockProduct.stockReserved):stockProduct.stock??0}{' '}{t("available to sell after saving")}</p><details><summary>{t("More details")}</summary><p>{t("Count everything physically on the shelf, including items set aside for orders.")}</p></details>{stockError?<p className="rd-products-error" role="alert">{t(stockError)}</p>:null}<button type="button" className="rd-products-primary" disabled={stockSaving} onClick={()=>void saveStock()}>{stockSaving?t("Saving…"):t("Save stock")}</button></>:null}</dialog>
+ <dialog className="rd-products-stock-dialog" ref={stockDialog} aria-labelledby="rd-products-stock-title" onCancel={e=>{e.preventDefault();closeStock();}}>{stockProduct?<><div className="rd-products-stock-dialog-head"><h2 id="rd-products-stock-title">{t("Update stock")}</h2><button type="button" disabled={stockSaving} onClick={closeStock} aria-label={t("Close")}>×</button></div><div className="rd-products-stock-product"><ProductImage src={photoUrl(stockProduct)} name={stockProduct.name}/><strong>{stockProduct.name}</strong></div><label>{t("Stock action")}<select aria-label={t("Stock action")} disabled={stockSaving||stockUncertain} value={stockKind} onChange={e=>{const kind=e.target.value as 'count'|'restock';setStockKind(kind);setStockAmount(kind==='count'?(stockProduct.stockOnHand===null?'':String(stockProduct.stockOnHand)):'');setStockError('');}}><option value="count">{t("Set physical shelf count")}</option><option value="restock" disabled={stockProduct.stockOnHand===null}>{t("Add received stock")}</option></select></label><label>{stockKind==='restock'?t("Quantity received"):t("Quantity on shelf")}<div className="rd-products-quantity"><input inputMode="decimal" disabled={stockSaving||stockUncertain} value={stockAmount} onChange={e=>setStockAmount(e.target.value)} autoFocus/><span>{plural(stockProduct.unit,2)}</span></div></label><p className="rd-products-stock-caption">{stockProduct.stockReserved??0}{' '}{t("set aside for orders")}<br/>{stockAmount?Math.max(0,(stockKind==='restock'?(stockProduct.stockOnHand??0):0)+Number(stockAmount)-stockProduct.stockReserved):stockProduct.stock??0}{' '}{t("available to sell after saving")}</p><details><summary>{t("More details")}</summary><p>{t("Count everything physically on the shelf, including items set aside for orders.")}</p></details><span className="rd-sr-only" role="status">{stockSaving?t(stockKind==='restock'?"Receiving stock…":"Saving shelf count…"):''}</span>{stockError?<p className="rd-products-error" role="alert">{t(stockError)}</p>:null}<button type="button" className="rd-products-primary" disabled={stockSaving} onClick={()=>void saveStock()}>{stockSaving?t(stockKind==='restock'?"Receiving stock…":"Saving shelf count…"):t(stockUncertain?"Retry same update":"Save stock")}</button></>:null}</dialog>
  </section>;
 }
 
@@ -162,6 +266,13 @@ function fromProduct(p:Product):Form{return {name:p.name,price:String(priceValue
 function displayPrice(p:Product){const value=priceValue(p);return p.priceStatus==='free'||value?money(value):'Price needed';}
 function stockClass(p:Product){return p.stockOnHand===null?'unknown':p.stock!==null&&p.stock<=0?'out':p.stock!==null&&p.stock<=5?'low':'normal';}
 function stockText(p:Product){return p.stockOnHand===null?'Not entered':p.stock!==null&&p.stock<=0?'Out of stock':String(p.stock)+' '+plural(p.unit,p.stock??0);}
-function ProductImage({src,name,large=false}:{src:string;name:string;large?:boolean}){const [broken,setBroken]=useState(false);useEffect(()=>setBroken(false),[src]);return <span className={'rd-products-image'+(large?' large':'')}>{src&&!broken?<img src={photoVariant(src,large?640:128)} alt="" loading={large?'eager':'lazy'} decoding="async" onError={()=>setBroken(true)}/>:<span aria-hidden="true">{imgText(name)}</span>}</span>;}
+function ProductImage({src,name,large=false,deferred}:{src:string;name:string;large?:boolean;deferred?:boolean}){
+ const [broken,setBroken]=useState(false);
+ useEffect(()=>setBroken(false),[src]);
+ return <span className={'rd-products-image'+(large?' large':'')}>
+  {!src||broken?<span aria-hidden="true">{imgText(name)}</span>:deferred?null:
+   <img src={photoVariant(src,large?640:128)} alt="" loading={large||deferred===false?'eager':'lazy'} decoding="async" onError={()=>setBroken(true)}/>}
+ </span>;
+}
 
 function attentionText(p:Product){return [!p.active?'Hidden from shop':'',!p.imageUrl?'Photo needed':'',p.priceStatus==='confirm'?'Price needed':'',p.stockOnHand===null?'Stock count needed':'',!p.sellingUnitVerified?'Selling unit needs review':'',p.verification&&Object.values(p.verification).some(v=>!v)?'Details need review':''].filter(Boolean).join(' · ');}

@@ -17,11 +17,11 @@ export function catalogImageSize(value:unknown):CatalogImageSize|undefined {
 }
 
 /** Called at ingestion/backfill only. Requests never invoke an image decoder. */
-export async function prepareCatalogImageVariants(bytes:Buffer,processingTimeoutMs=10000):Promise<CatalogImageVariant[]> {
+export async function prepareCatalogImageVariants(bytes:Buffer,processingTimeoutMs=10000,sizes:readonly CatalogImageSize[]=catalogImageSizes):Promise<CatalogImageVariant[]> {
  if(!Number.isInteger(processingTimeoutMs)||processingTimeoutMs<1000||processingTimeoutMs>60000)throw Error('Image processing timeout must be an integer from 1000 to 60000 milliseconds.');
  if(!bytes.length||bytes.length>2097152)throw Error('Keep catalog images under 2 MB.');
  const variants:CatalogImageVariant[]=[];
- for(const size of catalogImageSizes){
+ for(const size of sizes){
   const encode=(quality:number)=>new Promise<Buffer>((done,reject)=>{
    const child=spawn('ffmpeg',['-hide_banner','-loglevel','error','-threads','1','-protocol_whitelist','pipe','-i','pipe:0','-frames:v','1','-vf',`scale='min(${size},iw)':'min(${size},ih)':force_original_aspect_ratio=decrease`,'-map_metadata','-1','-q:v',String(quality),'-f','image2pipe','-vcodec','mjpeg','pipe:1'],{stdio:['pipe','pipe','ignore']});
    const chunks:Buffer[]=[];let length=0,finished=false;
@@ -56,7 +56,7 @@ export function sendOwnerCatalogImage(request:FastifyRequest,reply:FastifyReply,
 /** Immutable source bytes are scoped to a shop; variants are safe to share only within that shop. */
 export async function ownerCatalogProductImage(pool:Pool,storeId:string,sku:string,size?:CatalogImageSize):Promise<Buffer|undefined>{
  const row=(await pool.query(`SELECT p.image_path,COALESCE(v.image,f.image) AS image FROM products p
-  LEFT JOIN catalog_photos f ON f.store_id=p.store_id AND p.image_path IN ('/catalog-images/custom/'||f.id::text||'.jpg','/catalog-images/reference/'||f.id::text||'.jpg')
+  LEFT JOIN catalog_photos f ON f.store_id=p.store_id AND f.id=substring(p.image_path from '^/catalog-images/(?:custom|reference)/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\.jpg$')::uuid
   LEFT JOIN catalog_image_variants v ON v.store_id=f.store_id AND v.source_hash=f.content_hash AND v.max_side=$3
   WHERE p.store_id=$1 AND p.sku=$2`,[storeId,sku,size??null])).rows[0];
  if(row?.image)return row.image as Buffer;

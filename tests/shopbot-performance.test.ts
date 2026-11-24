@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {redesignApi} from '../apps/dashboard/src/redesign-api.js';
+import {prepareOwnerRead,readOwnerView,redesignApi} from '../apps/dashboard/src/redesign-api.js';
 import {cachedOwnerRead,invalidateOwnerReads,rememberOwnerRead} from '../apps/dashboard/src/owner-read-cache.js';
 import {visiblePoll} from '../apps/dashboard/src/owner-polling.js';
 const response=(data:unknown)=>new Response(JSON.stringify(data),{headers:{'content-type':'application/json'}});
@@ -32,4 +32,45 @@ test('visibility and focus coalesce into one resumed poll',async()=>{
  class Doc extends EventTarget{hidden=false;}const doc=new Doc(),win=new EventTarget();let calls=0,finish:()=>void=()=>{};
  const stop=visiblePoll(async()=>{calls++;await new Promise<void>(resolve=>finish=resolve);},{intervalMs:60000,doc,win,nav:{onLine:true}});
  try{finish();await new Promise(r=>setTimeout(r,0));doc.hidden=true;doc.dispatchEvent(new Event('visibilitychange'));doc.hidden=false;doc.dispatchEvent(new Event('visibilitychange'));win.dispatchEvent(new Event('focus'));assert.equal(calls,2);finish();await new Promise(r=>setTimeout(r,15));assert.equal(calls,2);}finally{stop();finish();}
+});
+
+test('a lazy view consumes the shell read once, whether it is still pending or already resolved',async()=>{
+ const original=globalThis.fetch;
+ const controller=new AbortController();
+ let calls=0,resolveRead!:(value:Response)=>void;
+ globalThis.fetch=async()=>{
+  calls++;
+  return new Promise<Response>(resolve=>{resolveRead=resolve;});
+ };
+ try{
+  prepareOwnerRead('pending-view',controller.signal);
+  const pending=readOwnerView('pending-view',controller.signal);
+  assert.equal(calls,1);
+  resolveRead(response({source:'pending'}));
+  assert.deepEqual(await pending,{source:'pending'});
+
+  prepareOwnerRead('ready-view',controller.signal);
+  resolveRead(response({source:'ready'}));
+  await new Promise<void>(resolve=>setImmediate(resolve));
+  assert.deepEqual(await readOwnerView('ready-view'),{source:'ready'});
+  assert.equal(calls,2);
+
+  const refresh=readOwnerView('ready-view');
+  resolveRead(response({source:'refresh'}));
+  assert.deepEqual(await refresh,{source:'refresh'});
+  assert.equal(calls,3);
+
+  prepareOwnerRead('changed-view',controller.signal);
+  resolveRead(response({source:'old'}));
+  await new Promise<void>(resolve=>setImmediate(resolve));
+  invalidateOwnerReads();
+  const afterChange=readOwnerView('changed-view');
+  resolveRead(response({source:'current'}));
+  assert.deepEqual(await afterChange,{source:'current'});
+  assert.equal(calls,5);
+ }finally{
+  controller.abort();
+  globalThis.fetch=original;
+  invalidateOwnerReads();
+ }
 });

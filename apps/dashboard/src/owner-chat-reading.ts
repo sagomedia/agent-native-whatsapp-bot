@@ -12,27 +12,39 @@ export function visibleChatPosition(node:HTMLElement,previous='0'):Position|unde
  const first=visible[0],last=visible.at(-1)!;
  return {through:sequenceAfter(last.dataset.messageSequence!,previous)?last.dataset.messageSequence!:previous,anchor:first.dataset.messageSequence!,offset:Math.max(-100000,Math.min(100000,Math.round(first.getBoundingClientRect().top-viewport.top)))};
 }
-export function useOwnerChatReading(id:string,opened:boolean,messages:Message[],loading:boolean,reading:ChatReading|null){
+export function useOwnerChatReading(id:string,opened:boolean,messages:Message[],loading:boolean,reading:ChatReading|null,onRead?:(id:string,through:string,messages:Message[])=>void){
  const session=useMemo(()=>({timeline:{current:null as HTMLDivElement|null},nearBottom:{current:false},initialized:{current:false},position:{current:null as Position|null},readSequence:{current:'0'},lastSaved:{current:''},saveTimer:{current:undefined as ReturnType<typeof setTimeout>|undefined},saving:{current:false},rerun:{current:false},lastNotified:{current:'0'}}),[id]);
  const {timeline,nearBottom,initialized,position,readSequence,lastSaved,saveTimer,saving,rerun,lastNotified}=session;
  const [away,setAway]=useState(false),[boundary,setBoundary]=useState<string|null>(null),[readError,setReadError]=useState('');
  const activeId=useRef(id);
+ const renderedMessages=useRef(messages);renderedMessages.current=messages;
  const active=useCallback(()=>opened&&!document.hidden&&!!timeline.current?.getClientRects().length,[opened,id]);
  const save=useCallback(async()=>{
   if(saving.current){rerun.current=true;return;}
   const value=position.current,chat=id;if(!value||lastSaved.current===JSON.stringify(value))return;
   saving.current=true;rerun.current=false;
-  try{await redesignApi(`conversations/${encodeURIComponent(chat)}/seen`,value,undefined,{keepalive:true});if(activeId.current===chat){lastSaved.current=JSON.stringify(value);setReadError('');if(sequenceAfter(value.through,lastNotified.current)){lastNotified.current=value.through;window.dispatchEvent(new Event('owner-attention-changed'));}}}
+  try{
+   await redesignApi(`conversations/${encodeURIComponent(chat)}/seen`,value,undefined,{keepalive:true});
+   lastSaved.current=JSON.stringify(value);
+   if(activeId.current===chat)setReadError('');
+   if(sequenceAfter(value.through,lastNotified.current)){
+    lastNotified.current=value.through;
+    window.dispatchEvent(new Event('owner-attention-changed'));
+   }
+  }
   catch{if(activeId.current===chat)setReadError('Reading position could not be saved. It will retry while this chat is open.');}
-  finally{saving.current=false;if(activeId.current===chat&&rerun.current)void save();}
+  finally{saving.current=false;if(rerun.current)void save();}
  },[id]);
  const record=useCallback(()=>{
   const node=timeline.current;if(!node||!initialized.current||!active())return;
   const value=visibleChatPosition(node,readSequence.current);if(!value)return;
+  if(sequenceAfter(value.through,readSequence.current)){
+   onRead?.(id,value.through,renderedMessages.current);
+  }
   readSequence.current=value.through;position.current=value;
   nearBottom.current=node.scrollHeight-node.scrollTop-node.clientHeight<80;setAway(!nearBottom.current);
   if(!saveTimer.current)saveTimer.current=setTimeout(()=>{saveTimer.current=undefined;void save();},700);
- },[active,save]);
+ },[active,save,id,onRead]);
  useLayoutEffect(()=>{
   activeId.current=id;initialized.current=false;nearBottom.current=false;position.current=null;readSequence.current='0';lastSaved.current='';setBoundary(null);setAway(false);setReadError('');
  },[id]);

@@ -43,3 +43,30 @@ export function redesignApi<T=any>(path:string,body?:unknown,signal?:AbortSignal
   if(signal?.aborted)cancel();
  });
 }
+
+// The shell starts data loading before a lazy route mounts. The first reader
+// joins that request or uses its finished result, including on a fast network.
+type PreparedRead = {generation: number; signal: AbortSignal; result?: {data: unknown}};
+const preparedReads = new Map<string, PreparedRead>();
+
+export function prepareOwnerRead(path: string, signal: AbortSignal) {
+ const prepared: PreparedRead = {generation: ownerReadGeneration(), signal};
+ preparedReads.set(path, prepared);
+ signal.addEventListener('abort', () => {
+  if (preparedReads.get(path) === prepared) preparedReads.delete(path);
+ }, {once: true});
+ void redesignApi(path, undefined, signal).then(data => {
+  prepared.result = {data};
+ }, () => {
+  if (preparedReads.get(path) === prepared) preparedReads.delete(path);
+ });
+}
+
+export function readOwnerView<T>(path: string, signal?: AbortSignal): Promise<T> {
+ const prepared = preparedReads.get(path);
+ preparedReads.delete(path);
+ if (!signal?.aborted && prepared?.result && !prepared.signal.aborted && prepared.generation === ownerReadGeneration()) {
+  return Promise.resolve(prepared.result.data as T);
+ }
+ return redesignApi<T>(path, undefined, signal);
+}
