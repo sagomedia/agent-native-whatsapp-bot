@@ -10,6 +10,7 @@ export const geminiTextRate:Readonly<RateCard>=Object.freeze({model:GEMINI_MODEL
 // Audio-only Transcribe input and text output; bounded to our 90-second notes.
 // 4096 input tokens conservatively cover 2250 audio tokens plus API overhead.
 export const geminiSpeechRate:Readonly<RateCard>=Object.freeze({model:GEMINI_TRANSCRIPTION_MODEL_ID,currency:'USD',verifiedOn:'2026-10-21',validUntil:'2026-11-01',source:'https://ai.google.dev/gemini-api/docs/pricing',inputMicrousdPerMillion:2000000,outputMicrousdPerMillion:12000000,inputTokenLimit:4096,maxOutputTokens:4096});
+export const geminiDecisionRate:Readonly<RateCard>=Object.freeze({model:'gemini-decision-1',currency:'USD',verifiedOn:'2026-11-24',validUntil:'2026-12-24',source:'https://ai.google.dev/gemini-api/docs/pricing',inputMicrousdPerMillion:100000,outputMicrousdPerMillion:0,inputTokenLimit:262144,maxOutputTokens:0});
 export const freeQuotaLimits=Object.freeze({requestsPerMinute:10,inputTokensPerMinute:200000,requestsPerDay:100,minIntervalSeconds:6,reservedInputTokens:64000});
 const integer=(n:unknown):n is number=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0;
 export const rateFreshnessPolicy=Object.freeze({maxVerificationDays:31,warningDays:7,graceDays:0});
@@ -17,7 +18,11 @@ export function rateHealth(rate:RateCard|undefined,now=Date.now()) {
   const date=(value:string)=>/^\d{4}-\d{2}-\d{2}$/.test(value)&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value?Date.parse(value+'T00:00:00Z'):NaN;
   let verified=NaN,expires=NaN;
   try{if(rate){verified=date(rate.verifiedOn);expires=date(rate.validUntil);}}catch{/* Invalid dates remain invalid. */}
-  const valid=!!rate&&rate.currency==='USD'&&[GEMINI_MODEL_ID,GEMINI_TRANSCRIPTION_MODEL_ID].some(model=>model===rate.model)&&integer(rate.inputMicrousdPerMillion)&&integer(rate.outputMicrousdPerMillion)&&integer(rate.inputTokenLimit)&&integer(rate.maxOutputTokens)&&rate.inputTokenLimit>0&&rate.inputTokenLimit<=(rate.model===GEMINI_TRANSCRIPTION_MODEL_ID?4096:1048576)&&rate.maxOutputTokens>0&&rate.maxOutputTokens<=(rate.model===GEMINI_TRANSCRIPTION_MODEL_ID?4096:16384)&&Number.isFinite(verified)&&Number.isFinite(expires)&&verified<=now&&expires>verified&&expires-verified<=rateFreshnessPolicy.maxVerificationDays*86400000&&rate.source==='https://ai.google.dev/gemini-api/docs/pricing';
+  const decision=rate?.model===geminiDecisionRate.model;
+  const maxInput=decision?geminiDecisionRate.inputTokenLimit:rate?.model===GEMINI_TRANSCRIPTION_MODEL_ID?4096:1048576;
+  const validOutput=decision?rate?.maxOutputTokens===0&&rate.outputMicrousdPerMillion===0:
+    !!rate&&integer(rate.maxOutputTokens)&&rate.maxOutputTokens>0&&rate.maxOutputTokens<=(rate.model===GEMINI_TRANSCRIPTION_MODEL_ID?4096:16384);
+  const valid=!!rate&&rate.currency==='USD'&&[GEMINI_MODEL_ID,GEMINI_TRANSCRIPTION_MODEL_ID,geminiDecisionRate.model].some(model=>model===rate.model)&&integer(rate.inputMicrousdPerMillion)&&integer(rate.outputMicrousdPerMillion)&&integer(rate.inputTokenLimit)&&rate.inputTokenLimit>0&&rate.inputTokenLimit<=maxInput&&validOutput&&Number.isFinite(verified)&&Number.isFinite(expires)&&verified<=now&&expires>verified&&expires-verified<=rateFreshnessPolicy.maxVerificationDays*86400000&&rate.source==='https://ai.google.dev/gemini-api/docs/pricing';
   const daysRemaining=valid?Math.max(0,Math.ceil((expires-now)/86400000)):null;
   const status=!valid?'invalid':expires<=now?'expired':(daysRemaining??0)<=rateFreshnessPolicy.warningDays?'expiring':'fresh';
   return {status:status as 'invalid'|'expired'|'expiring'|'fresh',verifiedOn:rate?.verifiedOn??null,validUntil:rate?.validUntil??null,daysRemaining};
@@ -61,7 +66,8 @@ export async function reserveAttempt(client:PoolClient,ctx:ActorContext,messageI
   await client.query("UPDATE provider_attempts SET state='unknown',billing_state=CASE WHEN billing_state='held' THEN 'unknown' ELSE billing_state END WHERE message_id=$1 AND stage=$2 AND state='started'",[messageId,stage]);
   const stageAttempts=previous.rows.filter(p=>p.stage===stage);
   const transientRetry=stage==='recognize'&&stageAttempts.length===1&&stageAttempts[0].state==='failed'&&['provider_http_502','provider_http_503','provider_http_504'].includes(stageAttempts[0].failure_code)&&stageAttempts[0].source_version===sourceVersion&&stageAttempts[0].provider===provider.name&&stageAttempts[0].provider_mode===provider.mode;
-  if((previous.rowCount??0)>=4||stageAttempts.length&&!transientRetry) return {cached:null,id:null,exhausted:true};
+  const decisionFallback=stage==='repair'&&stageAttempts.length===1&&stageAttempts[0].source_version===sourceVersion&&stageAttempts[0].provider==='google:'+geminiDecisionRate.model&&provider.name!=='google:'+geminiDecisionRate.model;
+  if((previous.rowCount??0)>=4||stageAttempts.length&&!transientRetry&&!decisionFallback) return {cached:null,id:null,exhausted:true};
   let reserved=0,rate:RateCard|null=null;
   if(provider.freeQuota) {
     const {scope,model}=provider.freeQuota;
