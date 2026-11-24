@@ -288,8 +288,33 @@ export class WhatsAppChannel {
     if(!this.config.processEnabled)return false;
     if(this.config.typingEnabled&&this.config.sendEnabled){
       const c=this.config;
-      const indicated=await this.pool.query(`WITH candidate AS (SELECT m.id,i.provider_id FROM messages m JOIN conversations v ON m.conversation_id=v.id JOIN whatsapp_conversations w ON v.id=w.conversation_id JOIN whatsapp_inbound i ON i.message_id=m.id JOIN stores s ON v.store_id=s.id WHERE s.id=$1 AND w.phone_id=$2 AND ($4::boolean OR w.recipient=ANY($3::text[])) AND NOT s.operator_paused AND v.operator_mode='assistant' AND w.last_inbound_at>now()-interval '24 hours' AND m.status='pending' AND m.typing_indicated_at IS NULL AND (m.not_before IS NULL OR m.not_before<=now()) AND m.id=(SELECT oldest.id FROM messages oldest WHERE oldest.conversation_id=v.id AND oldest.status='pending' ORDER BY oldest.sequence LIMIT 1) ORDER BY m.sequence LIMIT 1 FOR UPDATE OF m SKIP LOCKED) UPDATE messages m SET typing_indicated_at=now() FROM candidate c WHERE m.id=c.id RETURNING c.provider_id`,[c.storeId,c.phoneId,c.recipients,c.audience==='public']);
-      for(const row of indicated.rows.slice(0,1)){try{await this.request(`https://graph.facebook.com/${c.graphVersion}/${c.phoneId}/messages`,{method:'POST',headers:{authorization:'Bearer '+c.accessToken,'content-type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',status:'read',message_id:row.provider_id,typing_indicator:{type:'text'}}),signal:AbortSignal.timeout(1500)});}catch{}}
+      const indicated=await this.pool.query(`WITH candidate AS (SELECT m.id,i.provider_id FROM messages m JOIN conversations v ON m.conversation_id=v.id JOIN whatsapp_conversations w ON v.id=w.conversation_id JOIN whatsapp_inbound i ON i.message_id=m.id JOIN stores s ON v.store_id=s.id WHERE s.id=$1 AND w.phone_id=$2 AND ($4::boolean OR w.recipient=ANY($3::text[])) AND NOT s.operator_paused AND v.operator_mode='assistant' AND w.last_inbound_at>now()-interval '24 hours' AND m.status='pending' AND m.typing_indicated_at IS NULL AND (m.not_before IS NULL OR m.not_before<=now()) AND m.id=(SELECT oldest.id FROM messages oldest WHERE oldest.conversation_id=v.id AND oldest.status='pending' ORDER BY oldest.sequence LIMIT 1) ORDER BY m.sequence LIMIT 1 FOR UPDATE OF m SKIP LOCKED) UPDATE messages m SET typing_indicated_at=now() FROM candidate c WHERE m.id=c.id RETURNING m.id,c.provider_id`,[c.storeId,c.phoneId,c.recipients,c.audience==='public']);
+      for(const row of indicated.rows.slice(0,1)){
+        // The claim precedes the HTTP call so overlapping workers never send a
+        // second indicator for an accepted request. Retry only an explicit 408
+        // or 503; a thrown request may already have reached Meta.
+        for(let attempt=0;attempt<2;attempt++){
+          try{
+            const response=await this.request(`https://graph.facebook.com/${c.graphVersion}/${c.phoneId}/messages`,{method:'POST',headers:{authorization:'Bearer '+c.accessToken,'content-type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',status:'read',message_id:row.provider_id,typing_indicator:{type:'text'}}),signal:AbortSignal.timeout(1500)});
+            if(response.ok){
+              const result=await response.json().catch(()=>null) as {success?:unknown}|null;
+              if(result?.success===true)break;
+              console.error(JSON.stringify({event:'whatsapp_typing_failed',code:'invalid_success_response'}));
+              break;
+            }
+            if(attempt===0&&(response.status===408||response.status===503)){
+              const eligible=await this.pool.query(`SELECT 1 FROM messages m JOIN conversations v ON v.id=m.conversation_id JOIN stores s ON s.id=v.store_id JOIN whatsapp_conversations w ON w.conversation_id=v.id WHERE m.id=$1 AND s.id=$2 AND w.phone_id=$3 AND NOT s.operator_paused AND v.operator_mode='assistant' AND w.last_inbound_at>now()-interval '24 hours' AND m.status IN ('pending','processing')`,[row.id,c.storeId,c.phoneId]);
+              if(eligible.rowCount)continue;
+              break;
+            }
+            console.error(JSON.stringify({event:'whatsapp_typing_failed',status:response.status}));
+            break;
+          }catch(error){
+            console.error(JSON.stringify({event:'whatsapp_typing_failed',code:error instanceof Error?error.name:'request_error'}));
+            break;
+          }
+        }
+      }
     }
     if(!options.skipMedia)await this.processMediaNext();
     // Select only each conversation's oldest unfinished message. A delayed or
