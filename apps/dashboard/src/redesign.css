@@ -105,7 +105,6 @@
 .redesign .rd-global-message { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-shrink: 0; padding: 12px 18px; background: var(--rd-tint); color: var(--rd-teal); }
 .redesign .rd-error { background: #fff2ee; color: #923c25; }
 .redesign .rd-global-message button { border: 0; background: transparent; color: inherit; }
-.redesign .rd-loading { padding: 24px; color: var(--rd-muted); }
 .redesign .rd-mobile-nav { display: none; }
 .rd-skip { position: absolute; left: 12px; top: -100px; z-index: 30; background: white; color: #006a70; padding: 10px; }
 .rd-skip:focus { top: 12px; }
@@ -231,3 +230,60 @@
 }
 .redesign .rd-catalog-task .owner-product-tools .owner-button:hover { background: var(--rd-soft); }
 .redesign .rd-catalog-task :is(.owner-inventory-table, .owner-bulk-table) th { background: var(--rd-soft); color: var(--rd-muted); }
+
+/* Press feedback is immediate. Selection and progress use their own states. */
+.redesign :is(button, a[href]):not(:disabled):not([aria-disabled="true"]):active {
+  box-shadow: inset 0 0 0 2px currentColor;
+  filter: brightness(.94);
+}
+.redesign .rd-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.redesign .rd-wait {
+  padding: 16px;
+  color: var(--rd-muted);
+  font-size: 13px;
+}
+.redesign .rd-wait p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.redesign .rd-wait-indicator {
+  flex: 0 0 12px;
+  height: 12px;
+  border: 2px solid var(--rd-line);
+  border-inline-start-color: var(--rd-teal);
+  border-radius: 50%;
+  animation: rd-wait-spin .85s linear infinite;
+}
+@keyframes rd-wait-spin { to { transform: rotate(1turn); } }
+.redesign .rd-wait-preview {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.redesign .rd-wait-preview i {
+  display: block;
+  height: 32px;
+  background: var(--rd-soft);
+  border: 1px solid var(--rd-line);
+  border-radius: 5px;
+}
+.redesign .rd-wait-messages .rd-wait-preview i { width: min(36%, 230px); }
+.redesign .rd-wait-messages .rd-wait-preview i:nth-child(2) { justify-self: end; }
+.redesign .rd-products-refresh {
+  padding: 0 15px;
+  color: var(--rd-muted);
+  font-size: 13px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .redesign .rd-wait-indicator { animation: none; }
+}

@@ -15,6 +15,24 @@ df -h /opt/shopbot-vps
 
 Sign in to the owner dashboard and inspect `/api/owner/release` for the actual fingerprint and active features. The VM uses an immutable release directory named `preview-<digest>`; that name is part of the packaging contract. Before phone testing or deployment, end any [connected local session](../../LOCAL-DEVELOPMENT.md) so the shared number’s webhook reaches the VPS.
 
+## Routine releases from GitHub
+
+1. Test locally and merge the approved PR after **Build and test** passes. On `main`, **Project checks** produces a complete package for that commit and **Stage the VPS release** transfers it, checks the build fingerprint and verifies a recent backup. Staging can run while the current version serves requests.
+2. In GitHub Actions open **Deploy to VPS**, select `main`, and check **Activate**. The workflow switches the service to the staged commit and checks the running process and WhatsApp worker readiness. Leave **Activate** unchecked to see the running and staged commits. The workflow log reports the time spent staging and activating.
+3. For changed database code, dependency locks, or systemd units, follow the upgrade procedure below. The routine workflow checks these against the active installation and stops if they differ. If the backup ages out or another release takes over, rerun **Project checks** on `main` before activating.
+
+The restricted `shopbot-release` SSH login accepts `status`, `stage <commit> <archive-sha256>`, and `activate <commit>`. GitHub holds its SSH key in the `vps` environment, restricted to `main`, and pins the host key. The VPS executes the installed receiver at `/usr/local/sbin/shopbot-github-release`. Update that receiver separately through authorized VPS access after reviewing changes to [its source](github-release.py). GitHub's public build package contains tracked runtime resources and locked dependencies. Production credentials, catalog data, uploaded media and backups live on the VPS.
+
+Routine staging uses a readable backup from the last 24 hours or creates a private rolling backup on the VPS. The migration procedure below still requires its own verified restore and off-host backup. Keep the previous release until the new one is accepted. When rotating releases, retain the active and immediate rollback versions.
+
+## Update private VPS settings
+
+Local development reads `.env`, `.env.ai` and `.env.whatsapp`. The VPS reads `/etc/shopbot-vps.env` and receives no settings from those files. Commit example keys and defaults with safe placeholders. To change a live feature flag or rotate a provider credential, use an authorized VPS session:
+
+1. Make a private, root-only copy of `/etc/shopbot-vps.env` and edit only the approved keys with `sudoedit /etc/shopbot-vps.env`. Keep mode `0600`. Use an approved private channel for new credential values and keep values out of prompts and logs.
+2. Check the configuration with the current build. For a credential change, probe the provider using the new credential without displaying it. Restart `shopbot-vps.service`, check `/health/ready` and verify the affected capability. Restore the private copy and restart if the new configuration fails.
+3. Use the [catalog and media procedures](CATALOG-UPLOAD-RECOVERY.md) for private store data. Update a cumulative spending cap only as an explicitly authorized store change that preserves its ledger.
+
 ## Upgrade an authorized release
 
 1. From a clean reviewed commit on the build machine, install dependencies, run the [local checks](../../LOCAL-DEVELOPMENT.md#verify-a-source-change), and verify hosted CI. Run `npm run release:manifest` from the repository root. It rebuilds and verifies the artifacts against the source and dependency lock. Record commit, artifact fingerprint and CI result.

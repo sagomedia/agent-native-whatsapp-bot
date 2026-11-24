@@ -1,12 +1,37 @@
 import {readFile} from 'node:fs/promises';
 import type {Pool} from 'pg';
 import {z} from 'zod';
-import {createHash} from 'node:crypto';
 import {productColumns} from '../apps/server/src/services/catalog.js';
 import {localTestDatabase,localDevelopmentDatabase} from './local-command.js';
+import {imageHash,prepareCatalogImageVariants,saveCatalogImageVariants,type CatalogImageVariant} from '../apps/server/src/services/catalog-image-variants.js';
 const snapshotSchema=z.object({version:z.literal(1),capturedAt:z.string(),imageOrigin:z.string().regex(/^https:\/\/[a-zA-Z0-9.-]+$/),store:z.object({name:z.string(),type:z.string()}),nodes:z.array(z.object({id:z.string(),parent_id:z.string().nullable(),kind:z.enum(['department','family']),label:z.string(),aliases:z.array(z.string()),local_names:z.record(z.string(),z.string()).nullable()})),products:z.array(z.record(z.string(),z.unknown()))});
 const photosSchema=z.array(z.object({id:z.uuid(),image:z.string(),width:z.number().int().positive(),height:z.number().int().positive(),content_hash:z.string().nullable()})).max(5000);
 export const localCatalogStore='937b6ab0-7bf9-4611-89ca-20546cb2f15e';
+
+async function prepareSnapshotThumbnails(pool:Pool,photos:z.infer<typeof photosSchema>,products:z.infer<typeof snapshotSchema>['products']){
+ const existing=await pool.query('SELECT source_hash FROM catalog_image_variants WHERE store_id=$1 AND max_side=128',[localCatalogStore]);
+ const hashes=new Set<string>(existing.rows.map(row=>row.source_hash));
+ const thumbnails=new Map<string,CatalogImageVariant[]>();
+ async function prepare(bytes:Buffer,hash:string){
+  if(hashes.has(hash))return;
+  thumbnails.set(hash,await prepareCatalogImageVariants(bytes,30000,[128]));
+  hashes.add(hash);
+ }
+ const photoHashes:string[]=[];
+ for(const photo of photos){
+  const bytes=Buffer.from(photo.image,'base64'),hash=imageHash(bytes);
+  if(bytes.length<4||bytes.length>2097152||bytes[0]!==255||bytes[1]!==216||photo.content_hash&&hash!==photo.content_hash)throw new Error('A catalog photograph failed validation.');
+  photoHashes.push(hash);
+  await prepare(bytes,hash);
+ }
+ const demoPaths=new Set(products.flatMap(product=>typeof product.image_path==='string'&&/^\/demo-images\/H\d{2}\.jpg$/.test(product.image_path)?[product.image_path]:[]));
+ for(const path of demoPaths){
+  const bytes=await readFile('resources/catalog/ksmc-demo/images/'+path.split('/').at(-1));
+  await prepare(bytes,imageHash(bytes));
+ }
+ return {photoHashes,thumbnails};
+}
+
 /** Public inventory facts only; caller must use its separate local test database. */
 export async function loadLocalCatalog(pool:Pool,path:string,development=false,initializeOnly=false){
  (development?localDevelopmentDatabase:localTestDatabase)(process.env.DATABASE_URL);
@@ -14,6 +39,13 @@ export async function loadLocalCatalog(pool:Pool,path:string,development=false,i
  const snapshot=snapshotSchema.parse(source),columns=productColumns.split(','),jsonColumns=new Set(['local_names','aliases','specifications','keywords','indicative_price','selling_policy']);
  const photos=development?photosSchema.parse(source.photos??[]):[];
  for(const p of snapshot.products)if(columns.some(c=>!(c in p))||!p.sku||!p.name||!p.unit||typeof p.active!=='boolean')throw new Error('The inventory snapshot is incomplete; export it again.');
+ if(initializeOnly){
+  const existing=(await pool.query('SELECT synthetic FROM stores WHERE id=$1',[localCatalogStore])).rows[0];
+  if(existing&&existing.synthetic!=='true')throw new Error('The local catalog identity is not synthetic.');
+  if(existing)return {storeId:localCatalogStore,capturedAt:snapshot.capturedAt,products:0};
+ }
+ // Prepare only the list size, once per source hash, before taking the catalog write lock.
+ const previews=development?await prepareSnapshotThumbnails(pool,photos,snapshot.products):undefined;
  const c=await pool.connect();
  try{
   await c.query('BEGIN');
@@ -28,12 +60,12 @@ export async function loadLocalCatalog(pool:Pool,path:string,development=false,i
   await c.query("INSERT INTO stores(id,name,synthetic) VALUES($1,$2,'true') ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name",[localCatalogStore,snapshot.store.name+' · local snapshot']);
   await c.query('INSERT INTO catalog_profiles(store_id,store_type) VALUES($1,$2) ON CONFLICT(store_id) DO UPDATE SET store_type=EXCLUDED.store_type',[localCatalogStore,snapshot.store.type]);
   await c.query('INSERT INTO store_policies(store_id,require_product_confirmation) VALUES($1,true) ON CONFLICT DO NOTHING',[localCatalogStore]);
-  for(const photo of photos){
-   const bytes=Buffer.from(photo.image,'base64'),hash=createHash('sha256').update(bytes).digest('hex');
-   if(bytes.length<4||bytes.length>2097152||bytes[0]!==255||bytes[1]!==216||photo.content_hash&&hash!==photo.content_hash)throw new Error('A catalog photograph failed validation.');
+  for(const [index,photo] of photos.entries()){
+   const bytes=Buffer.from(photo.image,'base64'),hash=previews?.photoHashes[index];
    const result=await c.query('INSERT INTO catalog_photos(id,store_id,image,width,height,content_hash) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(id) DO UPDATE SET image=EXCLUDED.image,width=EXCLUDED.width,height=EXCLUDED.height,content_hash=EXCLUDED.content_hash WHERE catalog_photos.store_id=EXCLUDED.store_id RETURNING id',[photo.id,localCatalogStore,bytes,photo.width,photo.height,hash]);
    if(!result.rowCount)throw new Error('A photograph belongs to a different local store.');
   }
+  for(const [hash,variants] of previews?.thumbnails??[])await saveCatalogImageVariants(c,localCatalogStore,hash,variants);
   for(const n of [...snapshot.nodes].sort((a,b)=>Number(a.kind==='family')-Number(b.kind==='family')))await c.query('INSERT INTO catalog_nodes(store_id,id,parent_id,kind,label,aliases,local_names) VALUES($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb) ON CONFLICT(store_id,id) DO UPDATE SET parent_id=EXCLUDED.parent_id,label=EXCLUDED.label,aliases=EXCLUDED.aliases,local_names=EXCLUDED.local_names',[localCatalogStore,n.id,n.parent_id,n.kind,n.label,JSON.stringify(n.aliases),JSON.stringify(n.local_names)]);
   await c.query('UPDATE products SET active=false WHERE store_id=$1',[localCatalogStore]);
   const copied=columns,all=['store_id',...copied,'active'];

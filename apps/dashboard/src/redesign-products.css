@@ -142,7 +142,6 @@
 .redesign .rd-products-empty { display: grid; justify-items: center; gap: 8px; padding: 40px 14px; text-align: center; }
 .redesign .rd-products-empty h2 { font-size: 16px; }
 .redesign .rd-products-empty-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--rd-tint); color: var(--rd-teal); }
-.redesign .rd-products-loading { padding: 18px 15px; color: var(--rd-muted); }
 .redesign .rd-products-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 39px; padding: 8px 15px; border-top: 1px solid var(--rd-line); color: var(--rd-muted); font-size: 12px; }
 .redesign .rd-products-back { margin-bottom: 14px; }
 .redesign .rd-products-edit h1 { margin-bottom: 15px; font-size: 25px; }

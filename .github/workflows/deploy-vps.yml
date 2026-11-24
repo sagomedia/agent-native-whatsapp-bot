@@ -1,0 +1,38 @@
+name: Deploy to VPS
+
+on:
+  workflow_dispatch:
+    inputs:
+      activate:
+        description: Switch the VPS to the staged build. Leave unchecked to inspect status.
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: VPS deployment
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: vps
+    concurrency:
+      group: shopbot-vps
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Check or activate the staged build
+        env:
+          ACTIVATE: ${{ inputs.activate }}
+          VPS_RELEASE_HOST: ${{ vars.VPS_RELEASE_HOST }}
+          VPS_RELEASE_KNOWN_HOST: ${{ vars.VPS_RELEASE_KNOWN_HOST }}
+          VPS_RELEASE_KEY: ${{ secrets.VPS_RELEASE_KEY }}
+        run: |
+          if [[ "$ACTIVATE" == true ]]; then
+            bash deploy/native/send-github-release.sh activate
+          fi
+          bash deploy/native/send-github-release.sh status

@@ -1,6 +1,18 @@
 import {compactTamil} from './owner-compact-tamil.js';
 
 const tamil:Record<string,string>={
+ 'Loading photo…':'படத்தை ஏற்றுகிறது…',
+ 'This view could not load.':'இந்தப் பக்கத்தை ஏற்ற முடியவில்லை.',
+ 'Reload dashboard':'மீண்டும் ஏற்று',
+ 'Taking over chat…':'உரையாடலைக் கையேற்கிறது…',
+ 'Returning chat to the bot…':'உரையாடலை உதவியாளரிடம் ஒப்படைக்கிறது…',
+ 'Reply control changed. The customer notification could not be sent.':'பதில் அளிக்கும் முறை மாறியது. வாடிக்கையாளருக்கு அறிவிப்பை அனுப்ப முடியவில்லை.',
+ 'The last stock update may have saved. Retry the same update to check.':'கடைசி இருப்பு மாற்றம் சேமிக்கப்பட்டிருக்கலாம். சரிபார்க்க அதே மாற்றத்தை மீண்டும் முயற்சி செய்.',
+ 'Receiving stock…':'வந்த இருப்பைப் பதிவு செய்கிறது…',
+ 'Saving shelf count…':'கடை இருப்பு எண்ணிக்கையைச் சேமிக்கிறது…',
+ 'Recording pickup…':'பொருட்கள் கொடுத்ததைப் பதிவு செய்கிறது…',
+ 'Recording payment…':'பணத்தைப் பதிவு செய்கிறது…',
+
  "Bill actions":"பில் செயல்கள்",
  "Invoice actions":"விலைப்பட்டியல் செயல்கள்",
  "Item actions":"பொருள் செயல்கள்",

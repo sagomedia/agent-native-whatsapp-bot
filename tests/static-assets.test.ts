@@ -20,6 +20,11 @@ test('built dashboard assets negotiate lossless compression and private caching 
   const plain=await app.inject({url:'/assets/'+filename,headers:{...headers,'accept-encoding':'identity'}});assert.deepEqual(plain.rawPayload,original);assert.equal(plain.headers['content-encoding'],undefined);
   assert.equal((await app.inject({url:'/assets/'+filename,headers:{host:owner.hostname,'accept-encoding':'br'}})).statusCode,403);
   const html=await app.inject({url:'/owner',headers});assert.match(html.headers['cache-control']!,/no-store/);
+  const startup=html.body.match(/<script type="module" async src="(\/assets\/owner-startup-[^"]+\.js)"/)?.[1];
+  assert.ok(startup,'the built document must reference the independent startup module');
+  const earlyScript=await app.inject({url:startup,headers});
+  assert.equal(earlyScript.statusCode,200);
+  assert.match(earlyScript.headers['cache-control']!,/^private,.*immutable/);
   const missing=await app.inject({url:'/assets/missing.js',headers});assert.equal(missing.statusCode,404);assert.match(missing.headers['cache-control']!,/no-store/);
  }finally{await app.close();}
 });

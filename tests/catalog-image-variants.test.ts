@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {randomUUID} from 'node:crypto';
 import {existsSync} from 'node:fs';
-import {readFile} from 'node:fs/promises';
-import {resolve} from 'node:path';
+import {mkdtemp,readFile,rm,writeFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join,resolve} from 'node:path';
 import test from 'node:test';
 import pg from 'pg';
 import {setupDatabase} from '../apps/server/src/db/migrate.js';
@@ -12,6 +13,8 @@ import {setupImageDemo} from '../apps/server/src/services/demo-catalog.js';
 import {backfillCatalogImageVariants,catalogImageSize,imageHash,prepareCatalogImageVariants} from '../apps/server/src/services/catalog-image-variants.js';
 import {addProposalAsset,catalogWrite,createProposal,prepareProposalAsset} from '../apps/server/src/services/catalog-proposals.js';
 import {fixtureStore} from '../profiles/hardware.js';
+import {productColumns} from '../apps/server/src/services/catalog.js';
+import {loadLocalCatalog,localCatalogStore} from '../scripts/local-catalog.js';
 
 const owner={hostname:'image-owner.example.test',issuer:'https://test.cloudflareaccess.com',audience:'catalog-image-app',email:'owner@example.test',storeId:fixtureStore};
 const headers={host:owner.hostname,'cf-access-jwt-assertion':'synthetic'};
@@ -31,6 +34,34 @@ test('catalog image variants are bounded JPEGs, preserve aspect and substantiall
  assert.ok(variants[0].image.length<original.length/10);
  assert.equal(catalogImageSize('128'),128);for(const invalid of ['0','4096','128.0',['128'],128])assert.throws(()=>catalogImageSize(invalid),/Choose image size/);
 });
+
+test('local snapshot imports store one thumbnail per source without replacing full photos',()=>fixture(async(pool)=>{
+ const directory=await mkdtemp(join(tmpdir(),'shopbot-catalog-snapshot-'));
+ const previous=process.env.DATABASE_URL;
+ try{
+  const product={...(await pool.query(`SELECT ${productColumns},active FROM products WHERE store_id=$1 AND sku='H14'`,[fixtureStore])).rows[0],family_id:null};
+  const bytes=await readFile('resources/catalog/ksmc-demo/images/H19.jpg');
+  const demo=await readFile('resources/catalog/ksmc-demo/images/H14.jpg');
+  const photoIds=[randomUUID(),randomUUID()];
+  const photos=photoIds.map(id=>({id,image:bytes.toString('base64'),...dimensions(bytes),content_hash:imageHash(bytes)}));
+  const products=[product,...photoIds.map((id,index)=>({...product,sku:`FIXTURE-${index}`,image_path:`/catalog-images/custom/${id}.jpg`}))];
+  const snapshot=join(directory,'catalog.json');
+  await writeFile(snapshot,JSON.stringify({version:1,capturedAt:'fixture',imageOrigin:'https://fixture.example.test',store:{name:'Fixture',type:'hardware'},nodes:[],products,photos}));
+  // The importer validates the development profile. Its pool stays pinned to the disposable test schema.
+  process.env.DATABASE_URL='postgres://127.0.0.1/shopbot_snapshot_dev';
+  for(let i=0;i<2;i++)await loadLocalCatalog(pool,snapshot,true);
+  const stored=(await pool.query('SELECT image FROM catalog_photos WHERE store_id=$1',[localCatalogStore])).rows;
+  assert.equal(stored.length,2);
+  assert.ok(stored.every(row=>row.image.equals(bytes)));
+  const variants=(await pool.query('SELECT source_hash,max_side,image FROM catalog_image_variants WHERE store_id=$1',[localCatalogStore])).rows;
+  assert.deepEqual(new Set(variants.map(row=>row.source_hash)),new Set([imageHash(demo),imageHash(bytes)]));
+  assert.equal(variants.length,2);
+  for(const row of variants){assert.equal(row.max_side,128);assert.ok(Math.max(...Object.values(dimensions(row.image)))<=128);}
+ }finally{
+  if(previous===undefined)delete process.env.DATABASE_URL;else process.env.DATABASE_URL=previous;
+  await rm(directory,{recursive:true,force:true});
+ }
+}));
 
 test('owner photos ingest previews; authenticated ETags revalidate actual bytes across sizes, shop scope and mutable product versions',()=>fixture(async(pool,app)=>{
  const legacy=await app.inject({url:'/api/owner/products/H14/image?size=128&v=1',headers});assert.equal(legacy.statusCode,200);assert.equal(legacy.headers['cache-control'],'private, no-cache, max-age=0');
