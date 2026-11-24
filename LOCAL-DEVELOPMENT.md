@@ -1,103 +1,39 @@
-# Change and test ShopBot locally
+# Run ShopBot locally with WhatsApp
 
-GitHub contains the application code. The shop inventory, uploaded media, conversation/order database and private environment are separate runtime data. Local development uses its own PostgreSQL databases; pulling code neither copies nor resets the VPS.
+Use the prepared checkout on local disk. The local application uses its own PostgreSQL database and inventory snapshot. It connects to Gemini and receives messages for the shop’s existing WhatsApp number through the VPS tunnel.
 
-## Prepared development checkout on this computer
+## Start the connected session
 
-`/home/gk-pc/projects/shopbot-inventory-dev/02-Build/shopbot-ai`
-
-Use this checkout and the `main` branch as the starting point for daily work. Build and test from the same application directory. Local PostgreSQL uses the existing development database `shopbot_dev` and the separate test database `shopbot_local_test`.
+From the prepared computer, run:
 
 ```bash
 cd /home/gk-pc/projects/shopbot-inventory-dev
-git status --short --branch
-git switch main
-git pull --ff-only
-cd 02-Build/shopbot-ai
-npm ci
-npm run local:db -- start
-npm run build
 npm run whatsapp:local
 ```
 
-When you see `LOCAL_ROUTE_READY`, open the [local dashboard](https://shopbot-local.sagoautomation.tech/owner) and send a fresh message from the configured WhatsApp test phone. The app and tunnel share port 3018. On the prepared computer, the background instance is named `shopbot-local-whatsapp.service`. Inspect it with `systemctl --user status shopbot-local-whatsapp`. Stop that unit before starting a terminal instance. Ctrl+C ends a terminal instance and restores the WhatsApp route.
+The launcher starts the Docker Compose PostgreSQL service, checks the private profile and local catalog, verifies Gemini and WhatsApp access, builds the application, starts the backend on loopback port 3018, and opens the SSH reverse tunnel. Wait for `LOCAL_ROUTE_READY`. If an existing session already owns the port, use it or stop it cleanly before starting another.
 
-On another computer, install PostgreSQL/FFmpeg and supported Node 22, create separate local development and test databases, copy `.env.example` to `.env`, and set the matching URLs. The optional `local:db` helper requires an initialized PostgreSQL cluster and its `POSTGRES_BIN_DIR`, `POSTGRES_DATA_DIR`, `POSTGRES_SOCKET_DIR` and `POSTGRES_PORT` paths. Existing Docker Compose setup remains an alternative.
+1. Sign in to the [local owner dashboard](https://shopbot-local.sagoautomation.tech/owner).
+2. Send a fresh message to the connected number from a WhatsApp account. Choose an actual product and check that the same conversation and order appear in the local dashboard. Buttons from a VPS conversation refer to that VPS conversation.
+3. Press Ctrl+C in the launcher terminal when finished. The VPS route guard restores the original webhook after the tunnel closes and takes the local-only hosts offline. If the launcher exits unexpectedly, run `npm run whatsapp:restore`. The remote watchdog also restores routing on tunnel loss or session expiry (six hours).
 
-## Automated checks before deploying
+The VPS dashboard and its media/MCP endpoints continue serving VPS data throughout. The shared webhook temporarily forwards to the local backend, where any valid WhatsApp sender can start a conversation. Messages and orders received during that session are stored in the local database. Local media uses the dedicated local channel host. Each dashboard has its own hostname-bound sign-in. Finish the local session before a VPS deployment or ingress change. [VPS owner dashboard](https://shopbot-preview.sagoautomation.tech/owner)
 
-```bash
-npm run build
-npm run test:local
-python3 -m unittest discover -s scripts -p test_catalog_cleanup.py
-```
+## Prepare another computer
 
-`test:local` reads `TEST_DATABASE_URL` from `.env`, requires a loopback PostgreSQL database ending in `_test`, and leaves the normal development database alone. Tests create/drop their own schemas. Do not use a tunnel to a merchant database for these commands.
+- Use a local-disk clone of the [private repository](https://github.com/sagomedia/agent-native-whatsapp-bot). From the checkout root, install dependencies with `npm ci` using Node 22.12+ within 22.x. Install Docker Engine or Desktop with Compose, FFmpeg, and the authenticated Google Cloud CLI with authorized SSH access to the existing VPS.
+- Set up private, mode-0600 `.env`, `.env.ai` and `.env.whatsapp` in the app directory using their corresponding examples. In the authorized local Gemini profile, set the approved key, `ALLOW_PAID_INFERENCE=true` and the authorized cumulative cap in `AI_BUDGET_USD`. The connected WhatsApp profile accepts a positive cap up to US$5. In the WhatsApp profile, configure `WHATSAPP_AUDIENCE=public`, the authorized Meta business sender, owner login and tunnel identity. Keep the two local hostnames in the WhatsApp example. The VPS already runs the tunnel connector and the separate-domain routing helper.
+- Configure `POSTGRES_USER=shopbot_local` and a private `POSTGRES_PASSWORD` matching the credentials in the connection URLs. Use the Compose database on `127.0.0.1:55441`, with `shopbot_dev` for `DATABASE_URL` and `shopbot_local_test` for `TEST_DATABASE_URL`. URL-encode credentials in connection URLs when needed.
+- Supply the approved inventory-only snapshot and matching media in their private local locations. Set `LOCAL_CATALOG_SNAPSHOT` before first launch so the launcher can seed the empty shop. It preserves the existing catalog on later starts. Use `npm run local:catalog` for an intentional refresh that replaces local catalog, stock and price edits. Resolve existing test reservations or use a fresh development database before refreshing. Pulling code leaves shop data in place.
 
-## Real Gemini text, voice and image tests
+Local WhatsApp and CLI evaluation use separate cumulative ledgers. For an existing store, an authorized cap change must also update its stored limit while preserving committed spending and outstanding holds. Starting another chat or restarting the process preserves the ledger. Keep private credentials, retained audio, logs and customer data outside Git.
 
-The owner approved reuse of the existing Gemini key in private `.env.ai`, with a separate local cumulative US$0.50 ceiling. `.env` and `.env.ai` have mode 0600 and remain ignored by Git. No WhatsApp credentials are needed for these tests. On a new device, copy `.env.ai.example` to `.env.ai`, set the approved key, positive budget and `ALLOW_PAID_INFERENCE=true`. Do not paste keys into a chat or commit them.
+## Diagnose a connection
 
-```bash
-npm run eval:local -- --preflight
-npm run eval:local -- --fixtures tests/fixtures/local-shopping.json
-# Identity correction, retained count, five-piece change and negated removal:
-npm run eval:local -- --fixtures tests/fixtures/local-voice-corrections.json
-```
+`npm run whatsapp:check` checks the connected settings, local catalog, Gemini model access and the WhatsApp sender without switching the webhook. Use it with the database available. Inspect the private `data/logs/local-whatsapp.log` for backend errors. The shared webhook reaches the local store only after the readiness marker. A ready server alone does not establish that a message arrived on the phone.
 
-The evaluation uses the same unified understanding and inventory grounding path as WhatsApp, but no WhatsApp transport. The budget persists across runs; restarting or creating another chat does not reset it. Results and validated operations are written under ignored `artifacts/unified-evaluation/report.json`.
+## Verify a source change
 
-`LOCAL_CATALOG_SNAPSHOT=./data/catalog-snapshot.json` selects the prepared inventory-only snapshot. It preserves actual names, specifications, prices, units and photo references, without customer conversations, orders or production credentials. It imports into a synthetic store in the separate test schema. Snapshot stock/prices may become stale; these are test facts, not live availability. Without this setting, evaluation uses the bundled synthetic catalog.
+With the local database available, run `npm run build`, `npm run test:local` and `python3 -m unittest discover -s scripts -p 'test_catalog_cleanup.py'`. The integration suite uses temporary schemas in the disposable UTF-8 `_test` database. Hosted CI provisions its own database.
 
-For new recordings, create a private fixture file with this shape and run it with `eval:local -- --fixtures /absolute/path/cases.json`:
-
-```json
-{"cases":[{"id":"my-voice-order","messages":[{"kind":"audio","path":"./recordings/order.ogg","mimeType":"audio/ogg"}],"expected":{"orders":0}}]}
-```
-
-Media paths are relative to the case file. Keep private recordings under ignored `recordings/` or `data/`. Text uses `{"kind":"text","text":"..."}`; images use `{"kind":"image","path":"...","mimeType":"image/jpeg","text":"caption"}`. A test may include several messages to exercise add, change and remove behavior. Product approval and final submission remain distinct.
-
-Fixture expectations can include `minimumPhotoCandidates`, one minimum per final draft row. An optional `candidateNameIncludes` array checks a candidate name per row (`null` skips that row). Use these when actual product choices must survive a correction, so a retained name/count with no product photos cannot pass the evaluation. Saved Tamil/Tanglish conversations send Tamil and English hints to dedicated transcription; hints do not force a translation or guarantee recognition of unclear audio. Replaying a retained customer recording to the external provider requires permission for that recording; repository/public or synthetic fixtures are separate.
-
-The budget reserves the model's full allowed input/output ceiling before each call, so a small allowance can refuse a call even when actual spend is lower. For small synthetic fixtures, `EVALUATION_MAX_OUTPUT_TOKENS=2048 npm run eval:local -- --fixtures tests/fixtures/local-voice-corrections.json` lowers the actual API output limit and its reservation together. This does not reset or increase the budget. Large lists may need the default output allowance; truncated responses fail without applying partial actions.
-
-## Actual WhatsApp and full owner dashboard locally
-
-The prepared private `.env.whatsapp` reuses the existing number, Meta connection and dashboard password. Use `WHATSAPP_PARTIAL_REVIEWS_ENABLED=true` in that profile to test sending unlisted or unpriced items to the shop. Those items keep their requested quantities and stay out of the known subtotal. The local inventory snapshot includes product records and photographs. The local database is independent: local orders and catalog changes do not change live shop data. Existing VPS customer history is not copied. Each database/schema retains its own inference ledger; the local WhatsApp channel and CLI evaluation each have a cumulative $0.50 ceiling.
-
-```bash
-npm run local:db -- start
-npm run whatsapp:check
-npm run whatsapp:local
-```
-
-The helper verifies the local database, recipient allowlist, webhook challenge and signature before opening an SSH reverse tunnel. Local testing has its own addresses:
-
-| Address | Backend |
-| --- | --- |
-| https://shopbot-local.sagoautomation.tech/owner | This computer and the local database |
-| https://shopbot-local-api.sagoautomation.tech | Local product/message media and local webhook endpoint |
-| https://shopbot-preview.sagoautomation.tech/owner | VPS dashboard and VPS database, including during local testing |
-| https://demo.sagoautomation.tech | VPS media/MCP; only `/webhook` temporarily forwards to local during the test session |
-
-Meta's webhook subscription and the original Cloudflare configuration remain unchanged. The same WhatsApp number has one selected receiving backend during the session; separate dashboard names do not create a second WhatsApp connection. Send a fresh WhatsApp message from the configured test phone. Open the **local** dashboard and sign in with the existing password. Sessions are hostname-bound, so sign in separately on each address. Old VPS buttons reference VPS conversation state, so begin a fresh local shopping conversation.
-
-The running backend watches source files. Rebuild dashboard changes with `npm run build` in the same checkout and refresh the site. Logs are in private `data/logs/local-whatsapp.log`.
-
-Press Ctrl+C to restore the VPS webhook before the local backend stops. The local-only domains then stop serving the app; they never open the VPS database as a fallback. The VPS dashboard stays on the VPS throughout. The watchdog also restores after a tunnel/backend failure, and a session expires after six hours. A VPS reboot removes the runtime-only routing override. Verify recovery from another terminal if necessary:
-
-```bash
-npm run whatsapp:restore
-```
-
-The VPS app stays available for the existing authenticated inventory MCP integration throughout local testing. Other WhatsApp senders are excluded by the local test-recipient list while local mode is active. The dashboard requires a fresh sign-in after switching databases. Do not deploy or change Cloudflare routing while a local session is active.
-
-The route guard is installed on the prepared VPS at `/usr/local/lib/shopbot-local-route.py`. The separate-domain version supports `check-separated`; the local launcher refuses an older helper that switches both dashboards. The two local DNS names point to the existing VPS tunnel. Only its temporary session configuration forwards them through SSH to loopback port 3018. Do not run an additional connector for that same tunnel on this computer: connectors with different origin configurations can route unpredictably.
-
-For another VPS, inspect its ingress layout and provision the two DNS names before adapting `deploy/native/local-route.py`; it deliberately refuses an unexpected layout. Preserve the signed webhook's original body and rewrite only its origin Host header to the local channel host. This computer's private profile configures the project/instance/zone/user and gcloud executable. gcloud creates a private temporary SSH key under ignored `data/`; the session starts using the already authenticated Google account.
-
-To explicitly refresh the local inventory after exporting a new inventory-only snapshot, stop the local session and run `npm run local:catalog`. This overwrites local catalog/stock/price edits with snapshot facts, preserves local conversations/orders and never reads the VPS customer database. Pulling code does not refresh the snapshot automatically. Do not refresh stock while local test orders have reservations; use a fresh development database or resolve those test orders first.
-
-## Normal change cycle
-
-Start from `main` in the prepared checkout. Use a short-lived branch in that same folder for a change that needs review. Run the local checks, merge the pull request once CI passes, then return the checkout to `main`. The VPS runs a separate verified release and is updated through the deployment workflow.
+For authorized metered evaluation, use `npm run eval:local -- --preflight` then `npm run eval:local -- --fixtures tests/fixtures/local-shopping.json`. The correction fixture `tests/fixtures/local-voice-corrections.json` checks replacements, known counts and negation. The evaluator reads synthetic or separately authorized media, uses a disposable store and writes its report under ignored `artifacts/unified-evaluation/`. Sending a retained private customer recording to the provider requires authorization for that recording. Check native cards, delivery and actual voice quality on the authorized phone.

@@ -1,3 +1,0 @@
-npm WARN deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
-
-added 191 packages in 3s

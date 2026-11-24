@@ -4,6 +4,8 @@
 .env
 .env.*
 !.env.example
+!.env.ai.example
+!.env.whatsapp.example
 secrets/
 *.pem
 *.key
@@ -25,8 +27,6 @@ __pycache__/
 *.db
 *.sqlite
 *.sqlite3
-data/*.db
-data/*.sqlite
 
 # Large Media & Client Exports
 *.mp4
@@ -55,10 +55,11 @@ Thumbs.db
 dist/
 build/
 coverage/
-02-Build/shopbot-ai/data/
+/data/
+/artifacts/
 
 # Portable local Git history export
 *.bundle
 
 # Private local speech fixtures used for explicit evaluations.
-02-Build/shopbot-ai/recordings/
+/recordings/

@@ -1,3 +1,0 @@
-python3 -m unittest discover -s scripts -p test_catalog_cleanup.py
-Ran 4 tests
-OK
