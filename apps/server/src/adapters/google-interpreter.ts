@@ -219,7 +219,7 @@ export class GoogleInterpreter implements Interpreter {
     let output:unknown=null,validationIssues:ProviderResult['validationIssues'];
     let evidenceRepair:ProviderResult['evidenceRepair'];
     try{output=input.inventoryReplan?inventoryGroundingToInterpretation(JSON.parse(text),input,this.supportsImageLists,true):understandingToInterpretation(JSON.parse(text),input,this.supportsImageLists);}catch(error){
-      validationIssues=error instanceof z.ZodError?error.issues.slice(0,6).map(issue=>({path:['understanding',...issue.path].join('.'),code:issue.code})): [{path:'understanding',code:'invalid_evidence',reason:error instanceof Error?error.message.slice(0,180):'Evidence validation failed'}];
+      validationIssues=error instanceof SyntaxError?[{path:'',code:'invalid_json'}]:error instanceof z.ZodError?error.issues.slice(0,6).map(issue=>({path:['understanding',...issue.path].join('.'),code:issue.code})): [{path:'understanding',code:'invalid_evidence',reason:error instanceof Error?error.message.slice(0,180):'Evidence validation failed'}];
       // A schema-valid plan can fail its verbatim evidence check. Let the
       // metered runtime repair it once from the same transcript, never here
       // inside an unaccounted provider call. Negated and stale targets stay rejected.

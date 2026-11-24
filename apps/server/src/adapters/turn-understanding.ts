@@ -64,7 +64,7 @@ export function inventoryGroundingToInterpretation(value:unknown,input:Interpret
    const original=prior.requestedItems.find(before=>before.ordinal===item.ordinal)!;
    const available=observedSkus(itemObservationQuery(input.proposal,original));
    if(item.search.selectedSkus?.some(sku=>!available.has(sku))){
-    item.query=original.query??item.query;
+    item.query=original.query??original.sourceText;
     item.search={...item.search,selectedSkus:[]};
     heldItems.add(item.ordinal);
    }

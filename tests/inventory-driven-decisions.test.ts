@@ -274,6 +274,35 @@ test('a completed inventory grounding pass can report a genuine catalog miss',()
  assert.equal(snapshot.requests.length,0);
 }));
 
+test('runtime keeps a foreign repair SKU pending and applies an independent catalog match',()=>fixture(async(pool,inbox)=>{
+ const source='put a couple of oat drinks and one dairy milk on my list';
+ const raw={...base(),intents:['add'],requestedItems:[
+  {ordinal:0,sourceText:'a couple of oat drinks',query:'oat drink',purchaseCount:2,countEvidence:{sourceText:'a couple',value:2,mode:'total'},unresolved:[],search:{keywords:['oat drink']}},
+  {ordinal:1,sourceText:'one dairy milk',query:'dairy milk',purchaseCount:1,countEvidence:{sourceText:'one',value:1,mode:'total'},unresolved:[],search:{keywords:['dairy milk']}},
+ ]};
+ let repairCalls=0;
+ const provider:Interpreter={name:'controlled-foreign-repair-sku',mode:'mock',unifiedUnderstanding:true,interpret:async input=>{
+  if(!input.inventoryReplan)return {output:understandingToInterpretation(raw,input,false),usage:null,truncated:false};
+  repairCalls++;
+  const patch={items:[
+   {ordinal:0,query:'oat drink',search:{keywords:['oat drink'],selectedSkus:['FOREIGN']}},
+   {ordinal:1,query:'dairy milk',search:{keywords:['dairy milk'],selectedSkus:['DAIRY']}},
+  ],replacements:[]};
+  return {output:inventoryGroundingToInterpretation(patch,input,false,true),usage:null,truncated:false};
+ }};
+ const snapshot=await turn(inbox,new ConversationRuntime(pool,provider,{inventoryGrounding:true,visualOrdering:true}),{id:randomUUID(),type:'text',text:source});
+ assert.equal(repairCalls,1);
+ assert.notEqual(snapshot.messages.at(-1)?.rich?.clarificationReason,'inventory_check_incomplete');
+ assert.equal(snapshot.conversation.draft.length,2);
+ const held=snapshot.conversation.draft.find(line=>line.query==='oat drink');
+ assert.equal(held?.quantity,2);
+ assert.equal(held?.catalogIssue,'catalog_check_pending');
+ assert.equal(held?.sku,undefined);
+ const safe=snapshot.conversation.draft.find(line=>line.query==='dairy milk');
+ assert.equal(safe?.quantity,1);
+ assert.deepEqual(safe?.candidates?.map(product=>product.sku),['DAIRY']);
+}));
+
 test('category cards and their refinement use only types present in this store',()=>fixture(async(pool,inbox)=>{
  const c=await pool.connect();try{
   const found=await discoverProducts(c,inbox.context,'drink',{keywords:['drink','milk'],familyIds:['plant-drinks','dairy-drinks'],clarifyType:true});
@@ -434,6 +463,27 @@ test('a repair SKU outside one observed item holds that item and preserves anoth
  assert.deepEqual((recovered.operations[1] as any).search.selectedSkus,['PAINT-4L']);
  assert.ok(!(recovered.operations[1] as any).sourceUncertainty?.includes('catalog_check_pending'));
  assert.equal(validateInventoryReplan(original,recovered,observations).operations.length,2);
+});
+
+test('a held repair keeps the original source phrase when the first plan had no query',()=>{
+ const source='bring a couple of that drink';
+ const original=understandingToInterpretation({...base(),intents:['add'],requestedItems:[{ordinal:0,sourceText:source,query:null,purchaseCount:2,countEvidence:{sourceText:'a couple',value:2,mode:'total'},unresolved:['identity']}]},{text:source,state:empty},false);
+ const observations=[{tool:'discover_products' as const,query:source,products:[{sku:'OAT',name:'Oat Drink',unit:'can',pricePaise:100,stock:4,version:1,aliases:[],quantityStep:1}],totalCount:1}];
+ const input={text:source,state:empty,proposal:original,observations,inventoryReplan:true};
+ const recovered=inventoryGroundingToInterpretation({items:[{ordinal:0,query:'invented drink',search:{keywords:['invented drink'],selectedSkus:['FOREIGN']}}],replacements:[]},input,false,true);
+ assert.equal(recovered.understanding?.requestedItems[0].query,source);
+ assert.equal((recovered.operations[0] as any).query,source);
+ assert.ok((recovered.operations[0] as any).sourceUncertainty?.includes('catalog_check_pending'));
+ assert.equal(validateInventoryReplan(original,recovered,observations).operations.length,1);
+});
+
+test('live understanding distinguishes malformed JSON from valid JSON with invalid evidence',async()=>{
+ const unsupported=JSON.stringify({...base(),intents:['add'],requestedItems:[{ordinal:0,sourceText:'three bars',query:'bars',purchaseCount:3,unresolved:[],search:{keywords:['bars']}}]});
+ for(const [body,code] of [['{broken','invalid_json'],[unsupported,'invalid_evidence']] as const){
+  const provider=new GoogleInterpreter({allowPaidInference:true,apiKey:'offline',model:geminiTextRate.model,budgetMicrousd:1000000,unifiedUnderstanding:true},{generateContent:async()=>({modelVersion:geminiTextRate.model,candidates:[{finishReason:'STOP',content:{parts:[{text:body}]}}]} as GenerateContentResponse)});
+  const result=await provider.interpret({text:'two oat drinks',state:empty},new AbortController().signal);
+  assert.equal(result.validationIssues?.[0].code,code);
+ }
 });
 
 const fanSource='I need one Ottenburger fan';
