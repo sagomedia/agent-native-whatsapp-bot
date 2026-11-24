@@ -86,6 +86,8 @@ if args.dependency_additions_from:
 if args.node_archive:
     subprocess.run(['npm', 'ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'],
                    cwd=stage / 'app', check=True)
+    # Runtime starts the pinned Node binary directly. npm's command symlinks are unnecessary.
+    shutil.rmtree(stage / 'app/node_modules/.bin', ignore_errors=True)
     (stage / 'node/bin').mkdir(parents=True)
     with tarfile.open(args.node_archive, 'r:xz') as archive:
         root = node_name.removesuffix('.tar.xz')
