@@ -254,10 +254,17 @@ export class WhatsAppChannel {
       JOIN whatsapp_statuses s ON s.phone_id=c.phone_id AND s.recipient=c.recipient AND (s.provider_id=o.provider_id OR s.callback_id=o.message_id)
       WHERE c.phone_id=$1 AND o.state IN ('sending','unknown','accepted','delivered','read','failed')
       ORDER BY o.message_id,CASE s.state WHEN 'read' THEN 4 WHEN 'delivered' THEN 3 WHEN 'failed' THEN 2 ELSE 1 END DESC,s.provider_timestamp DESC
+    ), desired AS (
+      SELECT message_id,provider_id,CASE state WHEN 'sent' THEN 'accepted' ELSE state END AS state,
+        CASE WHEN error_code IS NOT NULL THEN 'meta_'||error_code::text END AS last_error
+      FROM latest
     ), updated AS (
-      UPDATE whatsapp_outbox o SET provider_id=l.provider_id,state=CASE l.state WHEN 'sent' THEN 'accepted' ELSE l.state END,last_error=CASE WHEN l.error_code IS NULL THEN NULL ELSE 'meta_'||l.error_code::text END
-      FROM latest l WHERE o.message_id=l.message_id AND (o.state NOT IN ('read','delivered') OR l.state='read') RETURNING o.message_id,o.state
-    ) UPDATE messages m SET status=u.state FROM updated u WHERE m.id=u.message_id`,[this.config.phoneId]);
+      UPDATE whatsapp_outbox o SET provider_id=d.provider_id,state=d.state,last_error=d.last_error
+      FROM desired d WHERE o.message_id=d.message_id AND (o.state NOT IN ('read','delivered') OR d.state='read')
+        AND ((o.provider_id,o.state,o.last_error) IS DISTINCT FROM (d.provider_id,d.state,d.last_error)
+          OR EXISTS(SELECT 1 FROM messages m WHERE m.id=o.message_id AND m.status IS DISTINCT FROM d.state))
+      RETURNING o.message_id,o.state
+    ) UPDATE messages m SET status=u.state FROM updated u WHERE m.id=u.message_id AND m.status IS DISTINCT FROM u.state`,[this.config.phoneId]);
   }
   async refreshPricingAnalytics(month:string){
     const c=this.config;

@@ -116,6 +116,37 @@ test('concurrent outbound sends preserve per-chat order and ambiguous attempts w
 }));
 
 
+test('reconciling unchanged WhatsApp receipts leaves row versions intact and repairs drift',()=>fixture(async pool=>{
+ const channel=new WhatsAppChannel(pool,{...cfg,sendEnabled:true},async()=>Response.json({messages:[{id:'wamid.reconcile.stable'}]}));
+ await channel.setup();await channel.receive(input('wamid.reconcile.inbound'));
+ assert.equal(await channel.processNext({skipMedia:true}),true);
+ assert.equal(await channel.sendNext(),true);
+ const snapshot=async()=>(await pool.query(`
+   SELECT o.message_id,o.state,m.status,o.ctid::text AS outbox_version,m.ctid::text AS message_version
+   FROM whatsapp_outbox o JOIN messages m ON m.id=o.message_id
+ `)).rows[0];
+ const {message_id}=await snapshot();
+ const timestamp=Math.floor(Date.now()/1000)-10;
+ for(const [offset,event,expected] of [[0,'sent','accepted'],[1,'delivered','delivered'],[2,'read','read']] as const){
+  await channel.receive(webhookSchema.parse({object:'whatsapp_business_account',entry:[{id:cfg.wabaId,changes:[{field:'messages',value:{
+   metadata:{phone_number_id:cfg.phoneId},statuses:[{id:'wamid.reconcile.stable',recipient_id:recipients[0],timestamp:String(timestamp+offset),status:event,biz_opaque_callback_data:message_id}]
+  }}]}]}));
+  const before=await snapshot();
+  assert.equal(before.state,expected);
+  assert.equal(before.status,expected);
+  await channel.reconcile();
+  await channel.reconcile();
+  assert.deepEqual(await snapshot(),before,`a repeated ${event} receipt must not rewrite either row`);
+ }
+ await pool.query("UPDATE messages SET status='accepted' WHERE id=$1",[message_id]);
+ await channel.reconcile();
+ const repaired=await snapshot();
+ assert.equal(repaired.state,'read');
+ assert.equal(repaired.status,'read');
+ await channel.reconcile();
+ assert.deepEqual(await snapshot(),repaired);
+}));
+
 for(const billing of ['free','paid'] as const)test(`five workers preserve shared ${billing} admission without increasing limits`,()=>fixture(async pool=>{
  const hold=gate();let calls=0;const reservation=worstCaseReservation(geminiTextRate);
  const provider:Interpreter={name:'offline-admission-'+billing,mode:'live',billing:geminiTextRate,...(billing==='free'?{freeQuota:{scope:'isolated-'+randomUUID(),model:geminiTextRate.model}}:{}),interpret:async()=>{calls++;await hold.promise;return {output:{next:'continue',operations:[]},truncated:false,usage:null};}};
