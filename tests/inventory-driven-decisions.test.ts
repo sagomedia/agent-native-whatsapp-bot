@@ -18,7 +18,7 @@ import {GoogleInterpreter} from '../apps/server/src/adapters/google-interpreter.
 import {admitRequest} from '../apps/server/src/services/inference-admission.js';
 import {geminiSpeechRate,geminiTextRate,initializeBudget} from '../apps/server/src/services/inference-budget.js';
 import type {GenerateContentParameters,GenerateContentResponse} from '@google/genai';
-import type {ConversationState,Interpretation,SimulatorEvent} from '../packages/contracts/index.js';
+import {interpretationSchema,type ConversationState,type Interpretation,type SimulatorEvent} from '../packages/contracts/index.js';
 import type {Interpreter,InterpretationInput} from '../apps/server/src/adapters/interpreter.js';
 
 const base=()=>({schemaVersion:2,inputKind:'text',intents:['edit'],requestedItems:[],proposedEdits:[],shopQuestions:[],unresolved:[]});
@@ -274,6 +274,35 @@ test('a completed inventory grounding pass can report a genuine catalog miss',()
  assert.equal(snapshot.requests.length,0);
 }));
 
+test('runtime keeps a foreign repair SKU pending and applies an independent catalog match',()=>fixture(async(pool,inbox)=>{
+ const source='put a couple of oat drinks and one dairy milk on my list';
+ const raw={...base(),intents:['add'],requestedItems:[
+  {ordinal:0,sourceText:'a couple of oat drinks',query:'oat drink',purchaseCount:2,countEvidence:{sourceText:'a couple',value:2,mode:'total'},unresolved:[],search:{keywords:['oat drink']}},
+  {ordinal:1,sourceText:'one dairy milk',query:'dairy milk',purchaseCount:1,countEvidence:{sourceText:'one',value:1,mode:'total'},unresolved:[],search:{keywords:['dairy milk']}},
+ ]};
+ let repairCalls=0;
+ const provider:Interpreter={name:'controlled-foreign-repair-sku',mode:'mock',unifiedUnderstanding:true,interpret:async input=>{
+  if(!input.inventoryReplan)return {output:understandingToInterpretation(raw,input,false),usage:null,truncated:false};
+  repairCalls++;
+  const patch={items:[
+   {ordinal:0,query:'oat drink',search:{keywords:['oat drink'],selectedSkus:['FOREIGN']}},
+   {ordinal:1,query:'dairy milk',search:{keywords:['dairy milk'],selectedSkus:['DAIRY']}},
+  ],replacements:[]};
+  return {output:inventoryGroundingToInterpretation(patch,input,false,true),usage:null,truncated:false};
+ }};
+ const snapshot=await turn(inbox,new ConversationRuntime(pool,provider,{inventoryGrounding:true,visualOrdering:true}),{id:randomUUID(),type:'text',text:source});
+ assert.equal(repairCalls,1);
+ assert.notEqual(snapshot.messages.at(-1)?.rich?.clarificationReason,'inventory_check_incomplete');
+ assert.equal(snapshot.conversation.draft.length,2);
+ const held=snapshot.conversation.draft.find(line=>line.query==='oat drink');
+ assert.equal(held?.quantity,2);
+ assert.equal(held?.catalogIssue,'catalog_check_pending');
+ assert.equal(held?.sku,undefined);
+ const safe=snapshot.conversation.draft.find(line=>line.query==='dairy milk');
+ assert.equal(safe?.quantity,1);
+ assert.deepEqual(safe?.candidates?.map(product=>product.sku),['DAIRY']);
+}));
+
 test('category cards and their refinement use only types present in this store',()=>fixture(async(pool,inbox)=>{
  const c=await pool.connect();try{
   const found=await discoverProducts(c,inbox.context,'drink',{keywords:['drink','milk'],familyIds:['plant-drinks','dairy-drinks'],clarifyType:true});
@@ -363,6 +392,20 @@ test('a replacement cannot select a SKU observed for a different requested repla
  assert.throws(()=>understandingToInterpretation({...raw,proposedEdits:[{...edit,search:{...edit.search,selectedSkus:['DAIRY']}}]},{text:source,state:cart,inventoryGrounding:true,proposal:original,observations},false),/this item’s fresh inventory/);
 });
 
+test('an unsupported replacement SKU leaves the existing row for shop checking',()=>{
+ const source='swap the hammer for oat drink';
+ const edit={kind:'replace',targetLineId:id,targetQuery:'hammer',sourceText:source,query:'oat drink',search:{keywords:['oat drink']}};
+ const original=understandingToInterpretation({...base(),proposedEdits:[edit]},{text:source,state:cart,inventoryGrounding:true},false);
+ const observations=[{tool:'discover_products' as const,query:'oat drink',products:[{sku:'OAT',name:'Oat Drink',unit:'can',pricePaise:100,stock:1,version:1,aliases:[],quantityStep:1}],totalCount:1}];
+ const input={text:source,state:cart,inventoryGrounding:true,inventoryReplan:true,proposal:original,observations};
+ const recovered=inventoryGroundingToInterpretation({items:[],replacements:[{index:0,search:{keywords:['oat drink'],selectedSkus:['OTHER']}}]},input,false,true);
+ assert.equal(recovered.operations.length,1);
+ assert.equal(recovered.operations[0].kind,'resolve_line');
+ assert.ok((recovered.operations[0] as any).sourceUncertainty?.includes('catalog_check_pending'));
+ assert.deepEqual((recovered.operations[0] as any).search.selectedSkus,[]);
+ assert.equal(validateInventoryReplan(original,recovered,observations).operations.length,1);
+});
+
 
 test('an empty unobserved SKU array is absence, while an observed rejection stays explicit',()=>{
  const source='two oat drinks',raw={...base(),intents:['add'],requestedItems:[{ordinal:0,sourceText:source,query:'oat drink',purchaseCount:2,unresolved:[],search:{keywords:['oat drink'],selectedSkus:[]}}]};
@@ -391,6 +434,64 @@ test('grounding search patches preserve all source fields and cannot invent a pa
  assert.throws(()=>inventoryGroundingToInterpretation({...patch,items:[{...patch.items[0],purchaseCount:10}]},input,false));
  assert.throws(()=>inventoryGroundingToInterpretation({...patch,items:[{...patch.items[0],search:{keywords:['drink'],selectedSkus:['FOREIGN']}}]},input,false),/fresh inventory/);
  assert.throws(()=>inventoryGroundingToInterpretation({...patch,items:[]},input,false),/observed items/);
+});
+
+test('a repair SKU outside one observed item holds that item and preserves another valid request',()=>{
+ const source='put a couple of oat drinks and one four litre white paint tin on my list';
+ const requests=[
+  {ordinal:0,sourceText:'a couple of oat drinks',query:'oat drink',purchaseCount:2,countEvidence:{sourceText:'a couple',value:2,mode:'total'},unresolved:[],search:{keywords:['oat drink']}},
+  {ordinal:1,sourceText:'one four litre white paint tin',query:'white paint',purchaseCount:1,countEvidence:{sourceText:'one',value:1,mode:'total'},packSize:{value:4,unit:'litre'},unresolved:[],search:{keywords:['white paint']}},
+ ];
+ const original=understandingToInterpretation({...base(),intents:['add'],requestedItems:requests},{text:source,state:empty},false);
+ const observations=[
+  {tool:'discover_products' as const,query:'oat drink',products:[{sku:'OAT',name:'Oat Drink',unit:'can',pricePaise:100,stock:4,version:1,aliases:[],quantityStep:1}],totalCount:1},
+  {tool:'discover_products' as const,query:'white paint',products:[{sku:'PAINT-4L',name:'White Paint 4 L',unit:'tin',pricePaise:50000,stock:4,version:1,aliases:[],quantityStep:1}],totalCount:1},
+ ];
+ const input={text:source,state:empty,proposal:original,observations,inventoryReplan:true};
+ const patch={items:[
+  {ordinal:0,query:'oat drink',search:{keywords:['oat drink'],selectedSkus:['FOREIGN']}},
+  {ordinal:1,query:'white paint',search:{keywords:['white paint'],selectedSkus:['PAINT-4L']}},
+ ],replacements:[]};
+ assert.throws(()=>inventoryGroundingToInterpretation(patch,input,false),/fresh inventory/);
+ const recovered=inventoryGroundingToInterpretation(patch,input,false,true);
+ assert.equal(recovered.operations.length,2);
+ assert.equal((recovered.operations[0] as any).quantity,2);
+ assert.deepEqual((recovered.operations[0] as any).search.selectedSkus,[]);
+ assert.ok((recovered.operations[0] as any).sourceUncertainty?.includes('catalog_check_pending'));
+ assert.equal((recovered.operations[1] as any).quantity,1);
+ assert.deepEqual((recovered.operations[1] as any).packSize,{value:4,unit:'litre'});
+ assert.deepEqual((recovered.operations[1] as any).search.selectedSkus,['PAINT-4L']);
+ assert.ok(!(recovered.operations[1] as any).sourceUncertainty?.includes('catalog_check_pending'));
+ assert.equal(validateInventoryReplan(original,recovered,observations).operations.length,2);
+
+ const unresolved=['identity','brand','variant','quantity','unit','budget','unreadable'];
+ const full=understandingToInterpretation({...base(),intents:['add'],requestedItems:[{...requests[0],unresolved},requests[1]]},{text:source,state:empty},false);
+ const bounded=inventoryGroundingToInterpretation(patch,{...input,proposal:full},false,true);
+ assert.ok(interpretationSchema.safeParse(bounded).success,'the hold marker fits the operation contract');
+ assert.equal((bounded.operations[0] as any).sourceUncertainty.length,7);
+ assert.ok((bounded.operations[0] as any).sourceUncertainty.includes('catalog_check_pending'));
+ assert.equal(validateInventoryReplan(full,bounded,observations).operations.length,2);
+});
+
+test('a held repair keeps the original source phrase when the first plan had no query',()=>{
+ const source='bring a couple of that drink';
+ const original=understandingToInterpretation({...base(),intents:['add'],requestedItems:[{ordinal:0,sourceText:source,query:null,purchaseCount:2,countEvidence:{sourceText:'a couple',value:2,mode:'total'},unresolved:['identity']}]},{text:source,state:empty},false);
+ const observations=[{tool:'discover_products' as const,query:source,products:[{sku:'OAT',name:'Oat Drink',unit:'can',pricePaise:100,stock:4,version:1,aliases:[],quantityStep:1}],totalCount:1}];
+ const input={text:source,state:empty,proposal:original,observations,inventoryReplan:true};
+ const recovered=inventoryGroundingToInterpretation({items:[{ordinal:0,query:'invented drink',search:{keywords:['invented drink'],selectedSkus:['FOREIGN']}}],replacements:[]},input,false,true);
+ assert.equal(recovered.understanding?.requestedItems[0].query,source);
+ assert.equal((recovered.operations[0] as any).query,source);
+ assert.ok((recovered.operations[0] as any).sourceUncertainty?.includes('catalog_check_pending'));
+ assert.equal(validateInventoryReplan(original,recovered,observations).operations.length,1);
+});
+
+test('live understanding distinguishes malformed JSON from valid JSON with invalid evidence',async()=>{
+ const unsupported=JSON.stringify({...base(),intents:['add'],requestedItems:[{ordinal:0,sourceText:'three bars',query:'bars',purchaseCount:3,unresolved:[],search:{keywords:['bars']}}]});
+ for(const [body,code] of [['{broken','invalid_json'],[unsupported,'invalid_evidence']] as const){
+  const provider=new GoogleInterpreter({allowPaidInference:true,apiKey:'offline',model:geminiTextRate.model,budgetMicrousd:1000000,unifiedUnderstanding:true},{generateContent:async()=>({modelVersion:geminiTextRate.model,candidates:[{finishReason:'STOP',content:{parts:[{text:body}]}}]} as GenerateContentResponse)});
+  const result=await provider.interpret({text:'two oat drinks',state:empty},new AbortController().signal);
+  assert.equal(result.validationIssues?.[0].code,code);
+ }
 });
 
 const fanSource='I need one Ottenburger fan';

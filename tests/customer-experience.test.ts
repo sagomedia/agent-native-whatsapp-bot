@@ -314,6 +314,33 @@ test('typing indicators claim only one eligible message and never repeat after f
  await channel.receive(inbound({type:'text',text:{body:'hello'}}));await pool.query("UPDATE whatsapp_conversations SET last_inbound_at=now()-interval '25 hours'");await channel.processNext();assert.equal(indicated.length,1);
 }));
 
+test('typing retries a definite transient Meta failure once, and accepts success only once',async()=>fixture(async(pool)=>{
+ const attempts:any[]=[];const channel=new WhatsAppChannel(pool,{...cfg,typingEnabled:true},async(_url,init)=>{
+  attempts.push(JSON.parse(String(init!.body)));
+  return attempts.length===1?new Response('{"error":"unavailable"}',{status:503}):new Response('{"success":true}',{status:200});
+ });
+ await channel.receive(inbound({type:'text',text:{body:'hello'}}));
+ await channel.processNext();await channel.processNext();
+ assert.equal(attempts.length,2);assert.deepEqual(attempts[0],attempts[1]);
+ assert.equal((await pool.query('SELECT count(*)::int AS count FROM messages WHERE typing_indicated_at IS NOT NULL')).rows[0].count,1);
+}));
+
+test('typing does not retry an ambiguous network error or a permanent Meta rejection',async()=>fixture(async(pool)=>{
+ const attempts:any[]=[];const network=new WhatsAppChannel(pool,{...cfg,typingEnabled:true},async(_url,init)=>{attempts.push(JSON.parse(String(init!.body)));throw new Error('network lost');});
+ await network.receive(inbound({type:'text',text:{body:'hello'}}));await network.processNext();await network.processNext();assert.equal(attempts.length,1);
+ const rejected=new WhatsAppChannel(pool,{...cfg,typingEnabled:true},async(_url,init)=>{attempts.push(JSON.parse(String(init!.body)));return new Response('{"error":"invalid token"}',{status:401});});
+ await rejected.receive(inbound({type:'text',text:{body:'hello again'}}));await rejected.processNext();await rejected.processNext();assert.equal(attempts.length,2);
+}));
+
+test('typing skips a transient retry when the owner pauses the store',async()=>fixture(async(pool)=>{
+ let attempts=0;const channel=new WhatsAppChannel(pool,{...cfg,typingEnabled:true},async()=>{
+  attempts++;await pool.query('UPDATE stores SET operator_paused=true WHERE id=$1',[cfg.storeId]);
+  return new Response('{"error":"unavailable"}',{status:503});
+ });
+ await channel.receive(inbound({type:'text',text:{body:'hello'}}));await channel.processNext();
+ assert.equal(attempts,1);
+}));
+
 test('paid multimodal voice bills recognition and planning separately and durable estimated budget settlement',async()=>fixture(async(pool)=>{
  const pcm=Buffer.alloc(384000);for(let i=0;i<192000;i++)pcm.writeInt16LE(Math.round(1000*Math.sin(i/10)),i*2);const wav=pcmWav(pcm);let calls=0;
  const provider=new GoogleInterpreter({apiKey:'offline',model:geminiTextRate.model,allowPaidInference:true,allowMultimodal:true,budgetMicrousd:500000},{generateContent:async params=>{

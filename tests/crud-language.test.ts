@@ -125,7 +125,7 @@ test('replacement semantics also bind an unfamiliar inventory identity without a
 
 test('malformed provider JSON keeps safe failure handling',async()=>{
  const provider=new GoogleInterpreter(settings,{generateContent:async()=>response('{invalid json')});
- const result=await provider.interpret({text:'remove screw box',state:state()},new AbortController().signal);assert.equal(result.output,null);assert.equal(result.evidenceRepair,undefined);assert.equal(result.validationIssues?.[0].code,'invalid_evidence');
+ const result=await provider.interpret({text:'remove screw box',state:state()},new AbortController().signal);assert.equal(result.output,null);assert.equal(result.evidenceRepair,undefined);assert.equal(result.validationIssues?.[0].code,'invalid_json');
 });
 
 test('a failed repair preserves the original transcript and safe clarification',()=>fixture(async(pool,inbox,runtime,s,requests)=>{
