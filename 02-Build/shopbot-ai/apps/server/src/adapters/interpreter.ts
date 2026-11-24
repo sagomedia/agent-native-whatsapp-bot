@@ -10,6 +10,7 @@ export interface Interpreter {
   readonly unifiedUnderstanding?:boolean;
   readonly supportsImageLists?:boolean;
   readonly recognitionProvider?: Interpreter;
+  readonly inventoryDecisionProvider?: Interpreter;
   recognitionProviderFor?(input:InterpretationInput):Interpreter;
   readonly supportsAudio?:boolean;
   readonly supportsImages?:boolean;

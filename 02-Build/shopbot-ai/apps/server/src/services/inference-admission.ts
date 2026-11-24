@@ -13,7 +13,7 @@ export type InputAdmission={requestHash:string;textBytes:number;mediaBytes:numbe
 export function admitRequest(request:GenerateContentParameters):InputAdmission {
   return admitInferenceRequest(request,request.config?.maxOutputTokens);
 }
-export function admitInferenceRequest(request:unknown,maxOutputTokens:number|undefined):InputAdmission {
+export function admitInferenceRequest(request:unknown,maxOutputTokens:number|undefined,decision=false):InputAdmission {
   let mediaBytes=0,imageBytes=0,audioBytes=0;
   const json=JSON.stringify(request,(_key,value)=>{
     if(value&&typeof value==='object'&&('mimeType' in value||'mime_type' in value)&&'data' in value){
@@ -30,7 +30,7 @@ export function admitInferenceRequest(request:unknown,maxOutputTokens:number|und
   });
   const textBytes=Buffer.byteLength(json,'utf8');
   if(textBytes>inputAdmissionLimits.textBytes)throw new ToolError('Native context is too large, including instructions and schema. Narrow the request; your list is retained.','inference_input_too_large');
-  if(imageBytes>inputAdmissionLimits.imageBytes||audioBytes>inputAdmissionLimits.audioBytes||(imageBytes>0&&audioBytes>0)||!Number.isSafeInteger(maxOutputTokens)||!maxOutputTokens||maxOutputTokens<1||maxOutputTokens>inputAdmissionLimits.maxOutputTokens)throw new ToolError('Invalid bounded inference request.','inference_input_invalid');
+  if(imageBytes>inputAdmissionLimits.imageBytes||audioBytes>inputAdmissionLimits.audioBytes||(imageBytes>0&&audioBytes>0)||!Number.isSafeInteger(maxOutputTokens)||maxOutputTokens===undefined||maxOutputTokens<(decision?0:1)||maxOutputTokens>inputAdmissionLimits.maxOutputTokens)throw new ToolError('Invalid bounded inference request.','inference_input_invalid');
   const requestHash=createHash('sha256').update(JSON.stringify(request,(_key,value)=>_key==='abortSignal'||_key==='httpOptions'?undefined:value)).digest('hex');
   return {requestHash,textBytes,mediaBytes,maxOutputTokens,reservationBasis:'model_context_limit'};
 }

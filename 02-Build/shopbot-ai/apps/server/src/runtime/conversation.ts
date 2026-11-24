@@ -1,3 +1,4 @@
+import {compactDecisionLines} from '../adapters/inventory-decision.js';
 import {readStoreHours,hoursAnswer,appendClosedShopNotice} from '../services/store-hours.js';
 import {inventoryItems,validateInventoryReplan,observeInventory,inventoryObservationLimit} from '../services/inventory-grounding.js';
 import {understandingSearch} from '../services/catalog-request.js';
@@ -1074,8 +1075,24 @@ export class ConversationRuntime {
         }
         throw new InventoryCheckIncomplete(transcript);
       }
-      const grounded=await this.callProvider(ctx,claim,{...input,inventoryReplan:true,audio:undefined,image:undefined,text,observations:fresh,proposal:identified,repairSourceKind:voice?'audio':'text',planningFeedback:'Ground the original product requests in these fresh inventory results. Preserve every item, sourceText, count, attribute, intent and cart edit. For broad results above ten matches, choose search.narrowing over useful observed facets instead of limiting to sampled SKUs. For compact results choose only genuinely matching selectedSkus; use [] when the returned names/specifications describe a different object. A bad alias or family is not proof of a match. If useful items were missed, refine search.identityQuery and keywords using faithful product meaning. Unobserved items must remain unchanged. Ask one practical question only for unresolved meaning.'},'repair');
-      const validated=validateInventoryReplan(identified,grounded,fresh);
+      const groundingInput:InterpretationInput={...input,inventoryReplan:true,audio:undefined,image:undefined,text,observations:fresh,proposal:identified,repairSourceKind:voice?'audio':'text',planningFeedback:'Ground the original product requests in these fresh inventory results. Preserve every item, sourceText, count, attribute, intent and cart edit. For broad results above ten matches, choose search.narrowing over useful observed facets instead of limiting to sampled SKUs. For compact results choose only genuinely matching selectedSkus; use [] when the returned names/specifications describe a different object. A bad alias or family is not proof of a match. If useful items were missed, refine search.identityQuery and keywords using faithful product meaning. Unobserved items must remain unchanged. Ask one practical question only for unresolved meaning.'};
+      const undecided=fresh.filter((observation,index)=>!assessed(observation,items[index].search?.selectedSkus));
+      const decisionInput={...groundingInput,observations:undecided};
+      let validated:Interpretation|undefined;
+      const decider=this.provider.inventoryDecisionProvider;
+      if(decider&&claim.event.type!=='image'&&compactDecisionLines(decisionInput)){
+        try{
+          const answer=await this.callProvider(ctx,claim,decisionInput,'repair',decider);
+          if(answer.understanding)validated=validateInventoryReplan(identified,answer,undecided);
+        }catch(error){
+          if(error instanceof ToolError&&['turn_deadline','stale_version','budget_unavailable'].includes(error.code))throw error;
+          // A failed or incomplete score batch leaves the original proposal available for normal review.
+        }
+      }
+      if(!validated){
+        const grounded=await this.callProvider(ctx,claim,groundingInput,'repair');
+        validated=validateInventoryReplan(identified,grounded,fresh);
+      }
       const normalized=claim.state.visualOrdering?normalizeAmountEdits(validated,text,claim.state):validated;
       return {...normalized,operations:claim.state.visualOrdering?validateCurrentTurn(normalized.operations,text,claim.state):normalized.operations,...(voice?{transcript}:{})};
     }catch(error){
@@ -1085,9 +1102,9 @@ export class ConversationRuntime {
     }
   }
 
-  private async callProvider(ctx:ActorContext,claim:Claimed,input:InterpretationInput,stage:'recognize'|'identify'|'repair'|'recommend'):Promise<Interpretation> {
+  private async callProvider(ctx:ActorContext,claim:Claimed,input:InterpretationInput,stage:'recognize'|'identify'|'repair'|'recommend',override?:Interpreter):Promise<Interpretation> {
     input={...input,stage:stage==='repair'?'identify':stage};
-    const provider=stage==='recognize'?(this.provider.recognitionProviderFor?.(input)??this.provider.recognitionProvider??this.provider):this.provider;
+    const provider=override??(stage==='recognize'?(this.provider.recognitionProviderFor?.(input)??this.provider.recognitionProvider??this.provider):this.provider);
     if(provider.mode==='live'&&!(provider.freeQuota?this.options.allowFreeInference:this.options.allowPaidInference))throw new ToolError('This inference stage is not authorized.');
     if(providerCallTimeout(input,claim.deadlineAt-Date.now())<=inferenceTiming.sdkMarginMs)throw new ToolError('The turn deadline was reached. Your list is retained.','turn_deadline');
     const prepared=provider.prepareInput?.(input);
