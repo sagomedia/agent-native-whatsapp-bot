@@ -17,9 +17,6 @@ jobs:
     name: Build and test
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: 02-Build/shopbot-ai
     services:
       postgres:
         image: postgres:17.6-bookworm
@@ -51,7 +48,7 @@ jobs:
         with:
           node-version: '22.22.1'
           cache: npm
-          cache-dependency-path: 02-Build/shopbot-ai/package-lock.json
+          cache-dependency-path: package-lock.json
       - name: Install audio tooling
         run: |
           sudo apt-get update
