@@ -341,7 +341,9 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
  // This makes a brand with few products discoverable in a large catalog.
  const facetKey=add(effective.facetPage?.key??''),facetSearch=add('%'+(effective.facetPage?.search??'').replace(/[\\%_]/g,'\\$&')+'%'),facetOffset=add(effective.facetPage?.offset??0);
  const strategyKeys=add(effective.narrowing?.map(step=>step.key)??[]);
- const allFacets=(await bound(client,`WITH scope AS (SELECT p.family_id,p.brand,p.specifications,p.price_paise,p.price_status,p.unit,p.selling_unit_verified FROM products p WHERE ${usedWhere}), price_values AS (
+ // A zero- or one-row SQL scope cannot offer a narrowing choice. Skip the
+ // second full-scope aggregation, which is costly for exact and absent items.
+ const allFacets=sqlMatchCount>1?(await bound(client,`WITH scope AS (SELECT p.family_id,p.brand,p.specifications,p.price_paise,p.price_status,p.unit,p.selling_unit_verified FROM products p WHERE ${usedWhere}), price_values AS (
  SELECT price_paise,ntile(3) OVER(ORDER BY price_paise) AS band FROM (SELECT DISTINCT price_paise FROM scope WHERE price_status='priced' AND price_paise>0 AND selling_unit_verified=true) prices
  WHERE (SELECT count(DISTINCT unit) FROM scope)=1), price_bands AS (
  SELECT min(price_paise)::int AS low,max(price_paise)::int AS high FROM price_values GROUP BY band), facet_values AS (
@@ -350,7 +352,7 @@ async function discoverExactProducts(client:PoolClient,ctx:ActorContext,query:st
  UNION ALL SELECT 'brand','Brand',brand,count(*)::int FROM scope WHERE brand IS NOT NULL GROUP BY brand
  UNION ALL SELECT 'spec:'||kv.key,kv.key,kv.value,count(*)::int FROM scope s CROSS JOIN LATERAL jsonb_each_text(s.specifications) kv GROUP BY kv.key,kv.value), facet_keys AS (SELECT key,count(*) OVER()::int AS total_keys FROM facet_values GROUP BY key HAVING count(*)>1 OR key=${facetKey} ORDER BY CASE WHEN key=${facetKey} THEN 0 WHEN key=ANY(${strategyKeys}::text[]) THEN 1 ELSE 2 END,sum(count) DESC,count(*) ASC,key LIMIT 12)
  SELECT * FROM (SELECT *,row_number() OVER(PARTITION BY key ORDER BY count DESC,value) AS position,count(*) OVER(PARTITION BY key)::int AS total_values FROM facet_values JOIN facet_keys USING(key) WHERE (${facetKey}='' OR key<>${facetKey} OR value ILIKE ${facetSearch} ESCAPE '\\')) paged
- WHERE position>CASE WHEN key=${facetKey} THEN ${facetOffset}::int ELSE 0 END AND position<=CASE WHEN key=${facetKey} THEN ${facetOffset}::int ELSE 0 END+10 ORDER BY key,position`,parameters)).rows;
+ WHERE position>CASE WHEN key=${facetKey} THEN ${facetOffset}::int ELSE 0 END AND position<=CASE WHEN key=${facetKey} THEN ${facetOffset}::int ELSE 0 END+10 ORDER BY key,position`,parameters)).rows:[];
  const facets:DiscoveryFacet[]=[];
  for(const key of unique(allFacets.map(f=>f.key)).sort((a,b)=>a===effective.facetPage?.key?-1:b===effective.facetPage?.key?1:a==='family'?-1:b==='family'?1:a==='brand'?-1:b==='brand'?1:a.localeCompare(b))){
   const vals=allFacets.filter(f=>f.key===key),offset=effective.facetPage?.key===key?effective.facetPage.offset:0,totalValues=Number(vals[0]?.total_values??0);
