@@ -9,7 +9,7 @@ import {readWhatsAppConfig,validateWhatsAppWorkers,type WhatsAppConfig} from '..
 import {ConversationRuntime} from '../apps/server/src/runtime/conversation.js';
 import type {Interpreter} from '../apps/server/src/adapters/interpreter.js';
 import {geminiTextRate,worstCaseReservation} from '../apps/server/src/services/inference-budget.js';
-import {startWhatsAppJobs} from '../apps/server/src/jobs/whatsapp.js';
+import {startWhatsAppJobs,WhatsAppWorkerHealth} from '../apps/server/src/jobs/whatsapp.js';
 
 const pause=(ms:number)=>new Promise<void>(r=>setTimeout(r,ms));
 function gate(){let release!:()=>void;const promise=new Promise<void>(r=>release=r);return {promise,release};}
@@ -90,6 +90,27 @@ test('independent media, outbound and reconciliation slots remain bounded and sh
  const stop=await startWhatsAppJobs(fake as unknown as WhatsAppChannel,e=>errors.push(e),{pollIntervalMs:10});
  await until(()=>plans===5&&medias===2&&sends>=4&&reconciles>=2);assert.equal(plans,5);assert.equal(medias,2);
  let stopped=false;const stopping=stop().then(()=>{stopped=true;});await pause(30);assert.equal(stopped,false);const oldSends=sends;plan.release();media.release();await stopping;await pause(30);assert.equal(sends,oldSends);assert.deepEqual(errors,[]);
+});
+
+test('worker readiness accepts idle polls and bounded work, detects a stalled planning slot, then recovers',async()=>{
+ const hold=gate(),health=new WhatsAppWorkerHealth(100,50);let plans=0;
+ const fake={config:{workers:{planning:1,media:1,outbound:1}},reconcile:async()=>{},processNext:async()=>{plans++;await hold.promise;},processMediaNext:async()=>false,sendNext:async()=>false};
+ const stop=await startWhatsAppJobs(fake as unknown as WhatsAppChannel,()=>assert.fail('Unexpected worker error'),{pollIntervalMs:10,health});
+ try{
+  await until(()=>plans===1);
+  assert.equal(health.status().healthy,true);
+  assert.ok(health.status(Date.now()+150).stalled.includes('planning'));
+  hold.release();await until(()=>health.status().healthy&&plans>=2);
+  assert.deepEqual(health.status().stalled,[]);
+ }finally{hold.release();await stop();}
+ assert.equal(health.status().healthy,false);
+});
+
+test('repeated worker failures identify their stage and clear after a successful poll',async()=>{
+ const health=new WhatsAppWorkerHealth(100,20),errors:string[]=[];let attempts=0;
+ const fake={config:{workers:{planning:1,media:1,outbound:1}},reconcile:async()=>{},processNext:async()=>{if(++attempts<=3)throw Error('private customer text');return false;},processMediaNext:async()=>false,sendNext:async()=>false};
+ const stop=await startWhatsAppJobs(fake as unknown as WhatsAppChannel,(_error,stage)=>errors.push(stage??''),{pollIntervalMs:10,health});
+ try{await until(()=>attempts===3);assert.deepEqual(errors,['planning','planning','planning']);assert.deepEqual(health.status(Date.now()+30).failing,['planning']);await until(()=>attempts>=4&&health.status().failing.length===0);}finally{await stop();}
 });
 
 

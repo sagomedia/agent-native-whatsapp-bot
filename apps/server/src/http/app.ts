@@ -16,12 +16,13 @@ import { SimulatorService } from '../services/simulator.js';
 import {registerOwner} from './owner.js';
 import type {AccessVerifier} from './access.js';
 import {WhatsAppChannel} from '../services/whatsapp-channel.js';
+import type {WhatsAppWorkerHealth} from '../jobs/whatsapp.js';
 import {registerWhatsApp,whatsappPath} from './whatsapp.js';
 import {renderPrivacy} from './privacy.js';
 import {registerRemoteMcp} from '../mcp/http.js';
 import {mcpPublicPath} from '../mcp/oauth.js';
 
-export async function createApp(config: Config, pool: Pool, nativeTest?:Interpreter,nativeStore=fixtureStore,ownerVerifier?:AccessVerifier,channel?:WhatsAppChannel,catalogGenerator?:CatalogGenerator) {
+export async function createApp(config: Config, pool: Pool, nativeTest?:Interpreter,nativeStore=fixtureStore,ownerVerifier?:AccessVerifier,channel?:WhatsAppChannel,catalogGenerator?:CatalogGenerator,workerHealth?:WhatsAppWorkerHealth) {
   if(config.owner&&((!config.connected&&config.mode!=='mock')||nativeTest))throw new Error('Owner access requires a connected profile or an isolated test harness');
   if(config.owner&&!['127.0.0.1','::1','localhost'].includes(config.host))throw new Error('Owner access must listen on loopback');
   if(config.remoteMcp&&(!config.owner||!['127.0.0.1','::1','localhost'].includes(config.host)))throw new Error('Remote MCP requires protected owner access and a loopback listener.');
@@ -74,6 +75,10 @@ export async function createApp(config: Config, pool: Pool, nativeTest?:Interpre
   app.get('/health/ready', async (_request, reply) => {
     try {
       await pool.query('SELECT 1');
+      if(config.connected&&workerHealth){
+        const workers=workerHealth.status();
+        if(!workers.healthy)return reply.code(503).send({status:'unavailable',reason:'whatsapp_workers',stalled:workers.stalled,failing:workers.failing});
+      }
       if (config.connected) return {
         status: 'ready', mode: 'connected',
         processing: !!config.whatsapp?.processEnabled,

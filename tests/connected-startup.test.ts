@@ -4,6 +4,7 @@ import type {Pool} from 'pg';
 import {readConnectedConfig} from '../apps/server/src/config.js';
 import {createApp} from '../apps/server/src/http/app.js';
 import type {WhatsAppChannel} from '../apps/server/src/services/whatsapp-channel.js';
+import {WhatsAppWorkerHealth} from '../apps/server/src/jobs/whatsapp.js';
 
 const storeId = '12345678-0000-4000-8000-000000000001';
 const profile = {
@@ -79,3 +80,18 @@ for (const mode of ['live', 'mock']) {
     }
   });
 }
+
+test('connected readiness rejects a stalled WhatsApp worker while keeping its response safe',async t=>{
+ const config=readConnectedConfig({...profile,APP_MODE:'live'});
+ const pool={query:async()=>({rowCount:1,rows:[{id:storeId}]})} as unknown as Pool;
+ const channel={config:config.whatsapp,setup:async()=>{}} as WhatsAppChannel;
+ const health=new WhatsAppWorkerHealth(-1,30_000);
+ const slot=health.register('planning');health.start(slot);
+ const app=await createApp(config,pool,undefined,undefined,async()=>({email:profile.OWNER_EMAIL,subject:'fixture'}),channel,undefined,health);
+ t.after(()=>app.close());
+ const response=await app.inject({url:'/health/ready',headers:{host:'127.0.0.1'}});
+ assert.equal(response.statusCode,503);
+ assert.deepEqual(response.json(),{status:'unavailable',reason:'whatsapp_workers',stalled:['planning'],failing:[]});
+ health.finish(slot);
+ assert.equal((await app.inject({url:'/health/ready',headers:{host:'127.0.0.1'}})).statusCode,200);
+});
