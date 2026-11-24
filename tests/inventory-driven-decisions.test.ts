@@ -363,6 +363,20 @@ test('a replacement cannot select a SKU observed for a different requested repla
  assert.throws(()=>understandingToInterpretation({...raw,proposedEdits:[{...edit,search:{...edit.search,selectedSkus:['DAIRY']}}]},{text:source,state:cart,inventoryGrounding:true,proposal:original,observations},false),/this item’s fresh inventory/);
 });
 
+test('an unsupported replacement SKU leaves the existing row for shop checking',()=>{
+ const source='swap the hammer for oat drink';
+ const edit={kind:'replace',targetLineId:id,targetQuery:'hammer',sourceText:source,query:'oat drink',search:{keywords:['oat drink']}};
+ const original=understandingToInterpretation({...base(),proposedEdits:[edit]},{text:source,state:cart,inventoryGrounding:true},false);
+ const observations=[{tool:'discover_products' as const,query:'oat drink',products:[{sku:'OAT',name:'Oat Drink',unit:'can',pricePaise:100,stock:1,version:1,aliases:[],quantityStep:1}],totalCount:1}];
+ const input={text:source,state:cart,inventoryGrounding:true,inventoryReplan:true,proposal:original,observations};
+ const recovered=inventoryGroundingToInterpretation({items:[],replacements:[{index:0,search:{keywords:['oat drink'],selectedSkus:['OTHER']}}]},input,false,true);
+ assert.equal(recovered.operations.length,1);
+ assert.equal(recovered.operations[0].kind,'resolve_line');
+ assert.ok((recovered.operations[0] as any).sourceUncertainty?.includes('catalog_check_pending'));
+ assert.deepEqual((recovered.operations[0] as any).search.selectedSkus,[]);
+ assert.equal(validateInventoryReplan(original,recovered,observations).operations.length,1);
+});
+
 
 test('an empty unobserved SKU array is absence, while an observed rejection stays explicit',()=>{
  const source='two oat drinks',raw={...base(),intents:['add'],requestedItems:[{ordinal:0,sourceText:source,query:'oat drink',purchaseCount:2,unresolved:[],search:{keywords:['oat drink'],selectedSkus:[]}}]};
@@ -391,6 +405,35 @@ test('grounding search patches preserve all source fields and cannot invent a pa
  assert.throws(()=>inventoryGroundingToInterpretation({...patch,items:[{...patch.items[0],purchaseCount:10}]},input,false));
  assert.throws(()=>inventoryGroundingToInterpretation({...patch,items:[{...patch.items[0],search:{keywords:['drink'],selectedSkus:['FOREIGN']}}]},input,false),/fresh inventory/);
  assert.throws(()=>inventoryGroundingToInterpretation({...patch,items:[]},input,false),/observed items/);
+});
+
+test('a repair SKU outside one observed item holds that item and preserves another valid request',()=>{
+ const source='put a couple of oat drinks and one four litre white paint tin on my list';
+ const requests=[
+  {ordinal:0,sourceText:'a couple of oat drinks',query:'oat drink',purchaseCount:2,countEvidence:{sourceText:'a couple',value:2,mode:'total'},unresolved:[],search:{keywords:['oat drink']}},
+  {ordinal:1,sourceText:'one four litre white paint tin',query:'white paint',purchaseCount:1,countEvidence:{sourceText:'one',value:1,mode:'total'},packSize:{value:4,unit:'litre'},unresolved:[],search:{keywords:['white paint']}},
+ ];
+ const original=understandingToInterpretation({...base(),intents:['add'],requestedItems:requests},{text:source,state:empty},false);
+ const observations=[
+  {tool:'discover_products' as const,query:'oat drink',products:[{sku:'OAT',name:'Oat Drink',unit:'can',pricePaise:100,stock:4,version:1,aliases:[],quantityStep:1}],totalCount:1},
+  {tool:'discover_products' as const,query:'white paint',products:[{sku:'PAINT-4L',name:'White Paint 4 L',unit:'tin',pricePaise:50000,stock:4,version:1,aliases:[],quantityStep:1}],totalCount:1},
+ ];
+ const input={text:source,state:empty,proposal:original,observations,inventoryReplan:true};
+ const patch={items:[
+  {ordinal:0,query:'oat drink',search:{keywords:['oat drink'],selectedSkus:['FOREIGN']}},
+  {ordinal:1,query:'white paint',search:{keywords:['white paint'],selectedSkus:['PAINT-4L']}},
+ ],replacements:[]};
+ assert.throws(()=>inventoryGroundingToInterpretation(patch,input,false),/fresh inventory/);
+ const recovered=inventoryGroundingToInterpretation(patch,input,false,true);
+ assert.equal(recovered.operations.length,2);
+ assert.equal((recovered.operations[0] as any).quantity,2);
+ assert.deepEqual((recovered.operations[0] as any).search.selectedSkus,[]);
+ assert.ok((recovered.operations[0] as any).sourceUncertainty?.includes('catalog_check_pending'));
+ assert.equal((recovered.operations[1] as any).quantity,1);
+ assert.deepEqual((recovered.operations[1] as any).packSize,{value:4,unit:'litre'});
+ assert.deepEqual((recovered.operations[1] as any).search.selectedSkus,['PAINT-4L']);
+ assert.ok(!(recovered.operations[1] as any).sourceUncertainty?.includes('catalog_check_pending'));
+ assert.equal(validateInventoryReplan(original,recovered,observations).operations.length,2);
 });
 
 const fanSource='I need one Ottenburger fan';

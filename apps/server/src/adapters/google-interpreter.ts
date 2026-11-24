@@ -218,7 +218,7 @@ export class GoogleInterpreter implements Interpreter {
     const observation=input.inventoryReplan?undefined:observeUnderstanding(text);
     let output:unknown=null,validationIssues:ProviderResult['validationIssues'];
     let evidenceRepair:ProviderResult['evidenceRepair'];
-    try{output=input.inventoryReplan?inventoryGroundingToInterpretation(JSON.parse(text),input,this.supportsImageLists):understandingToInterpretation(JSON.parse(text),input,this.supportsImageLists);}catch(error){
+    try{output=input.inventoryReplan?inventoryGroundingToInterpretation(JSON.parse(text),input,this.supportsImageLists,true):understandingToInterpretation(JSON.parse(text),input,this.supportsImageLists);}catch(error){
       validationIssues=error instanceof z.ZodError?error.issues.slice(0,6).map(issue=>({path:['understanding',...issue.path].join('.'),code:issue.code})): [{path:'understanding',code:'invalid_evidence',reason:error instanceof Error?error.message.slice(0,180):'Evidence validation failed'}];
       // A schema-valid plan can fail its verbatim evidence check. Let the
       // metered runtime repair it once from the same transcript, never here

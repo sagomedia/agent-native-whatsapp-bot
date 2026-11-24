@@ -1134,7 +1134,7 @@ export class ConversationRuntime {
       if(output.validationIssues?.length)await this.pool.query('UPDATE provider_attempts SET validation_issues=$1::jsonb WHERE id=$2 AND conversation_id=$3',[JSON.stringify(output.validationIssues.slice(0,6).map(i=>({path:i.path.slice(0,100),code:i.code.slice(0,40),...(i.reason?{reason:i.reason.slice(0,180)}:{})}))),reservation.id,ctx.conversationId]);
       failureCode='truncated_or_model_mismatch';
       if(output.truncated) throw new ToolError('Interpretation was truncated. No partial list was applied.');
-      failureCode=output.output===null?'invalid_json':'invalid_operations';
+      failureCode=output.output===null?(output.validationIssues?.some(issue=>issue.code!=='invalid_json')?'invalid_evidence':'invalid_json'):'invalid_operations';
       let parsed=interpretationSchema.safeParse(output.output);
       if(!parsed.success||stage==='recognize'&&(parsed.data.operations.length>0||parsed.data.next!=='continue')||input.image&&!(provider.supportsImageLists&&parsed.data.understanding?.inputKind==='handwritten_list'&&parsed.data.operations.every(op=>op.kind==='add_item'))&&(parsed.data.operations.length>0||!['assist','continue'].includes(parsed.data.next))) throw new ToolError('Could not validate all requested actions. Please rephrase; no changes were applied.');
       failureCode='ledger_write';
