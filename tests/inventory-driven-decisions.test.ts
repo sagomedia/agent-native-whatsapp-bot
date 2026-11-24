@@ -18,7 +18,7 @@ import {GoogleInterpreter} from '../apps/server/src/adapters/google-interpreter.
 import {admitRequest} from '../apps/server/src/services/inference-admission.js';
 import {geminiSpeechRate,geminiTextRate,initializeBudget} from '../apps/server/src/services/inference-budget.js';
 import type {GenerateContentParameters,GenerateContentResponse} from '@google/genai';
-import type {ConversationState,Interpretation,SimulatorEvent} from '../packages/contracts/index.js';
+import {interpretationSchema,type ConversationState,type Interpretation,type SimulatorEvent} from '../packages/contracts/index.js';
 import type {Interpreter,InterpretationInput} from '../apps/server/src/adapters/interpreter.js';
 
 const base=()=>({schemaVersion:2,inputKind:'text',intents:['edit'],requestedItems:[],proposedEdits:[],shopQuestions:[],unresolved:[]});
@@ -463,6 +463,14 @@ test('a repair SKU outside one observed item holds that item and preserves anoth
  assert.deepEqual((recovered.operations[1] as any).search.selectedSkus,['PAINT-4L']);
  assert.ok(!(recovered.operations[1] as any).sourceUncertainty?.includes('catalog_check_pending'));
  assert.equal(validateInventoryReplan(original,recovered,observations).operations.length,2);
+
+ const unresolved=['identity','brand','variant','quantity','unit','budget','unreadable'];
+ const full=understandingToInterpretation({...base(),intents:['add'],requestedItems:[{...requests[0],unresolved},requests[1]]},{text:source,state:empty},false);
+ const bounded=inventoryGroundingToInterpretation(patch,{...input,proposal:full},false,true);
+ assert.ok(interpretationSchema.safeParse(bounded).success,'the hold marker fits the operation contract');
+ assert.equal((bounded.operations[0] as any).sourceUncertainty.length,7);
+ assert.ok((bounded.operations[0] as any).sourceUncertainty.includes('catalog_check_pending'));
+ assert.equal(validateInventoryReplan(full,bounded,observations).operations.length,2);
 });
 
 test('a held repair keeps the original source phrase when the first plan had no query',()=>{
