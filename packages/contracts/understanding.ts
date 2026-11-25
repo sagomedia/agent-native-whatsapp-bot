@@ -28,6 +28,13 @@ export const understandingItemSchema=z.object({
  search:itemSearchSchema.optional(),countEvidence:countEvidence.optional(),additionalEvidence:phrase.optional(),
  attributeEvidence:z.array(z.object({field:z.enum(['brand','colour','material']),value:text,sourceText:phrase}).strict()).max(3).optional(),
 }).strict();
+export const listRecoverySchema=z.object({
+  fromVoice:z.boolean(),
+  evidence:z.string().min(1).max(24000),
+  rows:z.array(understandingItemSchema.nullable()).min(2).max(50),
+}).strict();
+export type ListRecovery=z.infer<typeof listRecoverySchema>;
+
 const edit=z.object({kind:z.enum(['set_quantity','increment_quantity','decrement_quantity','remove_item','replace','set_amount','increment_amount']),targetLineId:z.uuid(),sourceText:phrase,targetQuery:text.optional(),quantity:quantity.optional(),query:text.optional(),amount:measure.optional(),mode:z.enum(['total','continuous']).optional(),search:itemSearchSchema.optional(),countEvidence:countEvidence.optional(),additionalEvidence:phrase.optional()}).strict();
 const keepTarget=z.object({sourceText:phrase,query:text,targetLineId:z.uuid().optional(),duplicateSourceText:phrase.optional()}).strict();
 export const keepOnlySchema=z.object({sourceText:phrase,complete:z.boolean(),targets:z.array(keepTarget).min(1).max(50)}).strict();
