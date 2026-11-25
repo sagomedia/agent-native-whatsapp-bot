@@ -878,3 +878,40 @@ test('empty optional search keywords on a later voice item preserve the complete
  assert.deepEqual(plan.understanding?.requestedItems[6].search?.keywords,['black beans']);
  assert.throws(()=>understandingToInterpretation({...original,requestedItems:items.map(item=>item.ordinal===6?{...item,sourceText:'two red beans'}:item)},input,false),/evidence is not in current input/i);
 });
+
+test('independent list corrections retain nine items and bind each new answer once',()=>fixture(async(pool,inbox)=>{
+ const names=['almond flour','oat milk','nutmeg','black pepper','cocoa nibs','buckwheat','coconut oil','ginger tea','lentils','dried dates','fig jam'];
+ const transcript='Please put aside '+names.join(', ')+'.';
+ const row=(query:string,ordinal:number)=>({ordinal,sourceText:query,query,purchaseCount:null,unresolved:[]});
+ const initial=names.map((name,i)=>({...row(name,i+1),sourceText:[0,2].includes(i)?'organic '+name:name}));
+ let answer=initial,recordings=0;
+ const provider=new GoogleInterpreter({allowPaidInference:true,allowMultimodal:true,apiKey:'offline',model:geminiTextRate.model,budgetMicrousd:5000000,transcriptionModel:geminiSpeechRate.model,unifiedUnderstanding:true},{
+  generateContent:async request=>{
+   const context=JSON.parse((request.contents as {parts:{text:string}[]}[])[0].parts[0].text);
+   const output=context.groundingTargets?{items:context.groundingTargets.items.map((item:{ordinal:number;query:string})=>({...item,search:{keywords:[item.query],selectedSkus:[]}})),replacements:[]}:{...base(),intents:['add'],requestedItems:answer};
+   return {modelVersion:geminiTextRate.model,candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(output)}]}}],usageMetadata:{promptTokenCount:1200,candidatesTokenCount:400,totalTokenCount:1600}} as GenerateContentResponse;},
+ },{
+  create:async()=>{recordings++;return {id:'synthetic-recovery',status:'completed',model:geminiSpeechRate.model,steps:[{type:'model_output',content:[{type:'text',text:transcript}]}],usage:{total_input_tokens:100,total_output_tokens:40,total_tokens:140}};},
+ });
+ await initializeBudget(pool,inbox.context,5000000);
+ const runtime=new ConversationRuntime(pool,provider,{allowPaidInference:true,visualOrdering:true,inventoryGrounding:true});
+ const mediaId=randomUUID(),samples=Buffer.alloc(32000);
+ for(let i=0;i<16000;i++)samples.writeInt16LE(Math.round(Math.sin(i*.17)*1200),2*i);
+ await inbox.ingest({id:mediaId,type:'voice',mediaId},await normalizeVoice({id:mediaId,mimeType:'audio/wav',data:pcmWav(samples).toString('base64')}));
+ await runtime.processNext(inbox.context);
+ const first=await inbox.snapshot();
+ assert.match(first.messages.at(-1)!.text,/9 of 11.*item 1\b/i);
+ assert.equal(first.conversation.draft.length,0);
+ answer=[row('almond flour',1)];
+ const correction={type:'text' as const,id:randomUUID(),text:'almond flour'};
+ const second=await turn(inbox,runtime,correction);
+ assert.match(second.messages.at(-1)!.text,/10 of 11.*item 3\b/i);
+ await inbox.ingest(correction);
+ assert.equal(await runtime.processNext(inbox.context),false);
+ assert.equal(second.conversation.draft.length,0);
+ answer=[row('nutmeg',1)];
+ const final=await turn(inbox,runtime,{type:'text',id:randomUUID(),text:'nutmeg'});
+ assert.deepEqual(final.conversation.draft.map(line=>line.query),names);
+ assert.equal(final.requests.length,0);
+ assert.equal(recordings,1);
+}));

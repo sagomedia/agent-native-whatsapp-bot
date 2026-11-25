@@ -1,7 +1,7 @@
 import {recipientAllowed,admitCustomerMessage,admitCustomerMedia,observeCustomerIntent,queueHandoffNotice} from './customer-admission.js';
 import {recoverReviewQueue} from './review-queue-recovery.js';
 import {refreshOrderListChoice} from './order-list-choice.js';
-import {normalizeVoice} from './voice-media.js';
+import {normalizeVoiceBytes,voiceMimeSchema} from './voice-media.js';
 import {reviewDeliveryReady} from './review-delivery.js';
 import {whatsappSendError} from './whatsapp-send-error.js';
 import {catalogPhoto} from './catalog-photos.js';
@@ -204,16 +204,22 @@ export class WhatsAppChannel {
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
     if(!row)return false;
     let media:Awaited<ReturnType<typeof downloadWhatsAppMedia>>|undefined,mediaError:string|null=null;
+    const startedAt=performance.now();
+    let downloadMs=0,saveOriginalMs=0,decodeStartedAt=startedAt;
     let receivedHash=row.original_audio?createHash('sha256').update(row.original_mime_type).update(row.original_audio).digest('hex'):undefined;
     try{
       if(row.kind==='voice'&&row.original_audio&&row.original_mime_type){
-        media=await normalizeVoice({id:row.message_id,mimeType:row.original_mime_type,data:row.original_audio.toString('base64')});
+        media=await normalizeVoiceBytes(row.original_audio,voiceMimeSchema.parse(row.original_mime_type));
       }else media=await downloadWhatsAppMedia(this.config,this.request,row.media_id,row.kind,row.message_id,async source=>{
+        downloadMs=Math.round(performance.now()-startedAt);
         receivedHash=createHash('sha256').update(source.mimeType).update(source.audio).digest('hex');
         const saved=await this.pool.query("UPDATE whatsapp_media SET original_audio=$1,original_mime_type=$2,downloaded_at=now() WHERE message_id=$3 AND state='fetching' AND lease_until=$4::timestamptz AND lease_until>now()",[source.audio,source.mimeType,row.message_id,row.claimLease]);
+        decodeStartedAt=performance.now();
+        saveOriginalMs=Math.round(decodeStartedAt-startedAt-downloadMs);
         if(!saved.rowCount)throw new Error('Media work lease expired before saving the downloaded recording');
       });
     }catch(error){mediaError=mediaFailureCode(error);}
+    const mediaFinishedAt=performance.now();
     const ctx:ActorContext={storeId:this.config.storeId,conversationId:row.conversation_id,actor:row.actor,role:'customer'};
     const held=await this.pool.connect();
     try{
@@ -244,6 +250,9 @@ export class WhatsAppChannel {
       }
       await held.query('COMMIT');
     }catch(error){await held.query('ROLLBACK');throw error;}finally{held.release();}
+    if(row.kind==='voice')console.info(JSON.stringify({event:'whatsapp_voice_preparation',messageId:row.message_id,
+      downloadMs,saveOriginalMs,decodeMs:Math.round(mediaFinishedAt-decodeStartedAt),
+      persistMs:Math.round(performance.now()-mediaFinishedAt),outcome:mediaError??'ready'}));
     return true;
   }
   async reconcile(){

@@ -1,3 +1,5 @@
+import type {ListRecovery} from '../../../../packages/contracts/understanding.js';
+import {recoverListLines,correctListLine,listLineQuestion} from '../services/list-line-recovery.js';
 import {compactDecisionLines} from '../adapters/inventory-decision.js';
 import {readStoreHours,hoursAnswer,appendClosedShopNotice} from '../services/store-hours.js';
 import {inventoryItems,validateInventoryReplan,observeInventory,inventoryObservationLimit} from '../services/inventory-grounding.js';
@@ -56,7 +58,7 @@ function quantityAnswer(state:ConversationState,lineId:string,amount:{quantity:n
  if(line?.sku&&(!amount.unit||!line.unit||sameUnit(amount.unit,line.unit)))return line.resolution==='needs_unit'&&!line.requestedAmount?{kind:'resolve_line',lineId,quantity:amount.quantity,requestedUnit:amount.unit}:{kind:'set_quantity',reference:lineId,quantity:amount.quantity,supportingPhrase:text.slice(0,200)};
  return {kind:'resolve_line',lineId,quantity:amount.quantity,...(amount.unit?{requestedUnit:amount.unit}:{})};
 }
-type Claimed = { voiceRetry?:boolean;lastReplyWasListView?:boolean;evidenceRepair?:import('../adapters/interpreter.js').EvidenceRepair;cartEditResumed?:boolean; deadlineAt:number; id:string; token:string; event:SimulatorEvent; bindingId:string|null; state:ConversationState; catalog:Product[];catalogMap?:import('../../../../packages/contracts/index.js').CatalogMap;memory:AssistantMemory|null;displayedActions:SimulatorEvent[];displayedProducts:{event:SimulatorEvent;product:Product;delivered?:boolean}[] };
+type Claimed = { pendingList?:ListRecovery; recoveredEvidence?:string; voiceRetry?:boolean;lastReplyWasListView?:boolean;evidenceRepair?:import('../adapters/interpreter.js').EvidenceRepair;cartEditResumed?:boolean; deadlineAt:number; id:string; token:string; event:SimulatorEvent; bindingId:string|null; state:ConversationState; catalog:Product[];catalogMap?:import('../../../../packages/contracts/index.js').CatalogMap;memory:AssistantMemory|null;displayedActions:SimulatorEvent[];displayedProducts:{event:SimulatorEvent;product:Product;delivered?:boolean}[] };
 class DeferredRecommendation extends Error {}
 class InventoryCheckIncomplete extends ToolError {
   constructor(readonly transcript?:string) {
@@ -64,6 +66,7 @@ class InventoryCheckIncomplete extends ToolError {
   }
 }
 function correctionDescription(claim:Claimed,interpretation:Interpretation|undefined,description:string){
+ if(claim.recoveredEvidence)return claim.recoveredEvidence;
  if(claim.cartEditResumed&&claim.memory?.purpose==='cart_edit'&&claim.memory.sourceVersion===claim.state.version)return claim.memory.cartEdit?.description??description;
  const saved=claim.memory?.purpose==='cart_correction'&&claim.memory.sourceVersion===claim.state.version?claim.memory.correction:undefined;
  return saved&&interpretation?.understanding?.keepOnly&&digest(interpretation.understanding.keepOnly)===digest(saved.understanding.keepOnly)?saved.description:description;
@@ -167,7 +170,8 @@ export class ConversationRuntime {
       const shown=(await client.query("SELECT payload,coalesce((SELECT o.state FROM whatsapp_outbox o WHERE o.message_id=messages.id),'delivered') AS delivery FROM messages WHERE conversation_id=$1 AND direction='outbound' ORDER BY sequence DESC LIMIT 20",[ctx.conversationId])).rows;
       const displayedProducts=shown.flatMap(r=>[...(r.payload?.parts??[]).flatMap((p:any)=>p.cards.flatMap((c:any)=>c.kind==='product'?(c.buttons??[]).map((b:any)=>({event:b.event,product:c.product,delivered:['delivered','read'].includes(r.delivery)})):[])),...(r.payload?.cards??[]).flatMap((c:any)=>c.action&&c.product?[{event:c.action,product:c.product}]:[])]);
       const displayedActions=shown.flatMap(r=>[...(r.payload?.parts??[]).flatMap((p:any)=>[...(p.buttons??[]).map((b:any)=>b.event),...(p.cards??[]).flatMap((c:any)=>(c.buttons??[]).map((b:any)=>b.event))]),...(r.payload?.cards??[]).flatMap((c:any)=>c.action?[c.action]:[]),...(r.payload?.buttons??[]).map((b:any)=>b.event)]);
-      return {deadlineAt:new Date(claimedDeadline.rows[0].inference_deadline_at).getTime(),id:m.id,token,event:m.payload,bindingId:m.binding_id,lastReplyWasListView:shown[0]?.payload?.readOnly===true&&shown[0]?.payload?.stage==='products',state:await loadState(client,ctx),catalog:await catalogEnabled(client,ctx)?await catalogContext(client,ctx):await getProducts(client,ctx),catalogMap:await catalogEnabled(client,ctx)?await getCatalogMap(client,ctx):undefined,memory:await loadAssistantMemory(client,ctx),displayedActions,displayedProducts} as Claimed;
+      const enabled=await catalogEnabled(client,ctx);
+      return {deadlineAt:new Date(claimedDeadline.rows[0].inference_deadline_at).getTime(),id:m.id,token,event:m.payload,bindingId:m.binding_id,lastReplyWasListView:shown[0]?.payload?.readOnly===true&&shown[0]?.payload?.stage==='products',state:await loadState(client,ctx),catalog:enabled?await catalogContext(client,ctx):await getProducts(client,ctx),catalogMap:enabled?await getCatalogMap(client,ctx):undefined,memory:await loadAssistantMemory(client,ctx),displayedActions,displayedProducts} as Claimed;
     });
     if(!claimed) return false;
     let requestedLanguage=claimed.event.type==='change_language'?claimed.event.language:claimed.event.type==='text'?languageRequest(claimed.event.text):undefined;
@@ -334,7 +338,15 @@ export class ConversationRuntime {
       await client.query('SAVEPOINT turn_actions');
       try {
 
-        if(!failure&&viewRequested){
+        if(!failure&&(claimed.pendingList||claimed.recoveredEvidence)){
+          if(current.version!==claimed.state.version||current.lastRequestId||
+             (await loadAssistantMemory(client,ctx))?.id!==claimed.memory?.id)throw new ToolError('Use the latest item question.','stale_question');
+        }
+        if(!failure&&claimed.pendingList){
+          await saveAssistantMemory(client,ctx,{purpose:'list_recovery',listRecovery:claimed.pendingList,sourceVersion:current.version,queries:['list correction'],lineId:null,observations:[]});
+          rich={...plainReply(listLineQuestion(claimed.pendingList,current)),stage:'identify',clarificationReason:'correct_list_item',readOnly:true};
+          message=rich.text;
+        }else if(!failure&&viewRequested){
           const result=await this.tools.invokeInTransaction(client,ctx,{name:'get_draft',args:{}},claimed.id);
           rich=visualListView(result.state??current);message=rich.text;
         } else if(!failure&&current.lastRequestId&&(claimed.event.type==='confirm_amendment'||claimed.event.type==='discard_amendment')){
@@ -658,7 +670,7 @@ export class ConversationRuntime {
         await client.query('UPDATE conversations SET version=$1,pending=$2::jsonb,editing_line_id=$3,product_review=NULL,assistant_memory=NULL WHERE id=$4',[finalState.version,JSON.stringify(finalState.pending),quantityLine.id,ctx.conversationId]);
         rich={...plainReply(totalQuantityQuestion(finalState,quantityLine)),stage:'quantity',clarificationReason:'purchase_total'};
       }
-      rich=unclearKeep||unclearTarget||clearConfirmation||quantityLine?{...rich,replyLanguage:finalState.replyLanguage??'en'}:shoppingActions({...rich,replyLanguage:finalState.replyLanguage??'en'},finalState,claimed.catalogMap);
+      rich=rich.clarificationReason==='correct_list_item'||unclearKeep||unclearTarget||clearConfirmation||quantityLine?{...rich,replyLanguage:finalState.replyLanguage??'en'}:shoppingActions({...rich,replyLanguage:finalState.replyLanguage??'en'},finalState,claimed.catalogMap);
       if(claimed.catalogMap)rich={...rich,storeName:claimed.catalogMap.store.name};
       if(replyRequest?.advanceRequired&&this.options.advance&&!rich.readOnly)rich=await upiAdvanceReply(client,ctx,finalState,this.options.advance.hostname,{demoPayAtShop:this.options.advance.demoPayAtShop,onlyOnce:true})??rich;
       const alreadySeen=finalState.draft.length>0&&finalState.draft.every(line=>{const product=line.candidates?.find(p=>p.sku===line.sku);return product&&claimed.displayedProducts.some(p=>p.delivered&&p.event.type==='edit_item'&&p.event.lineId===line.id&&productIdentity(p.product)===productIdentity(product));});
@@ -935,20 +947,39 @@ export class ConversationRuntime {
     if(voice){transcript=this.provider.unifiedUnderstanding&&!separateRecognition?identified.transcript:transcript;if(!transcript)throw new ToolError('No clear speech was recognized. Record again or type your request.','voice_unreadable');identified={...identified,transcript};text=transcript;}
     if(image&&identified.understanding?.inputKind==='handwritten_list')text=identified.understanding.observedText??text;
     const evidenceRepair=!image&&identified.understanding?.unresolved.includes('validation_recovery')?claim.evidenceRepair:undefined;
+    const pending=claim.memory?.purpose==='list_recovery'&&claim.memory.sourceVersion===claim.state.version?claim.memory.listRecovery:undefined;
+    if(pending){
+      if(claim.bindingId!==claim.memory!.id)throw new ToolError('Use the latest item question.','stale_question');
+      const answer=correctListLine(pending,identified,{...input,text});
+      if(answer?.completed){
+        identified={...answer.completed,...(voice?{transcript}:{})};
+        claim.recoveredEvidence=text=answer.updated.evidence;
+      }else if(identified.understanding?.intents.includes('add')||identified.understanding?.unresolved.includes('validation_recovery')){
+        claim.pendingList=answer?.updated??pending;
+        return {operations:[],next:'continue',...(voice?{transcript}:{})};
+      }
+    }
     if(evidenceRepair){
       const repair=evidenceRepair;delete claim.evidenceRepair;
+      const savedLines=!pending&&!claim.state.lastRequestId&&repair.feedback.includes('Item evidence is not in current input')
+        ?recoverListLines(repair.understanding,{...input,text}):undefined;
+      const feedback=savedLines?repair.feedback+' Copy the exact transcript wording for list positions '+savedLines.rows.flatMap((row,i)=>row?[]:[i+1]).join(', ')+'. Keep all other supported items in order.':repair.feedback;
       const repairItems=[...repair.understanding.requestedItems.filter(item=>item.query).map(item=>({query:item.query!,search:understandingSearch(item)})),...repair.understanding.proposedEdits.filter(edit=>edit.kind==='replace'&&edit.query).map(edit=>({query:edit.query!,search:understandingSearch(edit)}))].map(item=>({...item,search:item.search?{...item.search,selectedSkus:undefined}:undefined}));
       const repairFacts=this.options.inventoryGrounding&&repairItems.length?await withConversation(this.pool,ctx,client=>observeInventory(client,ctx,this.tools,repairItems,`${claim.id}:evidence-inventory`)):input.observations;
       // Preserve the faithful current transcript and reserve a separate repair
       // attempt. Ground repaired identities in that same second call, so a
       // repaired cart action does not consume the product-review allowance.
       try{
-        identified={...await this.callProvider(ctx,claim,{...input,audio:undefined,text,observations:repairFacts,repairSourceKind:voice?'audio':'text',planningFeedback:repair.feedback+(this.options.inventoryGrounding?' Also assess the supplied catalogObservations in this same repair. Keep each observed query as the item/replacement query, choose search.narrowing over useful observed facet keys for broad results, or genuinely matching observed search.selectedSkus (or []) for compact results, omit familyIds when selecting SKUs, and preserve current counts. Do not ask for a count already saved on the target.':''),proposal:{...identified,understanding:repair.understanding}},'repair'),...(voice?{transcript}:{})};
+        identified={...await this.callProvider(ctx,claim,{...input,audio:undefined,text,observations:repairFacts,repairSourceKind:voice?'audio':'text',planningFeedback:feedback+(this.options.inventoryGrounding?' Also assess the supplied catalogObservations in this same repair. Keep each observed query as the item/replacement query, choose search.narrowing over useful observed facet keys for broad results, or genuinely matching observed search.selectedSkus (or []) for compact results, omit familyIds when selecting SKUs, and preserve current counts. Do not ask for a count already saved on the target.':''),proposal:{...identified,understanding:repair.understanding}},'repair'),...(voice?{transcript}:{})};
         // Only a validated, scoped semantic repair has already assessed these
         // facts. An initial model selection still needs ordinary grounding.
         for(const item of inventoryItems(identified))if(item.search?.selectedSkus!==undefined&&repairFacts?.some(observation=>observation.query===item.query))evidenceInventorySelections.add(item.query!);
       }
       catch{/* A denied or failed repair retains the original grounded no-op. */}
+      if(savedLines&&identified.understanding?.unresolved.includes('validation_recovery')){
+        claim.pendingList=savedLines;
+        return {operations:[],next:'continue',...(voice?{transcript}:{})};
+      }
       if(text.length<=500&&identified.understanding?.unresolved.includes('validation_recovery')&&repair.understanding.proposedEdits.length&&repair.understanding.proposedEdits.every(edit=>edit.kind==='remove_item')&&!repair.understanding.requestedItems.length&&!repair.understanding.keepOnly&&!repair.understanding.keepOnlyAnswer&&!repair.understanding.cartTargetAnswer&&!repair.understanding.cartGroupAnswer){
         // Rejected evidence cannot execute. Offer current named rows as a new,
         // version-bound customer decision instead of echoing the transcript.
@@ -1014,7 +1045,7 @@ export class ConversationRuntime {
       }
     }
     if(this.options.inventoryGrounding&&this.provider.unifiedUnderstanding&&identified.understanding&&inventoryItems(identified).length){
-      return this.groundInventory(ctx,claim,identified,input,text,evidenceInventorySelections,!!evidenceRepair||repairedVisualPlan);
+      return this.groundInventory(ctx,claim,identified,claim.recoveredEvidence?{...input,text,audio:undefined,voiceTranscript:true}:input,text,evidenceInventorySelections,!!evidenceRepair||repairedVisualPlan);
     }
     const mediaRecommendations=!!this.options.mediaRecommendations&&(voice||image);
     // Single spoken requests start with grounded choices, not an assumed cart selection.
@@ -1097,7 +1128,7 @@ export class ConversationRuntime {
       return {...normalized,operations:claim.state.visualOrdering?validateCurrentTurn(normalized.operations,text,claim.state):normalized.operations,...(voice?{transcript}:{})};
     }catch(error){
       if(error instanceof DeferredRecommendation||error instanceof ToolError&&error.code==='turn_deadline')throw error;
-      if(claim.event.type==='voice'&&transcript)await saveVoiceCatalogPlan(this.pool,ctx,claim.event.mediaId,claim.state.version,claim.id,claim.token,identified);
+      if(claim.event.type==='voice'&&transcript&&!claim.recoveredEvidence)await saveVoiceCatalogPlan(this.pool,ctx,claim.event.mediaId,claim.state.version,claim.id,claim.token,identified);
       throw new InventoryCheckIncomplete(transcript);
     }
   }

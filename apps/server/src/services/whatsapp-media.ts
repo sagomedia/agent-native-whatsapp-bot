@@ -1,6 +1,6 @@
 import {voiceLimits} from '../../../../packages/contracts/voice-policy.js';
 import {normalizeImage,imageUploadSchema} from './image-media.js';
-import {normalizeVoice,voiceUploadSchema} from './voice-media.js';
+import {normalizeVoiceBytes,voiceMimeSchema} from './voice-media.js';
 import type {WhatsAppConfig} from './whatsapp-config.js';
 
 class MediaDownloadError extends Error {
@@ -47,7 +47,12 @@ export async function downloadWhatsAppMedia(config:WhatsAppConfig,request:typeof
   if(url.protocol!=='https:'||url.username||url.password||url.port||!(url.hostname==='lookaside.fbsbx.com'||url.hostname==='lookaside.facebook.com'||url.hostname.endsWith('.fbcdn.net')))throw new MediaDownloadError('media_untrusted_host','Untrusted media host');
   const maximum=kind==='image'?2097152:voiceLimits.uploadBytes;
   if(!Number.isSafeInteger(metadata.file_size)||metadata.file_size!<=0||metadata.file_size!>maximum)throw new MediaDownloadError('media_too_large','Media is too large');
-  const data=(await downloadBytes(config,request,url.href,maximum)).toString('base64'),mimeType=metadata.mime_type?.split(';')[0].trim();
-  if(kind==='voice'){voiceUploadSchema.parse({id:messageId,data,mimeType});await onVoiceDownloaded?.({audio:Buffer.from(data,'base64'),mimeType:mimeType!});}
-  return kind==='image'?normalizeImage(imageUploadSchema.parse({id:messageId,data,mimeType,caption:''})):normalizeVoice(voiceUploadSchema.parse({id:messageId,data,mimeType}));
+  const bytes=await downloadBytes(config,request,url.href,maximum),mimeType=metadata.mime_type?.split(';')[0].trim();
+  if(kind==='voice'){
+    const type=voiceMimeSchema.parse(mimeType);
+    if(!bytes.length)throw new MediaDownloadError('media_decode_failed','The recording was empty');
+    await onVoiceDownloaded?.({audio:bytes,mimeType:type});
+    return normalizeVoiceBytes(bytes,type);
+  }
+  return normalizeImage(imageUploadSchema.parse({id:messageId,data:bytes.toString('base64'),mimeType,caption:''}));
 }
