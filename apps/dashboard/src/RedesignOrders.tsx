@@ -1,5 +1,5 @@
 import {customerContact} from './customer-contact.js';
-import {cachedOwnerRead} from './owner-read-cache.js';
+import {cachedOwnerRead,ownerReadGeneration} from './owner-read-cache.js';
 import {useEffect,useId,useRef,useState} from 'react';
 import type {DraftLine} from '../../../packages/contracts/index.js';
 import {formatMoney,lineTotal} from '../../../packages/contracts/money.js';
@@ -96,8 +96,10 @@ export function RedesignOrders(){
   const retained=cachedOwnerRead<Snapshot>(readPath);
   return retained?{path:readPath,listPath,snapshot:retained}:undefined;
  });
- const snapshot=loaded?.snapshot;
- const listSnapshot=loaded?.listPath===listPath?snapshot:undefined;
+ const [confirmed,setConfirmed]=useState<{id:string;name:string;stage:'ready'|'completed'}>();
+ const cached=loaded?.path!==readPath?cachedOwnerRead<Snapshot>(readPath):undefined;
+ const snapshot=cached??loaded?.snapshot;
+ const listSnapshot=cached??(loaded?.listPath===listPath?snapshot:undefined);
  const [readFailure,setReadFailure]=useState<{path:string;message:string}>();
  const readError=readFailure?.path===readPath?readFailure.message:'';
  const [error,setError]=useState(''),[notice,setNotice]=useState(''),[deliveryNotice,setDeliveryNotice]=useState(''),[busy,setBusy]=useState(false),[editor,setEditor]=useState<Editor>(),[refresh,setRefresh]=useState(0),[query,setQuery]=useState(search),[picker,setPicker]=useState<string>(),[bill,setBill]=useState<DialogView>(null),[cancelTarget,setCancelTarget]=useState<{id:string;revision:number}|null>(null);
@@ -113,10 +115,25 @@ export function RedesignOrders(){
  useEffect(()=>{const timer=setTimeout(()=>{if(query!==search)navigateOwner({orderSearch:query||null,orderPage:null,order:null},true);},250);return()=>clearTimeout(timer);},[query,search]);
  useEffect(()=>visiblePoll(async signal=>{
   try{
+   const generation=ownerReadGeneration();
    const data=await readOwnerView<Snapshot>(readPath,signal);
-   if(!signal.aborted){setLoaded({path:readPath,listPath,snapshot:data});setReadFailure(undefined);}
+   if(!signal.aborted&&generation===ownerReadGeneration()){setConfirmed(undefined);setLoaded({path:readPath,listPath,snapshot:data});setReadFailure(undefined);}
   }catch(e){if(!signal.aborted)setReadFailure({path:readPath,message:(e as Error).message});throw e;}
  },{intervalMs:5000}),[readPath,refresh]);
+ // Warm just the next stage once the foreground list has loaded. Navigation can
+ // join the same in-flight GET. Skip speculative reads on metered connections.
+ const hasList=!!listSnapshot;
+ useEffect(()=>{
+  if(!hasList||search||page!==1||!['new','ready'].includes(stage))return;
+  const controller=new AbortController();
+  const timer=setTimeout(()=>{
+   const network=(navigator as Navigator&{connection?:{saveData?:boolean;effectiveType?:string}}).connection;
+   if(document.hidden||!navigator.onLine||network?.saveData||/2g/.test(network?.effectiveType??'')||orderWrite.current)return;
+   const path=orderReads(new URLSearchParams({orderStage:stage==='new'?'ready':'completed'})).readPath;
+   if(!cachedOwnerRead(path,15000))void redesignApi(path,undefined,controller.signal).catch(()=>{});
+  },1200);
+  return ()=>{clearTimeout(timer);controller.abort();};
+ },[stage,hasList,search,page]);
  const listed=listSnapshot?.requests??[],wantedOrder=selectedId??listed[0]?.id;
  const order=listSnapshot?.selectedOrder?.id===wantedOrder?listSnapshot?.selectedOrder??undefined:undefined;
  const loadingDetail=!!listSnapshot&&!order&&loaded?.path!==readPath&&!readError;
@@ -298,6 +315,7 @@ export function RedesignOrders(){
    };
    setNotice(notices[action]);notifyResult(result);
    if(action==='ready'||action==='complete'||action==='cancel'){
+    if(result.requestId===order.id&&(result.stage==='ready'||result.stage==='completed'))setConfirmed({id:order.id,name:person(order),stage:result.stage});
     navigateOwner({orderStage:action==='ready'?'ready':action==='cancel'?'all':'completed',orderPage:null,order:order.id});
    }
    setRefresh(n=>n+1);
@@ -347,7 +365,7 @@ export function RedesignOrders(){
      else void sendFinalBill();
     }}
     onCancel={()=>setCancelTarget({id:order.id,revision:current.revision})}/>
-  </>:loadingDetail?<OwnerLoading label={t("Loading order…")} variant="rows"/>
+  </>:confirmed&&confirmed.id===selectedId&&confirmed.stage===stage?<div className="rd-orders-empty" role="status"><h2>{t(confirmed.name)}</h2><p>{t("Order #")}{code(confirmed.id)} · {t(stageLabel(confirmed.stage))}</p><p>{t(notice)}</p>{readError&&<button onClick={()=>setRefresh(n=>n+1)}>{t("Try again")}</button>}</div>:loadingDetail?<OwnerLoading label={t("Loading order…")} variant="rows"/>
    :!listSnapshot?null:readError?<div className="rd-orders-empty" role="alert">{t(readError)}<button onClick={()=>setRefresh(n=>n+1)}>{t("Try again")}</button></div>
    :<div className="rd-orders-empty"><h2>{selectedId?t("Order unavailable"):t("Choose an order")}</h2><p>{selectedId?t("Return to the list or try refreshing."):t("Review items and arrange pickup here.")}</p></div>}</section>
   <dialog className="rd-orders-dialog" ref={dialog} onCancel={event=>{event.preventDefault();closeDialog();}} aria-labelledby="rd-orders-dialog-title">
