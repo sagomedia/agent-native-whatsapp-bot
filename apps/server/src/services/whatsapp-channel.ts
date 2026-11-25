@@ -6,7 +6,7 @@ import {reviewDeliveryReady} from './review-delivery.js';
 import {whatsappSendError} from './whatsapp-send-error.js';
 import {catalogPhoto} from './catalog-photos.js';
 import {createHash,randomUUID} from 'node:crypto';
-import {eventSchema,type SimulatorEvent} from '../../../../packages/contracts/index.js';
+import {eventSchema,type ConversationState,type SimulatorEvent} from '../../../../packages/contracts/index.js';
 import {say} from '../../../../packages/contracts/language.js';
 import {renderWhatsAppReply,WhatsAppRenderError} from './whatsapp-reply.js';
 import {plainReply} from './replies.js';
@@ -38,11 +38,12 @@ export type WhatsAppFetch=typeof fetch;
 
 export class WhatsAppChannel {
   readonly runtime:ConversationRuntime;
+  private readonly activeSearches=new Set<string>();
   private readonly planningConversations=new Set<string>();
   constructor(private pool:Pool,readonly config:WhatsAppConfig,private request:WhatsAppFetch=fetch,private provider?:Interpreter){
     if(config.aiEnabled&&(!provider||provider.mode!=='live'||!provider.freeQuota&&(!config.paidEnabled||!config.budgetMicrousd||config.budgetMicrousd>5000000)))throw new Error('WhatsApp AI requires the configured free-tier or explicitly budgeted interpreter');
     if(!config.aiEnabled&&provider)throw new Error('WhatsApp AI has not been enabled');
-    this.runtime=new ConversationRuntime(pool,provider??new MockInterpreter(),{inventoryGrounding:!!provider?.unifiedUnderstanding,observeTurn:config.audience==='public'?async(client,ctx,offTopic)=>{
+    this.runtime=new ConversationRuntime(pool,provider??new MockInterpreter(),{onCatalogSearch:config.sendEnabled?this.startSearchNotice.bind(this):undefined,inventoryGrounding:!!provider?.unifiedUnderstanding,observeTurn:config.audience==='public'?async(client,ctx,offTopic)=>{
       if(!await observeCustomerIntent(client,ctx,offTopic))return false;
       await queueHandoffNotice(client,ctx,await loadState(client,ctx),config.sendEnabled);return true;
     }:undefined,allowFreeInference:!!config.aiEnabled,allowPaidInference:!!config.aiEnabled&&!!config.paidEnabled,discoveryStages:!!config.discoveryStages,mediaRecommendations:!!config.mediaRecommendations,sequentialItems:!!config.sequentialItems,visualOrdering:!!config.visualOrdering,maxDraftLines:config.maxDraftLines,advance:config.advance,partialReviews:config.partialReviews,welcomeAudio:config.welcomeAudio,queueReply:async(client,ctx,messageId,rich)=>{
@@ -70,6 +71,31 @@ export class WhatsAppChannel {
       await client.query('INSERT INTO whatsapp_outbox(message_id,conversation_id,operator_revision,reply_payload,sender_kind) VALUES($1,$2,$3,$4::jsonb,$5)',[messageId,ctx.conversationId,revision,JSON.stringify(rendered.payload),rich.handoffRequested?'system':'assistant']);
       for(const action of rendered.actions)await client.query('INSERT INTO whatsapp_actions(id,message_id,conversation_id,event,label,source_version,operator_revision,binding_id) VALUES($1,$2,$3,$4::jsonb,$5,$6,$7,$8)',[action.id,messageId,ctx.conversationId,JSON.stringify(action.event),action.label,state.version,revision,conversationBinding(state,memory)]);
     }});
+  }
+  private startSearchNotice(messageId:string,token:string,state:ConversationState){
+    this.activeSearches.add(token);
+    const timer=setTimeout(()=>{
+      void this.queueSearchNotice(messageId,token,state).catch(()=>console.error('whatsapp_search_notice_queue_failed'));
+    },10000);
+    return ()=>{clearTimeout(timer);this.activeSearches.delete(token);};
+  }
+
+  private async queueSearchNotice(messageId:string,token:string,state:ConversationState){
+    const text=say(state,'I’m still checking the shop’s inventory for your items. This is taking a little longer than usual.',
+      'நீங்க கேட்ட பொருட்களைக் கடைப் பட்டியலில் தேடிக்கிட்டிருக்கேன். இன்னும் கொஞ்ச நேரம் ஆகும்.',
+      'Neenga ketta porutkalai kadai list-la thedikkittirukken. Innum konjam neram aagum.');
+    // One durable notice per inbound message, even across lease recovery. Keep
+    // response_to free for the actual answer and its review/delivery semantics.
+    await this.pool.query(`WITH notice AS (
+      INSERT INTO messages(id,conversation_id,direction,text,status,stage,binding_id)
+      SELECT md5('catalog-wait:'||m.id::text)::uuid,m.conversation_id,'outbound',$3,'queued','search_wait',$2
+      FROM messages m JOIN conversations c ON c.id=m.conversation_id JOIN stores s ON s.id=c.store_id
+      WHERE m.id=$1 AND m.claim_token=$2 AND m.status='processing' AND m.lease_until>clock_timestamp()
+        AND c.store_id=$4 AND c.operator_mode='assistant' AND NOT s.operator_paused
+      ON CONFLICT(id) DO NOTHING RETURNING id,conversation_id)
+      INSERT INTO whatsapp_outbox(message_id,conversation_id,operator_revision,sender_kind)
+      SELECT n.id,n.conversation_id,c.operator_revision,'assistant' FROM notice n JOIN conversations c ON c.id=n.conversation_id`,
+      [messageId,token,text,this.config.storeId]);
   }
   async catalogPhoto(id:string,kind:'custom'|'reference'='custom'){return catalogPhoto(this.pool,this.config.storeId,id,true,kind);}
   async hasCatalogImage(filename:string){return !!(await this.pool.query('SELECT 1 FROM products WHERE store_id=$1 AND active=true AND image_path=$2',[this.config.storeId,'/demo-images/'+filename])).rowCount;}
@@ -361,11 +387,12 @@ export class WhatsAppChannel {
       // Current invoice pages must arrive in order. An uncertain obsolete review
       // can release a later customer turn only after its action page was explicitly
       // superseded; the uncertain page itself is neither retried nor marked sent.
-      const row=(await client.query(`SELECT o.*,m.text,w.recipient,w.last_inbound_at,c.operator_mode,c.operator_revision AS current_revision,s.operator_paused
+      const row=(await client.query(`SELECT o.*,m.text,m.stage,m.binding_id,w.recipient,w.last_inbound_at,c.operator_mode,c.operator_revision AS current_revision,s.operator_paused
         FROM whatsapp_outbox o JOIN whatsapp_conversations w ON w.conversation_id=o.conversation_id JOIN conversations c ON c.id=w.conversation_id JOIN stores s ON s.id=c.store_id JOIN messages m ON m.id=o.message_id
         WHERE w.phone_id=$1 AND c.store_id=$2 AND o.state='queued' AND o.next_attempt_at<=now() AND NOT EXISTS(
           SELECT 1 FROM messages earlier JOIN whatsapp_outbox pending ON pending.message_id=earlier.id
           WHERE earlier.conversation_id=m.conversation_id AND earlier.sequence<m.sequence AND pending.operator_revision=o.operator_revision AND pending.state IN ('queued','sending','unknown')
+          AND NOT(pending.state='unknown' AND earlier.stage IS NOT DISTINCT FROM 'search_wait')
           AND NOT(pending.state='unknown' AND pending.last_error IS NOT DISTINCT FROM 'bill_superseded')
           AND NOT(pending.state='unknown' AND pending.sender_kind='assistant'
             AND earlier.reply_group_id IS NOT NULL AND m.reply_group_id IS DISTINCT FROM earlier.reply_group_id
@@ -400,6 +427,13 @@ export class WhatsAppChannel {
       if(delivery?.state!=='sending'){await client.query('COMMIT');return true;}
       const controls=(await client.query('SELECT c.operator_mode,c.operator_revision,s.operator_paused FROM conversations c JOIN stores s ON s.id=c.store_id WHERE c.id=$1 FOR UPDATE OF c',[row.conversation_id])).rows[0];
       if(controls.operator_revision!==row.current_revision||row.sender_kind==='assistant'&&(controls.operator_paused||controls.operator_mode==='owner')||row.sender_kind==='owner'&&controls.operator_mode!=='owner'){await this.setDelivery(client,row.message_id,'cancelled','owner_control_changed');await client.query('COMMIT');return true;}
+      // Check immediately before dispatch. A result, failure or restart retires
+      // the search token, including when outbound workers were busy at 10 s.
+      if(row.stage==='search_wait'&&(!(await client.query(`SELECT 1 FROM messages WHERE conversation_id=$1
+        AND claim_token=$2 AND status='processing' AND lease_until>clock_timestamp()`,[row.conversation_id,row.binding_id])).rowCount||!this.activeSearches.has(row.binding_id))){
+        await this.setDelivery(client,row.message_id,'cancelled','search_finished');
+        await client.query('COMMIT');return true;
+      }
       let payload=row.reply_payload??{type:'text',text:{preview_url:false,body:row.text}};
       if(row.document_pdf){
         const document=payload.type==='interactive'?payload.interactive.header.document:payload.document;
@@ -426,7 +460,7 @@ export class WhatsAppChannel {
       }catch(error){networkError=error;}
       if(!response){
         const failure=whatsappSendError(networkError);
-        if(failure.retryable&&row.attempts<2){
+        if(row.stage!=='search_wait'&&failure.retryable&&row.attempts<2){
           await client.query("UPDATE whatsapp_outbox SET state='queued',next_attempt_at=now()+$2::integer*interval '10 seconds',last_error=$3 WHERE message_id=$1",[row.message_id,row.attempts+1,failure.code]);
           await client.query("UPDATE messages SET status='queued' WHERE id=$1",[row.message_id]);
         }else await this.setDelivery(client,row.message_id,failure.retryable?'failed':'unknown',failure.code);
@@ -434,7 +468,7 @@ export class WhatsAppChannel {
         if(response.ok&&typeof data?.messages?.[0]?.id==='string'){
           await client.query("UPDATE whatsapp_outbox SET provider_id=$1,state='accepted',last_error=NULL WHERE message_id=$2",[data.messages[0].id,row.message_id]);
           await client.query("UPDATE messages SET status='accepted' WHERE id=$1",[row.message_id]);
-        }else if(response.status===429&&row.attempts<2){
+        }else if(row.stage!=='search_wait'&&response.status===429&&row.attempts<2){
           await client.query("UPDATE whatsapp_outbox SET state='queued',next_attempt_at=now()+interval '60 seconds',last_error='meta_rate_limit' WHERE message_id=$1",[row.message_id]);
           await client.query("UPDATE messages SET status='queued' WHERE id=$1",[row.message_id]);
         }else{
