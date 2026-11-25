@@ -180,3 +180,35 @@ for(const billing of ['free','paid'] as const)test(`five workers preserve shared
  assert.equal(calls,1);assert.deepEqual(errors,[]);
  if(billing==='paid'){const budget=(await pool.query('SELECT * FROM inference_budgets WHERE store_id=$1',[fixtureStore])).rows[0];assert.equal(Number(budget.limit_microusd),reservation);assert.ok(Number(budget.committed_microusd)+Number(budget.held_microusd)<=reservation);}
 }));
+
+test('catalog waiting notice fires once at ten seconds and expires before delayed dispatch',t=>fixture(async pool=>{
+ const sent:string[]=[];
+ const channel=new WhatsAppChannel(pool,{...cfg,sendEnabled:true},async(_url,init)=>{
+   sent.push(JSON.parse(String(init?.body)).text.body);
+   return Response.json({messages:[{id:'wamid.wait.once'}]});
+ });
+ await channel.setup();
+ const state={version:0,draft:[],pending:null,lastRequestId:null,fulfillment:'pickup' as const,replyLanguage:'ta' as const};
+ for(const scenario of ['fast','slow','late']){
+   const token=randomUUID();
+   await channel.receive(input('wamid.wait.'+scenario));
+   const {id}= (await pool.query("UPDATE messages SET status='processing',claim_token=$1,lease_until=now()+interval '1 minute' WHERE direction='inbound' AND status='pending' RETURNING id",[token])).rows[0];
+   t.mock.timers.enable({apis:['setTimeout']});
+   const stop=channel['startSearchNotice'](id,token,state);
+   t.mock.timers.tick(9999);
+   if(scenario==='fast')stop();
+   t.mock.timers.tick(1);
+   t.mock.timers.reset();
+   if(scenario!=='fast'){
+     await until(async()=>!!(await pool.query("SELECT 1 FROM messages WHERE binding_id=$1 AND stage='search_wait'",[token])).rowCount);
+     await channel['queueSearchNotice'](id,token,state);
+     if(scenario==='late')stop();
+   }
+   await channel.sendNext();
+   stop();
+   assert.equal((await pool.query("SELECT count(*) FROM messages WHERE stage='search_wait' AND binding_id=$1",[token])).rows[0].count,scenario==='fast'?'0':'1');
+   await pool.query("UPDATE messages SET status='processed' WHERE id=$1",[id]);
+ }
+ assert.equal(sent.length,1);
+ assert.match(sent[0],/இன்னும் கொஞ்ச நேரம்/);
+}));

@@ -146,7 +146,7 @@ function discoverySelection(item:Extract<Interpretation['operations'][number],{k
 }
 export class ConversationRuntime {
   readonly tools:RetailTools;
-  constructor(private pool:Pool,private provider:Interpreter,private options:{inventoryGrounding?:boolean;advance?:UpiAdvanceConfig;partialReviews?:boolean;welcomeAudio?:string;allowPaidInference?:boolean;allowFreeInference?:boolean;discoveryStages?:boolean;mediaRecommendations?:boolean;sequentialItems?:boolean;visualOrdering?:boolean;maxDraftLines?:number;observeTurn?:(client:PoolClient,ctx:ActorContext,offTopic:boolean|null)=>Promise<boolean>;queueReply?:(client:PoolClient,ctx:ActorContext,id:string,reply:RichReply)=>Promise<void>}={}) {
+  constructor(private pool:Pool,private provider:Interpreter,private options:{onCatalogSearch?:(id:string,claimToken:string,state:ConversationState)=>()=>void;inventoryGrounding?:boolean;advance?:UpiAdvanceConfig;partialReviews?:boolean;welcomeAudio?:string;allowPaidInference?:boolean;allowFreeInference?:boolean;discoveryStages?:boolean;mediaRecommendations?:boolean;sequentialItems?:boolean;visualOrdering?:boolean;maxDraftLines?:number;observeTurn?:(client:PoolClient,ctx:ActorContext,offTopic:boolean|null)=>Promise<boolean>;queueReply?:(client:PoolClient,ctx:ActorContext,id:string,reply:RichReply)=>Promise<void>}={}) {
     if(provider.mode==='live') {
       if(!(provider.freeQuota?options.allowFreeInference:options.allowPaidInference)||!provider.billing) throw new ToolError('Live interpretation is disabled until explicitly authorized metered configuration is supplied');
       if(rateHealth(provider.billing).status==='invalid')validateRateCard(provider.billing);
@@ -167,7 +167,7 @@ export class ConversationRuntime {
       await client.query('UPDATE messages SET release_fingerprint=$1 WHERE id=$2',[currentReleaseFingerprint(),m.id]);
       if(this.options.visualOrdering!==undefined)await client.query('UPDATE conversations SET visual_ordering=$2 WHERE id=$1',[ctx.conversationId,this.options.visualOrdering]);
       if(this.options.partialReviews!==undefined)await client.query('UPDATE conversations SET partial_reviews=$2 WHERE id=$1',[ctx.conversationId,this.options.partialReviews]);
-      const shown=(await client.query("SELECT payload,coalesce((SELECT o.state FROM whatsapp_outbox o WHERE o.message_id=messages.id),'delivered') AS delivery FROM messages WHERE conversation_id=$1 AND direction='outbound' ORDER BY sequence DESC LIMIT 20",[ctx.conversationId])).rows;
+      const shown=(await client.query("SELECT payload,coalesce((SELECT o.state FROM whatsapp_outbox o WHERE o.message_id=messages.id),'delivered') AS delivery FROM messages WHERE conversation_id=$1 AND direction='outbound' AND stage IS DISTINCT FROM 'search_wait' ORDER BY sequence DESC LIMIT 20",[ctx.conversationId])).rows;
       const displayedProducts=shown.flatMap(r=>[...(r.payload?.parts??[]).flatMap((p:any)=>p.cards.flatMap((c:any)=>c.kind==='product'?(c.buttons??[]).map((b:any)=>({event:b.event,product:c.product,delivered:['delivered','read'].includes(r.delivery)})):[])),...(r.payload?.cards??[]).flatMap((c:any)=>c.action&&c.product?[{event:c.action,product:c.product}]:[])]);
       const displayedActions=shown.flatMap(r=>[...(r.payload?.parts??[]).flatMap((p:any)=>[...(p.buttons??[]).map((b:any)=>b.event),...(p.cards??[]).flatMap((c:any)=>(c.buttons??[]).map((b:any)=>b.event))]),...(r.payload?.cards??[]).flatMap((c:any)=>c.action?[c.action]:[]),...(r.payload?.buttons??[]).map((b:any)=>b.event)]);
       const enabled=await catalogEnabled(client,ctx);
@@ -906,7 +906,7 @@ export class ConversationRuntime {
     return undefined;
   }
   private async interpret(ctx:ActorContext,claim:Claimed):Promise<Interpretation> {
-    const recent=(await this.pool.query("SELECT direction,left(text,500) AS text FROM messages WHERE conversation_id=$1 AND created_at>=coalesce((SELECT session_started_at FROM conversations WHERE id=$1),'-infinity'::timestamptz) AND (status='processed' OR direction='outbound' AND status IN ('sent','accepted','delivered','read')) ORDER BY sequence DESC LIMIT 8",[ctx.conversationId])).rows.reverse();
+    const recent=(await this.pool.query("SELECT direction,left(text,500) AS text FROM messages WHERE conversation_id=$1 AND stage IS DISTINCT FROM 'search_wait' AND created_at>=coalesce((SELECT session_started_at FROM conversations WHERE id=$1),'-infinity'::timestamptz) AND (status='processed' OR direction='outbound' AND status IN ('sent','accepted','delivered','read')) ORDER BY sequence DESC LIMIT 8",[ctx.conversationId])).rows.reverse();
     const voice=claim.event.type==='voice',image=claim.event.type==='image';
     if(image&&!this.provider.supportsImages)throw new ToolError('Image input is not configured. Please describe the item.');
     if(voice&&!this.provider.supportsAudio)throw new ToolError('Voice input is not configured. Please type your request.');
@@ -1085,6 +1085,7 @@ export class ConversationRuntime {
   private async groundInventory(ctx:ActorContext,claim:Claimed,identified:Interpretation,input:InterpretationInput,text:string,evidenceInventorySelections:Set<string>,repairUsed:boolean):Promise<Interpretation> {
     const voice=claim.event.type==='voice',transcript=identified.transcript;
     const items=inventoryItems(identified).slice(0,inventoryObservationLimit);
+    const stopNotice=items.length?this.options.onCatalogSearch?.(claim.id,claim.token,claim.state):undefined;
     try{
       const fresh=await withConversation(this.pool,ctx,client=>observeInventory(client,ctx,this.tools,items.map(item=>({query:item.query!,search:claim.voiceRetry&&item.search?{...item.search,selectedSkus:undefined}:item.search,productMeasures:'productMeasures' in item?item.productMeasures:undefined})),`${claim.id}:inventory`));
       // Exact names/SKUs already have hard-filtered current facts. Other
@@ -1130,7 +1131,7 @@ export class ConversationRuntime {
       if(error instanceof DeferredRecommendation||error instanceof ToolError&&error.code==='turn_deadline')throw error;
       if(claim.event.type==='voice'&&transcript&&!claim.recoveredEvidence)await saveVoiceCatalogPlan(this.pool,ctx,claim.event.mediaId,claim.state.version,claim.id,claim.token,identified);
       throw new InventoryCheckIncomplete(transcript);
-    }
+    }finally{stopNotice?.();}
   }
 
   private async callProvider(ctx:ActorContext,claim:Claimed,input:InterpretationInput,stage:'recognize'|'identify'|'repair'|'recommend',override?:Interpreter):Promise<Interpretation> {
