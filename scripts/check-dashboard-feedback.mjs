@@ -23,6 +23,7 @@ function bounded(promise, message) {
   .finally(()=>clearTimeout(timeout));
 }
 const catalog=pause(),photo=pause(),completed=pause(),history=pause(),historyStarted=pause();
+const afterPickup=pause();let pickedUp=false;
 const imageSizes=[];let catalogReads=0;
 const stockResponse=pause(),stockStarted=pause(),stockBodies=[];
 const seenResponse=pause();
@@ -34,6 +35,7 @@ await page.route('**/api/owner/**',async route=>{
  const url=new URL(route.request().url());
  let json=context;
  if(url.pathname.endsWith('/seen')){await seenResponse.promise;return route.fulfill({json:{reading:{read_sequence:'2'}}}).catch(()=>{});}
+ else if(url.pathname.endsWith('/complete')){pickedUp=true;json={requestId:'o1',stage:'completed',effectiveRevision:1};}
  else if(url.pathname.endsWith('/stock')&&route.request().method()==='POST'){
   stockBodies.push(route.request().postDataJSON());
   if(stockBodies.length===1){stockStarted.resolve();await stockResponse.promise;return route.abort('failed');}
@@ -53,7 +55,10 @@ await page.route('**/api/owner/**',async route=>{
  }else if(url.searchParams.get('scope')==='orders'){
   const done=url.searchParams.get('orderStage')==='completed';
   if(done)await completed.promise;
-  json={...context,requests:done?[row]:[],selectedOrder:null,orderPage:{number:1,total:done?1:0,hasNext:false}};
+  if(done&&pickedUp)await afterPickup.promise;
+  const ready=url.searchParams.get('orderStage')==='ready';
+  const order={...row,stage:ready?'ready':'completed',source:'in_store',customer_name:'Fixture pickup',effective_revision:1,original_lines:[],lines:[],original_estimate:{lines:[]},total_paise:'0'};
+  json={...context,requests:done||ready?[order]:[],selectedOrder:ready||pickedUp?order:null,orderPage:{number:1,total:done?1:0,hasNext:false}};
  }
  await route.fulfill({json}).catch(()=>{});
 });
@@ -80,6 +85,12 @@ try{
  assert.equal(await page.getByText('No orders here',{exact:true}).isVisible(),false);
  completed.resolve();
  await page.locator('.rd-orders-list-row').waitFor();
+ await page.getByRole('button',{name:/^Ready/}).click();
+ await page.getByRole('button',{name:/Picked up/}).click();
+ await page.getByRole('status').filter({hasText:'Pickup recorded. Order completed.'}).waitFor();
+ assert.equal(await page.locator('.rd-orders-detail h2').innerText(),'Fixture pickup');
+ afterPickup.resolve();
+ console.log('Confirmed pickup stays visible while the destination read is held.');
  console.log('Completed waits for its own response without showing the empty New state.');
  await products.click();
  await page.getByRole('status').filter({hasText:'Loading products…'}).waitFor();
@@ -172,6 +183,6 @@ try{
  console.log('A failed route chunk leaves the navigation visible and offers reload.');
  assert.deepEqual(errors,[]);
 }finally{
- catalog.resolve();photo.resolve();completed.resolve();history.resolve();stockResponse.resolve();seenResponse.resolve();
+ afterPickup.resolve();catalog.resolve();photo.resolve();completed.resolve();history.resolve();stockResponse.resolve();seenResponse.resolve();
  await browser.close();server.close();
 }
